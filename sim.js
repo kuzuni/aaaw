@@ -12,13 +12,14 @@ const TUNE={
   wallHp:1.95, wallDmg:1.25,    // 10챕터 이상 벽 배수 (R06 — eHpG 상향분만큼 HP 배수를 내려 챕터10 절대 난도 유지)
   wall2Hp:0.82, wall2Dmg:1.0,   // 15챕터 이상 추가 배수 (R06 — 챕터15~19 상한 초과 완화)
   waveHp:0.15, waveDmg:0.08,    // 웨이브 인덱스당 (R03)
-  wall3Hp:3.6, wall3Dmg:1.30,   // 90챕터 대형 벽 (PLAN §11.7)
+  wall3Hp:3.6, wall3Dmg:1.30,   // 90챕터 대형 벽 (PLAN §11.7 앵커 A)
+  wall4Hp:3.6, wall4Dmg:1.30,   // 300챕터 최종 벽 (PLAN §11.7 앵커 B)
   bossHp:8, bossDmg:1.8,        // 주인 확정 상수 (튜닝 노브 아님) — 5배수 챕터 추가 배수 폐기
-  maxChapter:100,               // PLAN §2.4 (§11 도입으로 20 → 100)
+  maxChapter:300,               // PLAN §2.4 (§11 도입으로 20 → 100 → 주인 추가 지시로 300)
   /* 플레이어 기본치 (영구강화 4종 폐지 — 성장은 §11 장비 + 슬롯 강화가 전담) */
   pAtk0:30, pHp0:300, pAspd0:1.0, pCrit0:5,
   goldKillBase:0.6, goldKillPer:0.10, goldClearPer:3,
-  goldGrowth:1.10,              // 챕터당 골드 성장 배수 (챕터 100 확장용 신규 노브)
+  goldGrowth:1.185,             // 챕터당 골드 성장 배수 (신규 노브 — 슬롯 비용이 6.9^렙 이라 수입도 지수여야 한다. eHpG 와 같은 값으로 두면 슬롯 1렙 ≈ 6챕터로 맞는다)
   expKill:3, expBoss:9, expNeed:lv=>4+2*lv,
 };
 TUNE.goldKill=c=>(TUNE.goldKillBase+TUNE.goldKillPer*c)*Math.pow(TUNE.goldGrowth,c-1)*rand(1,1.8);
@@ -51,7 +52,8 @@ function enemyStats(c,w){
   let dmg=TUNE.eBaseDmg*Math.pow(TUNE.eDmgG,c-1)*(1+TUNE.waveDmg*w);
   if(c>=10){hp*=TUNE.wallHp; dmg*=TUNE.wallDmg;}
   if(c>=15){hp*=TUNE.wall2Hp; dmg*=TUNE.wall2Dmg;}
-  if(c>=90){hp*=TUNE.wall3Hp; dmg*=TUNE.wall3Dmg;}   /* 90 대형 벽 (PLAN §11.7) */
+  if(c>=90){hp*=TUNE.wall3Hp; dmg*=TUNE.wall3Dmg;}     /* 90 대형 벽 (PLAN §11.7 앵커 A) */
+  if(c>=300){hp*=TUNE.wall4Hp; dmg*=TUNE.wall4Dmg;}    /* 300 최종 벽 (PLAN §11.7 앵커 B) */
   return {hp:Math.round(hp), dmg:Math.round(dmg)};
 }
 
@@ -185,11 +187,13 @@ const GT={
     plate:'판금갑옷',chain:'사슬갑옷',robe:'로브',gauntlet:'건틀릿',leather:'가죽장갑',handwrap:'핸드랩',
     sandal:'샌들',boots:'부츠',greave:'장화',pendant:'펜던트',amulet:'부적',beads:'구슬목걸이'},
   rarName:['일반','희귀','영웅','전설','신화'],
-  /* 공/체 기여 (등급) — 신화0강 > 전설9강 제약 성립 확인: 36*(1+0.12*9)=74.9 < 95, 체력 23*2.08=47.8 < 61 */
-  atk:[6,11,20,36,95], hp:[4,7,13,23,61],
-  plusStep:0.12,                 // 강화 1레벨당 해당 장비 공/체 +12%
-  slotG:1.747,                   // 슬롯 레벨당 그 슬롯 장비 공/체 배수 (위임: 곡선은 튜닝 몫)
-  slotCostBase:600, slotCostG:2.0,
+  /* 공/체 기여 — 신화(최고 등급) 1부위 기준값에서 등급 1단계 내려갈 때마다 rarStep 으로 나눈다.
+     rarStep·slotG 는 PLAN §11.7 앵커 3점(C=30·A=90·B=300)에서 역산한 값이다 — 아래 «앵커 역산» 주석 참조.
+     신화0강 > 전설9강 제약: 전설 = 신화/155 이므로 +9강(×2.08) 을 곱해도 신화 0강의 1/100 — 여유롭게 성립. */
+  atkUnit:0.5904, hpUnit:5.904, rarStep:155,
+  plusStep:0.12,                 // 강화 1레벨당 해당 장비 공/체 +12% (위임)
+  slotG:2.68,                    // 슬롯 레벨당 그 슬롯 장비 공/체 배수 (앵커 A→B 역산)
+  slotCostBase:150, slotCostG:5.5,   // 슬롯 강화 비용 = base*costG^L (goldGrowth^6=6.93 보다 낮게 둬야 후반이 막히지 않는다 — T6 실측)
   evenStep:0.05, evenPer:5,      // 6슬롯 전부 5N렙 → 공/체 +5%*N (PLAN §11.4)
   pullCost:400, dailyGem:2500, iapGem:12000,   // 주인 확정 상수
   legendToMythPlus:10,           // 전설 +10강 도달 시 신화 0강으로 변환
@@ -200,6 +204,8 @@ if(process.env.GT_OVERRIDE){
   const o=JSON.parse(process.env.GT_OVERRIDE);
   for(const k in o){ if(Array.isArray(o[k])||typeof o[k]!=='object'||!o[k]) GT[k]=o[k]; else Object.assign(GT[k],o[k]); }
 }
+GT.atk=[0,1,2,3,4].map(i=>GT.atkUnit/Math.pow(GT.rarStep,4-i));
+GT.hp =[0,1,2,3,4].map(i=>GT.hpUnit /Math.pow(GT.rarStep,4-i));
 GT.slotMul=L=>Math.pow(GT.slotG,L);
 GT.slotCost=L=>Math.floor(GT.slotCostBase*Math.pow(GT.slotCostG,L));
 GT.allTypes=[]; for(const pt of GT.parts) for(const ty of GT.types[pt]) GT.allTypes.push({part:pt,type:ty});
@@ -237,7 +243,7 @@ const GOPT={
     {d:'공격 시 15% 확률 화살 2발', ap:p=>p.px.arrow2++},
     {d:'치명타 배율 +30',       ap:p=>p.critF+=30},
     {d:'화살 4발로 증가',        ap:p=>p.px.arrowCount=1},
-    {d:'치명타 시 45% 확률 추가타', ap:p=>p.px.extraHit++},
+    {d:'치명타 시 75% 확률 추가타', ap:p=>p.px.extraHit++},
     {d:'화살 발사 확률 +15%p',   ap:p=>p.px.arrow2++},
     {d:'최대 체력 적에게 치명타 확정', ap:p=>p.px.fullHpCrit=true},
   ],
@@ -281,10 +287,10 @@ const GOPT={
   ],
   chain:[ /* 가시 계열 */
     {d:'방어 +5',               ap:p=>p.def+=5},
-    {d:'피격 시 15% 확률 가시 반사', ap:p=>p.px.thorns++},
+    {d:'피격 시 60% 확률 가시 반사', ap:p=>p.px.thorns++},
     {d:'방어 +7',               ap:p=>p.def+=7},
     {d:'피격 시 방어 +3 3초(누적)', ap:p=>p.px.defHitBuff++},
-    {d:'가시 반사 확률 +15%p',   ap:p=>p.px.thorns++},
+    {d:'가시 반사 확률 +60%p',   ap:p=>p.px.thorns++},
     {d:'최대 체력 +10%',        ap:p=>{const a=p.maxHp*0.10;p.maxHp+=a;heal(p,a,true);}},
     {d:'피격 시 30% 확률 회피 +15 3초', ap:p=>p.px.evadeHitBuff++},
   ],
@@ -304,7 +310,7 @@ const GOPT={
     {d:'치명타 배율 +40',       ap:p=>p.critF+=40},
     {d:'치명타 시 30% 확률 체력 4% 회복', ap:p=>p.px.critHeal3++},
     {d:'치명타 배율 +50',       ap:p=>p.critF+=50},
-    {d:'치명타 시 45% 확률 추가타', ap:p=>p.px.extraHit++},
+    {d:'치명타 시 75% 확률 추가타', ap:p=>p.px.extraHit++},
     {d:'뒤쪽 적에게 피해 2배',   ap:p=>p.px.backDmg=true},
   ],
   leather:[ /* 공격속도 계열 */
@@ -374,12 +380,12 @@ const GOPT={
   ],
   beads:[ /* 창 계열 */
     {d:'공격력 +5%',            ap:p=>p.dmg*=1.05},
-    {d:'공격 시 10% 확률 창 발사', ap:p=>p.px.spear++},
+    {d:'공격 시 7.5% 확률 창 발사', ap:p=>p.px.spear++},
     {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
     {d:'창 피해 2배·전체 관통',  ap:p=>p.px.spearMaster=1},
-    {d:'창 발사 확률 +10%p',     ap:p=>p.px.spear++},
+    {d:'창 발사 확률 +7.5%p',    ap:p=>p.px.spear++},
     {d:'적 화살 30% 확률 오발',  ap:p=>p.misfire+=0.30},
-    {d:'모든 발동 확률 2배',     ap:p=>p.px.procX2=true},
+    {d:'모든 발동 확률 1.7배',   ap:p=>p.px.procX2=true},
   ],
 };
 
@@ -455,7 +461,10 @@ function mkBuild(rar,plus,slotLv,typeIdx){
   return {eq,slots};
 }
 const evenBonus=b=>1+GT.evenStep*Math.floor(Math.min(...GT.parts.map(pt=>b.slots[pt]||0))/GT.evenPer);
+/* 진단용 평탄 빌드: 장비/옵션 없이 공/체만 직접 지정 (앵커 요구 전투력 역산 fit 모드) */
+function flatBuild(atk,hp){ const slots={}; for(const pt of GT.parts) slots[pt]=0; return {eq:{},slots,flat:{atk,hp}}; }
 function buildPower(b){
+  if(b.flat)return b.flat;
   let atk=0,hp=0;
   for(const pt of GT.parts){
     const g=b.eq[pt]; if(!g)continue;
@@ -878,12 +887,12 @@ function eqStr(a){
 /* 실험1·2 하니스: 「그 챕터 도달 시점의 관측 중앙값 장비/슬롯 상태」 (T5 승인 규칙을 장비 경제로 이식).
    EXP1_GEAR='등급,강화,슬롯' 형태 환경변수로 덮어쓸 수 있다. */
 function harness(env,defRar,defPlus,defSlot){
-  const s=(process.env[env]||'').split(',').map(Number);
+  const s=(process.env[env]||'').split(',').map(v=>v.trim()===''?NaN:Number(v));   /* T7: ''.split(',') → [''] → Number('')=0 이라 기본값이 무시되던 버그 수정 */
   const rar=Number.isFinite(s[0])?s[0]:defRar, plus=Number.isFinite(s[1])?s[1]:defPlus, slot=Number.isFinite(s[2])?s[2]:defSlot;
   return {b:mkBuild(rar,plus,slot),desc:`${GT.rarName[rar]}${plus?'+'+plus:''} 6부위 · 슬롯 ${slot}렙`};
 }
 function exp1_rarityLadder(){
-  const h=harness('EXP1_GEAR',0,0,1);   /* 실험3 관측: 챕터6 도달 시점 중앙값 = 슬롯 1렙·저등급 장비 (T5 재보정 규칙) */
+  const h=harness('EXP1_GEAR',3,0,1);   /* 실험3 관측: 챕터6 도달 시점 중앙값 = 전설 장비·슬롯 1렙 (T5 재보정 규칙) */
   console.log(`\n=== 실험1: 등급 고정 파워 사다리 (챕터6, 하니스 ${h.desc}, 300판) ===`);
   for(const rar of [null,0,1,2,3]){
     let wins=0,times=0,n=300;
@@ -896,7 +905,7 @@ function exp1_rarityLadder(){
   }
 }
 function exp2_perkWinrate(){
-  const h=harness('EXP2_GEAR',1,0,1);   /* 실험3 관측: 챕터8 도달 시점 중앙값 = 슬롯 1렙·희귀 장비 (T5 재보정 규칙) */
+  const h=harness('EXP2_GEAR',4,0,0);   /* 실험3 관측: 챕터8 도달 시점 중앙값 = 신화 1~2부위·슬롯 1~2렙 → 변별력 최대인 클리어율 60~70% 지점 (T5 재보정 규칙) */
   /* 진단 전용 오버라이드 (채점용 기본값은 PLAN §7 의 1200판 그대로).
      EXP2_N: 표본 수를 늘려 «측정 노이즈 대 실제 아웃라이어» 를 분리할 때만 사용.
      EXP2_FULL=1: 등급별 전 특전 승률을 덤프해 어느 특전을 올리고 내릴지 고를 때 사용. */
@@ -955,8 +964,9 @@ function exp3_progression(){
 }
 /* ---------- 실험4: F2P 일 단위 장비 진행 (PLAN §7) ---------- */
 function exp4_gearProgress(){
-  const DAYS=parseInt(process.env.EXP4_DAYS||'180',10);
+  const DAYS=parseInt(process.env.EXP4_DAYS||'365',10);
   const IAP=process.env.EXP4_IAP==='1';
+  const STUCK=parseInt(process.env.EXP4_STUCK||'40',10);
   console.log(`\n=== 실험4: 장비 진행 (하루 다이아 ${GT.dailyGem} · ${GT.runsPerDay}판/일 · ${DAYS}일${IAP?' · 과금 '+GT.iapGem+'다이아 1회':''}) ===`);
   const a=newAccount(IAP?GT.iapGem:0);
   let chap=1,total=0,tries=0,stuckFrom=-1,stuck=0;
@@ -970,26 +980,38 @@ function exp4_gearProgress(){
       const my=GT.parts.filter(pt=>a.eq[pt]&&a.eq[pt].rar===4).length;
       console.log(`  ${String(d).padStart(3)}일차: 챕터 ${String(chap-1).padStart(3)} 클리어  슬롯 ${slotStr(a)}  신화 ${my}/6  장비 ${eqStr(a)}  누적뽑기 ${a.pulls}`);
     }
-    if(tries>GT.runsPerDay*20){ stuckFrom=chap; stuck=tries; break; }   /* 20일 넘게 한 챕터에 정체 = 막힘 */
+    if(tries>GT.runsPerDay*STUCK){ stuckFrom=chap; stuck=tries; break; }   /* STUCK 일 넘게 한 챕터에 정체 = 막힘 (90·300 대형 벽은 원래 오래 걸리므로 기본 40일) */
   }
   const my=GT.parts.filter(pt=>a.eq[pt]&&a.eq[pt].rar===4).length;
   console.log(`최종: 챕터 ${chap-1} 클리어 · 슬롯 ${slotStr(a)} · 신화 부위 ${my}/6 · 뽑기 ${a.pulls}회 · 합성 ${a.fuses}회 · 총 ${total}판`);
-  if(stuckFrom>0)console.log(`** 정체 감지: 챕터 ${stuckFrom} 에서 ${stuck}판 연속 실패 (진행 막힘) **`);
+  if(stuckFrom>0)console.log(`** 정체 감지: 챕터 ${stuckFrom} 에서 ${stuck}판(${(stuck/GT.runsPerDay).toFixed(0)}일) 연속 실패 — 90·300 은 대형 벽이라 정상, 그 외 챕터면 경제가 막힌 것 **`);
 }
-/* ---------- 실험5: 앵커 검증 (PLAN §11.7 주인 확정 과녁) ---------- */
+/* ---------- 실험5: 앵커 검증 (PLAN §11.7 주인 확정 과녁 3점) ---------- */
+/* C = 전설 풀셋 0강 · 슬롯 균등 10렙 → 챕터 30 «겨우»
+   A = 신화 풀셋 0강 · 슬롯 균등 15렙 → 챕터 90 «겨우» (91+ 벽)
+   B = 신화 풀셋 +9강 · 슬롯 균등 50렙 → 챕터 300 «겨우» (301+ 벽) */
+const ANCHORS=[
+  {id:'C', rar:3, plus:0, slot:10, at:30,  span:[28,32]},
+  {id:'A', rar:4, plus:0, slot:15, at:90,  span:[88,92]},
+  {id:'B', rar:4, plus:9, slot:50, at:300, span:[298,301]},
+];
 function exp5_anchor(){
-  const SLOT=parseInt(process.env.EXP5_SLOT||'15',10);
   const N=parseInt(process.env.EXP5_N||'200',10);
-  console.log(`\n=== 실험5: 앵커 (모든 부위 신화 0강 + 슬롯 6개 균등 ${SLOT}렙, 챕터 88~92 각 ${N}판) ===`);
-  const b=mkBuild(4,0,SLOT);
-  const pw=buildPower(b);
-  console.log(`  앵커 전투력: 공격력 ${Math.round(pw.atk)} · 최대체력 ${Math.round(pw.hp)} (균등보너스 x${evenBonus(b).toFixed(2)})`);
-  for(let c=88;c<=92;c++){
-    let w=0;
-    for(let i=0;i<N;i++) if(runChapter(c,b,{}).clear)w++;
-    const rate=w/N*100;
-    const exp=rate>0?(100/rate).toFixed(1)+'회':'∞';
-    console.log(`  챕터 ${c}: 클리어율 ${rate.toFixed(1)}%  (기대 재도전 ${exp})`);
+  const only=process.env.EXP5_ONLY;                 /* 'A' 등으로 한 앵커만 측정 */
+  console.log(`\n=== 실험5: 앵커 검증 (C=30 · A=90 · B=300, 각 챕터 ${N}판) ===`);
+  for(const a of ANCHORS){
+    if(only&&only!==a.id)continue;
+    const b=mkBuild(a.rar,a.plus,a.slot);
+    const pw=buildPower(b);
+    console.log(`\n  [앵커 ${a.id}] ${GT.rarName[a.rar]}${a.plus?'+'+a.plus+'강':' 0강'} 풀셋 · 슬롯 균등 ${a.slot}렙 → 과녁 챕터 ${a.at}`);
+    console.log(`    전투력: 공격력 ${pw.atk.toExponential(3)} · 최대체력 ${pw.hp.toExponential(3)} (균등보너스 x${evenBonus(b).toFixed(2)})`);
+    for(let c=a.span[0];c<=a.span[1];c++){
+      let w=0;
+      for(let i=0;i<N;i++) if(runChapter(c,b,{}).clear)w++;
+      const rate=w/N*100;
+      const exp=rate>0?(100/rate).toFixed(1)+'회':'∞';
+      console.log(`    챕터 ${String(c).padStart(3)}: 클리어율 ${rate.toFixed(1)}%  (기대 재도전 ${exp})${c===a.at?'   ← 과녁':''}`);
+    }
   }
 }
 
@@ -1005,8 +1027,26 @@ function dumpGearTable(){
     console.log(`| ${GT.partName[pt]} | ${GT.typeName[ty]} | ${line[ty]} | `+GOPT[ty].map(o=>o.d).join(' | ')+' |');
 }
 
+/* ---------- fit: 앵커 챕터가 «겨우 클리어(≈5%)» 가 되는 요구 전투력 역산 (진단 전용) ---------- */
+function fitAnchors(){
+  const N=parseInt(process.env.FIT_N||'60',10);
+  const CH=(process.env.FIT_CH||'30,90,300').split(',').map(Number);
+  console.log(`\n=== fit: 앵커 챕터 요구 전투력 역산 (기준 공30/체300 의 배수 k, 클리어율 ≈5% 지점, ${N}판/평가) ===`);
+  for(const c of CH){
+    const rate=k=>{let w=0;const b=flatBuild(30*k,300*k);for(let i=0;i<N;i++)if(runChapter(c,b,{}).clear)w++;return w/N*100;};
+    let lo=1,hi=1;
+    while(rate(hi)<5&&hi<1e60)hi*=4;
+    if(hi>1e60){console.log(`  챕터 ${c}: k>1e60 (역산 실패)`);continue;}
+    lo=hi/4;
+    for(let it=0;it<12;it++){const mid=Math.sqrt(lo*hi);if(rate(mid)<5)lo=mid;else hi=mid;}
+    const k=Math.sqrt(lo*hi);
+    console.log(`  챕터 ${String(c).padStart(3)}: k ≈ ${k.toExponential(3)}  (공격력 ${(30*k).toExponential(3)} · 체력 ${(300*k).toExponential(3)})`);
+  }
+}
+
 const mode=process.argv[2]||'all';
 if(mode==='table'){ dumpGearTable(); process.exit(0); }
+if(mode==='fit'){ fitAnchors(); process.exit(0); }
 if(mode==='1'||mode==='all')exp1_rarityLadder();
 if(mode==='2'||mode==='all')exp2_perkWinrate();
 if(mode==='3'||mode==='all')exp3_progression();
