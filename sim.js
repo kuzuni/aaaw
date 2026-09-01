@@ -8,17 +8,31 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 /* ---------- 튜닝 파라미터 (여기 숫자를 게임에 이식) ---------- */
 const TUNE={
   eBaseHp:40, eBaseDmg:8,
-  eHpG:1.35, eDmgG:1.26,        // 챕터당 성장
-  wallHp:1.6, wallDmg:1.35,     // 10챕터 이상 벽 배수
-  wall2Hp:1.5, wall2Dmg:1.25,   // 15챕터 이상 추가 배수
-  waveHp:0.22, waveDmg:0.10,    // 웨이브 인덱스당
+  eHpG:1.11, eDmgG:1.14,        // 챕터당 성장 (R02 튜닝)
+  wallHp:2.6, wallDmg:1.15,     // 10챕터 이상 벽 배수 (R02)
+  wall2Hp:1.06, wall2Dmg:1.0,   // 15챕터 이상 추가 배수 (R02)
+  waveHp:0.50, waveDmg:0.26,    // 웨이브 인덱스당 (R02)
   bossHp:12, bossDmg:1.8, bigBoss:1.5,
   pDmg:l=>30+8*l, pHp:l=>300+60*l, pAspd:l=>1+0.03*l, pCrit:l=>5+l,
-  cost:{dmg:l=>Math.floor(40*Math.pow(1.32,l)), hp:l=>Math.floor(40*Math.pow(1.30,l)),
-        aspd:l=>Math.floor(60*Math.pow(1.38,l)), crit:l=>Math.floor(55*Math.pow(1.36,l))},
-  goldKill:c=>(2+c)*rand(1,1.8), goldClear:c=>40*c,
+  /* 강화 비용 = base * growth^Lv (growth 는 PLAN §7 조정 노브) */
+  costBase:{dmg:40, hp:40, aspd:60, crit:55},
+  costG:{dmg:1.07, hp:1.07, aspd:1.09, crit:1.09},
+  goldKillBase:0.8, goldKillPer:0.14, goldClearPer:5,
   expKill:3, expBoss:9, expNeed:lv=>4+2*lv,
 };
+TUNE.cost={
+  dmg:l=>Math.floor(TUNE.costBase.dmg*Math.pow(TUNE.costG.dmg,l)),
+  hp:l=>Math.floor(TUNE.costBase.hp*Math.pow(TUNE.costG.hp,l)),
+  aspd:l=>Math.floor(TUNE.costBase.aspd*Math.pow(TUNE.costG.aspd,l)),
+  crit:l=>Math.floor(TUNE.costBase.crit*Math.pow(TUNE.costG.crit,l)),
+};
+TUNE.goldKill=c=>(TUNE.goldKillBase+TUNE.goldKillPer*c)*rand(1,1.8);
+TUNE.goldClear=c=>TUNE.goldClearPer*c;
+/* 스윕용 오버라이드 (기본 동작 불변) — 예: TUNE_OVERRIDE='{"eHpG":1.22}' node sim.js 3 */
+if(process.env.TUNE_OVERRIDE){
+  const o=JSON.parse(process.env.TUNE_OVERRIDE);
+  for(const k in o){ if(typeof o[k]==='object'&&o[k]) Object.assign(TUNE[k],o[k]); else TUNE[k]=o[k]; }
+}
 
 /* ---------- 챕터 레이아웃 (결정적) ---------- */
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
