@@ -7,7 +7,7 @@
 
 ## 0. 프로젝트 개요
 
-- **게임**: 세로형(9:19) 캐주얼 자동전투 방치형 RPG. 단일 HTML 파일(`index.html`)로 구현. 외부 라이브러리 없음, 그래픽은 Canvas로 직접 그림(참고 스크린샷: `C:\Users\user\Desktop\올빼미\*.jpg` — Legend of Slime 류 카툰 스타일), 오디오는 Web Audio 합성.
+- **게임**: 세로형(9:19) 캐주얼 자동전투 방치형 RPG. 단일 HTML 파일(`index.html`)로 구현. 외부 라이브러리 없음, 그래픽은 Canvas로 직접 그림(**참고 스크린샷: 레포의 `docs/ref/*.jpg`** — 주인이 2026-09-02 원본 이름 그대로 등록. Legend of Slime 류 카툰 스타일. 구 경로 `C:\Users\user\Desktop\올빼미\` 는 로컬 전용이라 폐기), 오디오는 Web Audio 합성.
 - **레포**: `C:\Users\user\Documents\GitHub\aaaw` (main 브랜치, origin 원격 있음)
 - **배포된 아티팩트**: https://claude.ai/code/artifact/228cba1b-db0b-4aef-b5ef-7aa344890524
   - 다른 대화에서 업데이트하려면 Artifact 도구에 `url`로 이 주소를 넘겨서 republish (url 없이 publish하면 새 아티팩트가 생기니 주의).
