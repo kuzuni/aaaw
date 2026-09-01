@@ -1,34 +1,34 @@
 
 === 실험2: 특전별 기여도 (챕터8, 하니스 신화 6부위 · 슬롯 0렙, 1200판) ===
-전체 클리어율: 69.3%
+전체 클리어율: 70.2%
 -- 상위 12 --
-  m_procX2(신) 98% (118판)
-  m_crit25(신) 95% (110판)
-  m_def20(신) 90% (99판)
-  c_killHeal2(일) 89% (147판)
-  l_fullHpCrit(전) 83% (206판)
-  l_perkHp(전) 81% (210판)
-  l_killHeal5(전) 80% (208판)
-  r_healShield5(희) 80% (126판)
-  l_evadeCrit(전) 80% (200판)
-  m_sage(신) 79% (109판)
-  m_wallBuff(신) 79% (109판)
-  r_evadeHeal(희) 79% (131판)
+  m_crit25(신) 96% (118판)
+  m_procX2(신) 95% (130판)
+  c_killHeal2(일) 89% (133판)
+  l_evadeCrit(전) 89% (201판)
+  l_perkHp(전) 88% (206판)
+  m_def20(신) 87% (119판)
+  l_killHeal5(전) 83% (217판)
+  m_lucky(신) 83% (129판)
+  l_fullHpCrit(전) 82% (208판)
+  l_killAspd(전) 82% (208판)
+  l_def10(전) 82% (229판)
+  m_time(신) 82% (109판)
 -- 하위 12 --
-  c_sh15(일) 61% (131판)
-  r_healAtk(희) 61% (130판)
-  c_atkBuff(일) 61% (137판)
-  c_counterAtk(일) 60% (138판)
-  m_choice4(신) 59% (112판)
-  r_critReset(희) 58% (144판)
-  r_critFBuff(희) 57% (145판)
-  c_critHeal1(일) 56% (117판)
-  r_counterX(희) 56% (123판)
-  c_critF(일) 56% (129판)
-  c_gold30(일) 55% (123판)
-  c_evadeAspd(일) 53% (147판)
+  r_arrow(희) 63% (125판)
+  c_gold30(일) 63% (136판)
+  c_walk20(일) 62% (143판)
+  l_counterWave(전) 62% (217판)
+  c_sh15(일) 61% (136판)
+  r_critReset(희) 61% (120판)
+  c_critF(일) 61% (119판)
+  c_counterAtk(일) 60% (151판)
+  r_healAtk(희) 59% (135판)
+  c_hitCounterS(일) 58% (136판)
+  r_healAmp(희) 57% (133판)
+  c_evadeDef(일) 56% (127판)
 -- 등급별 스프레드 (표본 25판 이상만) --
-  일반: 최상 c_killHeal2 89% / 최하 c_evadeAspd 53% → 폭 36%p 초과
-  희귀: 최상 r_healShield5 80% / 최하 r_counterX 56% → 폭 24%p OK
-  전설: 최상 l_fullHpCrit 83% / 최하 l_overBolt 63% → 폭 20%p OK
-  신화: 최상 m_procX2 98% / 최하 m_choice4 59% → 폭 39%p 초과
+  일반: 최상 c_killHeal2 89% / 최하 c_evadeDef 56% → 폭 34%p 초과
+  희귀: 최상 r_restHp 80% / 최하 r_healAmp 57% → 폭 22%p OK
+  전설: 최상 l_evadeCrit 89% / 최하 l_counterWave 62% → 폭 27%p 초과
+  신화: 최상 m_crit25 96% / 최하 m_arrow4 66% → 폭 29%p 초과
