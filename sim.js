@@ -16,8 +16,8 @@ const TUNE={
   pDmg:l=>30+8*l, pHp:l=>300+60*l, pAspd:l=>1+0.03*l, pCrit:l=>5+l,
   /* 강화 비용 = base * growth^Lv (growth 는 PLAN §7 조정 노브) */
   costBase:{dmg:40, hp:40, aspd:60, crit:55},
-  costG:{dmg:1.07, hp:1.07, aspd:1.09, crit:1.09},
-  goldKillBase:0.9, goldKillPer:0.10, goldClearPer:4,
+  costG:{dmg:1.055, hp:1.055, aspd:1.075, crit:1.075},
+  goldKillBase:0.6, goldKillPer:0.10, goldClearPer:3,
   expKill:3, expBoss:9, expNeed:lv=>4+2*lv,
 };
 TUNE.cost={
@@ -245,8 +245,8 @@ function onKill(G,e){
   G.kills++;
   G.gold+=Math.round(TUNE.goldKill(G.chapter)*p.goldMul);
   if(p.killHeal>0)heal(p,p.maxHp*p.killHeal);
-  if(px.killShield3)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.01*px.killShield3);
-  if(px.killShield10)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.015*px.killShield10);
+  if(px.killShield3)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.007*px.killShield3);
+  if(px.killShield10)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.009*px.killShield10);
   if(px.aspdKill)addBuff(p,'aspd',0.20*px.aspdKill,4,3);
   if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff))addBuff(p,'critR',14,4,3);
   if(px.killDefBuff)addBuff(p,'def',10*px.killDefBuff,3,3);
@@ -279,7 +279,7 @@ function dealDmg(G,e,ratio,fromBasic){
   e.hp-=d;
   if(p.steal>0)heal(p,d*p.steal/100);
   if(crit){
-    if(px.critChain)addBuff(p,'critR',3*px.critChain,3,5);
+    if(px.critChain)addBuff(p,'critR',5*px.critChain,3,5);
     if(px.critFsmall)addBuff(p,'critF',10*px.critFsmall,3,3);
     if(px.critFBuff)addBuff(p,'critF',34*px.critFBuff,4,3);
     if(px.critAtkBuff)addBuff(p,'atk',0.15*px.critAtkBuff,4,3);
@@ -292,7 +292,7 @@ function dealDmg(G,e,ratio,fromBasic){
   if(e.hp<=0)onKill(G,e);
   return crit;
 }
-function fireAxe(p){const G=p.G,n=p.px.axeCount?3:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'axe',x:p.worldX+14,tgt:t,ratio:0.50,spd:430});}}
+function fireAxe(p){const G=p.G,n=p.px.axeCount?4:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'axe',x:p.worldX+14,tgt:t,ratio:0.50,spd:430});}}
 function fireArrows(p){const G=p.G,n=p.px.arrowCount?4:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560});}}
 function fireBolts(p){const G=p.G,n=p.px.boltCount?3:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)dealDmg(G,t,0.75);}}
 function fireWave(p){const G=p.G;G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?480:340),hit:new Set(),pierce:p.px.waveKing?4:2});}
@@ -370,7 +370,7 @@ function playerStrike(G,e){
   if(p.nextAtk>0){ratio*=1+p.nextAtk;p.nextAtk=0;}
   const crit=dealDmg(G,e,ratio,true);
   if(px.clone&&e.hp>0)dealDmg(G,e,0.5);
-  if(crit&&px.extraHit&&pkk(p,0.30*px.extraHit)&&e.hp>0)dealDmg(G,e,1);
+  if(crit&&px.extraHit&&pkk(p,0.45*px.extraHit)&&e.hp>0)dealDmg(G,e,1.3);
   procOnAttack(G);
 }
 
