@@ -21,5 +21,5 @@
 
 ## 주인 할 일
 
-- [ ] GitHub Pages 활성화: https://github.com/kuzuni/aaaw/settings/pages → Branch=main, /(root)
+- [x] ~~GitHub Pages 활성화~~ — **이미 활성화됨** (주인 확인 2026-09-02, https://kuzuni.github.io/aaaw/ HTTP 200). main push 마다 자동 배포된다.
 - [ ] (T4 후) 대화형 세션에서 아티팩트 republish 요청
