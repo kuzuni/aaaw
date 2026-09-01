@@ -8,16 +8,16 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 /* ---------- 튜닝 파라미터 (여기 숫자를 게임에 이식) ---------- */
 const TUNE={
   eBaseHp:40, eBaseDmg:8,
-  eHpG:1.11, eDmgG:1.14,        // 챕터당 성장 (R02 튜닝)
-  wallHp:2.6, wallDmg:1.15,     // 10챕터 이상 벽 배수 (R02)
+  eHpG:1.15, eDmgG:1.10,        // 챕터당 성장 (R04)
+  wallHp:2.6, wallDmg:1.15,     // 10챕터 이상 벽 배수 (R04)
   wall2Hp:1.06, wall2Dmg:1.0,   // 15챕터 이상 추가 배수 (R02)
-  waveHp:0.50, waveDmg:0.26,    // 웨이브 인덱스당 (R02)
-  bossHp:12, bossDmg:1.8, bigBoss:1.5,
+  waveHp:0.15, waveDmg:0.08,    // 웨이브 인덱스당 (R03)
+  bossHp:8, bossDmg:1.8,        // 주인 확정 상수 (튜닝 노브 아님) — 5배수 챕터 추가 배수 폐기
   pDmg:l=>30+8*l, pHp:l=>300+60*l, pAspd:l=>1+0.03*l, pCrit:l=>5+l,
   /* 강화 비용 = base * growth^Lv (growth 는 PLAN §7 조정 노브) */
   costBase:{dmg:40, hp:40, aspd:60, crit:55},
   costG:{dmg:1.07, hp:1.07, aspd:1.09, crit:1.09},
-  goldKillBase:0.8, goldKillPer:0.14, goldClearPer:5,
+  goldKillBase:0.9, goldKillPer:0.10, goldClearPer:4,
   expKill:3, expBoss:9, expNeed:lv=>4+2*lv,
 };
 TUNE.cost={
@@ -71,7 +71,7 @@ function mkPerks(){
   add('c_critChain',0,p=>p.px.critChain++);
   add('c_critF',0,p=>p.px.critFsmall++);
   add('c_critHeal1',0,p=>p.px.critHealS++);
-  add('c_killHeal2',0,p=>p.killHeal+=0.02);
+  add('c_killHeal2',0,p=>p.killHeal+=0.005);
   add('c_killShield3',0,p=>p.px.killShield3++);
   add('c_gold30',0,p=>p.goldMul+=0.3);
   add('c_defHit',0,p=>p.px.defHitBuff++);
@@ -126,7 +126,7 @@ function mkPerks(){
   add('l_critAtk',2,p=>p.px.critAtkBuff++);
   add('l_critAspd',2,p=>p.px.critAspdBuff++);
   add('l_killAspd',2,p=>p.px.killAspd=true,1);
-  add('l_killHeal5',2,p=>p.killHeal+=0.05);
+  add('l_killHeal5',2,p=>p.killHeal+=0.008);
   add('l_killShield10',2,p=>p.px.killShield10++);
   add('l_thorns',2,p=>p.px.thorns++);
   add('l_evadeHitBuff',2,p=>p.px.evadeHitBuff++);
@@ -143,7 +143,7 @@ function mkPerks(){
   add('l_rage',2,p=>p.px.rage=true,1);
   add('l_backDmg',2,p=>p.px.backDmg=true,1);
   add('l_execute',2,p=>p.px.execute=true,1);
-  add('l_perkHp',2,p=>{p.px.perkHp=true; for(let i=0;i<p.G.perkChances;i++){const a=p.maxHp*0.05;p.maxHp+=a;heal(p,a,true);}},1);
+  add('l_perkHp',2,p=>{p.px.perkHp=true; for(let i=0;i<p.G.perkChances;i++){const a=p.maxHp*0.03;p.maxHp+=a;heal(p,a,true);}},1);
   add('l_misfire',2,p=>p.misfire+=0.30);
   add('l_legendOnly',2,p=>p.G.legendOnly=true,1);
   add('l_def10',2,p=>p.def+=10);
@@ -155,7 +155,7 @@ function mkPerks(){
   add('m_arsenal',3,p=>p.px.arsenal++);
   add('m_guard',3,p=>p.px.guardCrystal=true,1);
   add('m_autoBolt',3,p=>p.px.autoBolt++);
-  add('m_time',3,p=>{p.aspd*=1.5;p.walkMul+=0.5;});
+  add('m_time',3,p=>{p.aspd*=1.35;p.walkMul+=0.35;});
   add('m_axe3',3,p=>p.px.axeCount=1,1);
   add('m_arrow4',3,p=>p.px.arrowCount=1,1);
   add('m_spear200',3,p=>p.px.spearMaster=1,1);
@@ -165,10 +165,10 @@ function mkPerks(){
   add('m_sage',3,p=>p.px.sage=true,1);
   add('m_def20',3,p=>p.def+=20);
   add('m_crit25',3,p=>p.critR+=25);
-  add('m_giant',3,p=>{const a=p.maxHp*0.5;p.maxHp+=a;heal(p,a,true);});
+  add('m_giant',3,p=>{const a=p.maxHp*0.3;p.maxHp+=a;heal(p,a,true);});
   add('m_lucky',3,p=>{p.evade+=15;p.counter+=15;});
   add('m_choice4',3,p=>p.px.choice4=true,1);
-  add('m_fortress',3,p=>p.maxSh*=1.5);
+  add('m_fortress',3,p=>p.maxSh*=1.8);
   add('m_wallBuff',3,p=>p.px.wallBuff++);
   return P;
 }
@@ -223,11 +223,11 @@ function heal(p,amt,noBoost){
   if(!noBoost){
     if(px.healDefBuff&&pkk(p,0.30*px.healDefBuff)) addBuff(p,'def',5*px.healDefBuff,3,3);
     if(px.healShield3&&pkk(p,0.20*px.healShield3)) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.03);
-    if(px.healShield5&&pkk(p,0.20*px.healShield5)) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05);
-    if(px.healAtkBuff) addBuff(p,'atk',0.05,3,3);
+    if(px.healShield5&&pkk(p,0.30*px.healShield5)) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.08);
+    if(px.healAtkBuff) addBuff(p,'atk',0.08,3,3);
     if(over>0){
       if(px.overheal) p.sh=Math.min(p.maxSh,p.sh+over);
-      if(px.overBolt&&p.G.overBoltCd<=0){ p.G.overBoltCd=1.5; fireBolts(p,true); }
+      if(px.overBolt&&p.G.overBoltCd<=0){ p.G.overBoltCd=1.0; fireBolts(p,true); }
     }
   }
 }
@@ -245,20 +245,20 @@ function onKill(G,e){
   G.kills++;
   G.gold+=Math.round(TUNE.goldKill(G.chapter)*p.goldMul);
   if(p.killHeal>0)heal(p,p.maxHp*p.killHeal);
-  if(px.killShield3)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.03*px.killShield3);
-  if(px.killShield10)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.10*px.killShield10);
-  if(px.aspdKill)addBuff(p,'aspd',0.15*px.aspdKill,4,3);
-  if(px.killCritBuff&&pkk(p,0.20*px.killCritBuff))addBuff(p,'critR',10,4,3);
+  if(px.killShield3)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.01*px.killShield3);
+  if(px.killShield10)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.015*px.killShield10);
+  if(px.aspdKill)addBuff(p,'aspd',0.20*px.aspdKill,4,3);
+  if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff))addBuff(p,'critR',14,4,3);
   if(px.killDefBuff)addBuff(p,'def',10*px.killDefBuff,3,3);
   if(px.killAspd)p.aspd*=1.01;
-  if(e.wave.enemies.every(x=>x.hp<=0)&&!e.isBoss){p.sh=p.maxSh;}
+  /* 웨이브 전멸 실드 충전 폐지 (PLAN §2.3 주인 지시) — 실드 충전은 특전으로만 */
+  if(e.isBoss)G.cleared=true;   /* 클리어 확정을 먼저 — 보스 경험치로 레벨업해도 특전 3택 없음 (PLAN §2.4 주인 지시) */
   gainExp(G,(e.isBoss?TUNE.expBoss:TUNE.expKill)+(px.sage?1:0));
-  if(e.isBoss)G.cleared=true;
 }
 function gainExp(G,n){
   const p=G.player;
   p.exp+=n;
-  while(p.exp>=TUNE.expNeed(p.level)){p.exp-=TUNE.expNeed(p.level);p.level++;perkChoice(G);}
+  while(p.exp>=TUNE.expNeed(p.level)){p.exp-=TUNE.expNeed(p.level);p.level++;if(!G.cleared)perkChoice(G);}
 }
 function dealDmg(G,e,ratio,fromBasic){
   if(e.hp<=0)return false;
@@ -281,31 +281,31 @@ function dealDmg(G,e,ratio,fromBasic){
   if(crit){
     if(px.critChain)addBuff(p,'critR',3*px.critChain,3,5);
     if(px.critFsmall)addBuff(p,'critF',10*px.critFsmall,3,3);
-    if(px.critFBuff)addBuff(p,'critF',20*px.critFBuff,4,3);
+    if(px.critFBuff)addBuff(p,'critF',34*px.critFBuff,4,3);
     if(px.critAtkBuff)addBuff(p,'atk',0.15*px.critAtkBuff,4,3);
     if(px.critAspdBuff)addBuff(p,'aspd',0.15*px.critAspdBuff,3,3);
     if(px.critHealS&&pkk(p,0.20*px.critHealS))heal(p,p.maxHp*0.01);
-    if(px.critHeal3&&pkk(p,0.20*px.critHeal3))heal(p,p.maxHp*0.03);
-    if(px.critReset&&pkk(p,0.30*px.critReset))p.atkTimer=0;
+    if(px.critHeal3&&pkk(p,0.30*px.critHeal3))heal(p,p.maxHp*0.04);
+    if(px.critReset&&pkk(p,0.45*px.critReset))p.atkTimer=0;
   }
   if(px.execKill&&!e.isBoss&&e.hp>0&&e.hp<=e.maxHp*0.15)e.hp=0;
   if(e.hp<=0)onKill(G,e);
   return crit;
 }
-function fireAxe(p){const G=p.G,n=p.px.axeCount?3:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'axe',x:p.worldX+14,tgt:t,ratio:0.30,spd:430});}}
-function fireArrows(p){const G=p.G,n=p.px.arrowCount?4:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'parrow',x:p.worldX+14,tgt:t,ratio:0.50,spd:560});}}
+function fireAxe(p){const G=p.G,n=p.px.axeCount?3:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'axe',x:p.worldX+14,tgt:t,ratio:0.50,spd:430});}}
+function fireArrows(p){const G=p.G,n=p.px.arrowCount?4:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560});}}
 function fireBolts(p){const G=p.G,n=p.px.boltCount?3:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)dealDmg(G,t,0.75);}}
-function fireWave(p){const G=p.G;G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.50,spd:470,maxX:p.worldX+(p.px.waveKing?480:340),hit:new Set(),pierce:p.px.waveKing?4:2});}
+function fireWave(p){const G=p.G;G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?480:340),hit:new Set(),pierce:p.px.waveKing?4:2});}
 function fireSpear(p){const G=p.G;G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?2.0:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set()});}
 function procOnAttack(G){
   const p=G.player,px=p.px;
   if(px.atkPerm&&pkk(p,0.10*px.atkPerm))p.dmg*=1.01;
   if(px.c_atkBuff&&pkk(p,0.30*px.c_atkBuff))addBuff(p,'atk',0.05,3,5);
   if(px.c_aspdBuff&&pkk(p,0.30*px.c_aspdBuff))addBuff(p,'aspd',0.05,3,5);
-  if(px.atkBuffM&&pkk(p,0.20*px.atkBuffM))addBuff(p,'atk',0.10,4,5);
+  if(px.atkBuffM&&pkk(p,0.30*px.atkBuffM))addBuff(p,'atk',0.14,4,5);
   if(px.atkBuffL&&pkk(p,0.15*px.atkBuffL))addBuff(p,'atk',0.25,5,3);
-  if(px.axe&&pkk(p,0.10*px.axe))fireAxe(p);
-  if(px.arrow2&&pkk(p,0.10*px.arrow2))fireArrows(p);
+  if(px.axe&&pkk(p,0.15*px.axe))fireAxe(p);
+  if(px.arrow2&&pkk(p,0.15*px.arrow2))fireArrows(p);
   if(px.wave&&pkk(p,0.20*px.wave))fireWave(p);
   if(px.spear&&pkk(p,0.10*px.spear))fireSpear(p);
   if(px.bolt&&pkk(p,0.10*px.bolt))fireBolts(p);
@@ -317,9 +317,9 @@ function doCounter(G,src,depth){
   const cd=effDmg(p)*0.7*(1+px.counterX);
   src.hp-=cd;
   if(px.counterAtkS)addBuff(p,'atk',0.05*px.counterAtkS,3,3);
-  if(px.counterDefS)addBuff(p,'def',5*px.counterDefS,3,3);
-  if(px.counterAtkM)addBuff(p,'atk',0.10*px.counterAtkM,4,3);
-  if(px.counterCrit)addBuff(p,'critR',10,3,3);
+  if(px.counterDefS)addBuff(p,'def',8*px.counterDefS,3,3);
+  if(px.counterAtkM)addBuff(p,'atk',0.14*px.counterAtkM,4,3);
+  if(px.counterCrit)addBuff(p,'critR',14,3,3);
   if(px.counterHeal)heal(p,p.maxHp*0.02*px.counterHeal);
   if(px.counterWave&&pkk(p,0.30*px.counterWave))fireWave(p);
   if(src.hp<=0)onKill(G,src);
@@ -328,14 +328,14 @@ function doCounter(G,src,depth){
 function hitPlayer(G,dmg,isMelee,src){
   const p=G.player,px=p.px;
   if(Math.random()*100<effEvade(p)){
-    if(px.evadeEvBuff)addBuff(p,'evade',5*px.evadeEvBuff,3,3);
+    if(px.evadeEvBuff)addBuff(p,'evade',8*px.evadeEvBuff,3,3);
     if(px.evadeAspd)addBuff(p,'aspd',0.05,2,3);
     if(px.evadeDef)addBuff(p,'def',5*px.evadeDef,3,3);
     if(px.evadeAtkBuff)addBuff(p,'atk',0.10*px.evadeAtkBuff,4,3);
     if(px.evadeRush&&p.nextAtk<1.5)p.nextAtk=Math.min(1.5,p.nextAtk+0.5*px.evadeRush);
     if(px.evadeCrit)p.nextCrit=true;
-    if(px.evadeHeal&&pkk(p,0.10*px.evadeHeal))heal(p,p.maxHp*0.05);
-    if(px.evadeShield&&pkk(p,0.10*px.evadeShield))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.12);
+    if(px.evadeHeal&&pkk(p,0.15*px.evadeHeal))heal(p,p.maxHp*0.07);
+    if(px.evadeShield&&pkk(p,0.15*px.evadeShield))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.18);
     if(px.evadeCounter&&pkk(p,0.30*px.evadeCounter))doCounter(G,src);
     return;
   }
@@ -345,22 +345,22 @@ function hitPlayer(G,dmg,isMelee,src){
   if(d>0){
     p.hp-=d;
     if(p.hp<=0){
-      if(px.revive>0){px.revive--;p.hp=p.maxHp*0.5;p.sh=p.maxSh*0.5;}
+      if(px.revive>0){px.revive--;p.hp=p.maxHp*0.15;p.sh=p.maxSh*0.15;}
       else{p.hp=0;G.dead=true;return;}
     }
   }
   if(px.defHitBuff)addBuff(p,'def',3*px.defHitBuff,3,5);
-  if(px.defBuff2&&pkk(p,0.20*px.defBuff2))addBuff(p,'def',10,4,3);
+  if(px.defBuff2&&pkk(p,0.30*px.defBuff2))addBuff(p,'def',14,4,3);
   if(px.defBuffL&&pkk(p,0.20*px.defBuffL))addBuff(p,'def',15,4,2);
-  if(px.wallBuff)addBuff(p,'def',20,4,2);
-  if(px.hitEvadeBuff&&pkk(p,0.15*px.hitEvadeBuff))addBuff(p,'evade',10,3,2);
+  if(px.wallBuff)addBuff(p,'def',14,4,2);
+  if(px.hitEvadeBuff&&pkk(p,0.22*px.hitEvadeBuff))addBuff(p,'evade',14,3,2);
   if(px.evadeHitBuff&&pkk(p,0.30*px.evadeHitBuff))addBuff(p,'evade',15,3,2);
   if(px.shieldOnHit&&pkk(p,0.10*px.shieldOnHit))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05);
   if(px.hitHeal&&pkk(p,0.15*px.hitHeal))heal(p,p.maxHp*0.02);
   if(px.thorns&&src&&src.hp>0&&pkk(p,0.15*px.thorns)){src.hp-=dmg*0.5;if(src.hp<=0)onKill(G,src);}
   if(isMelee&&src&&src.hp>0){
     const cc=Math.random()*100<p.counter;
-    const pc=(px.hitCounter&&pkk(p,0.20*px.hitCounter))||(px.hitCounterS&&pkk(p,0.10*px.hitCounterS));
+    const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.10*px.hitCounterS));
     if(cc||pc)doCounter(G,src);
   }
 }
@@ -381,19 +381,21 @@ function rollRarity(G){
   return r<0.15?3:r<0.40?2:r<0.70?1:0;
 }
 function rollPerks(G,n){
-  const out=[],used=new Set();let guard=0;
-  while(out.length<n&&guard++<500){
-    const rar=rollRarity(G);
-    const pool=PERKS.filter(x=>x.r===rar&&!used.has(x)&&!(x.u&&G.taken.includes(x))&&(!G.rarityLock||G.rarityLock===rar||!G.rarityLockOn));
-    if(!pool.length)continue;
-    const perk=pick(pool);used.add(perk);out.push(perk);
+  /* PLAN §3.0 주인 지시: 등급은 선택지당 1번만 굴리고, 전부 그 등급에서만 나온다 (등급 섞임 금지) */
+  const rar=rollRarity(G);
+  const pool=PERKS.filter(x=>x.r===rar&&!(x.u&&G.taken.includes(x)));
+  const out=[],used=new Set();
+  while(out.length<n&&out.length<pool.length){
+    const perk=pick(pool);
+    if(used.has(perk))continue;
+    used.add(perk);out.push(perk);
   }
   return out;
 }
 function perkChoice(G){
   G.perkChances++;
   const p=G.player;
-  if(p.px.perkHp){const a=p.maxHp*0.05;p.maxHp+=a;heal(p,a,true);}
+  if(p.px.perkHp){const a=p.maxHp*0.03;p.maxHp+=a;heal(p,a,true);}
   let opts;
   if(G.rarityLockOn){ /* 등급 고정 실험 */
     const pool=PERKS.filter(x=>x.r===G.rarityLock&&!(x.u&&G.taken.includes(x)));
@@ -428,8 +430,7 @@ function runChapter(chapter,up,opts){
       wi++;x+=(node.size-1)*88+560;
     }else if(node.t==='boss'){
       const st=enemyStats(chapter,wi);
-      let bh=st.hp*TUNE.bossHp,bd=st.dmg*TUNE.bossDmg;
-      if(chapter%5===0){bh*=TUNE.bigBoss;bd*=1.2;}
+      const bh=st.hp*TUNE.bossHp,bd=st.dmg*TUNE.bossDmg;   /* 챕터 무관 항상 동일 (PLAN §6 주인 확정) */
       nd.enemies.push({worldX:x+60,hp:bh,maxHp:bh,dmg:bd,ranged:false,
         atkTimer:1.2,wave:nd,dead:false,isBoss:true,hits:0});
     }else x+=470;
@@ -449,7 +450,7 @@ function runChapter(chapter,up,opts){
       if(!n.done&&(n.type==='rest'||n.type==='devil'||n.type==='angel')&&p.worldX>n.x-95){
         n.done=true;ev=true;
         if(n.type==='rest'){
-          if(p.px.restHp){const a=p.maxHp*0.10*p.px.restHp;p.maxHp+=a;heal(p,a,true);}
+          if(p.px.restHp){const a=p.maxHp*0.15*p.px.restHp;p.maxHp+=a;heal(p,a,true);}
           if(p.hp<p.maxHp*0.6)heal(p,p.maxHp*0.4);
           else gainExp(G,10);
         }else if(n.type==='devil'){
@@ -529,8 +530,9 @@ function runChapter(chapter,up,opts){
 
 /* ---------- 실험들 ---------- */
 function exp1_rarityLadder(){
-  console.log('\n=== 실험1: 등급 고정 파워 사다리 (챕터6, 강화 각 6렙, 300판) ===');
-  const up={dmg:6,hp:6,aspd:6,crit:6};
+  const L1=parseInt(process.env.EXP1_UP||'4',10);   /* T5 규칙 재보정(R04 경제): 챕터6 도달 중앙값 4렙 */
+  console.log(`\n=== 실험1: 등급 고정 파워 사다리 (챕터6, 강화 각 ${L1}렙, 300판) ===`);
+  const up={dmg:L1,hp:L1,aspd:L1,crit:L1};
   for(const rar of [null,0,1,2,3]){
     let wins=0,times=0,n=300;
     for(let i=0;i<n;i++){
@@ -542,8 +544,9 @@ function exp1_rarityLadder(){
   }
 }
 function exp2_perkWinrate(){
-  console.log('\n=== 실험2: 특전별 기여도 (챕터8, 강화 8렙, 1200판) ===');
-  const up={dmg:8,hp:8,aspd:8,crit:8};
+  const L=parseInt(process.env.EXP2_UP||'6',10);   /* T5 규칙 재보정(R04 경제): 챕터8 도달 중앙값 6렙 */
+  console.log(`\n=== 실험2: 특전별 기여도 (챕터8, 강화 ${L}렙, 1200판) ===`);
+  const up={dmg:L,hp:L,aspd:L,crit:L};
   const stat={};
   for(const p of PERKS)stat[p.id]={w:0,n:0};
   let base=0,N=1200;
@@ -564,18 +567,32 @@ function exp2_perkWinrate(){
   rows.slice(0,12).forEach(x=>console.log(`  ${x.id}(${['일','희','전','신'][x.r]}) ${x.wr.toFixed(0)}% (${x.n}판)`));
   console.log('-- 하위 12 --');
   rows.slice(-12).forEach(x=>console.log(`  ${x.id}(${['일','희','전','신'][x.r]}) ${x.wr.toFixed(0)}% (${x.n}판)`));
+  /* 채점표 실험2 기준(등급 내 최상−최하 < 25%p) 을 바로 읽을 수 있게 등급별 요약 추가 */
+  console.log('-- 등급별 스프레드 (표본 25판 이상만) --');
+  for(let r=0;r<4;r++){
+    const rr=rows.filter(x=>x.r===r);
+    if(!rr.length){console.log(`  ${['일반','희귀','전설','신화'][r]}: 표본 없음`);continue;}
+    const hi=rr[0],lo=rr[rr.length-1],sp=hi.wr-lo.wr;
+    console.log(`  ${['일반','희귀','전설','신화'][r]}: 최상 ${hi.id} ${hi.wr.toFixed(0)}% / 최하 ${lo.id} ${lo.wr.toFixed(0)}% → 폭 ${sp.toFixed(0)}%p ${sp<25?'OK':'초과'}`);
+  }
 }
 function exp3_progression(){
   console.log('\n=== 실험3: 전체 진행 시뮬 (챕터 1→20, 골드로 강화 구매) ===');
   const up={dmg:0,hp:0,aspd:0,crit:0};
   let gold=0;
   const keys=['dmg','hp','aspd','crit'];
+  /* 강화 상한 티어 (PLAN §2.2 주인 지시): 상한 = 10*(1+floor(min(4종 레벨)/10)) */
+  const capOf=()=>10*(1+Math.floor(Math.min(up.dmg,up.hp,up.aspd,up.crit)/10));
   const buy=()=>{
     let bought=true;
     while(bought){
       bought=false;
+      const cap=capOf();
       let best=null,bestCost=1e18;
-      for(const k of keys){const c=TUNE.cost[k](up[k]);if(c<=gold&&c<bestCost){best=k;bestCost=c;}}
+      for(const k of keys){
+        if(up[k]>=cap)continue;                     /* 상한에 걸린 강화는 구매 불가 */
+        const c=TUNE.cost[k](up[k]);if(c<=gold&&c<bestCost){best=k;bestCost=c;}
+      }
       if(best){gold-=bestCost;up[best]++;bought=true;}
     }
   };
