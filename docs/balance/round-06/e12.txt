@@ -1,0 +1,41 @@
+
+=== 실험1: 등급 고정 파워 사다리 (챕터6, 강화 각 4렙, 300판) ===
+혼합: 클리어 38.7%  평균시간 120s
+일반: 클리어 8.3%  평균시간 134s
+희귀: 클리어 31.3%  평균시간 122s
+전설: 클리어 60.0%  평균시간 115s
+신화: 클리어 77.3%  평균시간 111s
+
+=== 실험2: 특전별 기여도 (챕터8, 강화 6렙, 1200판) ===
+전체 클리어율: 13.5%
+-- 상위 12 --
+  m_def20(신) 31% (101판)
+  l_killHeal5(전) 29% (167판)
+  m_arsenal(신) 29% (108판)
+  l_killAspd(전) 26% (174판)
+  l_killShield10(전) 25% (146판)
+  m_autoBolt(신) 24% (94판)
+  c_killHeal2(일) 24% (120판)
+  m_giant(신) 23% (111판)
+  r_healShield5(희) 23% (144판)
+  l_fullHpCrit(전) 22% (167판)
+  r_evadeShield(희) 22% (125판)
+  m_clone(신) 21% (103판)
+-- 하위 12 --
+  c_critF(일) 9% (121판)
+  r_counterX(희) 9% (121판)
+  c_def3(일) 9% (126판)
+  c_walk20(일) 9% (141판)
+  l_evadeCounter(전) 8% (137판)
+  c_critHeal1(일) 8% (125판)
+  r_defBuff2(희) 8% (117판)
+  c_gold30(일) 7% (128판)
+  m_gold2(신) 7% (102판)
+  r_healAmp(희) 7% (122판)
+  r_counterAtkM(희) 6% (116판)
+  c_counterDef(일) 6% (136판)
+-- 등급별 스프레드 (표본 25판 이상만) --
+  일반: 최상 c_killHeal2 24% / 최하 c_counterDef 6% → 폭 18%p OK
+  희귀: 최상 r_healShield5 23% / 최하 r_counterAtkM 6% → 폭 17%p OK
+  전설: 최상 l_killHeal5 29% / 최하 l_evadeCounter 8% → 폭 21%p OK
+  신화: 최상 m_def20 31% / 최하 m_gold2 7% → 폭 24%p OK

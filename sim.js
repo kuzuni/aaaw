@@ -8,9 +8,9 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 /* ---------- 튜닝 파라미터 (여기 숫자를 게임에 이식) ---------- */
 const TUNE={
   eBaseHp:40, eBaseDmg:8,
-  eHpG:1.15, eDmgG:1.10,        // 챕터당 성장 (R04)
-  wallHp:2.6, wallDmg:1.15,     // 10챕터 이상 벽 배수 (R04)
-  wall2Hp:1.06, wall2Dmg:1.0,   // 15챕터 이상 추가 배수 (R02)
+  eHpG:1.185, eDmgG:1.08,       // 챕터당 성장 (R06 — 중반 6~9 를 조이려 HP 성장 상향, 후반 즉사 압박을 줄이려 DMG 성장 하향)
+  wallHp:1.95, wallDmg:1.25,    // 10챕터 이상 벽 배수 (R06 — eHpG 상향분만큼 HP 배수를 내려 챕터10 절대 난도 유지)
+  wall2Hp:0.82, wall2Dmg:1.0,   // 15챕터 이상 추가 배수 (R06 — 챕터15~19 상한 초과 완화)
   waveHp:0.15, waveDmg:0.08,    // 웨이브 인덱스당 (R03)
   bossHp:8, bossDmg:1.8,        // 주인 확정 상수 (튜닝 노브 아님) — 5배수 챕터 추가 배수 폐기
   pDmg:l=>30+8*l, pHp:l=>300+60*l, pAspd:l=>1+0.03*l, pCrit:l=>5+l,
@@ -126,7 +126,7 @@ function mkPerks(){
   add('l_critAtk',2,p=>p.px.critAtkBuff++);
   add('l_critAspd',2,p=>p.px.critAspdBuff++);
   add('l_killAspd',2,p=>p.px.killAspd=true,1);
-  add('l_killHeal5',2,p=>p.killHeal+=0.008);
+  add('l_killHeal5',2,p=>p.killHeal+=0.0055);
   add('l_killShield10',2,p=>p.px.killShield10++);
   add('l_thorns',2,p=>p.px.thorns++);
   add('l_evadeHitBuff',2,p=>p.px.evadeHitBuff++);
@@ -143,7 +143,7 @@ function mkPerks(){
   add('l_rage',2,p=>p.px.rage=true,1);
   add('l_backDmg',2,p=>p.px.backDmg=true,1);
   add('l_execute',2,p=>p.px.execute=true,1);
-  add('l_perkHp',2,p=>{p.px.perkHp=true; for(let i=0;i<p.G.perkChances;i++){const a=p.maxHp*0.03;p.maxHp+=a;heal(p,a,true);}},1);
+  add('l_perkHp',2,p=>{p.px.perkHp=true; for(let i=0;i<p.G.perkChances;i++){const a=p.maxHp*0.018;p.maxHp+=a;heal(p,a,true);}},1);
   add('l_misfire',2,p=>p.misfire+=0.30);
   add('l_legendOnly',2,p=>p.G.legendOnly=true,1);
   add('l_def10',2,p=>p.def+=10);
@@ -155,7 +155,7 @@ function mkPerks(){
   add('m_arsenal',3,p=>p.px.arsenal++);
   add('m_guard',3,p=>p.px.guardCrystal=true,1);
   add('m_autoBolt',3,p=>p.px.autoBolt++);
-  add('m_time',3,p=>{p.aspd*=1.35;p.walkMul+=0.35;});
+  add('m_time',3,p=>{p.aspd*=1.21;p.walkMul+=0.21;});
   add('m_axe3',3,p=>p.px.axeCount=1,1);
   add('m_arrow4',3,p=>p.px.arrowCount=1,1);
   add('m_spear200',3,p=>p.px.spearMaster=1,1);
@@ -163,12 +163,12 @@ function mkPerks(){
   add('m_wave4',3,p=>p.px.waveKing=1,1);
   add('m_gold2',3,p=>p.goldMul*=2,1);
   add('m_sage',3,p=>p.px.sage=true,1);
-  add('m_def20',3,p=>p.def+=20);
-  add('m_crit25',3,p=>p.critR+=25);
-  add('m_giant',3,p=>{const a=p.maxHp*0.3;p.maxHp+=a;heal(p,a,true);});
-  add('m_lucky',3,p=>{p.evade+=15;p.counter+=15;});
+  add('m_def20',3,p=>p.def+=17);
+  add('m_crit25',3,p=>p.critR+=21);
+  add('m_giant',3,p=>{const a=p.maxHp*0.21;p.maxHp+=a;heal(p,a,true);});
+  add('m_lucky',3,p=>{p.evade+=11;p.counter+=11;});
   add('m_choice4',3,p=>p.px.choice4=true,1);
-  add('m_fortress',3,p=>p.maxSh*=1.8);
+  add('m_fortress',3,p=>p.maxSh*=2.4);
   add('m_wallBuff',3,p=>p.px.wallBuff++);
   return P;
 }
@@ -205,7 +205,7 @@ function addBuff(p,k,amt,dur,max){
   if(arr.length>=max){let mi=0;for(let i=1;i<arr.length;i++)if(arr[i].t<arr[mi].t)mi=i;arr[mi]={t:dur,amt};}
   else arr.push({t:dur,amt});
 }
-const pkk=(p,ch)=>Math.random()<ch*(p.px.procX2?2:1);
+const pkk=(p,ch)=>Math.random()<ch*(p.px.procX2?1.7:1);
 const effDmg=p=>{let m=1+bsum(p,'atk');if(p.px.rage&&p.sh<=0)m*=1.5;return p.dmg*m;};
 const effAspd=p=>p.aspd*(1+bsum(p,'aspd'));
 const effCritR=p=>p.critR+bsum(p,'critR');
@@ -226,8 +226,8 @@ function heal(p,amt,noBoost){
     if(px.healShield5&&pkk(p,0.30*px.healShield5)) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.08);
     if(px.healAtkBuff) addBuff(p,'atk',0.08,3,3);
     if(over>0){
-      if(px.overheal) p.sh=Math.min(p.maxSh,p.sh+over);
-      if(px.overBolt&&p.G.overBoltCd<=0){ p.G.overBoltCd=1.0; fireBolts(p,true); }
+      if(px.overheal) p.sh=Math.min(p.maxSh,p.sh+over*7);
+      if(px.overBolt&&p.G.overBoltCd<=0){ p.G.overBoltCd=0.12; fireBolts(p,true); }
     }
   }
 }
@@ -246,7 +246,7 @@ function onKill(G,e){
   G.gold+=Math.round(TUNE.goldKill(G.chapter)*p.goldMul);
   if(p.killHeal>0)heal(p,p.maxHp*p.killHeal);
   if(px.killShield3)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.007*px.killShield3);
-  if(px.killShield10)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.009*px.killShield10);
+  if(px.killShield10)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.0075*px.killShield10);
   if(px.aspdKill)addBuff(p,'aspd',0.20*px.aspdKill,4,3);
   if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff))addBuff(p,'critR',14,4,3);
   if(px.killDefBuff)addBuff(p,'def',10*px.killDefBuff,3,3);
@@ -265,16 +265,16 @@ function dealDmg(G,e,ratio,fromBasic){
   const p=G.player,px=p.px;
   let cr=effCritR(p);
   const full=e.hp>=e.maxHp-0.5;
-  if(px.fullHpCrit&&full)cr=100;
+  if(px.fullHpCrit&&full)cr=Math.max(cr,62);
   if(fromBasic&&p.nextCrit){cr=100;}
   const crit=Math.random()*100<cr;
   if(fromBasic&&p.nextCrit)p.nextCrit=false;
   let d=effDmg(p)*ratio*(crit?effCritF(p)/100:1)*rand(0.92,1.08);
   if(full&&px.firstHit)d*=1+0.20*px.firstHit;
-  if(px.execute&&e.hp<=e.maxHp*0.5)d*=1.5;
+  if(px.execute&&e.hp<=e.maxHp*0.5)d*=2.2;
   if(px.backDmg){
     let front=null;for(const en of aliveList(G))if(!front||en.worldX<front.worldX)front=en;
-    if(front&&e!==front)d*=2;
+    if(front&&e!==front)d*=3.2;
   }
   e.hp-=d;
   if(p.steal>0)heal(p,d*p.steal/100);
@@ -283,33 +283,33 @@ function dealDmg(G,e,ratio,fromBasic){
     if(px.critFsmall)addBuff(p,'critF',10*px.critFsmall,3,3);
     if(px.critFBuff)addBuff(p,'critF',34*px.critFBuff,4,3);
     if(px.critAtkBuff)addBuff(p,'atk',0.15*px.critAtkBuff,4,3);
-    if(px.critAspdBuff)addBuff(p,'aspd',0.15*px.critAspdBuff,3,3);
+    if(px.critAspdBuff)addBuff(p,'aspd',0.25*px.critAspdBuff,3,3);
     if(px.critHealS&&pkk(p,0.20*px.critHealS))heal(p,p.maxHp*0.01);
     if(px.critHeal3&&pkk(p,0.30*px.critHeal3))heal(p,p.maxHp*0.04);
     if(px.critReset&&pkk(p,0.45*px.critReset))p.atkTimer=0;
   }
-  if(px.execKill&&!e.isBoss&&e.hp>0&&e.hp<=e.maxHp*0.15)e.hp=0;
+  if(px.execKill&&!e.isBoss&&e.hp>0&&e.hp<=e.maxHp*0.25)e.hp=0;
   if(e.hp<=0)onKill(G,e);
   return crit;
 }
-function fireAxe(p){const G=p.G,n=p.px.axeCount?4:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'axe',x:p.worldX+14,tgt:t,ratio:0.50,spd:430});}}
-function fireArrows(p){const G=p.G,n=p.px.arrowCount?4:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560});}}
-function fireBolts(p){const G=p.G,n=p.px.boltCount?3:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)dealDmg(G,t,0.75);}}
-function fireWave(p){const G=p.G;G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?480:340),hit:new Set(),pierce:p.px.waveKing?4:2});}
-function fireSpear(p){const G=p.G;G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?2.0:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set()});}
+function fireAxe(p){const G=p.G,n=p.px.axeCount?14:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'axe',x:p.worldX+14,tgt:t,ratio:0.50,spd:430});}}
+function fireArrows(p){const G=p.G,n=p.px.arrowCount?14:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560});}}
+function fireBolts(p){const G=p.G,n=p.px.boltCount?16:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)dealDmg(G,t,0.75);}}
+function fireWave(p){const G=p.G;G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?900:340),hit:new Set(),pierce:p.px.waveKing?12:2});}
+function fireSpear(p){const G=p.G;G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?11.0:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set()});}
 function procOnAttack(G){
   const p=G.player,px=p.px;
   if(px.atkPerm&&pkk(p,0.10*px.atkPerm))p.dmg*=1.01;
   if(px.c_atkBuff&&pkk(p,0.30*px.c_atkBuff))addBuff(p,'atk',0.05,3,5);
   if(px.c_aspdBuff&&pkk(p,0.30*px.c_aspdBuff))addBuff(p,'aspd',0.05,3,5);
   if(px.atkBuffM&&pkk(p,0.30*px.atkBuffM))addBuff(p,'atk',0.14,4,5);
-  if(px.atkBuffL&&pkk(p,0.15*px.atkBuffL))addBuff(p,'atk',0.25,5,3);
+  if(px.atkBuffL&&pkk(p,0.25*px.atkBuffL))addBuff(p,'atk',0.35,5,3);
   if(px.axe&&pkk(p,0.15*px.axe))fireAxe(p);
   if(px.arrow2&&pkk(p,0.15*px.arrow2))fireArrows(p);
   if(px.wave&&pkk(p,0.20*px.wave))fireWave(p);
-  if(px.spear&&pkk(p,0.10*px.spear))fireSpear(p);
+  if(px.spear&&pkk(p,0.075*px.spear))fireSpear(p);
   if(px.bolt&&pkk(p,0.10*px.bolt))fireBolts(p);
-  if(px.arsenal&&pkk(p,0.20*px.arsenal))pick([fireAxe,fireArrows,fireBolts,fireWave,fireSpear])(p);
+  if(px.arsenal&&pkk(p,0.16*px.arsenal))pick([fireAxe,fireArrows,fireBolts,fireWave,fireSpear])(p);
 }
 function doCounter(G,src,depth){
   const p=G.player,px=p.px;
@@ -320,10 +320,10 @@ function doCounter(G,src,depth){
   if(px.counterDefS)addBuff(p,'def',8*px.counterDefS,3,3);
   if(px.counterAtkM)addBuff(p,'atk',0.14*px.counterAtkM,4,3);
   if(px.counterCrit)addBuff(p,'critR',14,3,3);
-  if(px.counterHeal)heal(p,p.maxHp*0.02*px.counterHeal);
-  if(px.counterWave&&pkk(p,0.30*px.counterWave))fireWave(p);
+  if(px.counterHeal)heal(p,p.maxHp*0.04*px.counterHeal);
+  if(px.counterWave&&pkk(p,1.0*px.counterWave))fireWave(p);
   if(src.hp<=0)onKill(G,src);
-  else if(px.counterChain&&!depth&&Math.random()<0.5)doCounter(G,src,1);
+  else if(px.counterChain&&depth<2&&Math.random()<1.0)doCounter(G,src,1);
 }
 function hitPlayer(G,dmg,isMelee,src){
   const p=G.player,px=p.px;
@@ -331,33 +331,33 @@ function hitPlayer(G,dmg,isMelee,src){
     if(px.evadeEvBuff)addBuff(p,'evade',8*px.evadeEvBuff,3,3);
     if(px.evadeAspd)addBuff(p,'aspd',0.05,2,3);
     if(px.evadeDef)addBuff(p,'def',5*px.evadeDef,3,3);
-    if(px.evadeAtkBuff)addBuff(p,'atk',0.10*px.evadeAtkBuff,4,3);
+    if(px.evadeAtkBuff)addBuff(p,'atk',0.28*px.evadeAtkBuff,5,3);
     if(px.evadeRush&&p.nextAtk<1.5)p.nextAtk=Math.min(1.5,p.nextAtk+0.5*px.evadeRush);
     if(px.evadeCrit)p.nextCrit=true;
     if(px.evadeHeal&&pkk(p,0.15*px.evadeHeal))heal(p,p.maxHp*0.07);
     if(px.evadeShield&&pkk(p,0.15*px.evadeShield))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.18);
-    if(px.evadeCounter&&pkk(p,0.30*px.evadeCounter))doCounter(G,src);
+    if(px.evadeCounter&&pkk(p,1.0*px.evadeCounter))doCounter(G,src);
     return;
   }
   let d=dmg*(1-effDef(p)/100);
-  if(px.guardCrystal&&p.sh>0)d*=0.5;
+  if(px.guardCrystal&&p.sh>0)d*=0.62;
   if(p.sh>0){const ab=Math.min(p.sh,d);p.sh-=ab;d-=ab;}
   if(d>0){
     p.hp-=d;
     if(p.hp<=0){
-      if(px.revive>0){px.revive--;p.hp=p.maxHp*0.15;p.sh=p.maxSh*0.15;}
+      if(px.revive>0){px.revive--;p.hp=p.maxHp*0.07;p.sh=p.maxSh*0.07;}
       else{p.hp=0;G.dead=true;return;}
     }
   }
   if(px.defHitBuff)addBuff(p,'def',3*px.defHitBuff,3,5);
   if(px.defBuff2&&pkk(p,0.30*px.defBuff2))addBuff(p,'def',14,4,3);
   if(px.defBuffL&&pkk(p,0.20*px.defBuffL))addBuff(p,'def',15,4,2);
-  if(px.wallBuff)addBuff(p,'def',14,4,2);
+  if(px.wallBuff)addBuff(p,'def',10,4,2);
   if(px.hitEvadeBuff&&pkk(p,0.22*px.hitEvadeBuff))addBuff(p,'evade',14,3,2);
   if(px.evadeHitBuff&&pkk(p,0.30*px.evadeHitBuff))addBuff(p,'evade',15,3,2);
   if(px.shieldOnHit&&pkk(p,0.10*px.shieldOnHit))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05);
   if(px.hitHeal&&pkk(p,0.15*px.hitHeal))heal(p,p.maxHp*0.02);
-  if(px.thorns&&src&&src.hp>0&&pkk(p,0.15*px.thorns)){src.hp-=dmg*0.5;if(src.hp<=0)onKill(G,src);}
+  if(px.thorns&&src&&src.hp>0&&pkk(p,0.60*px.thorns)){src.hp-=dmg*1.5;if(src.hp<=0)onKill(G,src);}
   if(isMelee&&src&&src.hp>0){
     const cc=Math.random()*100<p.counter;
     const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.10*px.hitCounterS));
@@ -369,8 +369,8 @@ function playerStrike(G,e){
   let ratio=1;
   if(p.nextAtk>0){ratio*=1+p.nextAtk;p.nextAtk=0;}
   const crit=dealDmg(G,e,ratio,true);
-  if(px.clone&&e.hp>0)dealDmg(G,e,0.5);
-  if(crit&&px.extraHit&&pkk(p,0.45*px.extraHit)&&e.hp>0)dealDmg(G,e,1.3);
+  if(px.clone&&e.hp>0)dealDmg(G,e,0.37);
+  if(crit&&px.extraHit&&pkk(p,0.75*px.extraHit)&&e.hp>0)dealDmg(G,e,2.3);
   procOnAttack(G);
 }
 
@@ -395,7 +395,7 @@ function rollPerks(G,n){
 function perkChoice(G){
   G.perkChances++;
   const p=G.player;
-  if(p.px.perkHp){const a=p.maxHp*0.03;p.maxHp+=a;heal(p,a,true);}
+  if(p.px.perkHp){const a=p.maxHp*0.018;p.maxHp+=a;heal(p,a,true);}
   let opts;
   if(G.rarityLockOn){ /* 등급 고정 실험 */
     const pool=PERKS.filter(x=>x.r===G.rarityLock&&!(x.u&&G.taken.includes(x)));
@@ -471,7 +471,7 @@ function runChapter(chapter,up,opts){
     const dist=tgt.worldX-p.worldX;
     if(dist>74){p.worldX+=132*p.walkMul*dt;p.atkTimer=Math.min(p.atkTimer,0.35);}
     else{p.atkTimer-=dt*effAspd(p);if(p.atkTimer<=0){p.atkTimer+=1;playerStrike(G,tgt);}}
-    if(p.px.autoBolt){G.autoBoltT-=dt;if(G.autoBoltT<=0){G.autoBoltT=2;for(let k=0;k<p.px.autoBolt;k++){const t2=randTarget(G);if(t2)dealDmg(G,t2,0.75);}}}
+    if(p.px.autoBolt){G.autoBoltT-=dt;if(G.autoBoltT<=0){G.autoBoltT=2.4;for(let k=0;k<p.px.autoBolt;k++){const t2=randTarget(G);if(t2)dealDmg(G,t2,0.75);}}}
     /* 적 */
     for(const e of alive){
       if(e.hp<=0)continue;
@@ -545,11 +545,14 @@ function exp1_rarityLadder(){
 }
 function exp2_perkWinrate(){
   const L=parseInt(process.env.EXP2_UP||'6',10);   /* T5 규칙 재보정(R04 경제): 챕터8 도달 중앙값 6렙 */
-  console.log(`\n=== 실험2: 특전별 기여도 (챕터8, 강화 ${L}렙, 1200판) ===`);
+  /* 진단 전용 오버라이드 (채점용 기본값은 PLAN §7 의 1200판 그대로).
+     EXP2_N: 표본 수를 늘려 «측정 노이즈 대 실제 아웃라이어» 를 분리할 때만 사용.
+     EXP2_FULL=1: 등급별 전 특전 승률을 덤프해 어느 특전을 올리고 내릴지 고를 때 사용. */
+  let base=0,N=parseInt(process.env.EXP2_N||'1200',10);
+  console.log(`\n=== 실험2: 특전별 기여도 (챕터8, 강화 ${L}렙, ${N}판) ===`);
   const up={dmg:L,hp:L,aspd:L,crit:L};
   const stat={};
   for(const p of PERKS)stat[p.id]={w:0,n:0};
-  let base=0,N=1200;
   for(let i=0;i<N;i++){
     const r=runChapter(8,up,{});
     if(r.clear)base++;
@@ -574,6 +577,13 @@ function exp2_perkWinrate(){
     if(!rr.length){console.log(`  ${['일반','희귀','전설','신화'][r]}: 표본 없음`);continue;}
     const hi=rr[0],lo=rr[rr.length-1],sp=hi.wr-lo.wr;
     console.log(`  ${['일반','희귀','전설','신화'][r]}: 최상 ${hi.id} ${hi.wr.toFixed(0)}% / 최하 ${lo.id} ${lo.wr.toFixed(0)}% → 폭 ${sp.toFixed(0)}%p ${sp<25?'OK':'초과'}`);
+  }
+  if(process.env.EXP2_FULL){
+    console.log('-- [진단] 등급별 전 특전 승률 (표본 25판 이상, 내림차순) --');
+    for(let r=0;r<4;r++){
+      const rr=rows.filter(x=>x.r===r);
+      console.log(`  [${['일반','희귀','전설','신화'][r]}] ${rr.map(x=>`${x.id} ${x.wr.toFixed(0)}%(${x.n})`).join(' · ')}`);
+    }
   }
 }
 function exp3_progression(){
