@@ -109,9 +109,12 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
      그래서 기다리는 동안 뜨는 레벨업 팝업을 계속 비워 가며 본다. */
   let gone = false, waited = 0;
   for (let i = 0; i < 40; i++) {
-    const st = await p.evaluate(() => ({ n: document.querySelectorAll('#buffBar .buff-ic').length, cards: document.querySelectorAll('.perk-card').length, paused: !!(G && G.paused) }));
+    const st = await p.evaluate(() => ({ n: document.querySelectorAll('#buffBar .buff-ic').length, cards: document.querySelectorAll('.perk-card').length,
+      choice: document.querySelectorAll('#overlay .choice-btn').length, paused: !!(G && G.paused) }));
     if (st.n === 0) { gone = true; break; }
     if (st.cards) { await p.click('.perk-card'); await p.waitForTimeout(300); }
+    /* 쉼터·악마·천사 이벤트 팝업이 뜨면 그것도 게임을 멈춘다 — 아무 선택지나 눌러 진행시킨다 */
+    else if (st.choice) { await p.click('#overlay .choice-btn'); await p.waitForTimeout(300); }
     await p.waitForTimeout(300); waited += 300;
   }
   chk('지속시간이 끝나면 아이콘이 사라진다', gone, `${(waited / 1000).toFixed(1)}초 안에 소멸 (버프 4초 + 팝업 정지 시간)`);

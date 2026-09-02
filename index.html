@@ -2048,6 +2048,10 @@ function aliveEnemies(){
   for(const n of G.nodes) for(const e of n.enemies) if(e.hp>0) out.push(e);
   return out;
 }
+/* 지금 «필드 위에» 있는 적이 속한 노드 = 플레이어가 상대하고 있는 최전방 노드. sim.js frontNode() 와 1:1.
+   주인 확정 보강(15:2X): 관통형(창·검기)은 이 노드의 적만 맞는다 — 다음 웨이브 대기분은 절대 맞지 않는다.
+   챕터의 적을 시작할 때 한꺼번에 만들어 두므로(노드 간격 560px, 창 사거리 88×8=704px) 필터가 없으면 꿰뚫린다. */
+function frontNode(){ let b=null; for(const n of G.nodes) for(const e of n.enemies) if(e.hp>0&&(!b||e.worldX<b.worldX)) b=e; return b?b.wave:null; }
 function randTarget(){
   const p=G.player;
   const pool=aliveEnemies().filter(e=>{const d=e.worldX-p.worldX; return d>-30&&d<540;});
@@ -2086,12 +2090,12 @@ function fireBolts(p){
 }
 function fireWave(p){
   AU.play('throw');
-  G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?1400:340),hit:new Set(),pierce:p.px.waveKing?20:2});
+  G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?1400:340),hit:new Set(),pierce:p.px.waveKing?20:2,node:frontNode()});
 }
 function fireSpear(p){
   AU.play('throw');
   /* 창 관통 상한 8마리 — PLAN §3.3 l_spear «일직선 8명 거리(88px×8) 관통» (T34). sim.js:663 과 동일 */
-  G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set(),pierce:8});
+  G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set(),pierce:8,node:frontNode()});
 }
 function gainExp(n){
   const p=G.player;
@@ -2400,6 +2404,7 @@ function update(dt){
     let done=false;
     if(pr.type==='spear'||pr.type==='wave'){
       for(const e of aliveEnemies()){
+        if(pr.node&&e.wave!==pr.node) continue;   /* 미스폰·대기 웨이브 피격 금지 (주인 15:2X) */
         if(!pr.hit.has(e)&&Math.abs(e.worldX-pr.x)<16){
           pr.hit.add(e);
           dealPlayerDamage(e,pr.ratio,pr.type==='spear'?'🔱':'🌊');

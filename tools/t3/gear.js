@@ -69,12 +69,19 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   /* 천장 — 50회에서 신화가 반드시 나온다 */
   const pity = await p.evaluate(() => {
     save.inv = []; save.gacha = { p50: 0, p10: 0, pulls: 0 }; save.gem = 1e9;
+    /* «50번째가 반드시 신화» 로 보면 안 된다 — 그 전에 자연 신화가 나오면 천장이 리셋된다.
+       천장의 실제 약속은 «신화 없이 50회를 넘기지 않는다», 피티는 «전설 이상 없이 10회를 넘기지 않는다» 다. */
     const rar = [];
-    for (let i = 0; i < 50; i++) rar.push(gachaPull(save.gacha).rar);
-    return { first50: rar[49], myth: rar.filter(r => r === 4).length, leg10: rar.slice(0, 10).some(r => r >= 3) };
+    for (let i = 0; i < 600; i++) rar.push(gachaPull(save.gacha).rar);
+    let gapM = 0, curM = 0, gapL = 0, curL = 0;
+    for (const r of rar) {
+      curM = r === 4 ? 0 : curM + 1; gapM = Math.max(gapM, curM);
+      curL = r >= 3 ? 0 : curL + 1; gapL = Math.max(gapL, curL);
+    }
+    return { gapM, gapL, myth: rar.filter(r => r === 4).length, leg: rar.filter(r => r >= 3).length, n: rar.length };
   });
-  chk('50회 천장에서 신화 확정', pity.first50 === 4, `50번째 등급 ${pity.first50}`);
-  chk('10회 안에 전설 이상 (피티)', pity.leg10);
+  chk('50회 천장 — 신화 없이 50회를 넘지 않는다', pity.gapM <= 50, `600회 중 최장 무신화 구간 ${pity.gapM}회 · 신화 ${pity.myth}개`);
+  chk('10회 피티 — 전설 이상 없이 10회를 넘지 않는다', pity.gapL <= 10, `최장 무전설 구간 ${pity.gapL}회 · 전설↑ ${pity.leg}개`);
   await p.screenshot({ path: `${OUT}/t3-shop.png` });
 
   /* ---------- 장비 탭 ---------- */

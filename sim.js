@@ -598,6 +598,11 @@ function heal(p,amt,noBoost){
 
 /* 시뮬 전투 상태 */
 function aliveList(G){const o=[];for(const n of G.nodes)for(const e of n.enemies)if(e.hp>0)o.push(e);return o;}
+/* 지금 «필드 위에» 있는 적이 속한 노드 = 플레이어가 상대하고 있는 최전방 노드.
+   주인 확정 보강(15:2X): 관통형(창·검기)은 이 노드의 적만 맞는다 — 다음 웨이브 대기분은 절대 맞지 않는다.
+   두 엔진 다 챕터의 적을 시작할 때 한꺼번에 만들어 두므로(노드 간격 560px, 창 사거리 88×8=704px)
+   필터가 없으면 창이 다음 웨이브까지 꿰뚫는다. 발사 시점의 노드를 투사체에 박아 두고 그것만 때린다. */
+function frontNode(G){let b=null;for(const n of G.nodes)for(const e of n.enemies)if(e.hp>0&&(!b||e.worldX<b.worldX))b=e;return b?b.wave:null;}
 function randTarget(G){
   const p=G.player;
   const pool=aliveList(G).filter(e=>{const d=e.worldX-p.worldX;return d>-30&&d<540;});
@@ -659,10 +664,10 @@ function dealDmg(G,e,ratio,fromBasic){
 function fireAxe(p){const G=p.G,n=p.px.axeCount?14:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'axe',x:p.worldX+14,tgt:t,ratio:0.50,spd:430});}}
 function fireArrows(p){const G=p.G,n=p.px.arrowCount?24:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560});}}
 function fireBolts(p){const G=p.G,n=p.px.boltCount?20:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)dealDmg(G,t,0.75);}}
-function fireWave(p){const G=p.G;G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?1400:340),hit:new Set(),pierce:p.px.waveKing?20:2});}
+function fireWave(p){const G=p.G;G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?1400:340),hit:new Set(),pierce:p.px.waveKing?20:2,node:frontNode(G)});}
 /* 창 관통 상한 8마리 — PLAN §3.3 l_spear «일직선 8명 거리(88px×8) 관통» 의 «8명» 이 엔진에 없어
    12마리 웨이브에서 총출력이 162배까지 갔다(T34). 신화 m_spear200 은 데미지만 올리고 관통 수는 그대로. */
-function fireSpear(p){const G=p.G;G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set(),pierce:8});}
+function fireSpear(p){const G=p.G;G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set(),pierce:8,node:frontNode(G)});}
 function procOnAttack(G){
   const p=G.player,px=p.px;
   if(px.atkPerm&&pkk(p,0.10*px.atkPerm))p.dmg*=1.01;
@@ -879,6 +884,7 @@ function runChapter(chapter,build,opts){
       const pr=G.pprojs[i];pr.x+=pr.spd*dt;let done=false;
       if(pr.type==='spear'||pr.type==='wave'){
         for(const e of aliveList(G)){
+          if(pr.node&&e.wave!==pr.node)continue;   /* 미스폰·대기 웨이브 피격 금지 (주인 15:2X) */
           if(!pr.hit.has(e)&&Math.abs(e.worldX-pr.x)<16){
             pr.hit.add(e);dealDmg(G,e,pr.ratio);
             if(pr.hit.size>=pr.pierce){done=true;break;}
