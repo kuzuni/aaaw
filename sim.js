@@ -32,6 +32,15 @@ if(process.env.TUNE_OVERRIDE){
 
 /* ---------- 챕터 레이아웃 (결정적) ---------- */
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ---------- 시드 RNG (하니스 전용 · R11) ----------
+   `SEED=<정수>` 를 주면 Math.random 을 결정적 스트림으로 갈아끼운다. SEED 미설정 시 동작은 종전과 완전히 동일하다.
+   스트림을 둘로 나눈 이유: 실험4 «과금은 가속만» 기준(§7)을 재려면 F2P/과금이 같은 난수를 써야 하는데(공통난수),
+   과금은 1일차에 뽑기를 30회 더 하므로 단일 스트림이면 그 시점부터 전투 난수까지 통째로 어긋나 비교가 무의미해진다.
+   뽑기를 별도 스트림으로 빼면 «k번째 뽑기 결과» 가 두 계정에서 동일해져, 과금은 같은 뽑기 수열을 더 빨리 소비할 뿐이 된다. */
+let RNG_GACHA=null;
+function setSeed(s){ const m=mulberry(s|0); Math.random=()=>m(); RNG_GACHA=mulberry((s^0x9E3779B9)|0); }
+const grand=()=>(RNG_GACHA||Math.random)();
 function chapterLayout(c){
   const rnd=mulberry(c*1013904223+77);
   const waveCount=4+(rnd()<0.4?1:0);
@@ -406,7 +415,7 @@ function gachaPull(st){
   let rar;
   if(pityM) rar=4;
   else{
-    const r=Math.random()*100;
+    const r=grand()*100;
     rar = r<0.1?4 : r<2.1?3 : r<12.1?2 : r<42.1?1 : 0;
     if(pityL&&rar<3) rar=3;
   }
@@ -415,7 +424,7 @@ function gachaPull(st){
     /* 50천장과 10피티가 겹치면 신화 우선 · 전설 확정은 다음 뽑기로 이월(p10 유지) */
     if(!(pityM&&pityL)) st.p10=0;
   }else if(rar===3) st.p10=0;
-  const t=pick(GT.allTypes);
+  const t=GT.allTypes[Math.floor(grand()*GT.allTypes.length)];   /* 뽑기 스트림 (R11) */
   return {part:t.part,type:t.type,rar,plus:0};
 }
 
@@ -901,7 +910,7 @@ function harness(env,defRar,defPlus,defSlot){
   return {b:mkBuild(rar,plus,slot),desc:`${GT.rarName[rar]}${plus?'+'+plus:''} 6부위 · 슬롯 ${slot}렙`};
 }
 function exp1_rarityLadder(){
-  const h=harness('EXP1_GEAR',3,0,2);   /* 실험3 관측: 챕터6 도달 시점 중앙값 = 전설 장비·슬롯 2렙 (T5 재보정 규칙 — R07 재보정, 5런 전부 슬롯 최저 2렙) */
+  const h=harness('EXP1_GEAR',3,0,1);   /* 실험3 관측: 챕터6 도달 시점 중앙값 = 전설 장비·슬롯 1렙 (T5 재보정 규칙 — R11 재보정, 12런 중앙값 1렙[1이 8런·2가 4런]. R09 의 slotCostG 4.2→3.5 가 재보정 대상 변경이었는데 R09·R10 이 이를 빠뜨렸다 — T26. 구값 2렙은 R07·slotCostG 4.2 시절 5런 관측) */
   console.log(`\n=== 실험1: 등급 고정 파워 사다리 (챕터6, 하니스 ${h.desc}, 300판) ===`);
   for(const rar of [null,0,1,2,3]){
     let wins=0,times=0,n=300;
@@ -1058,6 +1067,7 @@ function fitAnchors(){
 }
 
 const mode=process.argv[2]||'all';
+if(process.env.SEED!==undefined&&process.env.SEED!=='') setSeed(Number(process.env.SEED));   /* R11: 하니스 시드 (미설정 시 종전과 동일) */
 if(mode==='table'){ dumpGearTable(); process.exit(0); }
 if(mode==='fit'){ fitAnchors(); process.exit(0); }
 if(mode==='1'||mode==='all')exp1_rarityLadder();

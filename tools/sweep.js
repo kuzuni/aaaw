@@ -17,10 +17,15 @@ const root=path.join(__dirname,'..');
 const band=c=>c<=5?[1,2]:c<=9?[2,5]:c===10?[10,400]:c<=19?[3,10]:c===20?[10,30]
   :c<=49?[1,20]:c<=89?[1,40]:c===90?[30,400]:c<=299?[1,50]:[30,400];
 
+/* R11: SWEEP_SEED 를 주면 런 i 가 SEED=SWEEP_SEED+i 로 돈다 — 여러 구성을 «같은 난수» 로 비교(공통난수)해
+   R10 이 부딪힌 «런간 분산이 노브 효과보다 커서 전 구성이 구별 불가» 문제를 없앤다. 미설정 시 종전과 동일(무시드). */
+const SEED0=process.env.SWEEP_SEED!==undefined&&process.env.SWEEP_SEED!==''?Number(process.env.SWEEP_SEED):null;
 const runs=[],slots=[],gears=[];
 for(let i=0;i<N;i++){
+  const env=Object.assign({},process.env,{TUNE_OVERRIDE:ov,GT_OVERRIDE:gov,EXP3_MAX:String(MAXC)});
+  if(SEED0!==null)env.SEED=String(SEED0+i); else delete env.SEED;
   const out=execFileSync('node',[path.join(root,'sim.js'),'3'],
-    {env:Object.assign({},process.env,{TUNE_OVERRIDE:ov,GT_OVERRIDE:gov,EXP3_MAX:String(MAXC)}),encoding:'utf8',maxBuffer:1<<24});
+    {env,encoding:'utf8',maxBuffer:1<<24});
   const att={},sl={},gr={};
   for(const line of out.split('\n')){
     const m=line.match(/^챕터\s+(\d+): 시도\s+(\d+)회\s+슬롯\s+([\d/]+)\s+장비\s+(\S+)/);
