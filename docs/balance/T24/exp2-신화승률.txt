@@ -1,0 +1,14 @@
+-- 등급별 스프레드 (표본 25판 이상만) --
+  일반: 최상 c_killHeal2 84.7% / 최하 c_firstHit 54.3% → 폭 30.4%p 초과
+  희귀: 최상 r_healShield5 76.9% / 최하 r_refresh 58.5% → 폭 18.5%p OK
+  전설: 최상 l_perkHp 84.4% / 최하 l_critAtk 61.4% → 폭 23.0%p OK
+  신화: 최상 m_crit25 82.0% / 최하 m_arsenal 62.9% → 폭 19.1%p OK
+-- [진단] 등급별 전 특전 승률 (표본 25판 이상, 내림차순) --
+  [일반] c_killHeal2 85%(150) · c_shieldHit 80%(144) · c_hitHeal 75%(146) · c_hp12 73%(129) · c_critF 70%(119) · c_evadeEv 70%(148) · c_def3 69%(157) · c_killShield3 69%(148) · c_evadeDef 67%(140) · c_aspdBuff 67%(135) · c_counterDef 66%(148) · c_critChain 66%(133) · c_gold30 65%(150) · c_healShield 65%(135) · c_defHit 65%(131) · c_healDef 65%(128) · c_atkPerm 65%(113) · c_counterAtk 63%(145) · c_critHeal1 63%(152) · c_healBoost 62%(150) · c_walk20 60%(134) · c_evadeAspd 59%(122) · c_sh15 59%(153) · c_hitCounterS 59%(148) · c_atkBuff 59%(143) · c_firstHit 54%(116)
+  [희귀] r_healShield5 77%(130) · r_evadeShield 76%(147) · r_wave 74%(114) · r_critHeal3 73%(135) · r_lastStand 73%(127) · r_defBuff2 73%(129) · r_evadeHeal 73%(129) · r_killDef 71%(133) · r_def6 70%(131) · r_arrow 70%(126) · r_killCrit 69%(121) · r_counterCrit 68%(139) · r_critFBuff 68%(123) · r_healAmp 67%(140) · r_axe 66%(131) · r_hitCounter 65%(150) · r_restHp 65%(151) · r_aspdKill 64%(136) · r_evadeRush 64%(132) · r_hitEvade 64%(140) · r_critReset 63%(128) · r_counterX 62%(133) · r_counterAtkM 61%(132) · r_atkBuffM 61%(117) · r_healAtk 60%(132) · r_refresh 58%(142)
+  [전설] l_perkHp 84%(212) · l_fullHpCrit 82%(194) · l_killAspd 81%(199) · l_evadeCrit 81%(232) · l_def10 80%(193) · l_killHeal5 80%(218) · l_execute 78%(227) · l_rage 77%(222) · l_atkBuffL 76%(197) · l_evadeAtk 75%(181) · l_bolt 74%(225) · l_evadeCounter 73%(211) · l_counterHeal 72%(196) · l_defBuffL 72%(231) · l_legendOnly 72%(176) · l_killShield10 70%(198) · l_evadeHitBuff 69%(209) · l_spear 69%(192) · l_critAspd 69%(224) · l_counterWave 68%(190) · l_backDmg 68%(208) · l_misfire 66%(216) · l_overheal 65%(200) · l_counterChain 65%(205) · l_overBolt 64%(207) · l_thorns 63%(198) · l_extraHit 62%(223) · l_critAtk 61%(197)
+  [신화] m_crit25 82%(122) · m_procX2 80%(99) · m_time 79%(125) · m_wallBuff 79%(127) · m_lucky 77%(112) · m_revive 76%(105) · m_axe3 75%(110) · m_def20 75%(137) · m_fortress 73%(116) · m_clone 73%(130) · m_giant 72%(112) · m_arrow4 71%(108) · m_bolt3 71%(108) · m_guard 71%(109) · m_wave4 68%(116) · m_autoBolt 68%(111) · m_sage 66%(120) · m_execKill 64%(123) · m_spear200 64%(109) · m_choice4 64%(95) · m_gold2 64%(117) · m_arsenal 63%(105)
+
+=== 실험2: 특전별 기여도 (챕터8, 하니스 신화 6부위 · 슬롯 0렙, 1200판) ===
+전체 클리어율: 68.8%
+-- 상위 12 --
