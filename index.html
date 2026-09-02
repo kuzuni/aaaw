@@ -1766,7 +1766,7 @@ const PERKS=[
   {id:'l_def10', r:2, ic:'🧱', tx:'방어력 <b>+10%</b>', ap:p=>p.def+=10},
   {id:'l_stunHit3', r:2, ic:'💫', tx:'피격 시 <b>55%</b> 확률로 공격한 적 <b>3초</b> 기절', ap:p=>p.px.stunHitL++},
   {id:'l_stunCrit3', r:2, ic:'💫🔥', tx:'치명타 시 <b>35%</b> 확률로 대상 <b>3초</b> 기절', ap:p=>p.px.stunCritL++},
-  {id:'l_missCrit', r:2, ic:'🎯💨', tx:'빗나갈 시 다음 공격 <b>치명타 확정</b> (고유)', ap:p=>p.px.missCrit=true, u:1},
+  {id:'l_missCrit', r:2, ic:'🎯💨', tx:'빗나갈 시 다음 공격 <b>치명타 확정</b>', ap:p=>p.px.missCrit=true, u:1},
   {id:'l_missStack', r:2, ic:'💢', tx:'빗나갈 시 데미지 <b>+100%</b> 스택 획득 (최대 <b>5개</b>) — 적중 <b>1타당 1개</b> 소모, 한 타에 <b>+100%</b> 한 번만', ap:p=>p.px.missStack++},
   {id:'l_rangeBolt', r:2, ic:'🏹⚡', tx:'원거리 피격 시 <b>30%</b> 확률로 번개 <b>1회</b> (공격력의 <b>75%</b>, 랜덤 적)', ap:p=>p.px.rangeBolt++},
   /* ---------- 신화 (22종) ---------- */
@@ -1792,17 +1792,17 @@ const PERKS=[
   {id:'m_choice4', r:3, ic:'🔮', tx:'전지의 눈 — 특전 선택지가 4개가 됨', ap:p=>p.px.choice4=true, u:1},
   {id:'m_fortress', r:3, ic:'🏯', tx:'요새 — 실드 최대치 <b>+140%</b>', ap:p=>p.maxSh*=2.4},
   {id:'m_wallBuff', r:3, ic:'🧱👑', tx:'철벽 — 피격 시 <b>4초간</b> 방어력 <b>+10%p</b> (최대 <b>2중첩</b>)', ap:p=>p.px.wallBuff++},
-  {id:'m_stunLord', r:3, ic:'💫👑', tx:'뇌옥의 지배자 — 기절 지속 <b>2배</b> & 기절한 적에게 데미지 <b>1.6배</b> (고유)', ap:p=>p.px.stunLord=true, u:1},
-  {id:'m_stunKill', r:3, ic:'💥💫', tx:'충격파 — 처치 시 사거리 안 모든 적 <b>1.2초</b> 기절 (고유)', ap:p=>p.px.stunKill=true, u:1},
-  {id:'m_stunAura', r:3, ic:'💫🌀', tx:'위압 — <b>2.5초</b>마다 랜덤 적 1명 <b>2.5초</b> 기절 (중첩 시 횟수+1)', ap:p=>p.px.stunAura++},
-  {id:'m_missRush', r:3, ic:'💨👑', tx:'무념무상 — 빗나갈 시 <b>즉시 재공격</b> & 그 공격 데미지 <b>+100%</b> (고유)', ap:p=>p.px.missRush=true, u:1},
+  {id:'m_stunLord', r:3, ic:'💫👑', tx:'뇌옥의 지배자 — 기절 지속 <b>2배</b> & 기절한 적에게 주는 데미지 <b>1.6배</b>', ap:p=>p.px.stunLord=true, u:1},
+  {id:'m_stunKill', r:3, ic:'💥💫', tx:'충격파 — 처치 시 사거리 안 모든 적 <b>1.2초</b> 기절', ap:p=>p.px.stunKill=true, u:1},
+  {id:'m_stunAura', r:3, ic:'💫🌀', tx:'위압 — <b>2.5초</b>마다 랜덤 적 한 명 <b>2.5초</b> 기절 (중첩 시 횟수+1)', ap:p=>p.px.stunAura++},
+  {id:'m_missRush', r:3, ic:'💨👑', tx:'무념무상 — 빗나갈 시 <b>즉시 재공격</b> & 그 공격 데미지 <b>+100%</b>', ap:p=>p.px.missRush=true, u:1},
   {id:'m_missSpear', r:3, ic:'🔱💨', tx:'허공베기 — 빗나갈 시 <b>30%</b> 확률로 관통 창 발사', ap:p=>p.px.missSpear++},
   {id:'m_rangeSpear', r:3, ic:'🏹🔱', tx:'응사 — 원거리 피격 시 <b>30%</b> 확률로 관통 창 발사', ap:p=>p.px.rangeSpear++},
-  {id:'m_thornsKing', r:3, ic:'🌵👑', tx:'가시의 왕 — 피격 시 <b>반드시</b> 받은 피해의 <b>300%</b> 반사 (고유)', ap:p=>p.px.thornsKing=true, u:1},
-  {id:'m_stackMaster', r:3, ic:'📚👑', tx:'축적의 대가 — 모든 중첩 버프의 최대 중첩 <b>+5</b> (고유)', ap:p=>p.px.stackMaster=true, u:1},
-  {id:'m_reaper', r:3, ic:'☠️🌾', tx:'사신의 낫 — 회피 시 <b>10%</b> 확률로 공격한 그 적 <b>즉사</b> (보스 제외) (고유)', ap:p=>p.px.reaper=true, u:1},
-  {id:'m_wardKing', r:3, ic:'🛡️👑', tx:'불멸의 방벽 — 방어막 최대 <b>10장</b> & 방어막 획득 확률 <b>2배</b> (고유)', ap:p=>p.px.wardKing=true, u:1},
-  {id:'m_wardBurst', r:3, ic:'🛡️💥', tx:'반사 방벽 — 방어막으로 막을 때마다 그 적에게 공격력의 <b>300%</b> 반사 (고유)', ap:p=>p.px.wardBurst=true, u:1},
+  {id:'m_thornsKing', r:3, ic:'🌵👑', tx:'가시의 왕 — 피격 시 <b>반드시</b> 받은 피해의 <b>300%</b> 반사', ap:p=>p.px.thornsKing=true, u:1},
+  {id:'m_stackMaster', r:3, ic:'📚👑', tx:'축적의 대가 — 모든 중첩 버프의 최대 중첩 <b>+5</b>', ap:p=>p.px.stackMaster=true, u:1},
+  {id:'m_reaper', r:3, ic:'☠️🌾', tx:'사신의 낫 — 회피 시 <b>10%</b> 확률로 공격한 그 적 <b>즉사</b> (보스 제외)', ap:p=>p.px.reaper=true, u:1},
+  {id:'m_wardKing', r:3, ic:'🛡️👑', tx:'불멸의 방벽 — 방어막 최대 <b>10장</b> & 방어막 획득 확률 <b>2배</b>', ap:p=>p.px.wardKing=true, u:1},
+  {id:'m_wardBurst', r:3, ic:'🛡️💥', tx:'반사 방벽 — 방어막으로 막을 때마다 그 적에게 공격력의 <b>300%</b> 반사', ap:p=>p.px.wardBurst=true, u:1},
 ];
 const RARITY=[{nm:'일반',cc:'#9EA3AC'},{nm:'희귀',cc:'#4FA3E8'},{nm:'전설',cc:'#FFB92E'},{nm:'신화',cc:'#FF5E6C'}];
 /* 등급 확률: 일반 30 / 희귀 30 / 전설 25 / 신화 15 (sim.js rollRarity 와 1:1) */
@@ -2060,10 +2060,18 @@ function openOverlay(html,opts){
 }
 function closeOverlay(){ ov.classList.remove('on'); ov.innerHTML=''; ov.onclick=null; if(G) G.paused=false; }
 
+/* ⚑ T71 — 화면에 뜨는 특전 문구는 **여기 한 곳**에서만 만든다.
+   PLAN §3.1~3.4 «표시 텍스트» 열이 확정 스펙이고, 그 열은 고유 특전 35종에 «(고유)» 를 달고 있다.
+   종전엔 그 표기를 tx 문자열에 손으로 박아 뒀는데 T48 신규 9종에만 박혀서, 나머지 26종
+   (m_revive·m_clone·m_procX2·l_rage·r_lastStand …)은 «중복 획득 불가» 가 화면에 아예 안 떴다.
+   `u:1` 이 유일성의 유일한 근거이므로 표기도 거기서 파생시킨다 — 특전을 새로 넣을 때 손으로
+   덧붙일 것이 없어지고, 게이트(`verifyT2` ㊱)가 PLAN §3 표와 132종 전수를 1:1 로 대조한다.
+   T3 `battle.js` 는 그 문자열이 실제 DOM 까지 갔는지를 따로 본다. */
+const perkText=p=>p.tx+(p.u?' (고유)':'');
 function perkCardHTML(p,i,extra){
   const r=RARITY[p.r];
   return `<button class="perk-card ${extra||''} ${p.r===3?'myth':''}" data-i="${i}" style="--pc:${r.cc}">
-    <span class="tag">${r.nm}</span><span class="ic">${p.ic}</span><span class="tx">${p.tx}</span></button>`;
+    <span class="tag">${r.nm}</span><span class="ic">${p.ic}</span><span class="tx">${perkText(p)}</span></button>`;
 }
 function openPerkChoice(){
   G.perkChances++;
@@ -2149,7 +2157,7 @@ function openDevil(){
     takePerk(perk); renderStatsGrid(); updateBars();
     openOverlay(`<div class="big-emoji">${perk.ic}</div>
       <div class="ov-banner" style="color:${RARITY[perk.r].cc}">${RARITY[perk.r].nm} 특전 획득!</div>
-      <div class="ov-sub" style="font-size:16px">${perk.tx}</div>
+      <div class="ov-sub" style="font-size:16px">${perkText(perk)}</div>
       <button class="choice-btn gold" id="dOk">계속 전진</button>`,{rays:true});
     $('dOk').onclick=()=>{ AU.play('click'); closeOverlay(); };
   };

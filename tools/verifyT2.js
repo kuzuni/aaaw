@@ -2341,6 +2341,101 @@ console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
   }
 }
 
+/* ============================================================================
+   ㊱ 화면에 뜨는 특전 문구 ↔ PLAN §3 «표시 텍스트» 1:1 (T71)
+   ----------------------------------------------------------------------------
+   왜 게이트인가 — T8·T9·T11·T12 가 전부 «설명문에 적힌 것과 실제가 다르다» 였고,
+   그 계열을 막으려고 만든 verifyOptText 는 **PLAN ↔ sim.js 엔진 상수**만 본다.
+   정작 유저가 읽는 문자열(index.html 이 특전 카드에 렌더하는 것)은 아무도 PLAN 과
+   대조하지 않았고, 그래서 T71 이 나왔다: PLAN §3 은 고유 특전 35종에 «(고유)» 를
+   달아 뒀는데 화면에는 tx 에 손으로 박아 둔 9종만 떴다 — m_revive·m_clone·m_procX2·
+   l_rage·r_lastStand 등 **26종은 «중복 획득 불가» 가 화면에 아예 안 보였다.**
+   고칠 때 «26종 tx 에 손으로 덧붙이기» 를 골랐으면 다음 특전에서 또 빠진다.
+   그래서 `u:1` 하나를 근거로 `perkText()` 가 표기를 파생시키고, 이 게이트가
+   ① 파생 결과 ↔ PLAN, ② 하드코딩 되돌림, ③ 렌더 지점의 단일 출처를 함께 본다.
+   ============================================================================ */
+{
+  console.log('\n[㊱ 특전 표시 문구 ↔ PLAN §3 (T71)]');
+  const PLANTXT = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
+  const H36 = htmlPerks();
+
+  /* PLAN §3.1~3.4 표 파싱 — 첫 열이 sim id 인 행만 */
+  const planRow = {};
+  for (const line of PLANTXT.split('\n')) {
+    const m = line.match(/^\|\s*([a-z]_[A-Za-z0-9]+)\s*\|\s*(.+?)\s*(?:\|\s*(.+?)\s*)?\|\s*$/);
+    if (m) planRow[m[1]] = m[2];
+  }
+  const planIds = Object.keys(planRow);
+
+  /* «(Rnn↑)»·«(Rnn↓)» 는 PLAN 쪽 튜닝 이력 주석이지 표시 문자열이 아니다 — 그것만 면제한다.
+     그 밖의 모든 글자·숫자·괄호는 화면과 한 글자도 다르면 안 된다. */
+  const norm = t => t.replace(/\s*\(R\d+[↑↓]\)\s*/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, '').trim();
+  /* ⚑ 화면 문자열을 게이트가 «다시 적지» 않는다 — index.html 이 실제로 쓰는 perkText 정의를
+     그대로 꺼내 실행한다. 게이트가 규칙을 복사해 두면 페이지에서 그 규칙이 사라져도 ② 는
+     자기 복사본으로 계산해 통과한다(음성 ① 이 그 구멍을 찾았다). */
+  const mPT = HTML.match(/const perkText\s*=\s*([^\n;]+);/);
+  let perkTextFn = null;
+  if (mPT) { try { perkTextFn = vm.runInNewContext('(' + mPT[1] + ')'); } catch (e) { perkTextFn = null; } }
+  const shown = p => p.ic + ' ' + (perkTextFn ? perkTextFn(p) : p.tx);
+  perkTextFn
+    ? ok('⓪ index.html 의 perkText 정의를 그대로 실행해 화면 문자열을 만든다')
+    : bad('⓪ index.html 의 perkText 정의를 꺼내 실행하지 못했다 — 화면 문자열을 확인할 수 없다');
+
+  if (!H36) bad('① index.html 의 PERKS 배열을 못 읽었다 — 게이트 ㊱ 의 파서를 고칠 것');
+  else if (planIds.length !== H36.length) {
+    bad(`① PLAN §3 표 ${planIds.length}행 ≠ index.html 특전 ${H36.length}종`);
+  } else {
+    ok(`① PLAN §3 표 ${planIds.length}행 = index.html 특전 ${H36.length}종`);
+
+    /* ② 표시 문자열 전수 대조 */
+    let miss = 0, diff = [];
+    for (const p of H36) {
+      const want = planRow[p.id];
+      if (want === undefined) { miss++; diff.push(`${p.id} — PLAN §3 에 행이 없다`); continue; }
+      if (norm(want) !== norm(shown(p))) diff.push(`${p.id}\n      PLAN: ${want}\n      화면: ${shown(p).replace(/<[^>]+>/g, '')}`);
+    }
+    diff.length === 0
+      ? ok(`② 표시 문자열 ${H36.length}종 전수 일치 (아이콘·본문·«(고유)» 포함)`)
+      : bad(`② PLAN 과 다른 표시 문자열 ${diff.length}종:\n    - ` + diff.join('\n    - '));
+
+    /* ③ «(고유)» 는 u:1 에서만 파생된다 — tx 하드코딩 되돌림 감시 */
+    const hard = H36.filter(p => /\(고유\)/.test(p.tx)).map(p => p.id);
+    hard.length === 0
+      ? ok('③ tx 에 «(고유)» 하드코딩 0종 (u:1 파생만)')
+      : bad(`③ tx 에 «(고유)» 를 손으로 박은 특전 ${hard.length}종: ${hard.join(', ')} — perkText() 가 한 번 더 붙여 «(고유) (고유)» 가 되고, 안 박은 특전은 또 빠진다`);
+
+    /* ④ PLAN «(고유)» 집합 == index.html u:1 집합 */
+    const planU = new Set(planIds.filter(id => /\(고유\)/.test(planRow[id])));
+    const htmlU = new Set(H36.filter(p => p.u).map(p => p.id));
+    const only = a => [...a[0]].filter(x => !a[1].has(x));
+    const d1 = only([planU, htmlU]), d2 = only([htmlU, planU]);
+    (d1.length === 0 && d2.length === 0)
+      ? ok(`④ 고유 특전 집합 일치 — PLAN «(고유)» ${planU.size}종 = index.html u:1 ${htmlU.size}종`)
+      : bad(`④ 고유 집합 불일치 — PLAN 에만 [${d1.join(', ')}] · index.html 에만 [${d2.join(', ')}]`);
+  }
+
+  /* ⑤ 표시 문자열을 만드는 자리는 하나뿐이다 (단일 출처) */
+  const HS = HTML.replace(/\/\*[\s\S]*?\*\//g, '');
+  /perkText\s*=\s*p\s*=>\s*p\.tx\s*\+\s*\(p\.u\s*\?\s*' \(고유\)'\s*:\s*''\)/.test(HS)
+    ? ok("⑤ perkText() = p.tx + (p.u ? ' (고유)' : '') — 표기의 단일 출처")
+    : bad('⑤ perkText() 정의를 못 찾았다 — 표시 문자열이 다시 여러 곳에서 만들어지고 있다');
+
+  /* ⑥ 렌더 지점이 전부 perkText 를 쓴다 — 템플릿에 `${...tx}` 를 직접 박은 자리 0건 */
+  const rawTx = (HS.match(/\$\{\s*[A-Za-z_$][\w$]*\.tx\s*\}/g) || []);
+  rawTx.length === 0
+    ? ok('⑥ 특전 문구를 화면에 박는 자리 전부 perkText() 경유 (`${….tx}` 직접 삽입 0건)')
+    : bad(`⑥ perkText() 를 안 거치고 tx 를 그대로 박은 자리 ${rawTx.length}곳: ${rawTx.join(' · ')} — 그 자리에서만 «(고유)» 가 사라진다`);
+
+  /* 렌더 지점은 둘이다 — 특전 카드(perkCardHTML)와 악마 거래 «획득!» 팝업.
+     둘 중 하나가 perkText 를 안 거치면 그 화면에서만 «(고유)» 가 사라진다. */
+  const cardOK = /<span class="tx">\$\{perkText\(p\)\}<\/span>/.test(HS);
+  const devilOK = /ov-sub[^`]*\$\{perkText\(perk\)\}/.test(HS);
+  const useN = (HS.match(/perkText\(/g) || []).length;
+  (cardOK && devilOK && useN >= 2)
+    ? ok(`⑦ 렌더 지점 2곳 전부 perkText() 경유 — 특전 카드 ✓ · 악마 거래 획득 팝업 ✓ (총 ${useN}회 호출)`)
+    : bad(`⑦ 렌더 지점 누락 — 특전 카드 ${cardOK ? 'OK' : '✗'} · 악마 거래 팝업 ${devilOK ? 'OK' : '✗'} (perkText 호출 ${useN}회)`);
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');

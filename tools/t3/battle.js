@@ -84,6 +84,28 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('선택지 등급 통일 (주인 지시 06:2X)', new Set(pick.tags).size === 1, pick.tags.join(','));
   chk('특전 아이콘이 등급 메달리온 (6단계 구도)', pick.medal.every(Boolean));
 
+  /* ⚑ T71 — 고유 특전은 카드에 «(고유)» 가 실제로 찍혀야 한다.
+     정적 게이트(verifyT2 ㊱)는 PLAN 과 문자열을 대조하지만, «그 문자열이 DOM 까지 갔는가» 는 여기서 본다.
+     종전엔 tx 에 손으로 박은 9종만 표기가 떠서 나머지 26종이 화면에서 «중복 획득 불가» 를 못 알렸다. */
+  const uniqTx = await p.evaluate(() => {
+    const box = document.createElement('div');
+    const byId = id => PERKS.find(x => x.id === id);
+    const uniq = PERKS.filter(x => x.u), plain = PERKS.filter(x => !x.u);
+    box.innerHTML = uniq.map((x, i) => perkCardHTML(x, i)).join('') + plain.map((x, i) => perkCardHTML(x, i)).join('');
+    const txt = [...box.querySelectorAll('.perk-card .tx')].map(e => e.textContent);
+    const nU = uniq.length;
+    return {
+      uniqN: nU, plainN: plain.length,
+      uniqMissing: uniq.filter((x, i) => !/\(고유\)$/.test(txt[i].trim())).map(x => x.id),
+      plainExtra: plain.filter((x, i) => /\(고유\)/.test(txt[nU + i])).map(x => x.id),
+      sample: txt[uniq.indexOf(byId('m_revive'))],
+    };
+  });
+  chk('⚑ 고유 특전 전종이 카드에 «(고유)» 를 찍는다',
+    uniqTx.uniqMissing.length === 0, `고유 ${uniqTx.uniqN}종 · 누락 [${uniqTx.uniqMissing.join(',')}] · 예: ${uniqTx.sample}`);
+  chk('⚑ 고유가 아닌 특전에는 «(고유)» 가 안 붙는다',
+    uniqTx.plainExtra.length === 0, `일반 ${uniqTx.plainN}종 · 오표기 [${uniqTx.plainExtra.join(',')}]`);
+
   await p.click('.perk-card'); await p.waitForTimeout(300);
   const strip1 = await p.evaluate(() => ({ chips: document.querySelectorAll('#perkStrip .pv-ic').length, taken: G.perksTaken.length }));
   chk('⚑ 특전 미리보기 줄에 칩이 쌓인다', strip1.chips === 1 && strip1.taken === 1, `칩 ${strip1.chips} / 획득 ${strip1.taken}`);
