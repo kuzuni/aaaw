@@ -1590,7 +1590,78 @@ console.log('\n[㉗ 전투 플로팅 텍스트 표기 — addText 는 fmt 를 �
 }
 
 /* ============================================================================
-   ㉘ 보스 처치 ~ 클리어 확정 사이의 700ms 창 (T61)
+   ㉘ 절대배치 뱃지의 기준 상자 (T60)
+
+   `.bang`(합성 «!» 알림 점)은 `position:absolute; top:-6px; right:-4px` 라
+   **호스트 버튼이 positioned 여야만** 그 버튼 모서리에 붙는다. 호스트가 static 이면
+   기준 상자가 조상(`#gear`)으로 밀려 화면 우상단(-6·-4)으로 날아가고,
+   `#frame{overflow:hidden}` 에 잘린다 — 실제로 `#fuseBtn` 이 그랬다(T60 실측
+   378..394 × -6..10, 우 4px·상 6px 잘림, 정작 버튼은 267..304 에 있었다).
+
+   여기서는 되돌림과 «새 호스트» 둘 다 잡는다:
+   ① `.bang` 이 여전히 absolute + 음수 오프셋인가 (전제)
+   ② `class="bang"` 를 심는 호스트 집합이 등재분과 정확히 일치하는가
+      — 새 버튼에 뱃지를 달면 여기서 빨개져 «그 버튼도 positioned 인지» 를 강제한다
+   ③ 각 호스트를 positioned 로 만드는 CSS 규칙이 살아 있는가
+   ④ `#frame` 이 여전히 잘라내는가 (잘림이 실제 피해라는 근거)
+   실제 렌더 위치 단언은 T3 `tools/t3/gear.js` ⑤ 가 본다(정적으론 못 푸는 축).
+   ============================================================================ */
+{
+  console.log('\n[㉘ 절대배치 뱃지의 기준 상자 — .bang 호스트는 positioned (T60)]');
+
+  /* ① .bang 정의 */
+  const bangRule = (HTML.match(/\.bang\s*\{[^}]*\}/) || [''])[0];
+  /position:\s*absolute/.test(bangRule)
+    ? ok('.bang 이 position:absolute 다 (호스트 positioned 전제가 성립)')
+    : bad('.bang 이 absolute 가 아니다 — ㉘ 전제가 깨졌다. 규칙을 다시 세울 것');
+  /top:\s*-\d/.test(bangRule) && /right:\s*-\d/.test(bangRule)
+    ? ok('.bang 오프셋이 음수다 (top/right 모두) — 기준 상자가 틀리면 프레임 밖으로 나간다')
+    : bad('.bang 의 음수 오프셋(top/right)이 사라졌다 — ㉘ 이 지키던 실패 모드가 바뀌었다');
+
+  /* ② class="bang" 호스트 전수 수집 */
+  const BANG_HOSTS = {                       /* 호스트 id → 그를 positioned 로 만드는 CSS 셀렉터 */
+    fuseBtn: '#fuseBtn',                     /* 장비 탭 «🔨 합성» (T60 에서 position:relative 추가) */
+    fgAuto: '.forge-actionbar button',       /* 합성 화면 «⚙️ 자동» (T2 5단계부터 relative) */
+  };
+  const found = new Set();
+  for (const line of HTML.split('\n')) {
+    if (!line.includes('class="bang"')) continue;
+    const direct = line.match(/\$\('(\w+)'\)\.innerHTML\s*=/);
+    if (direct) { found.add(direct[1]); continue; }
+    const viaVar = line.match(/(\w+)\.innerHTML\s*=/);
+    if (viaVar) {
+      const re = new RegExp('(?:const|let|var)\\s+' + viaVar[1] + '\\s*=\\s*\\$\\(\'(\\w+)\'\\)');
+      const m = HTML.match(re);
+      if (m) { found.add(m[1]); continue; }
+    }
+    bad(`class="bang" 를 심는 호스트를 못 읽었다: «${line.trim().slice(0, 70)}» — ㉘ 파서를 고칠 것`);
+  }
+  const want = Object.keys(BANG_HOSTS).sort().join(',');
+  const got = [...found].sort().join(',');
+  got === want
+    ? ok(`.bang 호스트 ${found.size}곳 전부 등재분과 일치 — ${got}`)
+    : bad(`.bang 호스트 집합이 바뀌었다: 등재 «${want}» ≠ 실제 «${got}»` +
+          ' — 새 호스트라면 그 버튼도 positioned 인지 확인하고 BANG_HOSTS 에 등재할 것');
+
+  /* ③ 각 호스트가 positioned 인가 */
+  for (const [id, sel] of Object.entries(BANG_HOSTS)) {
+    const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rule = (HTML.match(new RegExp(esc + '\\s*\\{[^}]*\\}')) || [''])[0];
+    if (!rule) { bad(`${id} 를 positioned 로 만들 CSS 규칙 «${sel}» 이 없다`); continue; }
+    /position:\s*(relative|absolute|sticky|fixed)/.test(rule)
+      ? ok(`${id} 호스트가 positioned 다 — «${sel}»`)
+      : bad(`${id} 호스트 규칙 «${sel}» 에 position 이 없다 — .bang 이 조상으로 날아간다 (T60 재발)`);
+  }
+
+  /* ④ 프레임이 잘라낸다 = 기준 상자가 틀리면 실제 피해가 난다 */
+  const frameRule = (HTML.match(/#frame\s*\{[^}]*\}/) || [''])[0];
+  /overflow:\s*hidden/.test(frameRule)
+    ? ok('#frame 이 overflow:hidden 이다 — 밖으로 나간 뱃지는 잘린다(피해 근거)')
+    : bad('#frame 의 overflow:hidden 이 사라졌다 — ㉘ 의 피해 전제가 바뀌었다. 항목을 재작성할 것');
+}
+
+/* ============================================================================
+   ㉙ 보스 처치 ~ 클리어 확정 사이의 700ms 창 (T61)
    ----------------------------------------------------------------------------
    sim.js 는 `while(!G.dead && !G.cleared && G.t<maxT)` 라 **보스가 죽는 순간 챕터가 끝난다.**
    index.html 만 클리어 화면을 `setTimeout(…,700)` 로 미루면서 그 0.7초 동안 전투를 더 굴렸다.
@@ -1602,7 +1673,7 @@ console.log('\n[㉗ 전투 플로팅 텍스트 표기 — addText 는 fmt 를 �
         클리어 처리**됐다(챕터 40 을 처치 0 으로 클리어 + 보너스 280.04K 지급).
    그래서 «한 증상» 이 아니라 «창» 자체를 못박는다 — 네 자리 전부가 상시 감시 대상이다.
    ============================================================================ */
-console.log('\n[㉘ 보스 처치~클리어 확정 700ms 창 (T61)]');
+console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
 {
   /* ⓐ 정본 근거 — sim 은 보스 사망 즉시 루프를 빠져나간다 (이 규칙이 «옳은 동작» 의 기준이다) */
   /while\s*\(\s*!G\.dead\s*&&\s*!G\.cleared\s*&&/.test(SIM)
