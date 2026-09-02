@@ -47,11 +47,12 @@ const CHECKS=[
   ['플레이어 이동속도',     /p\.worldX\+=(\d+)\*p\.walkMul\*dt/,        /속도 `(\d+)\*walkMul`/,                    '§2.3'],
   ['플레이어 정지 거리',    /if\(dist>(\d+)\)\{p\.worldX/,              /가장 가까운 적이 (\d+)px 안이면/,           '§2.3'],
   ['플레이어 공격 쿨',      /p\.atkTimer\+=([\d.]+);playerStrike/,      /공격당 ([\d.]+) 쿨/,                        '§2.3'],
-  ['적 근접 사거리',        /const d=e\.worldX-p\.worldX;[\s\S]{0,80}?if\(d<(\d+)\)/, /플레이어가 (\d+)px 안에 오면/, '§2.3'],
-  ['적 근접 공격 쿨',       /e\.atkTimer\+=e\.isBoss\?[\d.]+:([\d.]+)/, /그 자리에서 공격\(쿨 ([\d.]+)s\)/,          '§2.3'],
+  ['적 근접 사거리',        /const d=e\.worldX-p\.worldX;[\s\S]{0,240}?if\(d<(\d+)\)/, /플레이어가 (\d+)px 안에 오면/, '§2.3'],
+  /* ⚑ P1(T83) — 🥶 위압의 오라·⛓️ 둔화가 «간격 배수»(ivm)를 곱하게 되면서 리터럴이 괄호 안으로 들어갔다 */
+  ['적 근접 공격 쿨',       /e\.atkTimer\+=\(e\.isBoss\?[\d.]+:([\d.]+)\)\*ivm/, /그 자리에서 공격\(쿨 ([\d.]+)s\)/,   '§2.3'],
   ['원거리 적 비율',        /const ranged=Math\.random\(\)<([\d.]+)&&j>0/, /원거리 적\((\d+)% 확률/,                 '§2.3', 100],
   ['원거리 적 사거리',      /\}else if\(d<(\d+)&&d>\d+\)\{/,            /(\d+)px 안에서 화살 발사/,                  '§2.3'],
-  ['원거리 적 공격 쿨',     /e\.atkTimer\+=([\d.]+);G\.arrows\.push/,   /화살 발사\(쿨 ([\d.]+)s/,                   '§2.3'],
+  ['원거리 적 공격 쿨',     /e\.atkTimer\+=([\d.]+)\*ivm;G\.arrows\.push/, /화살 발사\(쿨 ([\d.]+)s/,                '§2.3'],
   ['적 화살 속도',          /a\.x-=(\d+)\*dt/,                          /화살 속도 (\d+)\)/,                        '§2.3'],
   ['적 배치 간격',          /worldX:x\+j\*(\d+)/,                       /적 간격 (\d+)px/,                          '§2.3'],
   ['보스 강타 주기',        /e\.hits%(\d+)===0/,                        /(\d+)번째 공격마다 강타/,                   '§2.3'],
@@ -59,7 +60,7 @@ const CHECKS=[
   /* ⚑ T35: «maxSh = maxHp*0.8» 파생은 주인 지시로 폐기됐다 — 실드는 독립 기여축이다(§11.5-a).
      대조 대상을 «파생 배수» 에서 «노템 기본 실드» 로 교체한다. */
   ['기본 실드(노템)',       /pSh0:(\d+)/,                              /기본 실드는 노템 (\d+)/,                         '§2.3'],
-  ['방어력 상한',           /effDef=p=>Math\.min\((\d+),/,              /`effDef`\(상한 (\d+)\)/,                    '§4'],
+  ['방어력 상한',           /return Math\.min\((\d+),d\);\};/,          /`effDef`\(상한 (\d+)\)/,                    '§4'],
   ['회피 상한',             /return Math\.min\((\d+),e\)/,              /`effEvade`\(lastStand 포함, 상한 (\d+)\)/,  '§4'],
   ['반격 데미지 계수',      /const cd=effDmg\(p\)\*([\d.]+)\*\(1\+px\.counterX\)/, /반격 데미지 `effDmg\*([\d.]+)\*/, '§4'],
   ['랜덤 타겟 사거리',      /return d>-\d+&&d<(\d+);/,                  /플레이어 앞 (\d+)px 이내/,                  '§4'],
@@ -73,7 +74,8 @@ const CHECKS=[
   /* ⚑ 주인 지시(2026-09-02 15:0X, 승인 24번 종결): 창 관통 8마리 상한은 «누락된 스펙 구현» 이다.
      T34 가 실측한 대로 상한이 없으면 12마리 웨이브에서 총출력 162배가 되고 앵커 A 가 5.3%→100% 로 무너진다.
      신화 m_spear200 은 데미지만 올리고 관통 수는 건드리지 않으므로 이 값은 상수 하나로 족하다. */
-  ['창 관통 상한',          /type:'spear',[^}]*pierce:(\d+)/,           /일직선 (\d+)명 거리/,                        '§3.3'],
+  /* ⚑ P1(T83) — 창 관통은 상수 SPEAR_PIERCE 로 올라갔고 PLAN 문면도 §3.0 «일직선 최대 8마리» 로 바뀌었다 */
+  ['창 관통 상한',          /const R_AXE=[\d.]+[^\n]*\n[^\n]*SPEAR_PIERCE=(\d+);/, /일직선 최대 (\d+)마리 관통/,        '§3.0'],
   /* ⚑ 주인 확정(2026-09-02 15:4X, T43): 적 전원 회피 10%. 튜닝 노브가 아니라 «주인 확정 상수» 라
      TUNE 밖 최상위 const 로 둔다 — 여기서 PLAN §2.3 문장과 직접 대조한다(엔진 0.10 ↔ PLAN 10%). */
   ['적 회피율',             /const ENEMY_EVADE=([\d.]+);/,             /적 전원 회피율 (\d+)% 고정/,                 '§2.3', 100],
@@ -248,16 +250,18 @@ console.log('\n=== ④ 스턴 · 빗맞음 축 (PLAN §3.0·§4 주인 지시 15
     const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
     vm.createContext(ctx);
     vm.runInContext(SIM.slice(0,at)+
-      '\n;globalThis.__Y={applyStun,procOnMiss,dealDmg,STUN_BOSS_MUL,STUN_LORD_MUL,MISS_STACK_CAP,effDmg};',ctx);
+      '\n;globalThis.__Y={applyStun,procOnMiss,dealDmg,STUN_BOSS_MUL,effDmg};',ctx);
     const Y=ctx.__Y||ctx.globalThis.__Y;
     const mkG=(px,boss)=>{
       const e={worldX:100,hp:1e12,maxHp:1e12,dead:false,isBoss:!!boss,stun:0};
-      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,
+      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,ward:0,repairAmp:0,
+               atkN:0,evStk:0,evStreak2:0,evStreak3:0,nextX3:false,nextP200:false,
+               comboT:null,comboN:0,rampN:0,lowShieldUsed:false,
                buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
-               sh:0,maxSh:0,hp:100,maxHp:100,steal:0,goldMul:1,level:1,exp:0,
+               sh:0,maxSh:0,hp:100,maxHp:100,steal:0,goldMul:1,level:1,exp:0,healAmp:0,
                critR:0,critF:150,def:0,evade:0,counter:0,atkTimer:1,aspd:1,walkMul:1,killHeal:0};
       const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
-               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,stunAuraT:2.5,overBoltCd:0,
+               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,autoSumT:2,rampT:3,overBoltCd:0,
                atkTries:0,miss:0};
       p.G=G; return {G,p,e};
     };
@@ -283,12 +287,12 @@ console.log('\n=== ④ 스턴 · 빗맞음 축 (PLAN §3.0·§4 주인 지시 15
       Math.abs(e.stun-3.0)<1e-9 ? pass('짧은 스턴 재적용이 긴 스턴을 덮지도 합산하지도 않는다')
                                 : fail(`스턴 재적용 규칙 위반 (3초 뒤 1초 재적용 → ${e.stun})`);
     }
-    /* (4) 빗맞음 스택: 적립은 상한까지, 소모는 적중 1타당 1장 */
+    /* (4) 빗맞음 스택: ⚑ 주인 확정으로 **상한 없음(무제한 적립)**, 소모는 적중 1타당 1장 */
     {
-      const {G,p,e}=mkG({missStack:1});
-      for(let i=0;i<Y.MISS_STACK_CAP+3;i++) Y.procOnMiss(G,e);
-      p.missStk===Y.MISS_STACK_CAP ? pass(`빗맞음 스택이 상한 ${Y.MISS_STACK_CAP} 에서 멈춘다`)
-                                   : fail(`빗맞음 스택 상한이 안 걸린다 (${p.missStk})`);
+      const {G,p,e}=mkG({l_missStack:1});
+      for(let i=0;i<8;i++) Y.procOnMiss(G,e);
+      p.missStk===8 ? pass('빗맞음 스택이 상한 없이 8장까지 쌓인다 (주인 확정 «무제한 적립»)')
+                    : fail(`빗맞음 스택 적립이 8장이 아니다 (${p.missStk}) — 상한이 되살아났나`);
       const before=p.missStk;
       /* 확정 적중 상태에서 한 타 — 정확히 한 장만 줄어야 한다 (여러 장이 한 타에 붙으면 주인 정정 위반) */
       const rnd=Math.random; Math.random=()=>0.99;      /* 회피(0.10)·치명(0) 둘 다 안 뜨게 */
@@ -305,7 +309,7 @@ console.log('\n=== ④ 스턴 · 빗맞음 축 (PLAN §3.0·§4 주인 지시 15
         e.hp=e.maxHp=1e6;          /* 1e12 는 배정밀도 유효자릿수 밖이라 «맞은 만큼» 을 못 잰다 */
         const hp0=e.hp; Y.dealDmg(G,e,1,true); return hp0-e.hp;
       };
-      const base=hit({},0), stack=hit({missStack:1},1), both=hit({missStack:1,firstHit:1},1);
+      const base=hit({},0), stack=hit({l_missStack:1},1), both=hit({l_missStack:1,firstHit:1},1);
       Math.random=rnd;
       /* rand(0.92,1.08) 이 Math.random 고정으로 상수가 되므로 배수 비교가 성립한다 */
       const okStack=Math.abs(stack/base-2.0)<1e-6;
@@ -316,12 +320,13 @@ console.log('\n=== ④ 스턴 · 빗맞음 축 (PLAN §3.0·§4 주인 지시 15
              : fail(`스택+풀피가 ${(both/base).toFixed(3)} 배다 — 주인 정정(«가산, 다른 보너스와 합») 위반`);
     }
     /* (6) PLAN 에 주인 지시 문구가 살아 있는가 */
-    planHas(/빗맞음\(온미스\) 트리거 신설/)
-      ? pass('PLAN §3.0 에 주인 지시 «빗맞음 트리거 신설» 문구가 있다')
-      : fail('PLAN §3.0 에서 «빗맞음(온미스) 트리거 신설» 문구가 사라졌다');
-    planHas(/스턴 메커니즘 신설/)
-      ? pass('PLAN §3.0 에 주인 지시 «스턴 메커니즘 신설» 문구가 있다')
-      : fail('PLAN §3.0 에서 «스턴 메커니즘 신설» 문구가 사라졌다');
+    /* ⚑ P1(T83) — §3.0 이 재작성되면서 문면이 바뀌었다. 두 축이 «트리거 축» 목록과 기절 조항으로 남아 있는지 본다. */
+    planHas(/트리거 축: .*빗맞음/)
+      ? pass('PLAN §3.0 트리거 축 목록에 «빗맞음» 이 있다')
+      : fail('PLAN §3.0 트리거 축 목록에서 «빗맞음» 이 사라졌다');
+    planHas(/기절 지속은 3초 또는 6초만/)
+      ? pass('PLAN §3.0 에 주인 확정 «기절 지속 3초/6초» 조항이 있다')
+      : fail('PLAN §3.0 에서 기절(스턴) 조항이 사라졌다');
   }
 }
 
@@ -336,16 +341,18 @@ console.log('\n=== ⑤ 원거리 피격 축 · 고중첩 (PLAN §3.0 주인 16:1
     const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
     vm.createContext(ctx);
     vm.runInContext(SIM.slice(0,at)+
-      '\n;globalThis.__Z={hitPlayer,addBuff,STACK_BONUS};',ctx);
+      '\n;globalThis.__Z={hitPlayer,addBuff};',ctx);
     const Z=ctx.__Z||ctx.globalThis.__Z;
     const mkG=(px)=>{
       const e={worldX:100,hp:1e6,maxHp:1e6,dead:false,isBoss:false,stun:0};
-      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,
+      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,ward:0,repairAmp:0,healAmp:0,
+               atkN:0,evStk:0,evStreak2:0,evStreak3:0,nextX3:false,nextP200:false,
+               comboT:null,comboN:0,rampN:0,lowShieldUsed:false,
                buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
                sh:0,maxSh:1000,hp:1e6,maxHp:1e6,steal:0,goldMul:1,level:1,exp:0,
                critR:0,critF:150,def:0,evade:0,counter:0,atkTimer:1,aspd:1,walkMul:1,killHeal:0};
       const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
-               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,stunAuraT:2.5,overBoltCd:0,
+               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,autoSumT:2,rampT:3,overBoltCd:0,
                atkTries:0,miss:0};
       p.G=G; return {G,p,e};
     };
@@ -393,21 +400,18 @@ console.log('\n=== ⑤ 원거리 피격 축 · 고중첩 (PLAN §3.0 주인 16:1
       p.sh===0 ? pass('화살을 회피하면 원거리 축이 굴지 않는다')
                : fail('회피에 성공했는데 원거리 피격 축이 굴었다');
     }
-    /* (5) 중첩 상한 보너스 — m_stackMaster 가 있으면 상한 5 짜리 버프가 5+STACK_BONUS 개까지 쌓인다 */
+    /* (5) ⚑ 주인 확정 «버프 무한 중첩» — addBuff 는 상한 없이 계속 쌓는다 (구 STACK_BONUS 체계 폐지) */
     {
       const {p}=mkG({});
-      for(let i=0;i<20;i++) Z.addBuff(p,'atk',0.05,3,5);
-      const base=p.buffs.atk.length;
-      const {p:p2}=mkG({stackMaster:true});
-      for(let i=0;i<20;i++) Z.addBuff(p2,'atk',0.05,3,5);
-      (base===5&&p2.buffs.atk.length===5+Z.STACK_BONUS)
-        ? pass(`중첩 상한 보너스가 addBuff 에서 걸린다 (5 → ${p2.buffs.atk.length})`)
-        : fail(`중첩 상한 보너스가 스펙과 다르다 — 기본 ${base} · 보유 시 ${p2.buffs.atk.length}`);
+      for(let i=0;i<20;i++) Z.addBuff(p,'atk',0.05,3);
+      p.buffs.atk.length===20
+        ? pass('addBuff 가 상한 없이 20개까지 쌓는다 (주인 확정 «무한 중첩»)')
+        : fail(`버프 중첩 상한이 되살아났다 — 20번 넣었는데 ${p.buffs.atk.length}개만 남았다`);
     }
     /* (6) PLAN 에 주인 지시 문구가 살아 있는가 */
-    planHas(/원거리 피격 트리거 신설/)
+    planHas(/원거리 피격/)
       ? pass('PLAN §3.0 에 주인 지시 «원거리 피격 트리거 신설» 문구가 있다')
-      : fail('PLAN §3.0 에서 «원거리 피격 트리거 신설» 문구가 사라졌다');
+      : fail('PLAN §3.0 에서 «원거리 피격» 축이 사라졌다');
   }
 }
 
@@ -422,16 +426,18 @@ console.log('\n=== ⑥ 횟수형 방어막 · 회피 즉사 (PLAN §3.0 주인 1
     const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
     vm.createContext(ctx);
     vm.runInContext(SIM.slice(0,at)+
-      '\n;globalThis.__W={hitPlayer,gainWard,wardCap,WARD_CAP,WARD_CAP_KING,REAPER_CH};',ctx);
+      '\n;globalThis.__W={hitPlayer,gainWard,REAPER_CH};',ctx);
     const W=ctx.__W||ctx.globalThis.__W;
     const mkG=(px,boss)=>{
       const e={worldX:100,hp:1e6,maxHp:1e6,dead:false,isBoss:!!boss,stun:0};
-      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,ward:0,
+      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,ward:0,repairAmp:0,healAmp:0,
+               atkN:0,evStk:0,evStreak2:0,evStreak3:0,nextX3:false,nextP200:false,
+               comboT:null,comboN:0,rampN:0,lowShieldUsed:false,
                buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
                sh:500,maxSh:500,hp:1000,maxHp:1000,steal:0,goldMul:1,level:1,exp:0,
                critR:0,critF:150,def:0,evade:0,counter:0,atkTimer:1,aspd:1,walkMul:1,killHeal:0};
       const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
-               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,stunAuraT:2.5,overBoltCd:0,
+               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,autoSumT:2,rampT:3,overBoltCd:0,
                atkTries:0,miss:0};
       p.G=G; return {G,p,e};
     };
@@ -460,15 +466,13 @@ console.log('\n=== ⑥ 횟수형 방어막 · 회피 즉사 (PLAN §3.0 주인 1
         ? pass('장수가 떨어지면 다음 타격은 그대로 들어온다 («5장이면 5번» 이 성립)')
         : fail(`방어막 소진 후 동작이 스펙과 다르다 — 막은 뒤 실드 ${shAfterBlock} · 그 다음 ${p.sh}`);
     }
-    /* (3) 상한 — 기본 WARD_CAP, 신화 변형은 WARD_CAP_KING */
+    /* (3) ⚑ 주인 확정 «무한» — 방어막 장수에 상한이 없다 */
     {
       const {p}=mkG({wardAtk:1});
       for(let i=0;i<50;i++) W.gainWard(p,1.0);
-      const {p:p2}=mkG({wardAtk:1,wardKing:true});
-      for(let i=0;i<50;i++) W.gainWard(p2,1.0);
-      (p.ward===W.WARD_CAP&&p2.ward===W.WARD_CAP_KING)
-        ? pass(`방어막 상한 ${W.WARD_CAP}장 · 신화 변형 ${W.WARD_CAP_KING}장`)
-        : fail(`방어막 상한이 스펙과 다르다 — 기본 ${p.ward} · 신화 ${p2.ward}`);
+      p.ward===50
+        ? pass('방어막이 상한 없이 50장까지 쌓인다 (주인 확정 «무한»)')
+        : fail(`방어막 장수 상한이 되살아났다 — 50번 얻었는데 ${p.ward}장`);
     }
     /* (4) 방어막으로 막아도 «맞은 사건» 은 일어난 것이라 피격 트리거는 굴러간다 (위임 판단, 주인 원문 «데미지 무효») */
     {
@@ -483,7 +487,7 @@ console.log('\n=== ⑥ 횟수형 방어막 · 회피 즉사 (PLAN §3.0 주인 1
     }
     /* (5) 회피 즉사 — 회피에 성공했을 때만, 보스는 제외 */
     {
-      const {G,e}=mkG({reaper:true});
+      const {G,e}=mkG({c_reaper:1});
       G.player.evade=100;
       Math.random=()=>0.0;                  /* 회피 성공 + 즉사 굴림 성공 */
       W.hitPlayer(G,10,true,e);
@@ -492,16 +496,16 @@ console.log('\n=== ⑥ 횟수형 방어막 · 회피 즉사 (PLAN §3.0 주인 1
               : fail('회피 즉사가 안 터진다');
     }
     {
-      const {G,e}=mkG({reaper:true},true);  /* 보스 */
+      const {G,e}=mkG({c_reaper:1},true);  /* 보스 — ⚑ 새 132종에서는 «보스 포함» 이다(주인 명시) */
       G.player.evade=100;
       Math.random=()=>0.0;
       W.hitPlayer(G,10,true,e);
       Math.random=rnd;
-      e.hp>0 ? pass('보스는 사신의 낫에 즉사하지 않는다 (🧨 처형자 선례)')
-             : fail('보스가 회피 즉사로 죽었다 — 주인 위임 «보스 제외» 위반');
+      e.hp<=0 ? pass('보스도 사신의 낫에 즉사한다 (⚑ 주인 명시 «보스 포함»)')
+              : fail('보스가 사신의 낫에 안 죽는다 — 주인 명시 «보스 포함» 위반');
     }
     {
-      const {G,e}=mkG({reaper:true});       /* 회피 실패 → 즉사도 없음 */
+      const {G,e}=mkG({c_reaper:1});       /* 회피 실패 → 즉사도 없음 */
       Math.random=()=>0.0001;               /* evade 0 이라 회피 실패, 즉사 굴림은 성공할 값 */
       W.hitPlayer(G,10,true,e);
       Math.random=rnd;
@@ -509,10 +513,11 @@ console.log('\n=== ⑥ 횟수형 방어막 · 회피 즉사 (PLAN §3.0 주인 1
              : fail('맞았는데도 회피 즉사가 터졌다');
     }
     /* (6) PLAN 에 주인 지시 문구가 살아 있는가 */
-    planHas(/횟수형 방어막 특전/) ? pass('PLAN §3.0 에 «횟수형 방어막 특전» 문구가 있다')
-                                : fail('PLAN §3.0 에서 «횟수형 방어막 특전» 문구가 사라졌다');
-    planHas(/회피 즉사 특전/) ? pass('PLAN §3.0 에 «회피 즉사 특전» 문구가 있다')
-                            : fail('PLAN §3.0 에서 «회피 즉사 특전» 문구가 사라졌다');
+    /* ⚑ P1(T83) — §3.0 재작성 후 문면. 방어막 무한 조항과 사신의 낫(전용 연출)이 살아 있는지 본다. */
+    planHas(/방어막\(ward\) 장수 상한도 없다/) ? pass('PLAN §3.0 에 «방어막 장수 상한 없음» 조항이 있다')
+                                             : fail('PLAN §3.0 에서 방어막 무한 조항이 사라졌다');
+    planHas(/사신의 낫/) ? pass('PLAN §3 에 «사신의 낫» 이 있다')
+                        : fail('PLAN §3 에서 «사신의 낫» 이 사라졌다');
   }
 }
 
@@ -538,12 +543,14 @@ console.log('\n=== ⑦ 반격 연쇄 — «반드시 한 번 더, 연쇄 2회 �
     /* 반격 횟수 = 적이 받은 데미지 / 1회분. 적 체력을 넉넉히 줘서 «죽어서 끊긴 것» 과 구별한다. */
     const count=(px)=>{
       const e={worldX:100,hp:1e12,maxHp:1e12,dead:false,isBoss:false,stun:0};
-      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,ward:0,
+      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,ward:0,repairAmp:0,healAmp:0,
+               atkN:0,evStk:0,evStreak2:0,evStreak3:0,nextX3:false,nextP200:false,
+               comboT:null,comboN:0,rampN:0,lowShieldUsed:false,
                buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
                sh:500,maxSh:500,hp:1000,maxHp:1000,steal:0,goldMul:1,level:1,exp:0,
                critR:0,critF:150,def:0,evade:0,counter:0,atkTimer:1,aspd:1,walkMul:1,killHeal:0};
       const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
-               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,stunAuraT:2.5,overBoltCd:0,
+               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,autoSumT:2,rampT:3,overBoltCd:0,
                atkTries:0,miss:0};
       p.G=G;
       Math.random=()=>0.99;                 /* 적 회피(10%) 실패 = 반격이 전부 적중 */
@@ -551,14 +558,14 @@ console.log('\n=== ⑦ 반격 연쇄 — «반드시 한 번 더, 연쇄 2회 �
       Math.random=rnd;
       return G.atkTries;                    /* doCounter 진입 1회당 1 */
     };
-    const n0=count({}), n1=count({counterChain:1});
+    const n0=count({}), n1=count({l_counterChain:1});
     n0===1 ? pass('특전 없으면 반격 1회 (연쇄 없음)')
            : fail(`특전 없는 반격이 ${n0}회다 — 1회여야 한다`);
     n1===2 ? pass('l_counterChain 이 있으면 정확히 2회 (반격 + 연쇄 1회)')
            : fail(`l_counterChain 반격이 ${n1}회다 — PLAN §3.3 «반드시 한 번 더 · 연쇄 2회 제한» 위반`+
                   (n1===1?' (특전이 사장돼 한 번도 안 터진다 — T69 재발)':''));
     /* 두 엔진 가드 형태 대조 + «undefined 비교» 가드 금지 */
-    const grab=(s)=>{ const m=s.match(/else if\(px\.counterChain&&([^)]*)\)\s*doCounter/); return m?m[1].replace(/\s+/g,''):null; };
+    const grab=(s)=>{ const m=s.match(/else if\(\(px\.counterChain\|\|px\.l_counterChain\)&&([^)]*)\)\s*doCounter/); return m?m[1].replace(/\s+/g,''):null; };
     const gs=grab(SIM), gh=grab(HTML);
     (gs&&gh&&gs===gh) ? pass(`두 엔진의 연쇄 가드가 같다 («${gs}»)`)
                       : fail(`연쇄 가드가 두 엔진에서 다르다 — sim «${gs}» / index.html «${gh}»`);
@@ -577,132 +584,118 @@ console.log('\n=== ⑦ 반격 연쇄 — «반드시 한 번 더, 연쇄 2회 �
     (so.length===0&&ho.length===0)
       ? pass('바깥 호출부는 두 엔진 모두 depth 인자를 넘기지 않는다 (재귀 호출만 1)')
       : fail(`depth 를 넘기는 예상 밖 호출부가 있다 — sim ${JSON.stringify(so)} / index.html ${JSON.stringify(ho)}`);
-    planHas(/l_counterChain \| 🔂 반격 시 반드시 한 번 더 반격 \(연쇄 2회 제한\)/)
-      ? pass('PLAN §3.3 에 «반드시 한 번 더 반격 (연쇄 2회 제한)» 행이 있다')
+    planHas(/\| l_counterChain \| 🔂 반격하면 반드시 한 번 더 반격 \|/)
+      ? pass('PLAN §3.3 에 «반격하면 반드시 한 번 더 반격» 행이 있다')
       : fail('PLAN §3.3 의 l_counterChain 행 문구가 바뀌었다 — 게이트 기준과 대조할 것');
   }
 }
 
-/* ---------- ⑧ 킬 회복 축 — 주인 확정 «처치 시 체력 5% 회복» + 등급 차등 (T82) ---------- */
-/* 주인 원문(2026-09-03): «🍖 c_killHeal2 = «처치 시 체력 5% 회복» 고정 (주인 확정 상수 — 튜닝 노브 아님)» +
-   «특전 수치를 소수점(0.37%·0.5%·0.55%)으로 깎는 것 금지 — 남는 강함은 적 난이도를 올려서 흡수한다».
-   그래서 이 축은 «수치가 맞나» 만이 아니라 «다시 소수점으로 깎이지 않았나» 를 봐야 한다:
-     - c_killHeal2 = 정확히 5% (한 자리라도 다르면 빨개진다 — T1 이 이걸 노브로 쓰면 안 된다)
-     - 킬 회복 4종 전부 5%의 배수 (0.37/0.5/0.55/0.75 같은 소수점 체급으로 되돌아가면 빨개진다)
-     - 전설 > 일반 (주인: «전설은 일반보다 좋게»)
-     - 두 엔진 상수 일치 · PLAN §3 표시 텍스트 일치
-     - **실행 단언** — 실제로 onKill 한 번에 최대 체력의 5% 가 회복되고 실드가 5%/10% 충전되는가
-       (상수만 맞고 호출부가 죽어 있던 T69 형 사고를 막는다) */
-console.log('\n=== ⑧ 킬 회복 축 — 주인 확정 5% 체급 (PLAN §3 · T82) ===');
+/* ---------- ⑧ 킬 회복 축 — 주인 확정 «처치 시 체력 5% 회복» 체급 (T82 · ⚑ P1(T83) 재작성) ---------- */
+/* 주인 원문(2026-09-03): «🍖 c_killHeal2 = 처치 시 체력 5% 회복 — 주인 확정 상수, 튜닝 노브 아님» +
+   «특전 수치를 소수점(0.37%·0.5%·0.55%)으로 깎는 것 금지».
+   ⚑ P1 로 목록이 바뀌어 축의 구성이 이렇게 됐다:
+     🍖 c_killHeal2   처치 시 체력 5%          (확률 없음 — 확정 상수)
+     💉 l_killHeal5   처치 시 40% 확률 체력 10% (전설 = 일반의 2배 체급)
+     🔰 c_killShield3 처치 시 10% 확률 실드 10%
+   (구 l_killShield10 «전설 킬실드» 는 새 목록에서 사라졌다 — 그 자리는 🔧⚡ 오버킬 수리가 맡는다.)
+   상수만 맞고 호출부가 죽어 있던 T69 형 사고를 막으려고 **실행 단언**까지 한다. */
+console.log('\n=== ⑧ 킬 회복 축 — 주인 확정 5% 체급 (PLAN §3 · T82 · P1 재작성) ===');
 {
   const vm=require('vm');
   const HTML=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  /* (1) 네 값의 정적 대조 — 두 엔진 + PLAN */
-  const num=(re,src,what)=>{ const m=src.match(re); return m?Number(m[1]):null; };   /* 못 찾으면 null — 아래 renamed 분기가 «효과 자체가 사라졌나» 로 판정한다 */
-  const V={
-    killHealC:[num(/add\('c_killHeal2',0,p=>p\.killHeal\+=([\d.]+)\)/,SIM,'sim c_killHeal2'),
-               num(/id:'c_killHeal2'[^}]*p\.killHeal\+=([\d.]+)/,HTML,'index c_killHeal2'), 0.05, '일반 킬힐'],
-    killHealL:[num(/add\('l_killHeal5',2,p=>p\.killHeal\+=([\d.]+)\)/,SIM,'sim l_killHeal5'),
-               num(/id:'l_killHeal5'[^}]*p\.killHeal\+=([\d.]+)/,HTML,'index l_killHeal5'), null, '전설 킬힐'],
-    killSh3:  [num(/p\.maxSh\*([\d.]+)\*px\.killShield3/,SIM,'sim killShield3'),
-               num(/p\.maxSh\*([\d.]+)\*px\.killShield3/,HTML,'index killShield3'), null, '일반 킬실드'],
-    killSh10: [num(/p\.maxSh\*([\d.]+)\*px\.killShield10/,SIM,'sim killShield10'),
-               num(/p\.maxSh\*([\d.]+)\*px\.killShield10/,HTML,'index killShield10'), null, '전설 킬실드'],
-  };
-  /* ⚑ 주인이 특전 목록을 재작성 중이다(2026-09-03 «전면 정지»). id 가 통째로 바뀔 수 있으므로
-     «id 가 사라졌다» 를 곧장 불합격으로 보지 않는다 — 대신 **효과가 사라졌는지**를 본다:
-     일반 등급에 «처치 시 체력 N% 회복» 특전이 하나도 없으면 그때 빨개진다(주인 확정 상수의 소멸). */
-  const renamed = V.killHealC[0]===null && V.killHealC[1]===null;
-  if(renamed){
-    const commons=[...HTML.matchAll(/\{id:'(\w+)',\s*r:0,[^}]*tx:'([^']*)'/g)]
-      .map(m=>[m[1],m[2].replace(/<[^>]*>/g,'')])
-      .filter(([,t])=>/처치 시 체력 [\d.]+% 회복/.test(t));
-    if(!commons.length) fail('일반 등급에 «처치 시 체력 N% 회복» 특전이 없다 — 주인 확정 상수(킬힐 5%)가 목록에서 사라졌다');
-    else{
-      const bad=commons.filter(([,t])=>Number(t.match(/처치 시 체력 ([\d.]+)% 회복/)[1])!==5);
-      bad.length ? fail(`특전 재작성본의 일반 킬힐이 5% 가 아니다 — ${bad.map(([i,t])=>i+' «'+t+'»').join(' · ')}`)
-                 : pass(`특전 id 가 바뀌었다 — 일반 킬힐 ${commons.map(([i])=>i).join('·')} 가 5% 를 지키고 있다`);
-    }
-  }
-  for(const k in V){
-    const [a,b,fixed,nm]=V[k];
-    if(a===null&&b===null) continue;   /* 재작성으로 사라진 id — 위 renamed 분기가 본다 */
-    if(a===null||b===null) continue;
-    (a===b) ? pass(`${nm} 상수가 두 엔진에서 같다 (${(a*100).toFixed(0)}%)`)
-            : fail(`${nm} 상수가 두 엔진에서 다르다 — sim ${a} / index.html ${b}`);
-    if(fixed!==null){
-      (a===fixed) ? pass(`c_killHeal2 = ${(fixed*100).toFixed(0)}% (주인 확정 상수 — 튜닝 노브 아님)`)
-                  : fail(`c_killHeal2 가 ${(a*100)}% 다 — 주인 확정 상수는 5%. 밸런스가 안 맞으면 특전이 아니라 난이도를 움직여라(ROUTINE 2026-09-03 «밸런싱 방향 전환»)`);
-    }
-    const pct=+(a*100).toFixed(6);
-    (Number.isInteger(pct)&&pct%5===0)
-      ? pass(`${nm} ${pct}% 가 읽히는 체급(5% 단위)이다`)
-      : fail(`${nm} 가 ${pct}% 다 — 주인 확정 «소수점 금지·수치 계수 5% 단위» 위반. 소수점으로 깎지 말고 난이도로 흡수할 것`);
-  }
-  if(V.killHealL[0]!==null&&V.killHealC[0]!==null)
-    (V.killHealL[0]>V.killHealC[0]) ? pass(`전설 킬힐(${V.killHealL[0]*100}%) > 일반 킬힐(${V.killHealC[0]*100}%) — 주인 «전설은 일반보다 좋게»`)
-                                    : fail(`전설 킬힐 ${V.killHealL[0]*100}% 가 일반 ${V.killHealC[0]*100}% 이하다 — 주인 확정 «전설은 일반보다 좋게» 위반`);
-  if(V.killSh10[0]!==null&&V.killSh3[0]!==null)
-    (V.killSh10[0]>V.killSh3[0]) ? pass(`전설 킬실드(${V.killSh10[0]*100}%) > 일반 킬실드(${V.killSh3[0]*100}%)`)
-                                 : fail(`전설 킬실드 ${V.killSh10[0]*100}% 가 일반 ${V.killSh3[0]*100}% 이하다 — 등급 차등 위반`);
-  /* (2) PLAN §3 표시 텍스트 대조 — 게임에 뜨는 문장이 엔진 값과 같은가 */
-  const planRow=(re,want,nm)=>{ const m=PLAN.match(re);
-    if(!m) fail(`PLAN §3 에서 ${nm} 행을 못 찾았다`);
-    else (Number(m[1])===want) ? pass(`PLAN §3 «${nm} ${m[1]}%» 가 엔진과 일치`)
-                               : fail(`PLAN §3 «${nm} ${m[1]}%» 가 엔진 ${want}% 와 다르다`); };
-  const P4=[[/c_killHeal2 \| 🍖 처치 시 체력 ([\d.]+)% 회복/,V.killHealC[0],'c_killHeal2'],
-            [/c_killShield3 \| 🔰 처치 시 실드 ([\d.]+)% 충전/,V.killSh3[0],'c_killShield3'],
-            [/l_killHeal5 \| 💉 처치 시 체력 ([\d.]+)% 회복/,V.killHealL[0],'l_killHeal5'],
-            [/l_killShield10 \| 🏯 처치 시 실드 ([\d.]+)% 충전/,V.killSh10[0],'l_killShield10']];
-  for(const [re,v,nm] of P4) if(v!==null) planRow(re,100*v,nm);
-  /* index.html 표시 텍스트(tx)도 같은 값인가 — 태그를 걷어내고 본다(T79 ㊳ 과 같은 취지) */
-  const txPct=(id)=>{ const m=HTML.match(new RegExp(`id:'${id}'[^}]*tx:'([^']*)'`)); if(!m)return null;
-                      const t=m[1].replace(/<[^>]*>/g,''); const n=t.match(/([\d.]+)%/); return n?Number(n[1]):null; };
-  [['c_killHeal2',V.killHealC[0]],['c_killShield3',V.killSh3[0]],
-   ['l_killHeal5',V.killHealL[0]],['l_killShield10',V.killSh10[0]]].forEach(([id,v])=>{
-    if(v===null) return;                       /* 재작성으로 사라진 id */
-    const want=100*v, got=txPct(id);
-    (got===want) ? pass(`index.html 표시 텍스트 «${id} ${got}%» 가 엔진과 일치`)
-                 : fail(`index.html 표시 텍스트 «${id} ${got}%» 가 엔진 ${want}% 와 다르다 — 게임에 틀린 숫자가 뜬다`);
-  });
-  /* (3) 실행 단언 — onKill 한 번이 실제로 그만큼 회복시키는가 */
-  const CUT="const mode=process.argv[2]||'all';";
-  const at=SIM.indexOf(CUT);
-  if(at<0) fail('sim.js 에서 CLI 디스패처를 못 찾았다 — 잘림 기준이 바뀌었다');
+  const num=(re,src)=>{ const m=src.match(re); return m?Number(m[1]):null; };
+  /* (1) 확정 상수 — 🍖 는 정확히 5% 이고 두 엔진이 같다 */
+  const kh=[num(/add\('c_killHeal2',0,p=>\{p\.px\.c_killHeal2=1;p\.killHeal\+=([\d.]+);\}\)/,SIM),
+            num(/id:'c_killHeal2'[^}]*p\.killHeal\+=([\d.]+)/,HTML)];
+  (kh[0]===0.05&&kh[1]===0.05)
+    ? pass('🍖 c_killHeal2 = 정확히 5% (주인 확정 상수 · 두 엔진 일치)')
+    : fail(`🍖 c_killHeal2 가 5% 가 아니다 — sim ${kh[0]} · index.html ${kh[1]} (주인 확정 상수라 튜닝 금지)`);
+  /* (2) 축 전체가 5% 배수인가 (소수점 체급으로 되돌아가면 빨개진다) */
+  const coef=[
+    ['🍖 c_killHeal2 회복', kh[0]],
+    ['💉 l_killHeal5 회복', num(/px\.l_killHeal5&&pkk\(p,[\d.]+\)\)heal\(p,p\.maxHp\*([\d.]+)\)/,SIM)],
+    ['💉 l_killHeal5 확률', num(/px\.l_killHeal5&&pkk\(p,([\d.]+)\)/,SIM)],
+    ['🔰 c_killShield3 충전', num(/px\.c_killShield3&&pkk\(p,[\d.]+\)\)repair\(p,p\.maxSh\*([\d.]+)\)/,SIM)],
+    ['🔰 c_killShield3 확률', num(/px\.c_killShield3&&pkk\(p,([\d.]+)\)/,SIM)],
+  ];
+  const missing=coef.filter(([,v])=>v===null).map(([n])=>n);
+  if(missing.length) fail('킬 회복 축 계수를 못 읽었다: '+missing.join(', ')+' — 코드 모양이 바뀌었다. 게이트를 함께 고칠 것');
   else{
-    const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
-    vm.createContext(ctx);
-    vm.runInContext(SIM.slice(0,at)+'\n;globalThis.__K={onKill,PERKS,mkPlayer,mkBuild};',ctx);
-    const K=ctx.__K||ctx.globalThis.__K;
-    const run=(perkId)=>{
-      const p=K.mkPlayer(K.mkBuild(-1,0,0));   /* 미장착 = 장비 옵션 0개 (희귀 풀셋은 옵1 에 healAmp 가 붙어 회복량이 1.15배가 된다) */ const perk=K.PERKS.find(x=>x.id===perkId);
-      if(!perk) return null;
-      perk.ap(p);
-      p.hp=p.maxHp/2; p.sh=0;
-      const e={worldX:100,hp:0,maxHp:100,dead:false,isBoss:false,stun:0};
-      const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,t:0,
-               taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,stunAuraT:2.5,overBoltCd:0,atkTries:0,miss:0};
-      p.G=G;
-      const hp0=p.hp, sh0=p.sh;
-      K.onKill(G,e);
-      return {dHp:(p.hp-hp0)/p.maxHp*100, dSh:(p.sh-sh0)/p.maxSh*100};
-    };
-    const near=(a,b)=>Math.abs(a-b)<1e-6;
-    [['c_killHeal2','dHp',V.killHealC[0],'체력'],['l_killHeal5','dHp',V.killHealL[0],'체력'],
-     ['c_killShield3','dSh',V.killSh3[0],'실드'],['l_killShield10','dSh',V.killSh10[0],'실드']].forEach(([id,f,v,nm])=>{
-      if(v===null) return;                     /* 재작성으로 사라진 id */
-      const want=100*v, r=run(id);
-      if(!r) return fail(`특전 ${id} 가 PERKS 에 없다`);
-      near(r[f],want) ? pass(`${id}: 처치 1회에 최대 ${nm}의 ${r[f].toFixed(2)}% 가 실제로 채워진다`)
-                      : fail(`${id}: 처치 1회 실측 ${r[f].toFixed(4)}% ≠ 표시 ${want}% — 특전이 사장됐거나 호출부가 끊겼다`);
-     });
-    /* 특전이 없으면 0 이어야 한다 (다른 경로가 몰래 회복시키고 있지 않은가) */
-    const none=run('c_atkPerm');
-    (none&&near(none.dHp,0)&&near(none.dSh,0))
-      ? pass('킬 회복 특전이 없으면 처치로 체력·실드가 늘지 않는다')
-      : fail(`킬 회복 특전이 없는데 처치로 체력 ${none&&none.dHp.toFixed(2)}% · 실드 ${none&&none.dSh.toFixed(2)}% 가 찼다 — 무료 회복 경로가 있다`);
+    const bad5=coef.filter(([,v])=>Math.abs(v*100/5-Math.round(v*100/5))>1e-9);
+    bad5.length===0
+      ? pass('킬 회복 축 5종 계수가 전부 5% 배수다 ('+coef.map(([n,v])=>`${n} ${(v*100).toFixed(0)}%`).join(' · ')+')')
+      : fail('킬 회복 축에 5% 배수가 아닌 값이 있다 (소수점 체급 회귀): '+bad5.map(([n,v])=>`${n} ${(v*100)}%`).join(' · '));
+    /* (3) 전설 > 일반 (주인: «전설은 일반보다 좋게») */
+    const cH=coef[0][1], lH=coef[1][1];
+    lH>cH ? pass(`전설 킬힐 ${(lH*100).toFixed(0)}% > 일반 ${(cH*100).toFixed(0)}% (등급 차등)`)
+          : fail(`전설 킬힐이 일반보다 좋지 않다 — 전설 ${(lH*100)}% vs 일반 ${(cH*100)}%`);
+  }
+  /* (4) 두 엔진 일치 — 같은 확률·같은 계수 */
+  {
+    const pick=src=>[
+      (src.match(/px\.l_killHeal5&&pkk\(p,([\d.]+)\)\)\s*\{?\s*heal\(p,p\.maxHp\*([\d.]+)\)/)||[]).slice(1,3).join('/'),
+      (src.match(/px\.c_killShield3&&pkk\(p,([\d.]+)\)\)\s*\{?\s*repair\(p,p\.maxSh\*([\d.]+)\)/)||[]).slice(1,3).join('/'),
+    ].join(' · ');
+    const a=pick(SIM), b=pick(HTML);
+    (a===b&&a!==' · ') ? pass(`두 엔진의 킬 회복 확률·계수가 같다 (${a})`)
+                       : fail(`두 엔진의 킬 회복 축이 다르다 — sim «${a}» / index.html «${b}»`);
+  }
+  /* (5) PLAN §3 표시 텍스트 ↔ 엔진 */
+  [['c_killHeal2', /\| c_killHeal2 \| 🍖 처치 시 체력 5% 회복 \|/],
+   ['l_killHeal5', /\| l_killHeal5 \| 💉 처치 시 40% 확률로 체력 10% 회복 \|/],
+   ['c_killShield3', /\| c_killShield3 \| 🔰 처치 시 10% 확률로 실드 10% 충전 \|/]].forEach(([id,re])=>{
+    planHas(re) ? pass(`PLAN §3 의 ${id} 행이 엔진 수치와 같다`)
+                : fail(`PLAN §3 의 ${id} 행이 엔진 수치와 다르다 — 표시 텍스트와 엔진이 갈라졌다`);
+  });
+  /* (6) 실행 단언 — 처치 1회에 실제로 그만큼 채워지는가 */
+  {
+    const CUT="const mode=process.argv[2]||'all';";
+    const at=SIM.indexOf(CUT);
+    if(at<0) fail('sim.js 에서 CLI 디스패처를 못 찾았다');
+    else{
+      const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
+      vm.createContext(ctx);
+      vm.runInContext(SIM.slice(0,at)+'\n;globalThis.__K={onKill,PERKS};',ctx);
+      const K=ctx.__K||ctx.globalThis.__K;
+      const rnd=Math.random;
+      const run=(id)=>{
+        const perk=K.PERKS.find(x=>x.id===id); if(!perk) return null;
+        const e={worldX:100,hp:0,maxHp:1000,dead:false,isBoss:false,stun:0,exp:0};
+        const p={worldX:0,dmg:100,px:{},nextCrit:false,nextAtk:0,missStk:0,ward:0,repairAmp:0,healAmp:0,
+                 atkN:0,evStk:0,evStreak2:0,evStreak3:0,nextX3:false,nextP200:false,
+                 comboT:null,comboN:0,rampN:0,lowShieldUsed:false,
+                 buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
+                 sh:0,maxSh:1000,hp:500,maxHp:1000,steal:0,goldMul:1,level:1,exp:0,
+                 critR:0,critF:150,def:0,evade:0,counter:0,atkTimer:1,aspd:1,walkMul:1,killHeal:0};
+        const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
+                 t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,autoSumT:2,rampT:3,overBoltCd:0,
+                 atkTries:0,miss:0};
+        p.G=G;
+        for(const k of K.PERKS) p.px[k.id]=0;
+        perk.ap(p); G.taken.push(perk);
+        const hp0=p.hp, sh0=p.sh;
+        Math.random=()=>0.0;                 /* 확률형은 전부 발동시킨다 */
+        K.onKill(G,e,0);
+        Math.random=rnd;
+        return {dHp:(p.hp-hp0)/p.maxHp*100, dSh:(p.sh-sh0)/p.maxSh*100};
+      };
+      const near=(a,b)=>Math.abs(a-b)<0.51;
+      [['c_killHeal2','dHp',5,'체력'],['l_killHeal5','dHp',10,'체력'],['c_killShield3','dSh',10,'실드']]
+        .forEach(([id,f,want,nm])=>{
+          const r=run(id);
+          if(!r) return fail(`특전 ${id} 가 PERKS 에 없다`);
+          near(r[f],want) ? pass(`${id}: 처치 1회에 최대 ${nm}의 ${r[f].toFixed(1)}% 가 실제로 채워진다`)
+                          : fail(`${id}: 처치 1회 실측 ${r[f].toFixed(2)}% ≠ 표시 ${want}% — 특전이 사장됐거나 호출부가 끊겼다`);
+        });
+      /* 특전이 없으면 0 이어야 한다 (다른 경로가 몰래 회복시키고 있지 않은가) */
+      const none=run('c_atkPerm');
+      (none&&near(none.dHp,0)&&near(none.dSh,0))
+        ? pass('킬 회복 특전이 없으면 처치로 체력·실드가 늘지 않는다')
+        : fail(`킬 회복 특전이 없는데 처치로 체력 ${none&&none.dHp.toFixed(2)}% · 실드 ${none&&none.dSh.toFixed(2)}% 가 찼다 — 무료 회복 경로가 있다`);
+    }
   }
 }
+
 
 console.log(`\n대조 ${CHECKS.length}항목 · 일치 ${okN}개 · 불일치 ${bad}건 · 미문서화 신규 ${undocNew}건 · 등재된 기존 ${undocKnown}건`);
 console.log(bad?'→ 불합격':'→ 통과');

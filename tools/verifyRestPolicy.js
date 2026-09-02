@@ -36,15 +36,15 @@ if (!mSim) {
   /gainExp\(G,\s*REST_EXP\)/.test(body)
     ? ok('쉼터에서 gainExp(G,REST_EXP) 를 준다 (PLAN §2.4 «🌟 경험치»)')
     : bad('쉼터에 gainExp(G,REST_EXP) 가 없다 — 경험치 선택 정책이 깨졌거나 수치를 상수 밖에 박았다');
-  /* 회복 분기 = heal(...) 호출 중 restHp 특전(최대 체력 증가분 회복)이 아닌 것 */
+  /* 회복 분기 = heal(...) 호출 (⚑ P1(T83) 로 restHp 예외가 사라져 이제 0 이어야 한다) */
   const heals = (body.match(/heal\s*\(/g) || []).length;
-  const restHpHeal = /p\.px\.restHp\)\{[^}]*heal\(p,a,true\)/.test(body) ? 1 : 0;
+  const restHpHeal = 0;
   heals - restHpHeal === 0
-    ? ok('쉼터에 체력 회복 분기가 없다 (restHp 특전분 제외)')
+    ? ok('쉼터에 체력 회복 분기가 없다')
     : bad(`쉼터에 체력 회복이 ${heals - restHpHeal}개 남아 있다 — 주인 확정 16:4X 위반(시뮬은 회복 선택 금지)`);
-  /^\s*(?:if\(p\.px\.restHp\)[^\n]*\n)?\s*gainExp\(G,\s*REST_EXP\);\s*$/.test(body.replace(/\n\s*\n/g, '\n'))
+  /^\s*gainExp\(G,\s*REST_EXP\);\s*$/.test(body.replace(/\n\s*\n/g, '\n'))
     ? ok('경험치 지급이 무조건 실행된다 (체력 조건부 분기 없음)')
-    : bad('쉼터 본문이 «restHp 특전 + 무조건 gainExp» 형태가 아니다 — 조건부 선택이 남아 있는지 확인할 것');
+    : bad('쉼터 본문이 «무조건 gainExp» 형태가 아니다 — 조건부 선택이 남아 있는지 확인할 것');
   /p\.hp\s*<\s*p\.maxHp\s*\*\s*0\.6/.test(body)
     ? bad('폐지된 «체력 60% 미만이면 회복» 조건이 되돌아왔다 (주인 확정 16:4X 위반)')
     : ok('폐지된 «체력 60% 미만 → 회복» 조건 없음');
@@ -111,24 +111,18 @@ console.log('\n[⑥] 쉼터 보상 «체력 260 / 경험치 +26» (주인 확정
   }
 }
 
-/* ---------- ⓓ r_restHp 계수 3자 일치 ---------- */
-console.log('\n[④] 🏕️ r_restHp «최대 체력 +15%» — PLAN ↔ sim.js ↔ index.html 3자 일치');
+/* ---------- ⓓ 🏕️ 쉼터 최대 체력 특전이 존재하지 않는가 (⚑ P1(T83)) ----------
+   구 희귀 `r_restHp`(«쉼터에서 최대 체력 +15%»)는 새 132종에서 사라졌다 — «최대 체력 증가» 는
+   주인 확정 금지축이다. 되살아나면 여기서 빨개진다. */
+console.log('\n[④] 🏕️ 쉼터 최대 체력 증가 특전 — 금지축(존재 0)');
 {
-  const planPct = (PLAN.match(/r_restHp[^|]*\|[^|]*?\+(\d+)%/) || [])[1];
-  const simPct = (strip(SIM).match(/p\.px\.restHp\)\{const a=p\.maxHp\*([\d.]+)\*p\.px\.restHp/) || [])[1];
-  const htmlPct = (strip(HTML).match(/p\.px\.restHp\)\{\s*const a=p\.maxHp\*([\d.]+)\*p\.px\.restHp/) || [])[1];
-  const htmlTxt = (HTML.match(/id:'r_restHp'[^\n]*?\+(\d+)%/) || [])[1];
-  const htmlShow = (HTML.match(/최대 체력 \+\$\{(\d+)\*p\.px\.restHp\}%/) || [])[1];
-  const vals = { PLAN: planPct && planPct / 100, sim: simPct && Number(simPct), 'index.html': htmlPct && Number(htmlPct),
-                 '특전 설명문': htmlTxt && htmlTxt / 100, '쉼터 팝업 표시': htmlShow && htmlShow / 100 };
-  const missing = Object.keys(vals).filter(k => !vals[k]);
-  if (missing.length) bad('r_restHp 계수를 못 읽었다: ' + missing.join(', ') + ' — 게이트를 갱신할 것');
-  else {
-    const uniq = [...new Set(Object.values(vals).map(v => v.toFixed(4)))];
-    uniq.length === 1 && Number(uniq[0]) === 0.15
-      ? ok('5곳 전부 +15% 로 일치 (PLAN §3 표 · sim · 엔진 · 설명문 · 팝업)')
-      : bad('r_restHp 계수 불일치: ' + Object.entries(vals).map(([k, v]) => `${k} ${(v * 100).toFixed(1)}%`).join(' · '));
-  }
+  const hits = [];
+  if (/px\.restHp/.test(SIM)) hits.push('sim.js');
+  if (/px\.restHp/.test(HTML)) hits.push('index.html');
+  if (/r_restHp/.test(PLAN)) hits.push('PLAN.md');
+  hits.length === 0
+    ? ok('두 엔진·PLAN 어디에도 쉼터 최대 체력 특전이 없다')
+    : bad('쉼터 최대 체력 증가가 되살아났다 (금지축): ' + hits.join(', '));
 }
 
 /* ---------- ⓔ PLAN 에 정책이 문서로 남아 있는가 ---------- */

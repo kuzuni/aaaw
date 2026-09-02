@@ -35,31 +35,13 @@ const SIM = fs.readFileSync(path.join(root, 'sim.js'), 'utf8');
 const lines = SIM.split('\n');
 const LIST = process.argv.includes('--list');
 
-/* ── 승인 대기 중이라 지금은 못 고치는 기존 건 ── */
-const KNOWN = {
-  'bool|m_wave4|greatsword|4': 'T24 / 승인 대기 19번',
-  'bool|l_execute|greatsword|7': 'T24 / 승인 대기 19번',
-  'bool|m_axe3|axe|4': 'T24 / 승인 대기 19번',
-  'bool|m_arrow4|bow|4': 'T24 / 승인 대기 19번',
-  'bool|l_fullHpCrit|bow|7': 'T24 / 승인 대기 19번',
-  'bool|m_guard|helmet|7': 'T24 / 승인 대기 19번',
-  'bool|m_bolt3|hood|4': 'T24 / 승인 대기 19번',
-  'bool|l_rage|robe|7': 'T24 / 승인 대기 19번',
-  'bool|l_backDmg|gauntlet|7': 'T24 / 승인 대기 19번',
-  'bool|l_killAspd|leather|6': 'T24 / 승인 대기 19번',
-  'bool|m_clone|handwrap|6': 'T24 / 승인 대기 19번',
-  'bool|m_execKill|handwrap|7': 'T24 / 승인 대기 19번',
-  'bool|l_evadeCrit|sandal|7': 'T24 / 승인 대기 19번',
-  'bool|l_counterChain|boots|7': 'T24 / 승인 대기 19번',
-  'bool|r_lastStand|greave|7': 'T24 / 승인 대기 19번',
-  'bool|l_overheal|pendant|7': 'T24 / 승인 대기 19번',
-  'bool|m_spear200|beads|4': 'T24 / 승인 대기 19번',
-  'bool|m_procX2|beads|7': 'T24 / 승인 대기 19번',
-  'prob|l_counterWave|greatsword': 'T24 / 승인 대기 19번 — 기저 1.0 이라 대검 옵6 하나로 이미 확정',
-  'prob|l_thorns|chain': 'T24 / 승인 대기 19번 — T14(승인 12번)의 사슬갑옷 포화가 특전에도 그대로 번진다',
-};
+/* ── 승인 대기 중이라 지금은 못 고치는 기존 건 ──
+   ⚑ P1(T83)로 전부 비었다. 새 132종은 px 키를 «특전 id» 로 쓰고 장비 옵션은 종전의 짧은 키를 쓰므로
+   두 축이 네임스페이스 단위로 갈라져 있다 — 이 게이트는 이제 «그 분리가 깨지지 않는가» 를 지키는
+   보초다. 여기 무언가 걸리면 새 특전이 장비 옵션의 키를 다시 쓰기 시작했다는 뜻이다. */
+const KNOWN = {};
 
-const RN = ['일반', '희귀', '전설', '신화'];
+const RN = ['일반', '희귀', '전설'];
 /* 옵션 인덱스 → 요구 등급·강화 (GT.optCount 의 역함수) */
 const OPTREQ = ['희귀0강', '영웅0강', '전설0강', '신화0강', '신화+3강', '신화+6강', '신화+9강'];
 
@@ -74,16 +56,23 @@ for (const m of SIM.matchAll(/pkk\(p,\s*([0-9.]+)\s*\*\s*px\.([A-Za-z0-9_]+)\)/g
 const pStart = lines.findIndex(l => /^function mkPerks\(\)/.test(l));
 const pEnd = lines.findIndex(l => /^const PERKS\s*=/.test(l));
 if (pStart < 0 || pEnd < 0) { console.error('✗ mkPerks 블록을 찾지 못했다'); process.exit(1); }
+/* ⚑ P1(T83) — 한 줄에 add() 가 여러 개 오고, 대부분은 ap 를 안 넘겨 «px 키 = 특전 id» 인 기본형이다.
+   기본형은 소스에 `p.px.<키>` 문자열이 없으므로 id 를 그 키로 친다. ap 를 넘긴 것만 본문에서 읽는다. */
 const PERKS = [];
 for (let i = pStart; i < pEnd; i++) {
-  const m = lines[i].match(/^\s*add\('([^']+)',\s*(\d)\s*,/);
-  if (!m) continue;
-  const keys = {};
-  for (const mm of lines[i].matchAll(/p\.px\.([A-Za-z0-9_]+)\s*(\+\+|\+=|=\s*(?:true|1)\b)/g))
-    keys[mm[1]] = mm[2].startsWith('=') ? 'bool' : 'inc';
-  PERKS.push({ id: m[1], r: Number(m[2]), uniq: /,\s*1\s*\)\s*;/.test(lines[i]), line: i + 1, keys });
+  const ids = [...lines[i].matchAll(/add\('([^']+)',\s*(\d)/g)];
+  if (!ids.length) continue;
+  /* ap 를 넘긴 것은 한 줄에 하나뿐이다(스탯 직접 변형 6종) — 그 줄만 본문에서 px 키를 읽는다. */
+  const explicit = {};
+  if (ids.length === 1)
+    for (const mm of lines[i].matchAll(/p\.px\.([A-Za-z0-9_]+)\s*(\+\+|\+=|=\s*(?:true|1)\b)/g))
+      explicit[mm[1]] = mm[2].startsWith('=') ? 'bool' : 'inc';
+  for (const m of ids) {
+    const keys = Object.keys(explicit).length ? Object.assign({}, explicit) : { [m[1]]: 'bool' };
+    PERKS.push({ id: m[1], r: Number(m[2]), uniq: true, line: i + 1, keys });   /* 전 특전 고유 (획득 중복 금지) */
+  }
 }
-if (PERKS.length !== 128) { console.error(`✗ 특전이 128종이 아니다 (파싱 결과 ${PERKS.length}종). T77(전투 무관 4종 삭제)로 132 → 128 이 됐다 — 개수를 바꿨으면 이 숫자도 같이 고칠 것`); process.exit(1); }
+if (PERKS.length !== 132) { console.error(`✗ 특전이 132종이 아니다 (파싱 결과 ${PERKS.length}종). ⚑ P1(T83) 재설계본 = 일반 44 · 희귀 46 · 전설 42 — 개수를 바꿨으면 이 숫자도 같이 고칠 것`); process.exit(1); }
 
 /* ── ③ GOPT 파싱 ──────────────────────────────────── */
 const gStart = lines.findIndex(l => /^const GOPT\s*=\s*\{/.test(l));
@@ -156,12 +145,13 @@ if (!nProb) console.log('  없음');
 /* mkBuild(rar,plus,slot,typeIdx) 는 typeIdx 기본 0 이고 호출자 전원이 안 넘긴다(T20). */
 const T0 = ['greatsword', 'helmet', 'plate', 'gauntlet', 'sandal', 'pendant'];
 const optCount = (rar, plus) => { let n = rar; if (rar === 4) { if (plus >= 3) n++; if (plus >= 6) n++; if (plus >= 9) n++; } return n; };
+/* 장비 등급은 특전 등급과 무관하게 5단(일반~신화) 그대로다 — 여기 rar 은 «장비» 등급이다. */
 const CFG = [
-  { nm: '실험1 (전설0강·슬롯2)', rar: 3, plus: 0 },
-  { nm: '실험2 (신화0강·슬롯0)', rar: 4, plus: 0 },
-  { nm: '앵커C (전설0강·슬롯10)', rar: 3, plus: 0 },
-  { nm: '앵커A (신화0강·슬롯15)', rar: 4, plus: 0 },
-  { nm: '앵커B (신화+9강·슬롯50)', rar: 4, plus: 9 },
+  { nm: '실험1·2 (희귀 풀셋·슬롯0/5)', rar: 1, plus: 0 },
+  { nm: '사다리 영웅 풀셋', rar: 2, plus: 0 },
+  { nm: '사다리 전설 풀셋', rar: 3, plus: 0 },
+  { nm: '사다리 신화 풀셋', rar: 4, plus: 0 },
+  { nm: '사다리 신화+9강', rar: 4, plus: 9 },
 ];
 console.log('\n[③ 채점 하니스에서 실제로 죽어 있는 특전 — typeIdx 0 = ' + T0.map(ty2).join(' / ') + ']');
 const deadAt = {};

@@ -25,6 +25,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const SIM = fs.readFileSync(path.join(root, 'sim.js'), 'utf8');
 const PLAN = fs.readFileSync(path.join(root, 'PLAN.md'), 'utf8');
+const HTML = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const LIST = process.argv.includes('--list');
 
 /* ── 주인 판단 대기라 지금은 «불일치» 로 세지 않는 기존 차이 ── */
@@ -57,49 +58,66 @@ function check(nm, planV, simV, unit) {
   cmp.push({ nm, planV, simV: +simV.toFixed(6), unit: unit || '', ok });
 }
 
-/* ── ① 등급 등장 확률 (PLAN §3.0 ↔ rollRarity) ────── */
-const rr = grab(/return r<([\d.]+)\?3:r<([\d.]+)\?2:r<([\d.]+)\?1:0;/, 'rollRarity 의 등급 임계값');
-const tMyth = +rr[1], tLeg = +rr[2], tRare = +rr[3];
-const simRar = { 신화: tMyth, 전설: tLeg - tMyth, 희귀: tRare - tLeg, 일반: 1 - tRare };
+/* ── ① 등급 등장 확률 (PLAN §3.0 ↔ rollRarity) ──────
+   ⚑ P1(T83) — 신화 폐지로 3단이 됐다. 엔진은 상수 배열 `RARITY_P=[일반,희귀,전설]` 하나만 본다. */
+const rp = grab(/const RARITY_P=\[([\d.]+),([\d.]+),([\d.]+)\];/, 'RARITY_P 등급 확률 배열');
+const simRar = { 일반: +rp[1], 희귀: +rp[2], 전설: +rp[3] };
 const rarLine = planLine('등급 등장 확률', '§3.0 등급 등장 확률');
-const rarNums = rarLine.match(/일반 ([\d.]+)% \/ 희귀 ([\d.]+)% \/ 전설 ([\d.]+)% \/ 신화 ([\d.]+)%/);
+const rarNums = rarLine.match(/일반 ([\d.]+)% \/ 희귀 ([\d.]+)% \/ 전설 ([\d.]+)%/);
 if (!rarNums) { console.log('\n🔴 PLAN §3.0 등급 확률 문장의 형식이 바뀌었다'); process.exit(1); }
-const planRar = { 일반: +rarNums[1] / 100, 희귀: +rarNums[2] / 100, 전설: +rarNums[3] / 100, 신화: +rarNums[4] / 100 };
-for (const k of ['일반', '희귀', '전설', '신화']) check(`등급 확률 ${k}`, planRar[k] * 100, simRar[k] * 100, '%');
+const planRar = { 일반: +rarNums[1] / 100, 희귀: +rarNums[2] / 100, 전설: +rarNums[3] / 100 };
+for (const k of ['일반', '희귀', '전설']) check(`등급 확률 ${k}`, planRar[k] * 100, simRar[k] * 100, '%');
 const sum = Object.values(planRar).reduce((a, b) => a + b, 0);
 cmp.push({ nm: '등급 확률 합계', planV: +(sum * 100).toFixed(4), simV: 100, unit: '%', ok: Math.abs(sum - 1) < 1e-9 });
+/* 굴림이 그 배열을 실제로 쓰는가 (숫자를 다시 손으로 적어 두면 배열만 고쳐도 안 바뀐다) */
+const rrBody = grab(/function rollRarity\(G\)\{[\s\S]*?\n\}/, 'rollRarity 본문')[0];
+const usesArr = /RARITY_P\[2\]/.test(rrBody) && /RARITY_P\[1\]/.test(rrBody) && !/0\.\d/.test(rrBody);
+cmp.push({ nm: '굴림이 RARITY_P 를 쓴다', planV: '배열', simV: usesArr ? '배열' : '리터럴', unit: '', ok: usesArr, txt: true });
 
-/* ── ② 👼 전설 이상 제한(legendOnly) 의 신화 비율 ─── */
-const lo = grab(/if\(G\.legendOnly\)return Math\.random\(\)<([\d.]+)\?3:2;/, 'rollRarity 의 legendOnly 분기');
-const loLine = planLine('신화 37.5%', '§3.0 legendOnly 신화 비율');
-check('legendOnly 신화 비율', +(loLine.match(/신화 ([\d.]+)%/)[1]), +lo[1] * 100, '%');
+/* ── ② 신화 등급 폐지 (특전 축) ───────────────────
+   ⚑ 주인 확정 — 특전 등급은 3단이다. 장비의 신화 등급은 별개이므로 «특전» 쪽만 본다. */
+{
+  const mythPerk = /add\('m_/.test(SIM) || /id:'m_/.test(HTML);
+  const legendOnly = /legendOnly/.test(SIM) || /legendOnly/.test(HTML);
+  cmp.push({ nm: '신화 특전 0종', planV: '0종', simV: mythPerk ? '남아 있다' : '0종', unit: '', ok: !mythPerk, txt: true });
+  cmp.push({ nm: '👼 전설이상 제한 폐지', planV: '없음', simV: legendOnly ? '남아 있다' : '없음', unit: '', ok: !legendOnly, txt: true });
+}
 
-/* ── ③ 선택지 수 (기본 / 🔮 전지의 눈) ────────────── */
-const ch4 = grab(/opts=rollPerks\(G,p\.px\.choice4\?(\d+):(\d+)\);/, 'perkChoice 의 선택지 수');
-const ch4Line = planLine('레벨업 → 특전', '§2.4 선택지 수');
-check('선택지 수 기본', +(ch4Line.match(/특전 (\d+)개 중 1개/)[1]), +ch4[2], '개');
-check('선택지 수 🔮', +(ch4Line.match(/전지의 눈 보유 시 (\d+)개/)[1]), +ch4[1], '개');
+/* ── ③ 선택지 수 — ⚑ 3개 고정 (🔮 전지의 눈 삭제) ── */
+const ch3 = grab(/opts=rollPerks\(G,(\d+)\);/, 'perkChoice 의 선택지 수');
+const ch3Line = planLine('레벨업 → 특전', '§2.4 선택지 수');
+check('선택지 수 기본', +(ch3Line.match(/특전 \*\*(\d+)개 중 1개/)[1]), +ch3[1], '개');
+{
+  const c4 = /choice4/.test(SIM) || /choice4/.test(HTML);
+  cmp.push({ nm: '🔮 전지의 눈 폐지', planV: '없음', simV: c4 ? '남아 있다' : '없음', unit: '', ok: !c4, txt: true });
+}
 
-/* ── ④ 등급통일 · 고유 제외 (구조 검사) ───────────── */
+/* ── ④ 등급통일 · 획득 중복 금지 (구조 검사) ─────────
+   ⚑ 주인 확정 «획득 중복 금지» — 고유 플래그(u)가 아니라 **전 특전**이 taken 에서 빠진다. */
 const rpBody = grab(/function rollPerks\(G,n\)\{[\s\S]*?\n\}/, 'rollPerks 본문')[0];
 const rollsOnce = (rpBody.match(/rollRarity\(G\)/g) || []).length === 1;
-const filtersOne = /PERKS\.filter\(x=>x\.r===rar&&/.test(rpBody);
+const filtersOne = /perkPool\(G,rar\)/.test(rpBody);
 cmp.push({ nm: '등급통일(선택지당 굴림 1회)', planV: '1회', simV: rollsOnce ? '1회' : '여러 번', unit: '', ok: rollsOnce && filtersOne, txt: true });
-const uniqOk = /!\(x\.u&&G\.taken\.includes\(x\)\)/.test(rpBody) && /!\(y\.u&&G\.taken\.includes\(y\)\)/.test(SIM);
-cmp.push({ nm: '고유(u) 특전 선택지 제외', planV: '제외', simV: uniqOk ? '제외' : '미제외', unit: '', ok: uniqOk, txt: true });
+const poolBody = grab(/const perkPool=\(G,rar\)=>[^\n]*/, 'perkPool 정의')[0];
+const uniqSim = /x\.r===rar&&!G\.taken\.includes\(x\)/.test(poolBody) && !/x\.u/.test(poolBody);
+const uniqHtml = /p\.r===rar && !G\.perksTaken\.includes\(p\)/.test(HTML) && !/\bp\.u&&/.test(HTML);
+cmp.push({ nm: '획득 중복 금지(전 특전 고유)', planV: '전부 제외', simV: (uniqSim && uniqHtml) ? '전부 제외' : '일부만', unit: '', ok: uniqSim && uniqHtml, txt: true });
 
-/* ── ⑤ 😈 악마 이벤트 ─────────────────────────────── */
-const dv = grab(/const rar=Math\.random\(\)<([\d.]+)\?3:2;/, '악마 이벤트의 신화 확률');
+/* ── ⑤ 😈 악마 이벤트 — ⚑ 전설 확정 ───────────────── */
 const dvHp = grab(/p\.hp=Math\.max\(1,p\.hp-p\.maxHp\*([\d.]+)\);/, '악마 이벤트의 체력 지불');
 const dvLine = planLine('악마 😈', '§2.4 악마 이벤트');
-check('악마 신화 확률', +(dvLine.match(/(\d+)% 확률로 신화/)[1]), +dv[1] * 100, '%');
 check('악마 체력 지불', +(dvLine.match(/최대 체력의 (\d+)% 지불/)[1]), +dvHp[1] * 100, '%');
+{
+  const simLeg = /let pool=perkPool\(G,2\);/.test(SIM);
+  const htmlLeg = /let pool=perkPool\(2\);/.test(HTML);
+  const noMyth = !/Math\.random\(\)<0\.15\?3:2/.test(SIM) && !/Math\.random\(\)<0\.15\?3:2/.test(HTML);
+  cmp.push({ nm: '악마 = 전설 확정', planV: '전설 확정', simV: (simLeg && htmlLeg && noMyth) ? '전설 확정' : '어긋남', unit: '', ok: simLeg && htmlLeg && noMyth, txt: true });
+}
 
 /* ── ⑥ 🏕️ 쉼터 이벤트 ──────────────────────────────
    ⚑ 주인 확정(2026-09-02 16:4X · PLAN §7): **시뮬**의 가상 플레이어는 쉼터에서 항상 «🌟 경험치» 를 고른다.
    그래서 회복 분기는 sim.js 에서 사라졌고(T46), 회복량 40% 는 «유저가 고르는» index.html 에만 남는다.
    따라서 경험치는 sim.js 로, 회복량은 index.html 로 대조한다 (둘 다 과녁은 PLAN §2.4 한 줄). */
-const HTML = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 /* ⚑ 주인 확정 17:1X(T49)로 보상이 «체력 260 고정 회복 vs 경험치 +26» 이 됐고, 두 값은 양쪽 엔진의
    `REST_HEAL`·`REST_EXP` 상수로 산다. PLAN §2.4 줄은 개정 전 값을 취소선으로 남겨 두므로
    «주인 확정» 뒤쪽만 읽는다(안 그러면 폐기된 40%·+10 을 과녁으로 삼는다). */

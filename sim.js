@@ -549,17 +549,17 @@ function _basePxLegacy(){
     hitCounterS:0,counterAtkS:0,counterDefS:0,healBoost2:0,healDefBuff:0,healShield3:0,firstHit:0,
     axe:0,arrow2:0,wave:0,atkBuffM:0,critFBuff:0,critReset:0,critHeal3:0,aspdKill:0,
     killCritBuff:0,killDefBuff:0,defBuff2:0,hitEvadeBuff:0,hitCounter:0,evadeHeal:0,evadeShield:0,
-    evadeRush:0,counterX:0,counterAtkM:0,counterCrit:0,healShield5:0,healAtkBuff:0,restHp:0,lastStand:false,
+    evadeRush:0,counterX:0,counterAtkM:0,counterCrit:0,healShield5:0,healAtkBuff:0,lastStand:false,
     spear:0,bolt:0,atkBuffL:0,extraHit:0,critAtkBuff:0,critAspdBuff:0,killAspd:false,killShield10:0,
     thorns:0,evadeHitBuff:0,defBuffL:0,evadeCrit:false,evadeCounter:0,evadeAtkBuff:0,
     counterChain:false,counterHeal:0,counterWave:0,overheal:false,overBolt:false,
-    fullHpCrit:false,rage:false,backDmg:false,execute:false,perkHp:false,
+    fullHpCrit:false,rage:false,backDmg:false,execute:false,
     revive:0,clone:false,execKill:false,procX2:false,arsenal:0,guardCrystal:false,autoBolt:0,
     axeCount:0,arrowCount:0,spearMaster:0,boltCount:0,waveKing:0,sage:false,wallBuff:0,
     evadeAxe:0,
     /* ⚑ T48 1단계 — 신규 축 2개 (주인 15:5X): 스턴 · 빗맞음(onMiss) */
     stunHitS:0,stunHitL:0,stunCritM:0,stunCritL:0,stunLord:false,stunKill:false,stunAura:0,
-    missAtk:0,missDef:0,missAspd:0,missReset:0,missCrit:false,missStack:0,missRush:false,missSpear:0,
+    missAtk:0,missDef:0,missAspd:0,missReset:0,missRush:false,missSpear:0,
     /* ⚑ T48 2단계 — 원거리 피격 축 · 반사 확장 · 고중첩 변형 (주인 16:0X·16:1X·16:2X) */
     rangeShield:0,rangeThorns:0,rangeBolt:0,rangeSpear:0,thornsS:0,thornsKing:false,aspdStack10:0,
   };
@@ -776,7 +776,7 @@ function dealDmg(G,e,ratio,fromBasic){
                           if(px.backDmg)d*=3.2; }            /* 장비 옵션 (순수 배수) */
   }
   if(fromBasic&&px.c_fourthDmg&&p.atkN%4===0)addBonus+=1.00; /* 🔢 4번째 공격마다 +100% */
-  if(px.missStack&&p.missStk>0){p.missStk--;addBonus+=1.00;} /* 💢 빗맞음 스택 */
+  if(px.l_missStack&&p.missStk>0){p.missStk--;addBonus+=1.00;} /* 💢 빗맞음 스택 */
   if(px.c_evadeStack&&p.evStk>0){p.evStk--;addBonus+=0.50;}  /* 🌀🗡️ 회피 스택 */
   if(px.r_comboDmg){                                          /* 🥊 같은 적 연타 +10%씩 누적 */
     if(p.comboT===e)p.comboN++;else{p.comboT=e;p.comboN=0;}
@@ -1083,16 +1083,11 @@ function rollPerks(G,n){
   }
   return out;
 }
-/* ⚑ PLAN §4 «악마/레벨업 모두 perkChances 증가 → perkHp 소급 로직» (T70).
-   종전엔 이 두 줄이 레벨업 경로에만 있었고 악마 거래 경로는 `G.perkChances++` 만 해서
-   💗 l_perkHp 의 «특전 기회 1번마다 최대 체력 +1.8%» 가 악마 거래에서만 안 걸렸다
-   (index.html 은 두 자리 모두 `G.perkChances++; if(px.perkHp) applyPerkHp(1);` 로 걸고 있었다 = 두 파일 괴리).
-   한 동사로 모아 두 자리가 다시 갈라질 수 없게 했다 — index.html 의 applyPerkHp 와 같은 계수 0.018·같은 순서.
-   감시: `verifyT2` ㉟ (두 파일 호출 지점 대조 + vm 실행 단언). */
+/* 특전 기회 1번 = 레벨업 또는 악마 거래. 두 자리가 한 동사를 거치게 모아 둔다 (PLAN §4 · T70).
+   ⚑ P1(T83) — 여기 걸려 있던 💗 l_perkHp(«특전 기회마다 최대 체력 +1.8%»)는 새 132종에서 사라졌다
+   («최대 체력 증가» 는 주인 확정 금지축). 카운터만 남는다. */
 function grantPerkChance(G){
   G.perkChances++;
-  const p=G.player;
-  if(p.px.perkHp){const a=p.maxHp*0.018;p.maxHp+=a;heal(p,a,true);}
 }
 function perkChoice(G){
   grantPerkChance(G);   /* 레벨업 = 특전 기회 1번 (PLAN §4) */
@@ -1154,7 +1149,6 @@ function runChapter(chapter,build,opts){
         if(p.px.r_eventShield)repair(p,p.maxSh*0.20);        /* 🚪 이벤트를 지날 때마다 실드 20% 충전 */
         if(n.type==='rest'&&p.px.l_restWard)p.ward+=5;       /* 🏕️🛡️ 쉼터에서 쉴 때마다 방어막 5장 */
         if(n.type==='rest'){
-          if(p.px.restHp){const a=p.maxHp*0.15*p.px.restHp;p.maxHp+=a;heal(p,a,true);}
           /* ⚑ 주인 확정(2026-09-02 16:4X · PLAN §7): 가상 플레이어는 쉼터에서 «항상 🌟 경험치» 를 고른다.
              체력 회복 분기는 시뮬에서 금지 — 전 실험(1~5·사다리·하니스) 공통 측정 조건.
              실제 게임(index.html)은 유저 자유 선택이므로 두 선택지를 그대로 둔다.
@@ -1169,7 +1163,7 @@ function runChapter(chapter,build,opts){
             let pool=perkPool(G,2);
             if(!pool.length)pool=perkPool(G,1);   /* 게임과 같은 폴백: 전설 풀이 비면 희귀로 */
             if(pool.length){
-              grantPerkChance(G);   /* ⚑ 악마도 «특전 기회» 다 — perkChances 증가 + perkHp 소급 (PLAN §4 · T70) */
+              grantPerkChance(G);   /* ⚑ 악마도 «특전 기회» 다 (PLAN §4 · T70) */
               const perk=pick(pool);perk.ap(p);G.taken.push(perk);
             }
           }
