@@ -206,7 +206,7 @@
 ### 3.4 신화 — 22종
 | sim id | 표시 텍스트 |
 |---|---|
-| m_revive | ♻️ 불사조의 심장 — 사망 시 1회 부활 (체력·실드 9% 회복) (고유) |
+| m_revive | ♻️ 불사조의 심장 — 사망 시 1회 부활 (체력·실드 7% 회복) (고유) |
 | m_clone | 👻 그림자 분신 — 공격할 때마다 분신이 추가타 (공격력의 37%) (고유) |
 | m_execKill | 🧨 처형자 — 체력 25% 이하인 적 즉시 처치 (보스 제외) (고유) |
 | m_procX2 | 🌪️ 폭풍의 힘 — 모든 발동형 특전의 확률 1.22배 (고유) (R07↓) |
@@ -220,7 +220,7 @@
 | m_bolt3 | ⚡ 번개 지배자 — 번개가 20회씩 발동 (고유) (R07↑) |
 | m_wave4 | 🌊 검기의 왕 — 검기가 20명까지 관통 (사거리 340→1400) (고유) (R07↑) |
 | m_gold2 | 💰 황금 기사 — 골드 획득 2배 (고유) |
-| m_sage | 🌟 현자 — 처치 시 경험치 +2 (고유) |
+| m_sage | 🌟 현자 — 처치 시 경험치 +1 (고유) |
 | m_def20 | 🛡️ 불괴 — 방어력 +8%p (R07↓) |
 | m_crit25 | 🎯 정밀 — 치명타 확률 +9% (R07↓) |
 | m_giant | 🦾 거인화 — 최대 체력 +16% (즉시 회복) (R07↓) |
@@ -233,7 +233,7 @@
 
 ## 4. 엔진 구현 세부 (sim.js와 동일하게)
 
-- `pk(chance)` — 발동 판정. `procX2`면 확률 2배. **모든 "n% 확률" 발동형은 이 헬퍼를 통해서만 굴릴 것.**
+- `pk(chance)` — 발동 판정. `procX2`면 확률 **1.22배**(엔진 `pkk()` 실제 상수 — §3.4 `m_procX2` 와 같은 값. **T1 이 이 배수를 조정하면 §3.4 와 여기 둘 다 갱신할 것**). **모든 "n% 확률" 발동형은 이 헬퍼를 통해서만 굴릴 것.**
 - 실효 스탯: `effDmg`(rage 포함), `effAspd`, `effCritR`, `effCritF`, `effDef`(상한 80), `effEvade`(lastStand 포함, 상한 90). HUD에도 실효값 표시.
 - `healPlayer(amt)` — healAmp 적용 → healBoost2 → 회복시 트리거(healDef/healShield3/healShield5/healAtk) → 초과분은 overheal/overBolt 처리. 무한루프 방지: 특전 적용시 초기회복 등은 `noBoost=true`로 호출.
 - `dealPlayerDamage(e, ratio, fromBasic)` — 치명 판정(fullHpCrit/nextCrit) → firstHit/execute/backDmg 배수 → 흡혈 → 치명타시 트리거들 → execKill → onKill. **기본공격에서만** nextCrit/nextAtk 소모, 분신/추가타 발동.
