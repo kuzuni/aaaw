@@ -36,7 +36,7 @@ const TUNE={
   wall2Hp:1.0, wall2Dmg:1.0,    // 15챕터 이상 추가 배수 (임시 비활성 — T1 재산정)
   waveHp:0.15, waveDmg:0.08,    // 웨이브 인덱스당 (R03)
   wall3Hp:2.0, wall3Dmg:1.5,    // 90챕터 대형 벽 (⚑ T1 R03 켬 — 벽 예산: 구간 70→120 률을 3.30/3.38% → 1.88/2.54% 로 내려 D(120) 보존)
-  wall4Hp:1.6, wall4Dmg:1.3,    // 300챕터 최종 벽 (⚑ T1 R03 켬 — 260 위에는 과녁이 없어 벽 예산 제약이 없다)
+  wall4Hp:3.2, wall4Dmg:1.8,    // 300챕터 최종 벽 (⚑ T1 R03 켬 — 260 위에는 과녁이 없어 벽 예산 제약이 «완전히» 없다. slotCostG 1.6 의 짝 노브 — 계정이 부유해진 만큼 최종 벽을 올려 30~400회 대역에 되돌린다)
   bossHp:8, bossDmg:1.8,        // 주인 확정 상수 (튜닝 노브 아님) — 5배수 챕터 추가 배수 폐기
   maxChapter:300,               // PLAN §2.4 (§11 도입으로 20 → 100 → 주인 추가 지시로 300)
   /* 플레이어 기본치 (영구강화 4종 폐지 — 성장은 §11 장비 + 슬롯 강화가 전담)
@@ -299,7 +299,7 @@ const GT={
   plusStep:0.13,                 // 강화 1레벨당 해당 장비 공/체/실 +13% (주인 확정 — 종전 0.12)
   slotLvMax:150,                 // 슬롯 레벨 상한 (주인 확정)
   slotStep:0.01,                 // 슬롯 1레벨당 공/체/실 +1% (가산 — 종전 `slotG 2.68` 등비 폐기)
-  slotCostBase:600, slotCostG:2.6,   // 슬롯 강화 비용 = base*costG^L (⚑ T1 R03: 3.5 → 2.6 — T53 «F2P 챕터 300 미도달»)
+  slotCostBase:600, slotCostG:1.6,   // 슬롯 강화 비용 = base*costG^L (⚑ T1 R03: 3.5 → 2.6 → 1.6 — 비평가 B 실측. 정상상태 슬롯레벨 L ≈ c*ln(goldGrowth)/ln(slotCostG) 라 2.6 이면 상한 150 이 챕터 431 에서야 닿는다 = 사문. 1.6 이면 챕터 300 부근에서 닿는다)
   /* R07: 150/5.5 → 600/4.2. T6 의 «costG < goldGrowth^6» 규칙은 틀렸다 — 5.5 는 그 규칙을 지키고도 실험4 가
      챕터 118 에서 40일 정체했다. 올바른 조건은 «슬롯 1렙이 벌어주는 챕터 수(ln slotG/ln eHpG = 5.808챕터) 동안의
      골드 증가분 goldGrowth^5.808 ≥ costG», 즉 costG ≤ 1.22^5.808 = 3.174 다.
@@ -1306,10 +1306,15 @@ function exp4_gearProgress(){
      (R02 비평가 2인이 독립적으로 같은 한계를 지적했다 — «①은 검증 자체가 불가능하다»). 챕터별 최장 연속 실패 판수를 센다. */
   let worstCh=0,worstTries=0;
   const marks=[1,3,7,14,30,60,90,120,150,180,240,300,365];
-  for(let d=1;d<=DAYS;d++){
+  /* ⚑ T1 R03(T59) — `chap <= maxChapter` 가드. 이게 없으면 계정이 콘텐츠가 없는 301+ 로 계속 올라가고,
+     기준①(정체)이 «경제가 막혔다» 가 아니라 «게임이 끝났다» 를 재게 된다. R02 까지는 계정이 250~290 장에
+     머물러 드러나지 않았는데, R03 이 곡선·경제를 풀자 실제로 넘어갔다(F2P 365일차 315·350·348장). */
+  let doneDay=0;
+  for(let d=1;d<=DAYS&&!doneDay;d++){
     for(let k=0;k<GT.runsPerDay;k++){
       total++;tries++;
-      if(accAttempt(a,chap).clear){ if(tries>worstTries){worstTries=tries;worstCh=chap;} chap++; tries=0; }
+      if(accAttempt(a,chap).clear){ if(tries>worstTries){worstTries=tries;worstCh=chap;} chap++; tries=0;
+        if(chap>TUNE.maxChapter){ doneDay=d; break; } }
     }
     if(marks.includes(d)){
       const my=GT.parts.filter(pt=>a.eq[pt]&&a.eq[pt].rar===4).length;
@@ -1318,9 +1323,11 @@ function exp4_gearProgress(){
     if(tries>GT.runsPerDay*STUCK){ stuckFrom=chap; stuck=tries; break; }   /* STUCK 일 넘게 한 챕터에 정체 = 막힘 (90·300 대형 벽은 원래 오래 걸리므로 기본 40일) */
   }
   const my=GT.parts.filter(pt=>a.eq[pt]&&a.eq[pt].rar===4).length;
-  console.log(`최종: 챕터 ${chap-1} 클리어 · 슬롯 ${slotStr(a)} · 신화 부위 ${my}/6 · 뽑기 ${a.pulls}회 · 합성 ${a.fuses}회 · 총 ${total}판`);
-  /* ⚑ T1 R02 — 기준 ① 직접 판정. 마지막 챕터는 아직 클리어 전이라 진행 중 판수(tries)도 후보에 넣는다. */
-  if(tries>worstTries){worstTries=tries;worstCh=chap;}
+  console.log(`최종: 챕터 ${chap-1} 클리어 · 슬롯 ${slotStr(a)} · 신화 부위 ${my}/6 · 뽑기 ${a.pulls}회 · 합성 ${a.fuses}회 · 총 ${total}판`
+    +(doneDay?`  ★ 전 챕터(${TUNE.maxChapter}) 완주 — ${doneDay}일차`:''));
+  /* ⚑ T1 R02 — 기준 ① 직접 판정. 마지막 챕터는 아직 클리어 전이라 진행 중 판수(tries)도 후보에 넣는다.
+     ⚑ T1 R03(T59) — 완주한 런은 «진행 중» 이 없으므로 이 보정을 하지 않는다. */
+  if(!doneDay&&tries>worstTries){worstTries=tries;worstCh=chap;}
   console.log(`기준①(정체) 최장 연속 실패: 챕터 ${worstCh} 에서 ${worstTries}판(${(worstTries/GT.runsPerDay).toFixed(1)}일) — 임계 ${GT.runsPerDay*20}판(20일) ${worstTries<GT.runsPerDay*20?'미만 ✓':'이상 ✗'}`);
   if(stuckFrom>0)console.log(`** 정체 감지: 챕터 ${stuckFrom} 에서 ${stuck}판(${(stuck/GT.runsPerDay).toFixed(0)}일) 연속 실패 — 90·300 은 대형 벽이라 정상, 그 외 챕터면 경제가 막힌 것 **`);
 }
