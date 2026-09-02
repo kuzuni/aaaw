@@ -355,7 +355,7 @@ const GOPT={
   /* 무기 */
   greatsword:[ /* 검기 계열 */
     {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
-    {d:'공격 시 20% 확률 검기 발사', ap:p=>p.px.wave++},
+    {d:'공격 시 5% 확률 검기 발사', ap:p=>p.px.wave++},
     {d:'공격 시 30% 확률 공격력 +14% 4초', ap:p=>p.px.atkBuffM++},
     {d:'검기 관통 20·사거리 1400', ap:p=>p.px.waveKing=1},
     {d:'공격 시 25% 확률 공격력 +35% 5초', ap:p=>p.px.atkBuffL++},
@@ -364,20 +364,20 @@ const GOPT={
   ],
   axe:[ /* 도끼 계열 */
     {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
-    {d:'공격 시 15% 확률 도끼 발사', ap:p=>p.px.axe++},
+    {d:'공격 시 5% 확률 도끼 발사', ap:p=>p.px.axe++},
     {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
-    {d:'도끼 14개로 증가',       ap:p=>p.px.axeCount=1},
-    {d:'도끼 발사 확률 +15%p',   ap:p=>p.px.axe++},
+    {d:'도끼 3개로 증가',       ap:p=>p.px.axeCount=1},
+    {d:'도끼 발동 확률 +5%',   ap:p=>p.px.axe++},
     {d:'처치 시 실드 충전',      ap:p=>p.px.killShield3++},
     {d:'최대 체력 적 첫 타격 피해 +20%', ap:p=>p.px.firstHit++},
   ],
   bow:[ /* 화살 계열 */
     {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
-    {d:'공격 시 15% 확률 화살 2발', ap:p=>p.px.arrow2++},
+    {d:'공격 시 5% 확률 화살 2발', ap:p=>p.px.arrow2++},
     {d:'치명타 배율 +30',       ap:p=>p.critF+=30},
-    {d:'화살 24발로 증가',       ap:p=>p.px.arrowCount=1},
+    {d:'화살 3발로 증가',       ap:p=>p.px.arrowCount=1},
     {d:'치명타 시 75% 확률 추가타', ap:p=>p.px.extraHit++},
-    {d:'화살 발사 확률 +15%p',   ap:p=>p.px.arrow2++},
+    {d:'화살 발동 확률 +5%',   ap:p=>p.px.arrow2++},
     {d:'최대 체력 적에게 치명타 확률 62', ap:p=>p.px.fullHpCrit=true},
   ],
   /* 투구 */
@@ -401,12 +401,12 @@ const GOPT={
   ],
   hood:[ /* 번개 계열 */
     {d:'치명타 배율 +25',       ap:p=>p.critF+=25},
-    {d:'공격 시 10% 확률 번개 2발', ap:p=>p.px.bolt++},
+    {d:'공격 시 5% 확률 번개 1회', ap:p=>p.px.bolt++},
     {d:'치명타 시 치명 배율 +34 4초', ap:p=>p.px.critFBuff++},
-    {d:'번개 20회로 증가',       ap:p=>p.px.boltCount=1},
+    {d:'번개 2회로 증가',       ap:p=>p.px.boltCount=1},
     {d:'2.4초마다 번개 자동 발사', ap:p=>p.px.autoBolt++},
     {d:'치명타 시 공격속도 +25% 3초', ap:p=>p.px.critAspdBuff++},
-    {d:'공격 시 16% 확률 소환 무작위 발사', ap:p=>p.px.arsenal++},
+    {d:'공격 시 5% 확률 소환 무작위 발사', ap:p=>p.px.arsenal++},
   ],
   /* 갑옷 */
   plate:[ /* 체력·피격 계열 */
@@ -513,10 +513,10 @@ const GOPT={
   ],
   beads:[ /* 창 계열 */
     {d:'공격력 +5%',            ap:p=>p.dmg*=1.05},
-    {d:'공격 시 7.5% 확률 창 발사', ap:p=>p.px.spear++},
+    {d:'공격 시 5% 확률 창 발사', ap:p=>p.px.spear++},
     {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
     {d:'창 피해 13.5배·관통',    ap:p=>p.px.spearMaster=1},
-    {d:'창 발사 확률 +7.5%p',    ap:p=>p.px.spear++},
+    {d:'창 발동 확률 +5%',    ap:p=>p.px.spear++},
     {d:'적 화살 30% 확률 오발',  ap:p=>p.misfire+=0.30},
     {d:'모든 발동 확률 1.22배',  ap:p=>p.px.procX2=true},
   ],
@@ -844,9 +844,9 @@ function pushProj(G,pr){
     for(const e of list.slice(0,pr.pierce))summonHit(G,e,pr.ratio);
   }else if(pr.tgt&&pr.tgt.hp>0)summonHit(G,pr.tgt,pr.ratio);
 }
-function fireAxe(p){const G=p.G,n=p.px.axeCount?14:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)pushProj(G,{type:'axe',x:p.worldX+14,tgt:t,ratio:0.50,spd:430});}}
-function fireArrows(p){const G=p.G,n=p.px.arrowCount?24:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)pushProj(G,{type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560});}}
-function fireBolts(p){const G=p.G,n=p.px.boltCount?20:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)summonHit(G,t,0.75);}}
+function fireAxe(p){const G=p.G,n=p.px.axeCount?3:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)pushProj(G,{type:'axe',x:p.worldX+14,tgt:t,ratio:0.50,spd:430});}}
+function fireArrows(p){const G=p.G,n=p.px.arrowCount?3:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)pushProj(G,{type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560});}}
+function fireBolts(p){const G=p.G,n=p.px.boltCount?2:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)summonHit(G,t,0.75);}}
 function fireWave(p){const G=p.G;pushProj(G,{type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?1400:340),hit:new Set(),pierce:p.px.waveKing?20:2,node:frontNode(G)});}
 /* 창 관통 상한 8마리 — PLAN §3.3 l_spear «일직선 8명 거리(88px×8) 관통» 의 «8명» 이 엔진에 없어
    12마리 웨이브에서 총출력이 162배까지 갔다(T34). 신화 m_spear200 은 데미지만 올리고 관통 수는 그대로. */
@@ -859,12 +859,12 @@ function procOnAttack(G){
   if(px.aspdStack10&&pkk(p,0.25*px.aspdStack10))addBuff(p,'aspd',0.05,4,10);   /* 주인 예시 — 고중첩 상위 변형 */
   if(px.atkBuffM&&pkk(p,0.30*px.atkBuffM))addBuff(p,'atk',0.14,4,5);
   if(px.atkBuffL&&pkk(p,0.25*px.atkBuffL))addBuff(p,'atk',0.35,5,3);
-  if(px.axe&&pkk(p,0.15*px.axe))fireAxe(p);
-  if(px.arrow2&&pkk(p,0.15*px.arrow2))fireArrows(p);
-  if(px.wave&&pkk(p,0.20*px.wave))fireWave(p);
-  if(px.spear&&pkk(p,0.075*px.spear))fireSpear(p);
-  if(px.bolt&&pkk(p,0.10*px.bolt))fireBolts(p);
-  if(px.arsenal&&pkk(p,0.16*px.arsenal))pick([fireAxe,fireArrows,fireBolts,fireWave,fireSpear])(p);
+  if(px.axe&&pkk(p,0.05*px.axe))fireAxe(p);
+  if(px.arrow2&&pkk(p,0.05*px.arrow2))fireArrows(p);
+  if(px.wave&&pkk(p,0.05*px.wave))fireWave(p);
+  if(px.spear&&pkk(p,0.05*px.spear))fireSpear(p);
+  if(px.bolt&&pkk(p,0.05*px.bolt))fireBolts(p);
+  if(px.arsenal&&pkk(p,0.05*px.arsenal))pick([fireAxe,fireArrows,fireBolts,fireWave,fireSpear])(p);
   gainWard(p,0.10*px.wardAtk);   /* 주인 필수 예시 — «공격 시 10% 확률로 방어막 1장» */
 }
 function doCounter(G,src,depth){

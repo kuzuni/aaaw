@@ -58,7 +58,11 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
        임계값 440 바로 바깥에 서므로 플레이어가 몇 px 만 걸어도 넘어간다. 적 화살 수를 따로 세서 뺀다. */
     const origArr = G.arrows.push.bind(G.arrows);
     G.arrows.push = (o) => { earrows.push(performance.now() - t0); return origArr(o); };
-    G.player.px.arrowCount = 1;                       /* 신화 화살 24발 */
+    G.player.px.arrowCount = 1;                       /* 신화 화살 폭풍(m_arrow4) 보유 상태 */
+    /* ⚑ T78 — 발수를 숫자로 박아 두면 밸런스 튜닝(소환 연쇄 임계 ≤ 0.8)마다 이 검사가 헛되이 빨개진다.
+       엔진 함수 본문에서 그 값을 그대로 읽어 «코드가 쏘겠다는 발수만큼 낱발로 나갔는가» 를 본다. */
+    const mN = String(fireArrows).match(/arrowCount\s*\?\s*(\d+)\s*:\s*(\d+)/);
+    const wantN = mN ? Number(mN[1]) : -1;
     /* 예약된 지연값 자체를 잡는다 — 이것이 «코드가 요구한 간격» 이고 판정의 근거다 */
     const wanted = [], origST = window.setTimeout;
     window.setTimeout = (f, ms, ...a) => { if (typeof ms === 'number' && ms > 0 && ms < 5000) wanted.push(ms); return origST(f, ms, ...a); };
@@ -75,7 +79,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     const early = stamps.filter((t, i) => i < wabs.length && t < wabs[i] - 5).length;
     const lag = stamps.reduce((m, t, i) => i < wabs.length ? Math.max(m, t - wabs[i]) : m, 0);
     return {
-      n: stamps.length, sounds: sounds.length, earrows: earrows.length, wn: wanted.length,
+      n: stamps.length, wantN, sounds: sounds.length, earrows: earrows.length, wn: wanted.length,
       min: gaps.length ? Math.min(...gaps).toFixed(1) : -1,
       max: gaps.length ? Math.max(...gaps).toFixed(1) : -1,
       avg: gaps.length ? (gaps.reduce((a, c) => a + c, 0) / gaps.length).toFixed(1) : -1,
@@ -89,7 +93,8 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       sasc: stamps.every((t, i) => i === 0 || t >= stamps[i - 1]),
     };
   });
-  chk('화살 24발이 낱발로 나간다', volley.n === 24, `${volley.n}발 · 총 ${volley.span}ms`);
+  chk(`화살 ${volley.wantN}발(엔진 fireArrows 의 발수)이 낱발로 나간다`, volley.wantN > 1 && volley.n === volley.wantN,
+    `${volley.n}발 / 기대 ${volley.wantN}발 · 총 ${volley.span}ms`);
   chk('발마다 예약이 하나씩 (n-1발이 지연 예약)', volley.wn === volley.n - 1, `예약 ${volley.wn}건 / ${volley.n}발`);
   chk('동시 스폰 0 (예약 간격에 20ms 미만 없음)', volley.wsimul === 0, `최소 예약 간격 ${volley.wmin}ms`);
   chk('코드가 예약한 간격이 정확히 50~70ms', +volley.wmin >= 50 && +volley.wmax <= 70, `예약 간격 ${volley.wmin}~${volley.wmax}ms`);

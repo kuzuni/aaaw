@@ -74,6 +74,10 @@ const ALLOW_PROSE = {
     ctx: 'l_killShield10 97%',
     why: '§3.0 R03 조정 기록의 관측 승률(조정 *전* 실험2 측정치)이라 엔진 상수로 존재하지 않는다',
   },
+  '산문:m_axe3+m_arrow4+m_bolt3+m_arsenal+m_missSpear|0.769': {
+    ctx: 'T78 실측 B = 0.769',
+    why: '§4 소환 연쇄 임계 규칙의 «개정 후 실측 기대값» — 확률·발수에서 계산돼 나오는 관측치라 엔진에 리터럴로 존재하지 않는다. 이 값을 실제로 지키는지는 node tools/verifySummonChain.js 가 매번 다시 재서 단언한다',
+  },
   '산문:fireAxe()+fireArrows()+fireBolts()+fireWave()+fireSpear()+m_axe3|5': {
     ctx: '이 5개 중 랜덤',
     why: '§4 «arsenal은 이 5개 중 랜덤 호출» 의 5 = 소환 함수 개수를 센 수사다(m_arsenal 의 랜덤 범위는 엔진에서 배열 길이로 잡는다)',

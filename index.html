@@ -593,7 +593,7 @@ const GOPT={
   /* 무기 */
   greatsword:[ /* 검기 계열 */
     {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
-    {d:'공격 시 20% 확률 검기 발사', ap:p=>p.px.wave++},
+    {d:'공격 시 5% 확률 검기 발사', ap:p=>p.px.wave++},
     {d:'공격 시 30% 확률 공격력 +14% 4초', ap:p=>p.px.atkBuffM++},
     {d:'검기 관통 20·사거리 1400', ap:p=>p.px.waveKing=1},
     {d:'공격 시 25% 확률 공격력 +35% 5초', ap:p=>p.px.atkBuffL++},
@@ -602,20 +602,20 @@ const GOPT={
   ],
   axe:[ /* 도끼 계열 */
     {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
-    {d:'공격 시 15% 확률 도끼 발사', ap:p=>p.px.axe++},
+    {d:'공격 시 5% 확률 도끼 발사', ap:p=>p.px.axe++},
     {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
-    {d:'도끼 14개로 증가',       ap:p=>p.px.axeCount=1},
-    {d:'도끼 발사 확률 +15%p',   ap:p=>p.px.axe++},
+    {d:'도끼 3개로 증가',       ap:p=>p.px.axeCount=1},
+    {d:'도끼 발동 확률 +5%',   ap:p=>p.px.axe++},
     {d:'처치 시 실드 충전',      ap:p=>p.px.killShield3++},
     {d:'최대 체력 적 첫 타격 피해 +20%', ap:p=>p.px.firstHit++},
   ],
   bow:[ /* 화살 계열 */
     {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
-    {d:'공격 시 15% 확률 화살 2발', ap:p=>p.px.arrow2++},
+    {d:'공격 시 5% 확률 화살 2발', ap:p=>p.px.arrow2++},
     {d:'치명타 배율 +30',       ap:p=>p.critF+=30},
-    {d:'화살 24발로 증가',       ap:p=>p.px.arrowCount=1},
+    {d:'화살 3발로 증가',       ap:p=>p.px.arrowCount=1},
     {d:'치명타 시 75% 확률 추가타', ap:p=>p.px.extraHit++},
-    {d:'화살 발사 확률 +15%p',   ap:p=>p.px.arrow2++},
+    {d:'화살 발동 확률 +5%',   ap:p=>p.px.arrow2++},
     {d:'최대 체력 적에게 치명타 확률 62', ap:p=>p.px.fullHpCrit=true},
   ],
   /* 투구 */
@@ -639,12 +639,12 @@ const GOPT={
   ],
   hood:[ /* 번개 계열 */
     {d:'치명타 배율 +25',       ap:p=>p.critF+=25},
-    {d:'공격 시 10% 확률 번개 2발', ap:p=>p.px.bolt++},
+    {d:'공격 시 5% 확률 번개 1회', ap:p=>p.px.bolt++},
     {d:'치명타 시 치명 배율 +34 4초', ap:p=>p.px.critFBuff++},
-    {d:'번개 20회로 증가',       ap:p=>p.px.boltCount=1},
+    {d:'번개 2회로 증가',       ap:p=>p.px.boltCount=1},
     {d:'2.4초마다 번개 자동 발사', ap:p=>p.px.autoBolt++},
     {d:'치명타 시 공격속도 +25% 3초', ap:p=>p.px.critAspdBuff++},
-    {d:'공격 시 16% 확률 소환 무작위 발사', ap:p=>p.px.arsenal++},
+    {d:'공격 시 5% 확률 소환 무작위 발사', ap:p=>p.px.arsenal++},
   ],
   /* 갑옷 */
   plate:[ /* 체력·피격 계열 */
@@ -751,10 +751,10 @@ const GOPT={
   ],
   beads:[ /* 창 계열 */
     {d:'공격력 +5%',            ap:p=>p.dmg*=1.05},
-    {d:'공격 시 7.5% 확률 창 발사', ap:p=>p.px.spear++},
+    {d:'공격 시 5% 확률 창 발사', ap:p=>p.px.spear++},
     {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
     {d:'창 피해 13.5배·관통',    ap:p=>p.px.spearMaster=1},
-    {d:'창 발사 확률 +7.5%p',    ap:p=>p.px.spear++},
+    {d:'창 발동 확률 +5%',    ap:p=>p.px.spear++},
     {d:'적 화살 30% 확률 오발',  ap:p=>p.misfire+=0.30},
     {d:'모든 발동 확률 1.22배',  ap:p=>p.px.procX2=true},
   ],
@@ -1700,9 +1700,9 @@ const PERKS=[
   {id:'c_wardHit', r:0, ic:'🔰✨', tx:'피격 시 <b>8%</b> 확률로 <b>방어막 1장</b> (적 공격 1회 완전 방어)', ap:p=>p.px.wardHit++},
   {id:'c_wardEvade', r:0, ic:'👥✨', tx:'회피 시 <b>10%</b> 확률로 <b>방어막 1장</b> (적 공격 1회 완전 방어)', ap:p=>p.px.wardEvade++},
   /* ---------- 희귀 (26종) ---------- */
-  {id:'r_axe', r:1, ic:'🪓', tx:'공격 시 <b>15%</b> 확률로 도끼 투척 (공격력의 <b>50%</b>, 랜덤 적 <b>1명</b>)', ap:p=>p.px.axe++},
-  {id:'r_arrow', r:1, ic:'🏹', tx:'공격 시 <b>15%</b> 확률로 화살 2발 (각 공격력의 <b>65%</b>, 랜덤 적)', ap:p=>p.px.arrow2++},
-  {id:'r_wave', r:1, ic:'🌊', tx:'공격 시 <b>20%</b> 확률로 검기 발사 (대상과 바로 뒤 적, 공격력의 <b>70%</b>)', ap:p=>p.px.wave++},
+  {id:'r_axe', r:1, ic:'🪓', tx:'공격 시 <b>5%</b> 확률로 도끼 투척 (공격력의 <b>50%</b>, 랜덤 적 <b>1명</b>)', ap:p=>p.px.axe++},
+  {id:'r_arrow', r:1, ic:'🏹', tx:'공격 시 <b>5%</b> 확률로 화살 2발 (각 공격력의 <b>65%</b>, 랜덤 적)', ap:p=>p.px.arrow2++},
+  {id:'r_wave', r:1, ic:'🌊', tx:'공격 시 <b>5%</b> 확률로 검기 발사 (대상과 바로 뒤 적, 공격력의 <b>70%</b>)', ap:p=>p.px.wave++},
   {id:'r_atkBuffM', r:1, ic:'⚔️', tx:'공격 시 <b>30%</b> 확률로 <b>4초간</b> 공격력 <b>+14%</b> (최대 <b>5중첩</b>)', ap:p=>p.px.atkBuffM++},
   {id:'r_critFBuff', r:1, ic:'🔥', tx:'치명타 시 <b>4초간</b> 치명타 배율 <b>+34%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.critFBuff++},
   {id:'r_critReset', r:1, ic:'⏫', tx:'치명타 시 <b>45%</b> 확률로 다음 공격 즉시 발동 (atkTimer=0)', ap:p=>p.px.critReset++},
@@ -1734,8 +1734,8 @@ const PERKS=[
   {id:'r_ward', r:1, ic:'🛡️✨', tx:'공격 시 <b>10%</b> 확률로 <b>방어막 1장</b> — 적 공격 <b>1회</b>를 완전히 막는다 (최대 <b>5장</b>)', ap:p=>p.px.wardAtk++},
   {id:'r_wardCrit', r:1, ic:'💥✨', tx:'치명타 시 <b>12%</b> 확률로 <b>방어막 1장</b> (최대 <b>5장</b>)', ap:p=>p.px.wardCrit++},
   /* ---------- 전설 (28종) ---------- */
-  {id:'l_spear', r:2, ic:'🔱', tx:'공격 시 <b>7.5%</b> 확률로 관통 창 (공격력의 <b>100%</b>, 일직선 <b>8명</b> 거리(88px×8) 관통)', ap:p=>p.px.spear++},
-  {id:'l_bolt', r:2, ic:'⚡', tx:'공격 시 <b>10%</b> 확률로 번개 <b>2회</b> (각 공격력의 <b>75%</b>, 랜덤 적)', ap:p=>p.px.bolt++},
+  {id:'l_spear', r:2, ic:'🔱', tx:'공격 시 <b>5%</b> 확률로 관통 창 (공격력의 <b>100%</b>, 일직선 <b>8명</b> 거리(88px×8) 관통)', ap:p=>p.px.spear++},
+  {id:'l_bolt', r:2, ic:'⚡', tx:'공격 시 <b>5%</b> 확률로 번개 <b>1회</b> (각 공격력의 <b>75%</b>, 랜덤 적)', ap:p=>p.px.bolt++},
   {id:'l_atkBuffL', r:2, ic:'⚔️', tx:'공격 시 <b>25%</b> 확률로 <b>5초간</b> 공격력 <b>+35%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.atkBuffL++},
   {id:'l_extraHit', r:2, ic:'🗡️', tx:'치명타 시 <b>75%</b> 확률로 즉시 추가타 (공격력 <b>230%</b>)', ap:p=>p.px.extraHit++},
   {id:'l_critAtk', r:2, ic:'🔥', tx:'치명타 시 <b>4초간</b> 공격력 <b>+15%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.critAtkBuff++},
@@ -1772,14 +1772,14 @@ const PERKS=[
   {id:'m_clone', r:3, ic:'👻', tx:'그림자 분신 — 공격할 때마다 분신이 추가타 (공격력의 <b>37%</b>)', ap:p=>p.px.clone=true, u:1},
   {id:'m_execKill', r:3, ic:'🧨', tx:'처형자 — 체력 <b>25%</b> 이하인 적 즉시 처치 (보스 제외)', ap:p=>p.px.execKill=true, u:1},
   {id:'m_procX2', r:3, ic:'🌪️', tx:'폭풍의 힘 — 모든 발동형 특전의 확률 <b>1.22배</b>', ap:p=>p.px.procX2=true, u:1},
-  {id:'m_arsenal', r:3, ic:'🎇', tx:'무기고 — 공격 시 <b>16%</b> 확률로 도끼/화살/번개/검기/창 중 하나 랜덤 발동', ap:p=>p.px.arsenal++},
+  {id:'m_arsenal', r:3, ic:'🎇', tx:'무기고 — 공격 시 <b>5%</b> 확률로 도끼/화살/번개/검기/창 중 하나 랜덤 발동', ap:p=>p.px.arsenal++},
   {id:'m_guard', r:3, ic:'💎', tx:'수호의 결정 — 실드가 남아있는 동안 받는 피해 <b>38%</b> 감소', ap:p=>p.px.guardCrystal=true, u:1},
   {id:'m_autoBolt', r:3, ic:'⚡👑', tx:'뇌신 — <b>2.4초</b>마다 자동으로 번개 <b>1회</b> (공격력의 <b>75%</b>) (중첩 시 횟수+1)', ap:p=>p.px.autoBolt++},
   {id:'m_time', r:3, ic:'🕰️', tx:'시간 가속 — 공격속도 <b>+21%</b> & 이동속도 <b>+21%</b>', ap:p=>{p.aspd*=1.21;p.walkMul+=0.21;}},
-  {id:'m_axe3', r:3, ic:'🪓', tx:'도끼 폭풍 — 도끼가 14개씩 발사', ap:p=>p.px.axeCount=1, u:1},
-  {id:'m_arrow4', r:3, ic:'🏹', tx:'화살 폭풍 — 화살이 24발씩 발사', ap:p=>p.px.arrowCount=1, u:1},
+  {id:'m_axe3', r:3, ic:'🪓', tx:'도끼 폭풍 — 도끼가 3개씩 발사', ap:p=>p.px.axeCount=1, u:1},
+  {id:'m_arrow4', r:3, ic:'🏹', tx:'화살 폭풍 — 화살이 3발씩 발사', ap:p=>p.px.arrowCount=1, u:1},
   {id:'m_spear200', r:3, ic:'🔱', tx:'창의 대가 — 창 데미지가 공격력의 <b>1350%</b>', ap:p=>p.px.spearMaster=1, u:1},
-  {id:'m_bolt3', r:3, ic:'⚡', tx:'번개 지배자 — 번개가 <b>20회</b>씩 발동', ap:p=>p.px.boltCount=1, u:1},
+  {id:'m_bolt3', r:3, ic:'⚡', tx:'번개 지배자 — 번개가 <b>2회</b>씩 발동', ap:p=>p.px.boltCount=1, u:1},
   {id:'m_wave4', r:3, ic:'🌊', tx:'검기의 왕 — 검기가 <b>20명</b>까지 관통 (사거리 340→1400)', ap:p=>p.px.waveKing=1, u:1},
   {id:'m_def20', r:3, ic:'🛡️', tx:'불괴 — 방어력 <b>+8%p</b>', ap:p=>p.def+=8},
   {id:'m_crit25', r:3, ic:'🎯', tx:'정밀 — 치명타 확률 <b>+9%</b>', ap:p=>p.critR+=9},
@@ -2338,17 +2338,17 @@ function volley(n,shot){
   for(let k=1;k<n;k++){ d+=50+Math.random()*20; setTimeout(()=>{ if(G&&!G.over) shot(k); }, d); }
 }
 function fireAxe(p){
-  const n=p.px.axeCount?14:1;
+  const n=p.px.axeCount?3:1;
   volley(n,()=>{ const t=randTarget(); if(!t)return; AU.play('throw');
     pushProj({type:'axe',x:p.worldX+14,tgt:t,ratio:0.50,spd:430,spin:0}); });
 }
 function fireArrows(p){
-  const n=p.px.arrowCount?24:2;
+  const n=p.px.arrowCount?3:2;
   volley(n,()=>{ const t=randTarget(); if(!t)return; AU.play('arrow');
     pushProj({type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560}); });
 }
 function fireBolts(p){
-  const n=p.px.boltCount?20:2;
+  const n=p.px.boltCount?2:1;
   volley(n,()=>{ const t=randTarget(); if(t) castBolt(t); });
 }
 function fireWave(p){
@@ -2526,12 +2526,12 @@ function procOnAttack(){
   if(px.aspdStack10&&pkk(p,0.25*px.aspdStack10)) addBuff(p,'aspd',0.05,4,10,'aspdStack10');   /* 주인 예시 — 고중첩 상위 변형 */
   if(px.atkBuffM&&pkk(p,0.30*px.atkBuffM)) addBuff(p,'atk',0.14,4,5,'atkBuffM');
   if(px.atkBuffL&&pkk(p,0.25*px.atkBuffL)) addBuff(p,'atk',0.35,5,3,'atkBuffL');
-  if(px.axe&&pkk(p,0.15*px.axe)) fireAxe(p);
-  if(px.arrow2&&pkk(p,0.15*px.arrow2)) fireArrows(p);
-  if(px.wave&&pkk(p,0.20*px.wave)) fireWave(p);
-  if(px.spear&&pkk(p,0.075*px.spear)) fireSpear(p);
-  if(px.bolt&&pkk(p,0.10*px.bolt)) fireBolts(p);
-  if(px.arsenal&&pkk(p,0.16*px.arsenal)) pick([fireAxe,fireArrows,fireBolts,fireWave,fireSpear])(p);
+  if(px.axe&&pkk(p,0.05*px.axe)) fireAxe(p);
+  if(px.arrow2&&pkk(p,0.05*px.arrow2)) fireArrows(p);
+  if(px.wave&&pkk(p,0.05*px.wave)) fireWave(p);
+  if(px.spear&&pkk(p,0.05*px.spear)) fireSpear(p);
+  if(px.bolt&&pkk(p,0.05*px.bolt)) fireBolts(p);
+  if(px.arsenal&&pkk(p,0.05*px.arsenal)) pick([fireAxe,fireArrows,fireBolts,fireWave,fireSpear])(p);
   gainWard(p,0.10*px.wardAtk);   /* 주인 필수 예시 — «공격 시 10% 확률로 방어막 1장» */
 }
 function doCounter(src,depth){
