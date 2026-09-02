@@ -423,7 +423,7 @@ const GOPT={
     {d:'피격 시 60% 확률 가시 반사', ap:p=>p.px.thorns++},
     {d:'방어 +7',               ap:p=>p.def+=7},
     {d:'피격 시 방어 +3 3초(누적)', ap:p=>p.px.defHitBuff++},
-    {d:'가시 반사 확률 +60%p',   ap:p=>p.px.thorns++},
+    {d:'가시 반사 확률 +60%',   ap:p=>p.px.thorns++},
     {d:'최대 체력 +10%',        ap:p=>{const a=p.maxHp*0.10;p.maxHp+=a;heal(p,a,true);}},
     {d:'피격 시 30% 확률 회피 +15 3초', ap:p=>p.px.evadeHitBuff++},
   ],
