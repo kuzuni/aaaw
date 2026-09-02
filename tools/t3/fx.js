@@ -5,6 +5,12 @@
  *       스크래치패드에 `npm i playwright-core` 로 깔고 `PW_CORE=<경로>/node_modules/playwright-core` 로 넘긴다.
  *       크로미움은 환경에 미리 깔린 /opt/pw-browsers 를 쓴다(PW_CHROME 으로 덮어쓸 수 있다).
  * 스크린샷은 OUT(기본 /tmp)에만 떨어뜨린다 — 캡처 PNG 커밋 금지.
+ *
+ * ⚑ 계측 규칙 (T50, 2026-09-02): **연출 타이밍은 «엔진이 예약한 시각» 으로 판정하고 벽시계 실측으로 판정하지 않는다.**
+ *   헤드리스 브라우저의 setTimeout 은 지터·코얼레싱으로 간격이 0.7ms 까지 붙거나 크게 벌어진다 —
+ *   그건 엔진의 성질이 아니라 런타임의 성질이라, 벽시계 간격을 합격선으로 쓰면 같은 커밋이 통과/실패로 갈린다.
+ *   실행 시각으로 볼 수 있는 것은 «예약보다 이르지 않다» 뿐이다(타이머는 늦어질 뿐 빨라지지 않는다).
+ *   벽시계 수치는 판정에서 빼고 «[참고·판정외]» 로 출력한다. 이 스위트에 연출 항목을 더할 때도 같은 규칙을 따를 것.
  */
 const path = require('path');
 const fs = require('fs');
@@ -32,15 +38,28 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
 
   /* ---------- ⚑ 다연발 = 순차 연사 (주인 지시 08:3X) ---------- */
   console.log('\n=== ⚑ 다연발 순차 연사 (50~70ms 간격 · 발마다 판정·사운드) ===');
+  /* ⚑ T50 수리 — 계측점을 «벽시계 실측 간격» 에서 «엔진이 예약한 발사 시각» 으로 옮겼다.
+     종전 판정 2개(«간격 20ms 미만 없음» · «실측 간격 35~110ms»)는 헤드리스 브라우저의 setTimeout
+     지터·코얼레싱을 그대로 재고 있어서 같은 커밋에서 통과/실패가 갈렸다(워커 C 관측: 최소 간격 0.7ms · 32.5ms).
+     타이머 지터는 엔진의 성질이 아니다 — 엔진이 통제하는 건 «예약 간격» 뿐이다. 그래서:
+       · 간격 판정은 전부 예약값(setTimeout 인자)으로 — 결정적이다.
+       · 실행 시각은 «예약보다 이르지 않다» 만 본다. 타이머는 늦어질 뿐 빨라지지 않으므로 지터에 면역이고,
+         예약만 해 두고 실제로는 즉시 쏘는 회귀는 전 발이 예약 시각보다 이르게 찍혀 즉시 빨개진다.
+         스케줄 자체를 없애는 동시 스폰 회귀는 «발마다 예약이 하나씩» 이 잡는다.
+       · 벽시계 min/avg/max 는 판정에서 빼고 참고 수치로만 출력한다. */
   const volley = await p.evaluate(async () => {
-    /* 화살 24발이 언제 스폰되는지 실측 — 동시 스폰이면 간격이 0 이 된다 */
-    const t0 = performance.now(), stamps = [], sounds = [];
+    const t0 = performance.now(), stamps = [], sounds = [], earrows = [];
     const origPlay = AU.play; AU.play = k => { if (k === 'arrow') sounds.push(performance.now() - t0); origPlay.call(AU, k); };
     const origPush = G.pprojs.push.bind(G.pprojs);
     G.pprojs.push = (o) => { if (o.type === 'parrow') stamps.push(performance.now() - t0); return origPush(o); };
+    /* ⚑ T50 — «arrow» 사운드는 플레이어 화살만 쓰는 게 아니다. 적 원거리 분기도 같은 키를 쓴다
+       (`AU.play('arrow'); G.arrows.push(...)` 1:1). 첫 웨이브의 궁수가 사거리 440 에 들어오는 순간
+       25번째 소리가 섞여 «발마다 사운드» 가 25/24 로 틀렸다 — 실측에서 최근접 적이 446~448px 로
+       임계값 440 바로 바깥에 서므로 플레이어가 몇 px 만 걸어도 넘어간다. 적 화살 수를 따로 세서 뺀다. */
+    const origArr = G.arrows.push.bind(G.arrows);
+    G.arrows.push = (o) => { earrows.push(performance.now() - t0); return origArr(o); };
     G.player.px.arrowCount = 1;                       /* 신화 화살 24발 */
-    /* 예약된 지연값 자체도 잡는다 — 실측 간격에는 브라우저 타이머 지터가 섞이므로
-       «코드가 요구한 간격» 은 setTimeout 인자로 확인하는 것이 결정적이다 */
+    /* 예약된 지연값 자체를 잡는다 — 이것이 «코드가 요구한 간격» 이고 판정의 근거다 */
     const wanted = [], origST = window.setTimeout;
     window.setTimeout = (f, ms, ...a) => { if (typeof ms === 'number' && ms > 0 && ms < 5000) wanted.push(ms); return origST(f, ms, ...a); };
     /* 적이 있어야 randTarget 이 대상을 준다 — 없으면 첫 웨이브를 깨운다 */
@@ -48,27 +67,37 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     fireArrows(G.player);
     window.setTimeout = origST;          /* 예약은 fireArrows 동기 구간에서 전부 끝난다 */
     await new Promise(r => origST(r, 2600));
-    AU.play = origPlay; G.pprojs.push = origPush;
+    AU.play = origPlay; G.pprojs.push = origPush; G.arrows.push = origArr;
     const wgaps = wanted.slice(1).map((t, i) => t - wanted[i]);
     const gaps = stamps.slice(1).map((t, i) => t - stamps[i]);
+    const wabs = [0].concat(wanted);                  /* k 번째 발의 예약 시각(0발은 동기 발사) */
+    /* 타이머는 늦어질 뿐 빨라지지 않는다 — 5ms 는 시계 해상도 여유 */
+    const early = stamps.filter((t, i) => i < wabs.length && t < wabs[i] - 5).length;
+    const lag = stamps.reduce((m, t, i) => i < wabs.length ? Math.max(m, t - wabs[i]) : m, 0);
     return {
-      n: stamps.length, sounds: sounds.length,
+      n: stamps.length, sounds: sounds.length, earrows: earrows.length, wn: wanted.length,
       min: gaps.length ? Math.min(...gaps).toFixed(1) : -1,
       max: gaps.length ? Math.max(...gaps).toFixed(1) : -1,
       avg: gaps.length ? (gaps.reduce((a, c) => a + c, 0) / gaps.length).toFixed(1) : -1,
       span: stamps.length ? (stamps[stamps.length - 1] - stamps[0]).toFixed(0) : -1,
-      simul: gaps.filter(g => g < 20).length,
+      wspan: wabs[wabs.length - 1].toFixed(0),
+      early, lag: lag.toFixed(0),
+      wsimul: wgaps.filter(g => g < 20).length,
       wmin: wgaps.length ? Math.min(...wgaps).toFixed(1) : -1,
       wmax: wgaps.length ? Math.max(...wgaps).toFixed(1) : -1,
       wasc: wanted.every((t, i) => i === 0 || t > wanted[i - 1]),
+      sasc: stamps.every((t, i) => i === 0 || t >= stamps[i - 1]),
     };
   });
   chk('화살 24발이 낱발로 나간다', volley.n === 24, `${volley.n}발 · 총 ${volley.span}ms`);
-  chk('동시 스폰 0 (간격 20ms 미만 없음)', volley.simul === 0, `최소 간격 ${volley.min}ms`);
+  chk('발마다 예약이 하나씩 (n-1발이 지연 예약)', volley.wn === volley.n - 1, `예약 ${volley.wn}건 / ${volley.n}발`);
+  chk('동시 스폰 0 (예약 간격에 20ms 미만 없음)', volley.wsimul === 0, `최소 예약 간격 ${volley.wmin}ms`);
   chk('코드가 예약한 간격이 정확히 50~70ms', +volley.wmin >= 50 && +volley.wmax <= 70, `예약 간격 ${volley.wmin}~${volley.wmax}ms`);
-  chk('발 순서가 뒤집히지 않는다 (예약 시각 단조증가)', volley.wasc);
-  chk('실측 간격도 낱발로 구별된다 (브라우저 타이머 지터 포함)', volley.min >= 35 && volley.max <= 110, `min ${volley.min} · avg ${volley.avg} · max ${volley.max} ms`);
-  chk('발마다 사운드', volley.sounds === volley.n, `사운드 ${volley.sounds}회 / ${volley.n}발`);
+  chk('발 순서가 뒤집히지 않는다 (예약·실측 둘 다 단조증가)', volley.wasc && volley.sasc);
+  chk('실측 발사가 예약 시각보다 이르지 않다 (예약해 두고 즉시 쏘면 빨개진다)', volley.early === 0,
+    `이른 발 ${volley.early}개 · 실측 ${volley.span}ms / 예약 ${volley.wspan}ms · 최대 지연 ${volley.lag}ms · [참고·판정외] 벽시계 간격 min ${volley.min} · avg ${volley.avg} · max ${volley.max} ms`);
+  chk('발마다 사운드 (적 궁수 화살 제외)', volley.sounds - volley.earrows === volley.n,
+    `사운드 ${volley.sounds}회 − 적화살 ${volley.earrows}회 = ${volley.sounds - volley.earrows} / ${volley.n}발`);
 
   /* ---------- 이벤트 3종 ---------- */
   console.log('\n=== 이벤트 팝업 (쉼터 · 악마 · 천사) ===');
