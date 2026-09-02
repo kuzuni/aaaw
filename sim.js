@@ -48,7 +48,11 @@ const TUNE={
   maxChapter:300,               // PLAN §2.4 (§11 도입으로 20 → 100 → 주인 추가 지시로 300)
   /* 플레이어 기본치 (영구강화 4종 폐지 — 성장은 §11 장비 + 슬롯 강화가 전담)
      ⚑ T35 주인 확정(PLAN §11.5-a): 공 25 / 체 150 / 실드 250. 실드는 `maxHp*0.8` 파생이 아니라 독립 스탯이다. */
-  pAtk0:25, pHp0:150, pSh0:250, pAspd0:1.0, pCrit0:5,
+  /* ⚑ 주인 확정 2026-09-03 (ROUTINE «플레이어 기본 스탯») — 노브 아님. PLAN §2.3 표와 1:1.
+     종전엔 치배·방어·반격·회피 넷이 mkPlayer 에 리터럴로 박혀 있어 PLAN 어디에도 값이 없었다
+     (T27 «미문서 상수 4종» · 승인 대기 22번). 주인이 값을 확정하면서 그 안건이 종결됐고,
+     넷을 여기로 끌어올려 «한 곳에서만 정의 → PLAN 과 대조» 가 가능해졌다(verifyCombatConst ①). */
+  pAtk0:25, pHp0:150, pSh0:250, pAspd0:1.0, pCrit0:20, pCritF0:150, pCounter0:20, pDef0:20, pEvade0:20,
   goldKillBase:0.6, goldKillPer:0.10, goldClearPer:3,
   goldGrowth:1.22,              // 챕터당 골드 성장 배수 (R07: 1.185 → 1.22. 1.185 는 챕터 90 대형 벽에서 슬롯 13 에 갇혀 F2P·과금 둘 다 영구 정체했다 — 실험4 실측. eHpG 보다 높게 둬야 후반 벽에서 수입이 적 성장을 따라잡는다)
   expKill:3, expBoss:9, expNeed:lv=>4+4*lv,
@@ -642,8 +646,8 @@ function mkPlayer(build,G){
   const pw=buildPower(build);
   const maxHp=pw.hp;
   const p={G, worldX:0, atkTimer:0, nextAtk:0, nextCrit:false,
-    dmg:pw.atk, aspd:TUNE.pAspd0, critR:TUNE.pCrit0, critF:200,
-    def:5, counter:10, evade:8, steal:0, killHeal:0, misfire:0, goldMul:1, walkMul:1, healAmp:0,
+    dmg:pw.atk, aspd:TUNE.pAspd0, critR:TUNE.pCrit0, critF:TUNE.pCritF0,
+    def:TUNE.pDef0, counter:TUNE.pCounter0, evade:TUNE.pEvade0, steal:0, killHeal:0, misfire:0, goldMul:1, walkMul:1, healAmp:0,
     maxHp, hp:maxHp, maxSh:pw.sh, sh:pw.sh,   /* ⚑ T35: 실드 독립 스탯 (`maxHp*0.8` 파생 폐기) */
     level:1, exp:0, missStk:0, ward:0, buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]}, px:basePx()};
   /* 장비 계열 옵션 적용 (PLAN §11.1 — 상위 등급은 하위 옵션 포함) */
@@ -1205,7 +1209,16 @@ function harness(env,defRar,defPlus,defSlot){
   return {b:mkBuild(rar,plus,slot),desc:`${GT.rarName[rar]}${plus?'+'+plus:''} 6부위 · 슬롯 ${slot}렙`};
 }
 function exp1_rarityLadder(){
-  const h=harness('EXP1_GEAR',0,3,0), CH=hCh('EXP1_CH',13);
+  const h=harness('EXP1_GEAR',1,0,0), CH=hCh('EXP1_CH',30);
+  /* ⚑⚑ T72 재선정 (2026-09-03, 주인 확정 «밸런스 기준점» + 기본 스탯 개편 · 정본 ②③④).
+     주인이 **표준 장비를 «희귀 풀셋» 으로 못박았다**(PLAN §2.3) — 이제 «일반 등급 + 강화» 픽스처는 못 쓴다.
+     장비가 고정되므로 조절 축은 챕터(와 미세 축인 슬롯)뿐이다.
+     기본 스탯 개편(치확 5→20 · 반격 10→20 · 방어 5→20 · 회피 8→20)으로 플레이어가 크게 세져
+     종전 «챕터 13·일반+3» 은 30.7% → 89.3% 로 변별 구간(15~85%) 위로 빠졌다.
+     200~300판 실측 스윕(희귀 풀셋·슬롯0): ch19 100.0 · ch22 80.5 · ch25 93.5 · ch28 80.7 ·
+     **ch30 52.0**(사다리 20.3 / 44.7 / 67.0 / 78.0 — 포화 0, 인접 24.3·22.3·11.0%p) · ch33 29.5 · ch36 26.0 · ch39 2.5.
+     ⚠ 챕터 축은 단조가 아니다(T28 — `chapterLayout` 제비뽑기가 지배): 26 은 93.7% 인데 28 은 80.7%,
+       30 에서 52.0% 로 떨어진다. 반드시 실측으로 고를 것. → **챕터 30 · 희귀 풀셋 · 슬롯 0 채택**. */
   /* ⚑ T1 R02 재보정 (정본 ④ — 챕터 10 벽을 켠 회차). 하니스 챕터 13 은 벽 구간(c≥10) 안이라 ×1.5 를 그대로 맞는다:
      종전 «일반+1» 이 혼합 23.7% → 4.7% 로 변별 구간(15~85%) 아래로 빠졌다. 챕터는 그대로 두고 강화만 +1 → +3.
      300판 실측 후보 — ch13·+2 17.3%(사다리 2.3/6.7/22.0/58.0, 일반 칸이 바닥에 붙는다) · **채택 ch13·+3 29.3%**
@@ -1243,7 +1256,15 @@ function exp1_rarityLadder(){
   }
 }
 function exp2_perkWinrate(){
-  const h=harness('EXP2_GEAR',0,4,0), CH=hCh('EXP2_CH',11);
+  const h=harness('EXP2_GEAR',1,0,5), CH=hCh('EXP2_CH',30);
+  /* ⚑⚑ T72 재선정 (2026-09-03 · 정본 ②④) — 실험1 과 같은 사유(표준 장비 «희귀 풀셋» 확정 + 기본 스탯 개편).
+     종전 «챕터 11·일반+4» 는 64.7% → 99.3% 로 천장 포화했다.
+     장비가 고정되어 강화 축이 사라졌으므로 **슬롯(레벨당 공/체/실 +1%)이 유일한 미세 축**이다.
+     챕터 30 에서 게이트 300판(시드 12벌) 실측: 슬롯0 52.3 · 슬롯3 53.7 · 슬롯4 51.7 · **슬롯5 65.0** ·
+     슬롯6 76.3 · 슬롯7 69.3. → 목표 밴드 60~70% 정중앙인 **챕터 30 · 희귀 풀셋 · 슬롯 5 채택**
+     (챕터 축만으로는 28=80.7 ↔ 30=52.0 으로 밴드를 통째로 건너뛴다).
+     ⚠ 슬롯 축도 단조가 아니다 — 레벨당 +1% 는 시드별 챕터 배치가 만드는 계단보다 작아 4↘·6↗ 처럼 뒤집힌다.
+       고를 때는 반드시 이 게이트의 시드 12벌로 재고, 한 칸 차이는 잡음으로 보지 말 것. */
   /* ⚑ T1 R02 재보정 (정본 ②④ — 챕터 10 벽을 켠 회차). 챕터 11 도 벽 안이라 종전 «일반+1·슬롯3» 이 64.7% → 21.0%
      로 밴드 아래로 빠졌다. 300판 실측 — 일반+3·슬롯3 54.0% · **채택 일반+4·슬롯0 66.7%** · 일반+4·슬롯3 70.0% ·
      일반+5·슬롯0 80.3%. 채점이 실제로 도는 1200판에서 재확인 **65.4%** 로 밴드(60~70%) 정중앙이다.

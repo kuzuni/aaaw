@@ -77,6 +77,16 @@ const CHECKS=[
   /* ⚑ 주인 확정(2026-09-02 15:4X, T43): 적 전원 회피 10%. 튜닝 노브가 아니라 «주인 확정 상수» 라
      TUNE 밖 최상위 const 로 둔다 — 여기서 PLAN §2.3 문장과 직접 대조한다(엔진 0.10 ↔ PLAN 10%). */
   ['적 회피율',             /const ENEMY_EVADE=([\d.]+);/,             /적 전원 회피율 (\d+)% 고정/,                 '§2.3', 100],
+  /* ⚑ 주인 확정(2026-09-03, T72): 플레이어 기본 스탯 6종. 노브가 아니라 확정 상수다.
+     넷(치배·반격·방어·회피)은 종전에 mkPlayer 리터럴이라 PLAN 에 값이 없었고 아래 ② 가
+     «미문서 상수» 로 등재만 하고 있었다(T27 · 승인 대기 22번). 주인이 값을 정하면서
+     TUNE 으로 올라왔고, 이제 PLAN §2.3 표와 직접 대조한다 — ② 에서는 빠졌다. */
+  ['기본 공격속도',         /pAspd0:([\d.]+),/,                        /\| 공격속도 \| ([\d.]+) \/s \|/,          '§2.3'],
+  ['기본 치명타 확률',      /pCrit0:(\d+),/,                           /\| 치명타 확률 \| (\d+)% \|/,             '§2.3'],
+  ['기본 치명타 배율',      /pCritF0:(\d+),/,                          /\| 치명타 데미지 \| (\d+)% \|/,           '§2.3'],
+  ['기본 반격 확률',        /pCounter0:(\d+),/,                        /\| 반격 확률 \| (\d+)% \|/,               '§2.3'],
+  ['기본 방어력',           /pDef0:(\d+),/,                            /\| 방어력 \| (\d+) \|/,                   '§2.3'],
+  ['기본 회피',             /pEvade0:(\d+),/,                          /\| 회피 \| (\d+) \|/,                     '§2.3'],
   /* ⚑ 주인 확정(2026-09-02 17:0X, T47): 레벨업 필요 경험치 `4+2*Lv` → `4+4*Lv`.
      PLAN 문장에는 폐기된 식이 취소선으로 함께 남아 있으므로, «주인 확정» 표기가 붙은 쪽만 골라 대조한다. */
   ['레벨업 필요경험치 기본', /expNeed:lv=>(\d+)\+\d+\*lv/,             /17:0X\): `(\d+)\+\d+\*Lv`/,                  '§2.4'],
@@ -100,18 +110,12 @@ for(const [name,engRe,planRe,where,mul,mode] of CHECKS){
 /* KNOWN = 이미 PROGRESS 에 등재된 건. 여기 없는 새 항목이 나오면 불합격. */
 const KNOWN={
   'maxT(전투 제한시간)':'T23 / 승인 대기 18번 — PLAN 에 전투 제한시간 항목 자체가 없다. 채점 2점(90·300 벽)을 이 상수가 지배한다',
-  'pCritF0(기본 치명타 배율)':'T27 / 승인 대기 22번 — mkPlayer 하드코딩. PLAN §2.3 은 스탯 이름만 적고 기본값을 안 적는다',
-  'pDef0(기본 방어력)':'T27 / 승인 대기 22번 — 같음. 실측상 실험3 1~20 ↔ 앵커 C 를 동시에 지배하는 축',
-  'pCounter0(기본 반격 확률)':'T27 / 승인 대기 22번 — 같음',
-  'pEvade0(기본 회피)':'T27 / 승인 대기 22번 — 같음. pDef0 와 함께 앵커 C 를 밴드 밖으로 밀어낸다',
 };
 /* [항목, 엔진 정규식, PLAN 에 그 값이 있으면 매칭될 정규식] */
 const UNDOC=[
   ['maxT(전투 제한시간)',        /const maxT=(\d+);/,                                  /제한\s*시간|타임아웃|maxT/],
-  ['pCritF0(기본 치명타 배율)',  /critR:TUNE\.pCrit0, critF:(\d+),/,                   /기본 치명타 배율[^\n]*\d/],
-  ['pDef0(기본 방어력)',         /\n\s*def:(\d+), counter:\d+, evade:\d+, steal:0,/,   /기본 방어력[^\n]*\d/],
-  ['pCounter0(기본 반격 확률)',  /\n\s*def:\d+, counter:(\d+), evade:\d+, steal:0,/,   /기본 반격[^\n]*\d/],
-  ['pEvade0(기본 회피)',         /\n\s*def:\d+, counter:\d+, evade:(\d+), steal:0,/,   /기본 회피[^\n]*\d/],
+  /* ⚑ T72 — 넷(치배·반격·방어·회피)은 주인 확정(2026-09-03)으로 PLAN §2.3 표에 값이 생겨
+     ① 로 옮겨 갔다. 승인 대기 22번 종결. 여기 남은 것은 maxT 하나뿐이다. */
 ];
 console.log('\n=== ② 엔진에만 있고 PLAN 에 값이 없는 전투 코어 상수 ===');
 let undocNew=0, undocKnown=0;
@@ -121,6 +125,27 @@ for(const [name,engRe,planRe] of UNDOC){
   if(planHas(planRe)){ pass(`${name} = ${e.v} — PLAN 에 문서화됨`); continue; }
   if(KNOWN[name]){ undocKnown++; console.log(`  🔵 ${name} = ${e.v} — PLAN 에 값 없음`); console.log(`        └ 등재됨: ${KNOWN[name]}`); }
   else { undocNew++; fail(`${name} = ${e.v} — PLAN 에 값이 없고 PROGRESS 에도 미등재 (신규)`); }
+}
+
+/* ---------- ②-b 기본 스탯이 mkPlayer 리터럴로 되돌아가지 않았는가 (T72) ---------- */
+/* 왜 — 이 넷이 리터럴이던 시절이 정확히 «PLAN 에 값이 없다» 의 원인이었다(T27).
+   TUNE 을 안 거치고 다시 숫자를 박으면 ① 은 TUNE 만 보므로 조용히 통과한다. */
+console.log('\n=== ②-b 기본 스탯 단일 출처 (mkPlayer ↔ TUNE) ===');
+{
+  const HTML2=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const want=[['치명타 배율','critF:TUNE.pCritF0'],['방어력','def:TUNE.pDef0'],
+              ['반격 확률','counter:TUNE.pCounter0'],['회피','evade:TUNE.pEvade0'],
+              ['치명타 확률','critR:TUNE.pCrit0'],['공격속도','aspd:TUNE.pAspd0']];
+  for(const [nm,frag] of want){
+    const inSim=SIM.includes(frag), inHtml=HTML2.includes(frag);
+    if(inSim&&inHtml) pass(`${nm} — 두 파일 mkPlayer 가 «${frag}» 를 쓴다`);
+    else fail(`${nm} — «${frag}» 누락 (sim ${inSim?'OK':'✗'} · index.html ${inHtml?'OK':'✗'}) — 리터럴로 되돌아갔나`);
+  }
+  /* 두 파일의 TUNE 기본 스탯 줄이 글자 그대로 같은가 */
+  const line=/pAtk0:\d+, pHp0:\d+, pSh0:\d+, pAspd0:[\d.]+, pCrit0:\d+, pCritF0:\d+, pCounter0:\d+, pDef0:\d+, pEvade0:\d+,/;
+  const a=SIM.match(line), b=HTML2.match(line);
+  (a&&b&&a[0]===b[0]) ? pass(`두 파일 기본 스탯 줄 일치 — ${a?a[0]:''}`)
+                      : fail(`두 파일 기본 스탯 줄이 다르다 — sim «${a?a[0]:'없음'}» / index.html «${b?b[0]:'없음'}»`);
 }
 
 /* ---------- ③ 소환 적중 = «공격» 트리거 — 실행 단언 (주인 확정 15:3X · T45) ---------- */
