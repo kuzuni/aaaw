@@ -73,7 +73,7 @@
   #startBtn:active{transform:translateY(4px); box-shadow:0 2px 0 #C77E12;}
   .bottomNav{width:100%; display:flex; background:var(--panel); padding:8px 8px calc(8px + env(safe-area-inset-bottom));gap:6px; flex:none;}
   .nav-tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 0 7px; border-radius:14px; font-size:12px; color:var(--ink-dim); background:var(--panel2);}
-  .nav-tab .nic{font-size:23px;}
+  .nav-tab .nic{font-size:23px; line-height:0; display:block;}   /* 인라인 SVG(UI_SVG) — T2 7단계 */
   .nav-tab.mid{background:linear-gradient(#4A4A54,#3A3A42); color:var(--ink); transform:translateY(-6px); border:2px solid #5A5A66;}
   .nav-tab.locked{opacity:.5;}
   .nav-tab.sel{background:linear-gradient(#4A4A54,#3A3A42); color:var(--ink); border:2px solid #6A6A78;}
@@ -229,7 +229,8 @@
   .bar .cap{position:absolute; left:7px; top:50%; transform:translateY(-50%); font-size:11px; z-index:1; text-shadow:0 1px 2px rgba(0,0,0,.7);}
   #stats{display:grid; grid-template-columns:1fr 1fr; gap:7px;}
   .st{display:flex; align-items:center; gap:9px; background:var(--panel2); border-radius:12px; padding:6px 11px;}
-  .st .ic{font-size:18px;}
+  /* 스탯 아이콘 — 인라인 SVG(UI_SVG). 크기 노브는 이 font-size 하나뿐이다(.gicon 이 1em). T2 7단계 */
+  .st .ic{font-size:24px; line-height:0; flex:none; display:block;}
   .st .lb{font-size:11px; color:var(--ink-dim); line-height:1.1;}
   .st .vl{font-size:15px; line-height:1.15; font-variant-numeric:tabular-nums;}
   .st .vl.up{color:#7ED957;}
@@ -829,11 +830,85 @@ GT.typeSvg={
     '<circle cx="18" cy="15.4" r="1.5"/><circle cx="19.4" cy="12.2" r="1.5"/><circle cx="19.4" cy="8.4" r="1.5"/><circle cx="18.4" cy="4.8" r="1.5"/></g>'+
     '<circle cx="12" cy="18.9" r="2.4" fill="#E8B23C"/>',
 };
-/* 장비 아이콘 1개를 그린다. `GT.typeSvg` 에 없는 종류는 있을 수 없다(게이트 ⑮ 가 18종 전수를 본다). */
-function gearIcon(t){
+/* 아이콘 1개를 그리는 공용 래퍼 — 장비(GT.typeSvg)·UI(UI_SVG) 가 같은 마크업·같은 외곽선을 쓴다.
+   화면마다 표기가 갈라지던 T8·T9·T11·T12 계열을 구조로 막는다(그리는 곳이 한 군데뿐이다). */
+function svgIcon(body){
   return `<svg class="gicon" viewBox="0 0 24 24" aria-hidden="true">`+
-    `<g fill="none" stroke="#14141C" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">${GT.typeSvg[t]}</g></svg>`;
+    `<g fill="none" stroke="#14141C" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">${body}</g></svg>`;
 }
+/* 장비 아이콘 1개를 그린다. `GT.typeSvg` 에 없는 종류는 있을 수 없다(게이트 ⑮ 가 18종 전수를 본다). */
+function gearIcon(t){ return svgIcon(GT.typeSvg[t]); }
+/* ⚑ T2 7단계 — UI 아이콘: 이모지 → 인라인 SVG (참고: docs/ref/메인 게임화면.jpg · 메인로비.jpg).
+   대상은 6단계가 남겨 둔 두 곳 — ①인게임 스탯 그리드 7칸 ②하단 5탭. 장비 아이콘과 같은 방식
+   (24×24 뷰박스 · 굵은 어두운 외곽선 · 납작한 단색 + 음영 1겹)이라 한 화면에서 톤이 갈라지지 않는다.
+   크기 노브도 같다 — `.gicon{width:1em;height:1em}` 이 칸의 font-size(스탯 24px · 탭 23px · 버프 18px)를 물려받는다.
+   표시 전용이라 sim.js 와 무관하다(밸런스 영향 0). */
+const UI_SVG={
+  /* --- 인게임 스탯 7종 --- */
+  /* 공격력: 대각 한손검(장비 greatsword 의 정면 대검과 실루엣이 갈린다) */
+  dmg:'<path d="M21.4 2.6 21.4 6.2 10.8 16.8 7.2 13.2 17.8 2.6Z" fill="#DCE3EC"/>'+
+    '<path d="M21.4 2.6 21.4 6.2 10.8 16.8 9 15Z" fill="#A9B4C3" stroke="none"/>'+
+    '<path d="M6.4 13.4 11.6 18.6 10.2 20 5 14.8Z" fill="#E8B23C"/>'+
+    '<path d="M4.6 17.6 7 20 4.4 22.2 2.4 20.2Z" fill="#7A4E24"/>',
+  /* 방어력: 방패(갑옷은 장비 plate 가 이미 쓴다) */
+  def:'<path d="M12 2.2 20.2 5.1V11.8C20.2 17 16.6 20.2 12 21.8 7.4 20.2 3.8 17 3.8 11.8V5.1Z" fill="#8FA9C6"/>'+
+    '<path d="M12 2.2 20.2 5.1V11.8C20.2 17 16.6 20.2 12 21.8Z" fill="#6C88A8" stroke="none"/>'+
+    '<path d="M6.8 9.6 12 12.4 17.2 9.6" stroke="#E8B23C" stroke-width="1.7"/>',
+  /* 공격속도: 번개 */
+  aspd:'<path d="M14.4 1.8 5.6 12.9H10.6L9.2 22.2 18.8 10.4H13.4Z" fill="#F5C542"/>'+
+    '<path d="M14.4 1.8 10.6 12.9H10.6L9.2 22.2 18.8 10.4H13.4Z" fill="#D9A21F" stroke="none"/>',
+  /* 반격 확률: 되돌아오는 화살(원형 화살표) */
+  counter:'<path d="M4.4 12A7.6 7.6 0 1 0 12 4.4" stroke="#4FA3E3" stroke-width="2.6"/>'+
+    '<path d="M12 1 16.4 4.4 12 7.8Z" fill="#4FA3E3"/>'+
+    '<circle cx="12" cy="12" r="2.2" fill="#DCE3EC"/>',
+  /* 치명타 확률: 타격 폭발 별 */
+  critR:'<path d="M12 1.6 14.4 8 20.8 5.8 18.2 12 22.4 16.4 15.8 16.2 14.6 22.4 12 17 9.4 22.4 8.2 16.2 1.6 16.4 5.8 12 3.2 5.8Z" fill="#E8483F"/>'+
+    '<path d="M12 6.6 13.6 11 18 12 13.6 13.2 12 17.2 10.4 13.2 6 12 10.4 11Z" fill="#F5C542" stroke="none"/>',
+  /* 회피: 겹친 사람 실루엣 3(스크린샷 구도) */
+  evade:'<g stroke-width="1.2"><path d="M7 22V15.2A3 3 0 0 1 10 12.2H10.6A3 3 0 0 1 13.6 15.2V22Z" fill="#6E7B8C"/>'+
+    '<circle cx="10.3" cy="8.6" r="2.6" fill="#6E7B8C"/>'+
+    '<path d="M10.4 22V15.2A3 3 0 0 1 13.4 12.2H14A3 3 0 0 1 17 15.2V22Z" fill="#AAB4C2"/>'+
+    '<circle cx="13.7" cy="8" r="2.6" fill="#AAB4C2"/>'+
+    '<path d="M13.8 22V15.2A3 3 0 0 1 16.8 12.2H17.4A3 3 0 0 1 20.4 15.2V22Z" fill="#EDF1F6"/>'+
+    '<circle cx="17.1" cy="7.4" r="2.6" fill="#EDF1F6"/></g>',
+  /* 치명타 배율: 불꽃 */
+  critF:'<path d="M12 1.8C13.6 6 17.2 6.8 17.2 10.8 17.2 12.4 16.6 13.6 15.6 14.4 16.2 15.2 16.5 16.1 16.5 17.1 16.5 19.7 14.5 21.9 12 21.9S7.5 19.7 7.5 17.1C7.5 13.7 10.6 12.9 10.6 9.3 10.6 7.1 9.6 6.1 9.6 6.1 11.2 5.1 12 3.6 12 1.8Z" fill="#E8483F"/>'+
+    '<path d="M12 12.4C13.4 14 14 15.3 14 16.6 14 18.4 13.1 19.6 12 19.6S10 18.4 10 16.6C10 15.3 10.8 14.2 12 12.4Z" fill="#F5C542" stroke="none"/>',
+  /* --- 하단 5탭 --- */
+  /* 상점: 차양 친 가판대(스크린샷의 빨강·흰 줄무늬) */
+  nav_shop:'<path d="M2.4 3.6H21.6L22.6 9.4H1.4Z" fill="#E8E8F0"/>'+
+    '<g fill="#E0483F" stroke="none"><path d="M2.4 3.6H6.2L5.2 9.4H1.4Z"/><path d="M10 3.6H13.8L13.6 9.4H9.8Z"/><path d="M17.6 3.6H21.4L22.4 9.4H18.6Z"/></g>'+
+    '<path d="M2.4 3.6H21.6L22.6 9.4H1.4Z" fill="none"/>'+
+    '<path d="M3.6 9.4H20.4V21H3.6Z" fill="#B98A50"/><path d="M3.6 13.4H20.4V15.2H3.6Z" fill="#8A6236" stroke="none"/>'+
+    '<path d="M8.6 15.6H15.4V21H8.6Z" fill="#7A4E24"/>',
+  /* 장비: 정면 투구(장비 helmet 은 둥근 돔 + 파란 보석이라 실루엣이 갈린다) */
+  /* 어두운 면을 «십자 전면» 이 아니라 «가는 눈구멍 2 + 코가리개» 로 줄였다 — 23px 에서 검은 덩어리로 뭉치지 않게 */
+  nav_gear:'<path d="M12 2.4C7.8 2.4 5.6 6 5.6 10.6V16.4C5.6 19.4 8.2 21.6 12 21.6S18.4 19.4 18.4 16.4V10.6C18.4 6 16.2 2.4 12 2.4Z" fill="#C3CEDC"/>'+
+    '<path d="M12 2.4C16.2 2.4 18.4 6 18.4 10.6V16.4C18.4 19.4 15.8 21.6 12 21.6Z" fill="#9DAABC" stroke="none"/>'+
+    '<g stroke-width="1.1"><path d="M7.4 10.2H10.6V12.6H7.4Z" fill="#20242C"/><path d="M13.4 10.2H16.6V12.6H13.4Z" fill="#20242C"/>'+
+    '<path d="M11.2 8.6H12.8V16.2H11.2Z" fill="#20242C"/></g>'+
+    '<path d="M5.8 17.4H18.2V19.4H5.8Z" fill="#E8B23C"/>',
+  /* 전투: 교차한 두 검 */
+  nav_battle:'<path d="M2.6 3.2 6.2 3.2 19 16 17.2 20.4 12.8 18.6Z" fill="#DCE3EC"/>'+
+    '<path d="M21.4 3.2 17.8 3.2 5 16 6.8 20.4 11.2 18.6Z" fill="#C0C9D6"/>'+
+    '<path d="M14.8 20.6 17.4 18 20.6 21.2 19 22.8Z" fill="#E8B23C"/><path d="M9.2 20.6 6.6 18 3.4 21.2 5 22.8Z" fill="#E8B23C"/>',
+  /* 카드: 펼친 카드 3장 */
+  nav_card:'<path d="M2.2 8.4 7.6 5.4 13.4 15.6 8 18.6Z" fill="#E8883C"/>'+
+    '<path d="M7.2 4.6H13.8V19.4H7.2Z" fill="#8A63D2"/>'+
+    '<path d="M13.2 4.6H20.4V19.4H13.2Z" fill="#4FA3E3"/>'+
+    '<path d="M16.8 8.4 18 11.2 20.8 11.6 18.6 13.6 19.2 16.4 16.8 15 14.4 16.4 15 13.6 12.8 11.6 15.6 11.2Z" fill="#EDF1F6" stroke="none"/>',
+  /* 도전: 황금 주먹 */
+  /* 정면 주먹 — 옆모습(관절 + 튀어나온 엄지)은 23px 에서 손잡이 달린 머그로 보였다.
+     이제 «손가락 4 + 가로지르는 엄지 + 손목 띠» 정면 구도다. */
+  nav_trial:'<path d="M5.6 6.4A2.6 2.6 0 0 1 8.2 3.8H15.8A2.6 2.6 0 0 1 18.4 6.4V15.4A4.4 4.4 0 0 1 14 19.8H10A4.4 4.4 0 0 1 5.6 15.4Z" fill="#F0C040"/>'+
+    '<g stroke="#C39321" stroke-width="1.2"><path d="M8.9 4.4V10.4"/><path d="M12 4.2V10.4"/><path d="M15.1 4.4V10.4"/></g>'+
+    '<path d="M6.4 11.8H14.4A2 2 0 0 1 14.4 15.8H6.4Z" fill="#F5D06A"/>'+
+    '<path d="M7.4 19.6H16.6V21.8H7.4Z" fill="#B98A50"/>',
+  /* 폴백(어느 스탯인지 모르는 버프) */
+  spark:'<path d="M12 2.2 14.2 9.4 21.4 11.6 14.2 13.8 12 21 9.8 13.8 2.6 11.6 9.8 9.4Z" fill="#F5C542"/>',
+};
+/* UI 아이콘 1개 — 없는 키는 폴백(spark). 스탯 그리드·하단 탭·버프바가 전부 이 함수 하나만 쓴다. */
+function uiIcon(k){ return svgIcon(UI_SVG[k]||UI_SVG.spark); }
 GT.lineName={greatsword:'검기',axe:'도끼 소환',bow:'화살 소환',helmet:'방어',crown:'치명타 확률',hood:'번개 소환',
   plate:'체력·피격',chain:'가시 반사',robe:'실드',gauntlet:'치명타 배율',leather:'공격속도',handwrap:'연타·분신',
   sandal:'회피',boots:'반격',greave:'체력',pendant:'회복',amulet:'처치',beads:'창 소환'};
@@ -1030,19 +1105,20 @@ function openChapterJump(){
 $('lobbyChapName').onclick=openChapterJump;
 $('startBtn').onclick=()=>{ AU.play('click'); startChapter(save.selChapter); };
 /* ---- 하단 탭바 (로비·장비·상점 공용) ---- */
+/* 아이콘은 `UI_SVG['nav_'+k]` — T2 7단계에서 이모지를 폐지했다(스크린샷 docs/ref/메인로비.jpg 하단 탭). */
 const NAV_TABS=[
-  {k:'shop', ic:'🏪', nm:'상점'},
-  {k:'gear', ic:'🛡️', nm:'장비'},
-  {k:'battle', ic:'⚔️', nm:'전투', mid:true},
-  {k:'card', ic:'🃏', nm:'카드', lock:true},
-  {k:'trial',ic:'🏆', nm:'도전', lock:true},
+  {k:'shop', nm:'상점'},
+  {k:'gear', nm:'장비'},
+  {k:'battle', nm:'전투', mid:true},
+  {k:'card', nm:'카드', lock:true},
+  {k:'trial', nm:'도전', lock:true},
 ];
 function buildNav(){
   document.querySelectorAll('.bottomNav').forEach(nav=>{
     const cur=nav.dataset.tab;
     nav.innerHTML=NAV_TABS.map(t=>
       `<button class="nav-tab${t.mid?' mid':''}${t.lock?' locked':''}${t.k===cur&&!t.mid?' sel':''}" data-k="${t.k}">`+
-      `<span class="nic">${t.ic}</span>${t.nm}</button>`).join('');
+      `<span class="nic">${uiIcon('nav_'+t.k)}</span>${t.nm}</button>`).join('');
     nav.querySelectorAll('.nav-tab').forEach(b=>{
       const t=NAV_TABS.find(x=>x.k===b.dataset.k);
       b.onclick=()=>{
@@ -2337,13 +2413,14 @@ function update(dt){
 const STAT_DEFS=[
   /* base = 「전투 시작 시점 값」 — 장비 계열 옵션은 시작 시점에 이미 들어가 있으므로 buildPower/GOPT 결과가 기준이다.
      특전·버프로 그 위로 올라간 항목만 초록으로 강조된다. */
-  {ic:'⚔️',lb:'공격력',    v:p=>fmt(effDmg(p)),           cur:p=>effDmg(p),    base:()=>statBase().dmg},
-  {ic:'🛡️',lb:'방어력',    v:p=>effDef(p).toFixed(1)+'%', cur:p=>effDef(p),    base:()=>statBase().def},
-  {ic:'⚡',lb:'공격속도',  v:p=>effAspd(p).toFixed(2)+'/s',cur:p=>effAspd(p),  base:()=>statBase().aspd},
-  {ic:'🔁',lb:'반격 확률',  v:p=>p.counter.toFixed(1)+'%', cur:p=>p.counter,    base:()=>statBase().counter},
-  {ic:'💥',lb:'치명타 확률',v:p=>effCritR(p).toFixed(0)+'%',cur:p=>effCritR(p), base:()=>statBase().critR},
-  {ic:'👥',lb:'회피',      v:p=>effEvade(p).toFixed(1)+'%',cur:p=>effEvade(p), base:()=>statBase().evade},
-  {ic:'🔥',lb:'치명타 배율',v:p=>effCritF(p).toFixed(0)+'%',cur:p=>effCritF(p), base:()=>statBase().critF},
+  /* `k` = UI_SVG 아이콘 키 (T2 7단계에서 이모지 폐지 — 참고: docs/ref/메인 게임화면.jpg 하단 스탯 그리드) */
+  {k:'dmg',    lb:'공격력',    v:p=>fmt(effDmg(p)),           cur:p=>effDmg(p),    base:()=>statBase().dmg},
+  {k:'def',    lb:'방어력',    v:p=>effDef(p).toFixed(1)+'%', cur:p=>effDef(p),    base:()=>statBase().def},
+  {k:'aspd',   lb:'공격속도',  v:p=>effAspd(p).toFixed(2)+'/s',cur:p=>effAspd(p),  base:()=>statBase().aspd},
+  {k:'counter',lb:'반격 확률',  v:p=>p.counter.toFixed(1)+'%', cur:p=>p.counter,    base:()=>statBase().counter},
+  {k:'critR',  lb:'치명타 확률',v:p=>effCritR(p).toFixed(0)+'%',cur:p=>effCritR(p), base:()=>statBase().critR},
+  {k:'evade',  lb:'회피',      v:p=>effEvade(p).toFixed(1)+'%',cur:p=>effEvade(p), base:()=>statBase().evade},
+  {k:'critF',  lb:'치명타 배율',v:p=>effCritF(p).toFixed(0)+'%',cur:p=>effCritF(p), base:()=>statBase().critF},
   /* 🩸 흡혈 행 제거 — 주인 지시(2026-09-02 07:1X): 흡혈 특전 전면 배제로 항상 0 이라 7종으로 (엔진 steal 지원은 유지) */
 ];
 /* 현재 장비 구성의 전투 시작 스탯 (특전 획득 전) — 전투마다 한 번만 계산해 캐시 */
@@ -2360,7 +2437,7 @@ function renderStatsGrid(){
   const p=G.player, box=$('stats');
   if(!box.children.length){
     box.innerHTML=STAT_DEFS.map((d,i)=>
-      `<div class="st"><span class="ic">${d.ic}</span><div><div class="lb">${d.lb}</div><div class="vl" id="sv${i}"></div></div></div>`
+      `<div class="st"><span class="ic">${uiIcon(d.k)}</span><div><div class="lb">${d.lb}</div><div class="vl" id="sv${i}"></div></div></div>`
     ).join('');
   }
   STAT_DEFS.forEach((d,i)=>{
@@ -2373,7 +2450,9 @@ function renderStatsGrid(){
    ① 발동 중 버프 아이콘 — 화면 왼쪽 위·챕터 표시보다 아래, 등급색 테두리 + 중첩 수 뱃지, 오래된 것이 위.
    ② 얻은 특전 미리보기 줄 — Info 버튼 행 왼쪽 끝부터 획득 순서대로, 중복은 개수 뱃지, 넘치면 «+N».
    둘 다 표시 전용이라 전투 수치·판정에 관여하지 않는다 (sim.js 무관). */
-const BUFF_STAT_IC={atk:'⚔️',aspd:'⚡',critR:'💥',critF:'🔥',def:'🛡️',evade:'👥'};
+/* 장비 옵션발 버프(= 특전이 아니라 어느 특전 아이콘도 못 쓰는 경우)의 폴백 아이콘 —
+   스탯 그리드와 **같은 UI_SVG 표**를 쓴다(같은 스탯이 두 화면에서 다른 그림이 되지 않게). T2 7단계 */
+const BUFF_STAT_IC={atk:'dmg',aspd:'aspd',critR:'critR',critF:'critF',def:'def',evade:'evade'};
 function renderBuffBar(){
   const box=$('buffBar'); if(!box) return;
   if(!G||!G.player){ box.innerHTML=''; return; }
@@ -2386,7 +2465,7 @@ function renderBuffBar(){
   }
   const html=[...groups.values()].sort((a,b)=>a.q-b.q).map(g=>{
     const cc = g.perk ? RARITY[g.perk.r].cc : '#9EA3AC';
-    const ic = g.perk ? g.perk.ic : (BUFF_STAT_IC[g.k]||'✨');
+    const ic = g.perk ? g.perk.ic : uiIcon(BUFF_STAT_IC[g.k]||'spark');
     return `<div class="buff-ic" style="--bc:${cc};--bg:${cc}55">${ic}`+
       (g.n>1?`<span class="cnt">${g.n}</span>`:'')+`</div>`;
   }).join('');

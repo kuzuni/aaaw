@@ -820,6 +820,100 @@ console.log('\n[⑯ 특전 선택 화면 — 등급 메달리온 · 새로고침
     : bad('횟수 소진 시 두 요소가 함께 숨겨지지 않는다 — 0 인데 줄만 남는다');
 }
 
+/* ---------- ⑰ UI 아이콘 — 스탯 그리드 7 + 하단 5탭 (참고: docs/ref/메인 게임화면.jpg · 메인로비.jpg · T2 7단계) ---------- */
+/* 왜 게이트인가 — ⑮ 와 같은 이유다. 아이콘이 «데이터» 라서 한 칸이 비어도 문법 검사에 안 걸린다.
+   여기에 더해 이 표는 **스탯 그리드·하단 탭·버프바 폴백 3곳이 공유**하므로, 키가 하나 어긋나면
+   한 화면만 조용히 폴백(spark)으로 바뀐다 — 사람 눈으로는 «그냥 그런 아이콘» 으로 보인다. */
+console.log('\n[⑰ UI 아이콘 — 스탯 7 · 하단 탭 5 (인라인 SVG, 이모지 폐지)]');
+{
+  /* (1) 공용 표·공용 함수 — 그리는 곳이 한 군데인가 */
+  /const UI_SVG=\{/.test(HTML) ? ok('UI_SVG — UI 인라인 SVG 아이콘 표 존재') : bad('UI_SVG 가 없다 — 스탯·탭 아이콘이 빈다');
+  /function uiIcon\(k\)\{/.test(HTML) ? ok('uiIcon(k) — UI 아이콘 1개를 그리는 공용 함수') : bad('uiIcon() 공용 함수가 없다');
+  /function svgIcon\(body\)\{/.test(HTML) ? ok('svgIcon(body) — 장비·UI 가 같은 마크업 래퍼를 쓴다') : bad('svgIcon() 공용 래퍼가 없다 — 두 계열의 외곽선이 갈라진다');
+  /function gearIcon\(t\)\{ return svgIcon\(GT\.typeSvg\[t\]\); \}/.test(HTML)
+    ? ok('gearIcon 이 같은 래퍼(svgIcon)를 쓴다') : bad('gearIcon 이 마크업을 따로 만든다');
+  /* (2) 렌더 지점 3곳이 전부 uiIcon 을 부른다 */
+  {
+    const SITES = [
+      ['하단 탭바(buildNav)', /<span class="nic">\$\{uiIcon\('nav_'\+t\.k\)\}<\/span>/],
+      ['인게임 스탯 그리드(renderStatsGrid)', /<span class="ic">\$\{uiIcon\(d\.k\)\}<\/span>/],
+      ['버프바 폴백(renderBuffBar)', /uiIcon\(BUFF_STAT_IC\[g\.k\]\|\|'spark'\)/],
+    ];
+    for (const [nm, re] of SITES) re.test(HTML) ? ok(`${nm} 이 uiIcon() 을 쓴다`) : bad(`${nm} 이 uiIcon() 을 쓰지 않는다 — 그 화면만 옛 표기`);
+  }
+  /* (3) 이모지로 되돌아가지 않았는가 — 세 정의 블록을 실제로 잘라서 본다 */
+  {
+    const EMO = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/u;
+    const BLOCKS = [
+      ['NAV_TABS(하단 5탭)', /const NAV_TABS=\[[\s\S]*?\n\];/],
+      ['STAT_DEFS(스탯 7칸)', /const STAT_DEFS=\[[\s\S]*?\n\];/],
+      ['BUFF_STAT_IC(버프 폴백)', /const BUFF_STAT_IC=\{[^}]*\}/],
+    ];
+    for (const [nm, re] of BLOCKS) {
+      const m = HTML.match(re);
+      if (!m) { bad(`${nm} 을(를) 찾지 못했다 — 게이트를 갱신할 것`); continue; }
+      const code = m[0].replace(/\/\*[\s\S]*?\*\//g, '');   /* 주석의 이모지(«🩸 흡혈 행 제거» 등)는 표기가 아니다 */
+      EMO.test(code) ? bad(`${nm} 에 이모지가 되살아났다 — 7단계에서 SVG 로 교체된 항목이다`) : ok(`${nm} 이모지 폐지 상태 유지`);
+    }
+  }
+  /* (4) 크기 노브 — 칸의 font-size 하나로 크기가 정해지는가(.gicon 이 1em 이므로) */
+  /\.st \.ic\{[^}]*font-size:\d+px/.test(HTML) ? ok('.st .ic 에 font-size (스탯 아이콘 크기 노브)') : bad('.st .ic 크기 규칙이 없다');
+  /\.nav-tab \.nic\{[^}]*font-size:\d+px/.test(HTML) ? ok('.nav-tab .nic 에 font-size (탭 아이콘 크기 노브)') : bad('.nav-tab .nic 크기 규칙이 없다');
+  /* (5) 표를 실제로 평가해 전수·마크업·중복을 본다 — 키는 STAT_DEFS/NAV_TABS 에서 읽는다(베끼지 않는다) */
+  {
+    const mUi = HTML.match(/const UI_SVG=\{[\s\S]*?\n\};/);
+    const mStat = HTML.match(/const STAT_DEFS=\[[\s\S]*?\n\];/);
+    const mNav = HTML.match(/const NAV_TABS=\[[\s\S]*?\n\];/);
+    const mGear = HTML.match(/GT\.typeSvg=\{[\s\S]*?\n\};/);
+    if (!mUi || !mStat || !mNav) bad('UI_SVG / STAT_DEFS / NAV_TABS 를 읽지 못했다 — 게이트를 갱신할 것');
+    else {
+      const ctx = { GT: {} }; vm.createContext(ctx);
+      vm.runInContext(mUi[0].replace(/^const /, ''), ctx);   /* const 는 vm 전역에 안 붙는다 → 암묵 전역으로 */
+      const svg = ctx.UI_SVG;
+      const statKeys = [...mStat[0].matchAll(/\{k:'([a-zA-Z]+)'/g)].map(m => m[1]);
+      const navKeys = [...mNav[0].matchAll(/\{k:'([a-zA-Z]+)'/g)].map(m => m[1]);
+      statKeys.length === 7 ? ok('스탯 7칸 (흡혈 제거 후 — 주인 지시 07:1X)') : bad(`스탯 칸이 7개가 아니다 (${statKeys.length}개)`);
+      navKeys.length === 5 ? ok('하단 탭 5개') : bad(`하단 탭이 5개가 아니다 (${navKeys.length}개)`);
+      const need = [...statKeys, ...navKeys.map(k => 'nav_' + k), 'spark'];
+      const miss = need.filter(k => !svg[k]);
+      const extra = Object.keys(svg).filter(k => !need.includes(k));
+      miss.length === 0 ? ok(`필요한 아이콘 ${need.length}종 전부 있다 (스탯 7 · 탭 5 · 폴백 1)`)
+        : bad(`아이콘 없는 키 ${miss.length}종: ${miss.join(',')} — 그 칸이 폴백으로 조용히 바뀐다`);
+      extra.length === 0 ? ok('쓰이지 않는 아이콘 없음') : bad(`아무도 안 쓰는 아이콘 ${extra.join(',')}`);
+      let broke = 0, spill = 0, emo = 0;
+      const EMO = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+      for (const k of Object.keys(svg)) {
+        const s = svg[k] || '', stack = [];
+        for (const m of s.matchAll(/<(\/?)([a-zA-Z]+)[^>]*?(\/?)>/g)) {
+          if (m[3] === '/') continue;
+          if (m[1] === '/') { if (stack.pop() !== m[2]) { broke++; break; } }
+          else stack.push(m[2]);
+        }
+        if (stack.length) broke++;
+        for (const d of s.matchAll(/\sd="([^"]*)"/g))
+          for (const n of d[1].match(/-?\d+(\.\d+)?/g) || []) if (+n < -0.5 || +n > 24.5) { spill++; break; }
+        if (EMO.test(s)) emo++;
+      }
+      broke === 0 ? ok('UI 아이콘 마크업 태그 짝 정상') : bad(`태그 짝이 맞지 않는 UI 아이콘 ${broke}종`);
+      spill === 0 ? ok('UI 아이콘 좌표가 24×24 뷰박스 안') : bad(`뷰박스를 벗어난 UI 아이콘 ${spill}종 — 칸에서 잘린다`);
+      emo === 0 ? ok('UI 아이콘 마크업에 이모지 잔재 없음') : bad(`이모지가 남은 UI 아이콘 ${emo}종`);
+      const keys = Object.keys(svg), uniq = new Set(keys.map(k => norm(svg[k] || '')));
+      uniq.size === keys.length ? ok(`UI 아이콘 ${keys.length}종이 서로 다르다 (중복 0)`)
+        : bad(`같은 그림을 쓰는 UI 아이콘이 있다 (서로 다른 그림 ${uniq.size}종/${keys.length}종)`);
+      /* 장비 18종과도 겹치면 안 된다 — 한 화면(장비 탭 + 하단 탭)에 둘이 같이 뜬다 */
+      if (mGear) {
+        vm.runInContext(mGear[0], ctx);
+        const gset = new Set(Object.values(ctx.GT.typeSvg).map(s => norm(s)));
+        const clash = keys.filter(k => gset.has(norm(svg[k] || '')));
+        clash.length === 0 ? ok('UI 아이콘이 장비 아이콘 18종과 겹치지 않는다') : bad(`장비 아이콘과 같은 그림: ${clash.join(',')}`);
+      }
+    }
+  }
+  /* (6) 표시 전용 — sim.js 는 UI 아이콘을 모른다 */
+  /UI_SVG|uiIcon/.test(SIM) ? bad('sim.js 에 UI 아이콘이 새어 들어갔다 — 표시 메타는 게임 전용이다')
+    : ok('sim.js 무관 (표시 전용 메타 — 밸런스 영향 0)');
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
