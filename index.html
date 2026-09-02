@@ -1714,7 +1714,7 @@ const PERKS=[
   {id:'r_healAmp', r:1, ic:'💞', tx:'모든 회복량 <b>+20%</b>', ap:p=>p.healAmp+=0.2},
   {id:'r_restHp', r:1, ic:'🏕️', tx:'쉼터 도착 시 최대 체력 <b>+15%</b>', ap:p=>p.px.restHp++},
   {id:'r_lastStand', r:1, ic:'🦉', tx:'체력 <b>10%</b> 이하일 때 회피 <b>+40%</b>', ap:p=>p.px.lastStand=true, u:1},
-  {id:'r_refresh', r:1, ic:'🎲', tx:'특전 새로고침 횟수 +1', ap:p=>{}, u:1},
+  {id:'r_refresh', r:1, ic:'🎲', tx:'특전 새로고침 횟수 +1', ap:p=>p.G.refreshBonus++, u:1},
   {id:'r_def6', r:1, ic:'🧱', tx:'방어력 <b>+6%</b>', ap:p=>p.def+=6},
   {id:'r_stunCrit', r:1, ic:'💫', tx:'치명타 시 <b>15%</b> 확률로 대상 <b>2초</b> 기절', ap:p=>p.px.stunCritM++},
   {id:'r_missAspd', r:1, ic:'💨⚡', tx:'빗나갈 시 <b>2초간</b> 공격속도 <b>+12%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.missAspd++},

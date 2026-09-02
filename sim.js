@@ -192,7 +192,7 @@ function mkPerks(){
   add('r_healAmp',1,p=>p.healAmp+=0.2);
   add('r_restHp',1,p=>p.px.restHp++);
   add('r_lastStand',1,p=>p.px.lastStand=true,1);
-  add('r_refresh',1,p=>{},1); // 새로고침: 시뮬에서는 효과 없음(선택 정책 랜덤)
+  add('r_refresh',1,p=>p.G.refreshBonus++,1); // 새로고침 +1 — 게임(index.html)은 G.refreshLeft=1+G.refreshBonus 로 소비한다. 시뮬은 «무료 새로고침» 메커니즘 자체가 없어(승인 20번 대기) 카운터만 오른다 = 시뮬 밸런스 영향 0
   add('r_def6',1,p=>p.def+=6);
   add('r_stunCrit',1,p=>p.px.stunCritM++);
   add('r_missAspd',1,p=>p.px.missAspd++);
@@ -985,7 +985,7 @@ function perkChoice(G){
 function runChapter(chapter,build,opts){
   opts=opts||{};
   const G={chapter,player:null,nodes:[],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
-    perkChances:0,taken:[],legendOnly:false,overBoltCd:0,autoBoltT:2,stunAuraT:2.5,stuns:0,misses:0,
+    perkChances:0,taken:[],legendOnly:false,refreshBonus:0,overBoltCd:0,autoBoltT:2,stunAuraT:2.5,stuns:0,misses:0,
     dead:false,cleared:false,t:0,atkTries:0,miss:0,   /* 적 회피 10% 실측용 (PLAN §2.3) */
     rarityLockOn:opts.rarityLock!==undefined,rarityLock:opts.rarityLock};
   const p=mkPlayer(build,G);G.player=p;p.G=G;

@@ -2027,6 +2027,108 @@ console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
   }
 }
 
+/* ============================================================================
+   ㉝ 특전 본문이 살아 있다 — 툴팁이 약속한 효과가 실제로 코드에 있는가 (T66)
+
+   T66 의 실패 모드: `r_refresh`(«특전 새로고침 횟수 +1», 희귀·고유)의 `ap` 가 **두 파일 모두 빈 함수**여서
+   툴팁만 «+1» 이고 실제로는 아무 일도 없었다. 게임은 `G.refreshLeft=1+G.refreshBonus` 로 소비까지 해 두고
+   **`refreshBonus` 를 올리는 코드가 레포 어디에도 없었다**(초기화 1줄 + 소비 1줄이 전부).
+   ② 는 «두 파일의 ap 본문이 같은가» 만 보므로 **양쪽이 똑같이 비어 있으면 조용히 통과한다** — 그 구멍을 막는다.
+
+     ① 두 파일 전 특전 중 «본문이 아무것도 건드리지 않는» 것 0종 (같은 계열의 재발 차단)
+     ② `r_refresh` 의 본문이 실제로 `refreshBonus` 를 올린다 (두 파일 — 본문 동일성은 ② 가 이미 본다)
+     ③ 게임의 소비 경로 3점이 살아 있다 — 초기화 `refreshBonus:0` · `G.refreshLeft=1+G.refreshBonus` ·
+        새로고침 버튼의 `G.refreshLeft--`  (셋 중 하나만 빠져도 특전이 다시 죽는다)
+     ④ 실행 단언 — index.html 에서 뽑아낸 `ap` 본문을 실제로 돌려 남은 횟수가 **1 → 2** 가 되는지 본다
+     ⑤ 특전이 쓰는 `p.G.*` 필드는 같은 파일 어딘가에서 **읽히기도** 하는가
+        (쓰기만 있고 읽는 곳이 없으면 그게 곧 «죽은 특전» 이다. 예외는 KNOWN 에 근거와 함께 등재)
+   ============================================================================ */
+{
+  console.log('\n[㉝ 특전 본문이 살아 있다 — 죽은 특전 0종 (T66)]');
+  const SPK = simPerks(), HPK = htmlPerks() || [];
+
+  /* ① 본문이 아무것도 건드리지 않는 특전 */
+  const dead = src => src.filter(x => !/p\.[A-Za-z_]/.test(norm(x.ap || ''))).map(x => x.id);
+  const dS = dead(SPK), dH = dead(HPK);
+  dS.length ? bad(`sim.js 에 본문이 빈 특전 ${dS.length}종: ${dS.join(' ')} — 툴팁만 있고 효과가 없다(T66 재발)`)
+            : ok(`sim.js 특전 ${SPK.length}종 전부 본문이 무언가를 건드린다`);
+  dH.length ? bad(`index.html 에 본문이 빈 특전 ${dH.length}종: ${dH.join(' ')} — 툴팁만 있고 효과가 없다(T66 재발)`)
+            : ok(`index.html 특전 ${HPK.length}종 전부 본문이 무언가를 건드린다`);
+
+  /* ② r_refresh 본문이 refreshBonus 를 올린다 */
+  const apOf = (arr, id) => { const x = arr.find(y => y.id === id); return x ? norm(x.ap || '') : null; };
+  const WANT = 'p=>p.G.refreshBonus++';
+  for (const [nm, got] of [['sim.js', apOf(SPK, 'r_refresh')], ['index.html', apOf(HPK, 'r_refresh')]]) {
+    got === WANT ? ok(`${nm} r_refresh = «${WANT}» (새로고침 횟수를 실제로 올린다)`)
+                 : bad(`${nm} r_refresh 본문이 «${got}» 다 — «${WANT}» 여야 한다 (T66)`);
+  }
+
+  /* ③ 게임의 소비 경로 3점 */
+  const PATHS = [
+    ['refreshBonus 초기화', /refreshBonus:\s*0/],
+    ['남은 횟수 = 1 + 보너스', /G\.refreshLeft\s*=\s*1\s*\+\s*G\.refreshBonus/],
+    ['새로고침 버튼이 횟수를 깎는다', /G\.refreshLeft--/],
+  ];
+  for (const [nm, re] of PATHS) {
+    re.test(HTML) ? ok(`index.html — ${nm}`) : bad(`index.html 에서 «${nm}» 이 사라졌다 — r_refresh 가 다시 죽는다`);
+  }
+
+  /* ④ 실행 단언 — 뽑아낸 ap 를 실제로 돌려 남은 횟수가 1 → 2 */
+  {
+    const src = (HPK.find(x => x.id === 'r_refresh') || {}).ap;
+    const ctx = { out: null };
+    vm.createContext(ctx);
+    try {
+      vm.runInContext(`const ap=${src};const G={refreshBonus:0};const before=1+G.refreshBonus;ap({G});out=[before,1+G.refreshBonus];`, ctx);
+    } catch (e) { ctx.out = 'ERR:' + e.message; }
+    (Array.isArray(ctx.out) && ctx.out[0] === 1 && ctx.out[1] === 2)
+      ? ok(`ap 실행 결과 남은 새로고침 ${ctx.out[0]} → ${ctx.out[1]} 회 (툴팁 «+1» 과 일치)`)
+      : bad(`ap 를 실제로 돌렸더니 ${JSON.stringify(ctx.out)} — 1 → 2 여야 한다`);
+  }
+
+  /* ⑤ 특전이 쓰는 p.G.* 필드가 그 파일에서 읽히기도 하는가 */
+  const KNOWN_UNREAD = {
+    'sim.js': {
+      refreshBonus: '승인 20번 대기 — 시뮬에는 «무료 새로고침» 메커니즘 자체가 없다(T25). ' +
+                    '주인 승인이 나면 이 예외를 지우고 perkChoice 에 재굴림을 넣을 것',
+    },
+  };
+  const gWrites = perks => {
+    const set = new Set();
+    for (const p of perks) {
+      const re = /p\.G\.([A-Za-z_][A-Za-z0-9_]*)\s*(?:\+\+|--|\+=|-=|=[^=])/g;
+      let m; while ((m = re.exec(norm(p.ap || '')))) set.add(m[1]);
+    }
+    return [...set].sort();
+  };
+  /* 주석 안의 언급은 «읽는 곳» 이 아니다 — 이걸 안 지우면 설명 주석 한 줄로 죽은 특전이 초록이 된다.
+     `//` 는 앞이 줄머리·공백일 때만 주석으로 본다 (`https://` 같은 URL 을 잘라내지 않으려고). */
+  const decomment = s => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|\s)\/\/[^\n]*/g, '$1');
+  const readCount = (rawSrc, key) => {
+    const src = decomment(rawSrc);
+    const re = new RegExp('G\\.' + key + '\\b', 'g');
+    let m, n = 0;
+    while ((m = re.exec(src))) {
+      const rest = src.slice(m.index + m[0].length);
+      if (/^\s*(\+\+|--|\+=|-=|=[^=])/.test(rest)) continue;   /* 쓰기는 세지 않는다 */
+      n++;
+    }
+    return n;
+  };
+  for (const [nm, src, perks] of [['sim.js', SIM, SPK], ['index.html', HTML, HPK]]) {
+    const keys = gWrites(perks);
+    keys.length ? ok(`${nm} 특전이 쓰는 G 필드 ${keys.length}개: ${keys.join(' ')}`)
+                : bad(`${nm} 특전이 쓰는 G 필드를 하나도 못 읽었다 — 파서를 고칠 것`);
+    for (const k of keys) {
+      const n = readCount(src, k);
+      const known = (KNOWN_UNREAD[nm] || {})[k];
+      if (n > 0) ok(`${nm} G.${k} — 읽는 곳 ${n}군데 (특전 효과가 실제로 쓰인다)`);
+      else if (known) ok(`${nm} G.${k} — 읽는 곳 0군데 · KNOWN 등재: ${known}`);
+      else bad(`${nm} G.${k} 를 올리기만 하고 읽는 곳이 없다 — 죽은 특전이다(T66 과 같은 모양). 소비 경로를 넣거나 KNOWN 에 근거와 함께 등재할 것`);
+    }
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
