@@ -1021,9 +1021,21 @@ save.selChapter=Math.max(1,Math.min(save.selChapter|0||1,save.maxChapter));
 save.gold=Math.max(0,+save.gold||0); save.gem=Math.max(0,+save.gem||0);
 if(!Array.isArray(save.inv)) save.inv=[];
 save.inv=save.inv.filter(g=>g&&GT.parts.includes(g.part)&&GOPT[g.type]&&g.rar>=0&&g.rar<=4)
-  .map(g=>({u:g.u|0||0, part:g.part, type:g.type, rar:g.rar|0, plus:Math.max(0,g.plus|0)}));
+  .map(g=>({u:Math.max(0,g.u|0), part:g.part, type:g.type, rar:g.rar|0, plus:Math.max(0,g.plus|0)}));
+/* ⚑ T68 — uid «유일성» 보정. 종전엔 «uid 가 없는 항목»(`if(!g.u)`)만 봤다. 그래서 ① 같은 uid 가 둘인 세이브와
+   ② `save.uid` 가 인벤 최대 uid 보다 뒤처진 세이브(구버전·부분 손상)가 그대로 통과했고, 그 다음 뽑기·합성이
+   만든 신품이 **장착 중인 장비의 uid 를 그대로 재사용**했다. uid 는 인벤의 유일 키라(`invById`·`save.eq`·
+   대장간 `FG` 가 전부 이걸로 장비를 집는다) 겹치는 순간 세부 팝업·해제·합성이 엉뚱한 장비를 집는다.
+   순서: ① 중복은 나중 것을 0 으로 떨궈 새 번호를 받게 한다(먼저 나온 쪽이 `save.eq` 와의 연결을 유지).
+        ② `save.uid` 를 남아 있는 최대 uid 위로 올린다. ③ 그제서야 번호 없는 항목에 배분한다.
+   ②를 ③보다 먼저 해야 배분값이 다시 겹치지 않는다. */
 save.uid=Math.max(1,save.uid|0);
-for(const g of save.inv) if(!g.u) g.u=save.uid++;          /* uid 없는 항목(구버전·손상) 보정 */
+{
+  const seen=new Set();
+  for(const g of save.inv){ if(!g.u) continue; if(seen.has(g.u)) g.u=0; else seen.add(g.u); }
+  for(const u of seen) if(u>=save.uid) save.uid=u+1;
+  for(const g of save.inv) if(!g.u) g.u=save.uid++;        /* uid 없는 항목(구버전·손상·중복 강등분) 보정 */
+}
 if(!save.slots||typeof save.slots!=='object') save.slots={};
 for(const pt of GT.parts) save.slots[pt]=Math.max(0,Math.min(save.slots[pt]|0,GT.slotLvMax));
 if(!save.eq||typeof save.eq!=='object') save.eq={};

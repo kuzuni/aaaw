@@ -178,6 +178,61 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   const mig = await p.evaluate(() => ({ gold: save.gold, mx: save.maxChapter, up: save.up, muted: save.muted, inv: save.inv.length }));
   chk('v1 세이브에서 골드·진행도·음소거만 이월', mig.gold === 999 && mig.mx === 7 && mig.muted === true && mig.up === undefined, `골드 ${mig.gold} · 챕터 ${mig.mx} · up=${JSON.stringify(mig.up)}`);
 
+  /* ---------- ⑦ 세이브 정규화가 uid 유일성을 지킨다 (T68) ----------
+     uid 는 인벤의 유일 키다 — `invById`·`save.eq`·대장간 `FG` 가 전부 이걸로 장비를 집는다.
+     겹치면 세부 팝업·해제·합성이 «엉뚱한 장비» 를 집는다(장착 중인 신화 장비가 신품에 가려진다).
+     정규화 블록이 종전엔 «uid 가 없는 항목» 만 봤기 때문에 두 갈래로 샜다 —
+       ⓐ 같은 uid 를 가진 항목이 둘인 세이브   ⓑ `save.uid` 가 인벤 최대 uid 보다 뒤처진 세이브.
+     ⓑ 는 정규화 시점엔 멀쩡해 보이고 **그 다음 뽑기·합성이 만든 신품에서** 터지므로,
+     여기서는 부팅 직후 상태만이 아니라 «부팅 후 실제로 한 번 뽑아 본다» 까지 확인한다. */
+  console.log('\n=== ⑦ 세이브 정규화 — uid 유일성 (T68) ===');
+  {
+    /* 인벤 6칸 전부 장착 · uid 1~6 인데 save.uid 필드가 없는 세이브(구버전·부분 손상) */
+    await p.evaluate(() => {
+      const inv = [], eq = {}; let u = 1;
+      for (const pt of GT.parts) { inv.push({ u, part: pt, type: GT.types[pt][0], rar: 4, plus: 9 }); eq[pt] = u; u++; }
+      const slots = {}; for (const pt of GT.parts) slots[pt] = 0;
+      localStorage.clear();
+      localStorage.setItem('kkoma-knight-v2', JSON.stringify({ gold: 0, gem: 1e6, maxChapter: 1, selChapter: 1, inv, eq, slots, gacha: { p50: 0, p10: 0, pulls: 0 } }));
+    });
+    await p.reload(); await p.waitForTimeout(700);
+    const u0 = await p.evaluate(() => ({ uid: save.uid, mx: Math.max(...save.inv.map(g => g.u)), n: save.inv.length, eq: Object.keys(save.eq).length }));
+    chk('uid 필드가 없는 세이브 — save.uid 가 인벤 최대 uid 위로 보정된다', u0.uid > u0.mx, `save.uid=${u0.uid} · 인벤 최대=${u0.mx}`);
+    chk('보정하면서 장비·장착을 잃지 않는다', u0.n === 6 && u0.eq === 6, `인벤 ${u0.n} · 장착 ${u0.eq}`);
+    const u1 = await p.evaluate(() => {
+      doPull(1); closeOverlay();
+      const uids = save.inv.map(g => g.u);
+      const dup = [...new Set(uids.filter((x, i) => uids.indexOf(x) !== i))];
+      /* 겹치면 «장착 중인 부위» 의 세부 팝업이 신품 이름으로 뜬다 — 증상 쪽도 같이 본다 */
+      const ghost = GT.parts.filter(pt => { const g = save.inv.find(x => x.u === save.eq[pt]); return !g || g.part !== pt; });
+      return { uids, dup, ghost };
+    });
+    chk('보정 후 뽑은 신품이 기존 uid 를 재사용하지 않는다', u1.dup.length === 0, `중복 uid [${u1.dup}] · 전체 [${u1.uids}]`);
+    chk('장착 uid 가 다른 부위 장비를 가리키지 않는다', u1.ghost.length === 0, `어긋난 부위 ${u1.ghost}`);
+
+    /* ⓐ 같은 uid 가 둘인 세이브 — 나중 것이 새 번호를 받고 먼저 것이 장착 연결을 유지해야 한다 */
+    await p.evaluate(() => {
+      localStorage.clear();
+      localStorage.setItem('kkoma-knight-v2', JSON.stringify({
+        uid: 2, gold: 0, gem: 0, maxChapter: 1, selChapter: 1, eq: { weapon: 1 }, slots: {},
+        inv: [{ u: 1, part: 'weapon', type: 'greatsword', rar: 4, plus: 9 },
+              { u: 1, part: 'armor', type: 'plate', rar: 0, plus: 0 }],
+        gacha: { p50: 0, p10: 0, pulls: 0 },
+      }));
+    });
+    await p.reload(); await p.waitForTimeout(700);
+    const d = await p.evaluate(() => {
+      const uids = save.inv.map(g => g.u);
+      const keep = save.inv.find(g => g.u === save.eq.weapon);
+      return { uids, dup: uids.length !== new Set(uids).size, uid: save.uid, keptRar: keep && keep.rar, keptPart: keep && keep.part };
+    });
+    chk('중복 uid 세이브 — 중복이 사라진다', !d.dup, `uid 목록 [${d.uids}]`);
+    chk('중복 강등분도 save.uid 위의 새 번호를 받는다', Math.max(...d.uids) < d.uid, `최대 ${Math.max(...d.uids)} < save.uid ${d.uid}`);
+    chk('먼저 나온 쪽이 장착 연결을 유지한다 (신화 무기)', d.keptPart === 'weapon' && d.keptRar === 4, `eq.weapon → ${d.keptPart}/rar${d.keptRar}`);
+  }
+  await p.evaluate(() => localStorage.clear());
+  await p.reload(); await p.waitForTimeout(500);
+
   /* ---------- 챕터 300 이동 UI (T36) ---------- */
   console.log('\n=== 챕터 이동 UI (T36) ===');
   await p.evaluate(() => { save.maxChapter = 300; save.selChapter = 1; renderLobby(); persist(); showScreen('lobby'); });
