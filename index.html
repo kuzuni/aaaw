@@ -44,7 +44,16 @@
   #avatar{width:52px; height:52px; border-radius:14px; background:#5B87C7; border:3px solid #F2D34B; flex:none;}
   #powerPill{font-size:18px; color:var(--gold);}
   #sndBtnL,#sndBtnG{width:42px; height:42px; border-radius:12px; background:rgba(20,20,24,.72); font-size:17px; flex:none;}
-  #lobbyChapName{margin-top:4vh; font-size:36px; letter-spacing:3px; text-shadow:0 3px 0 rgba(0,0,0,.35);}
+  /* 챕터 300 대응(T36): 제목을 눌러 «챕터 이동» 팝업. 로비 구도(메인로비.jpg)는 그대로 — 크기·위치·서체 동일. */
+  #lobbyChapName{margin-top:4vh; font-size:36px; letter-spacing:3px; text-shadow:0 3px 0 rgba(0,0,0,.35);
+    padding:0; background:none; color:var(--ink); font-family:inherit;}
+  .jump-row{display:flex; gap:8px; width:100%; margin-top:10px;}
+  .jump-row button{flex:1; padding:12px 4px; border-radius:14px; background:var(--panel3); font-size:15px;}
+  .jump-row button.gold{background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00;}
+  .jump-row button:disabled{opacity:.4;}
+  #jumpVal{width:100%; margin-top:12px; padding:12px; border-radius:14px; border:2px solid #3E3E48;
+    background:#141418; color:var(--ink); font-family:inherit; font-size:26px; text-align:center;
+    user-select:text; -webkit-user-select:text;}
   .chap-underline{width:190px; height:3px; margin:6px 0 2vh; background:rgba(255,255,255,.35); border-radius:9px; position:relative;}
   .chap-underline::after{content:''; position:absolute; left:50%; top:0; transform:translateX(-50%) rotate(45deg); width:10px; height:10px; border-right:3px solid rgba(255,255,255,.35); border-bottom:3px solid rgba(255,255,255,.35); background:transparent; margin-top:2px;}
   .dio-row{display:flex; align-items:center; gap:6px; width:100%; justify-content:center;}
@@ -142,6 +151,32 @@
   #progIn{height:100%; width:0%; background:var(--gold); border-radius:99px; transition:width .3s;}
   #speedBtn{position:absolute; left:12px; bottom:12px; padding:8px 14px; border-radius:12px; background:rgba(60,20,20,.85); font-size:17px; border:2px solid rgba(255,255,255,.25);}
 
+  /* 발동 중 버프 아이콘 (주인 지시 07:0X — 챕터 아래, 왼쪽, 오래된 것이 위) */
+  /* top 은 #chapHud(top 64px) 아래로 — 실측 챕터 블록 하단이 106px 이라 8px 띄운다 */
+  #buffBar{position:absolute; top:114px; left:10px; display:flex; flex-direction:column; gap:6px; pointer-events:none; z-index:5;}
+  .buff-ic{
+    position:relative; width:34px; height:34px; border-radius:11px; border:2.5px solid var(--bc,#9EA3AC);
+    background:rgba(20,20,24,.78); display:flex; align-items:center; justify-content:center; font-size:18px;
+    box-shadow:0 0 9px var(--bg,rgba(0,0,0,.4)); animation:popIn .18s ease-out;
+  }
+  .buff-ic .cnt{
+    position:absolute; right:-5px; top:-5px; min-width:16px; height:16px; padding:0 3px; border-radius:99px;
+    background:var(--bc,#9EA3AC); color:#141418; font-size:11px; line-height:16px; text-align:center;
+  }
+
+  /* 얻은 특전 미리보기 줄 (주인 지시 07:0X — Info 버튼 행 왼쪽 끝부터 획득 순서대로) */
+  #perkStrip{flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:4px; overflow:hidden; height:34px;}
+  .pv-ic{
+    position:relative; flex:none; width:28px; height:28px; border-radius:9px; border:2px solid var(--bc,#9EA3AC);
+    background:var(--panel2); display:flex; align-items:center; justify-content:center; font-size:15px;
+  }
+  .pv-ic .cnt{
+    position:absolute; right:-4px; top:-4px; min-width:14px; height:14px; padding:0 3px; border-radius:99px;
+    background:var(--bc,#9EA3AC); color:#141418; font-size:10px; line-height:14px; text-align:center;
+  }
+  .pv-more{flex:none; height:28px; padding:0 7px; border-radius:9px; background:var(--panel2); border:2px solid #3E3E48;
+    color:var(--ink-dim); font-size:12px; display:flex; align-items:center;}
+
   #hud{flex:0 0 auto; background:var(--panel); padding:10px 12px 10px; border-top:3px solid #17171a;}
   .bars{display:flex; gap:8px; align-items:center; margin-bottom:10px;}
   .bar{position:relative; flex:1; height:24px; background:#141418; border-radius:99px; overflow:hidden;}
@@ -157,7 +192,7 @@
   .st .lb{font-size:11px; color:var(--ink-dim); line-height:1.1;}
   .st .vl{font-size:15px; line-height:1.15; font-variant-numeric:tabular-nums;}
   .st .vl.up{color:#7ED957;}
-  #hudFoot{display:flex; justify-content:flex-end; margin-top:8px;}
+  #hudFoot{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px;}
   #infoBtn{
     display:flex; align-items:center; gap:7px; background:var(--panel2); border-radius:12px;
     padding:7px 14px; font-size:14px; color:var(--ink-dim); border:2px solid #3E3E48;
@@ -242,7 +277,7 @@
       <div class="pill">💎 <span id="lbGem">0</span></div>
       <button id="sndBtnL">🔊</button>
     </div>
-    <div id="lobbyChapName">CHAPTER 1</div>
+    <button id="lobbyChapName">CHAPTER 1</button>
     <div class="chap-underline"></div>
     <div class="dio-row">
       <button class="dio-arrow" id="chPrev">◀</button>
@@ -299,6 +334,8 @@
         <div class="nm" id="chapHudName">CHAPTER 1</div>
         <div id="progOut"><div id="progIn"></div></div>
       </div>
+      <!-- ⚑ 주인 지시(07:0X) 발동 중 버프 아이콘 — 챕터 표시보다 아래, 화면 왼쪽 위 -->
+      <div id="buffBar"></div>
       <button id="speedBtn">x1</button>
     </div>
     <div id="hud">
@@ -309,6 +346,8 @@
       </div>
       <div id="stats"></div>
       <div id="hudFoot">
+        <!-- ⚑ 주인 지시(07:0X) 얻은 특전 미리보기 줄 — Info 버튼 행의 왼쪽 끝부터 획득 순서대로 -->
+        <div id="perkStrip"></div>
         <button id="infoBtn"><span class="bk">📘</span>Info</button>
       </div>
     </div>
@@ -793,8 +832,53 @@ function renderLobby(){
   $('lbPower').textContent=fmt(power());
   drawDiorama(); drawAvatar();
 }
-$('chPrev').onclick=()=>{ AU.play('click'); save.selChapter--; renderLobby(); persist(); };
-$('chNext').onclick=()=>{ AU.play('click'); save.selChapter++; renderLobby(); persist(); };
+/* ---- T36: 챕터 300 대응 이동 UI (게임 로직·밸런스 무관, 순수 UI) ----
+   ① ◀▶ 를 누르고 있으면 연속 이동(가속) ② 제목 탭 → 챕터 이동 팝업(숫자 입력·±10·최신 해금) */
+function chapStep(d){
+  const v=clamp(save.selChapter+d,1,save.maxChapter);
+  if(v===save.selChapter) return false;
+  save.selChapter=v; renderLobby(); persist(); return true;
+}
+function holdRepeat(btn,d){
+  let tmr=null, iv=300, moved=0;
+  const stop=()=>{ if(tmr){ clearTimeout(tmr); tmr=null; } iv=300; moved=0; };
+  const tick=()=>{
+    if(!chapStep(d)){ stop(); return; }
+    if(moved++%3===0) AU.play('click');
+    iv=Math.max(45,iv*0.72);
+    tmr=setTimeout(tick,iv);
+  };
+  btn.addEventListener('pointerdown',e=>{ e.preventDefault(); AU.play('click'); chapStep(d); tmr=setTimeout(tick,420); });
+  for(const ev of ['pointerup','pointercancel','pointerleave']) btn.addEventListener(ev,stop);
+}
+holdRepeat($('chPrev'),-1); holdRepeat($('chNext'),1);
+function openChapterJump(){
+  AU.play('click');
+  openOverlay(`<div class="ov-banner">챕터 이동</div>
+    <div class="ov-sub">해금: 1 ~ ${save.maxChapter}</div>
+    <input id="jumpVal" type="number" inputmode="numeric" min="1" max="${save.maxChapter}" value="${save.selChapter}">
+    <div class="jump-row">
+      <button id="jm10" ${save.selChapter<=1?'disabled':''}>−10</button>
+      <button id="jp10" ${save.selChapter>=save.maxChapter?'disabled':''}>+10</button>
+      <button id="jLast" ${save.selChapter>=save.maxChapter?'disabled':''}>최신 ${save.maxChapter}</button>
+    </div>
+    <div class="jump-row">
+      <button id="jOk" class="gold">이동</button>
+      <button id="jNo">취소</button>
+    </div>`);
+  const inp=$('jumpVal');
+  const bump=d=>{ inp.value=clamp((+inp.value||1)+d,1,save.maxChapter); };
+  $('jm10').onclick=()=>{ AU.play('click'); bump(-10); };
+  $('jp10').onclick=()=>{ AU.play('click'); bump(10); };
+  $('jLast').onclick=()=>{ AU.play('click'); inp.value=save.maxChapter; };
+  $('jOk').onclick=()=>{
+    AU.play('click');
+    save.selChapter=clamp(Math.round(+inp.value)||1,1,save.maxChapter);
+    renderLobby(); persist(); closeOverlay();
+  };
+  $('jNo').onclick=()=>{ AU.play('click'); closeOverlay(); };
+}
+$('lobbyChapName').onclick=openChapterJump;
 $('startBtn').onclick=()=>{ AU.play('click'); startChapter(save.selChapter); };
 /* ---- 하단 탭바 (로비·장비·상점 공용) ---- */
 const NAV_TABS=[
@@ -1087,13 +1171,16 @@ function drawAvatar(){
 /* ================= 버프/스탯 엔진 (sim.js 와 1:1) ================= */
 /* 발동 확률 (🌪️ 폭풍의 힘이면 1.22배 — sim.js pkk()) */
 function pkk(p,ch){ return Math.random() < ch*(p.px.procX2?1.22:1); }
-function addBuff(p,k,amt,dur,max){
+/* src = 이 버프를 준 px 키(주인 지시 07:0X «발동 중 버프 아이콘» 전용 표시 정보).
+   sim.js 는 표시가 없어 5인자 그대로다 — 6번째 인자는 수치·판정에 일절 관여하지 않는다. */
+let buffSeq=0;   /* q = 발동 순번 — 버프 아이콘을 «오래된 것이 위» 로 쌓는 기준 */
+function addBuff(p,k,amt,dur,max,src){
   const arr=p.buffs[k];
   if(arr.length>=max){
     let mi=0; for(let i=1;i<arr.length;i++) if(arr[i].t<arr[mi].t) mi=i;
-    arr[mi]={t:dur,amt};
-  }else arr.push({t:dur,amt});
-  renderStatsGrid();
+    arr[mi]={t:dur,amt,src,q:++buffSeq};
+  }else arr.push({t:dur,amt,src,q:++buffSeq});
+  renderStatsGrid(); renderBuffBar();
 }
 function bsum(p,k){ let s=0; for(const b of p.buffs[k]) s+=b.amt; return s; }
 function effDmg(p){ let m=1+bsum(p,'atk'); if(p.px.rage&&p.sh<=0) m*=1.5; return p.dmg*m; }
@@ -1116,10 +1203,10 @@ function heal(p,amt,noBoost){
   const over=Math.max(0,p.hp+amt-p.maxHp);
   p.hp=Math.min(p.maxHp,p.hp+amt);
   if(!noBoost){
-    if(px.healDefBuff&&pkk(p,0.30*px.healDefBuff)) addBuff(p,'def',5*px.healDefBuff,3,3);
+    if(px.healDefBuff&&pkk(p,0.30*px.healDefBuff)) addBuff(p,'def',5*px.healDefBuff,3,3,'healDefBuff');
     if(px.healShield3&&pkk(p,0.20*px.healShield3)){ p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.03); addText('💦','#6CC0F0'); }
     if(px.healShield5&&pkk(p,0.30*px.healShield5)){ p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.08); addText('💦','#6CC0F0'); }
-    if(px.healAtkBuff) addBuff(p,'atk',0.08,3,3);
+    if(px.healAtkBuff) addBuff(p,'atk',0.08,3,3,'healAtkBuff');
     if(over>0){
       if(px.overheal) p.sh=Math.min(p.maxSh,p.sh+over*7);
       if(px.overBolt&&p.G.overBoltCd<=0){ p.G.overBoltCd=0.12; fireBolts(p); }
@@ -1262,9 +1349,14 @@ function rollPerks(n){
   return out;
 }
 function takePerk(perk){
+  const before=Object.assign({},G.player.px);
   perk.ap(G.player);
+  /* ap 가 올린 px 키를 이 특전으로 기록 — 버프 아이콘이 «어느 특전의 버프인가» 를 이걸로 안다.
+     장비 옵션(GOPT)이 올린 키는 특전이 아니므로 여기 등록되지 않고, 아이콘은 스탯 기본형으로 뜬다. */
+  for(const k in G.player.px) if(G.player.px[k]!==before[k]) G.pxPerk[k]=perk;
   G.perksTaken.push(perk);
   AU.play('perk');
+  renderPerkStrip();
 }
 
 /* ================= GAME STATE ================= */
@@ -1427,12 +1519,13 @@ function startChapter(c){
     pprojs:[], bolts:[],
     paused:false, over:false, cleared:false, pendingLevels:0, perksTaken:[], shake:0, bossWarned:false,
     perkChances:0, refreshBonus:0, legendOnly:false, overBoltCd:0, autoBoltT:2,
+    pxPerk:{},   /* px 키 → 그 키를 올린 특전 (발동 중 버프 아이콘이 «해당 특전» 을 찾는 용도) */
   };
   G.player.G=G;   /* sim.js 의 p.G 와 동일 — 특전 ap 본문이 p.G.perkChances / p.G.legendOnly 를 쓴다 */
   $('chapHudName').textContent='CHAPTER '+c;
   $('gKills').textContent='0'; $('gGold').textContent='0'; $('progIn').style.width='0%';
   lastBars='';
-  showScreen('game'); closeOverlay(); renderStatsGrid(); updateBars();
+  showScreen('game'); closeOverlay(); renderStatsGrid(); updateBars(); renderBuffBar(); renderPerkStrip();
 }
 
 function showScreen(n){
@@ -1501,6 +1594,8 @@ function openPerkBook(){
   ov.onclick=()=>{ AU.play('click'); closeOverlay(); };
 }
 $('infoBtn').onclick=openPerkBook;
+$('perkStrip').onclick=openPerkBook;   /* 미리보기 줄을 눌러도 전체 목록(인포 팝업)이 열린다 */
+addEventListener('resize',()=>{ renderPerkStrip(); });
 
 function openRest(){
   AU.play('heal');
@@ -1557,7 +1652,7 @@ function openAngel(){
   const bless=mult=>{
     G.player.dmg*=mult;
     G.perksTaken.push({r:1,ic:'😇',tx:`천사의 축복 — 공격력 <b>+${Math.round((mult-1)*100)}%</b>`});
-    renderStatsGrid();
+    renderStatsGrid(); renderPerkStrip();
   };
   $('aFree').onclick=()=>{ AU.play('perk'); bless(1.05); closeOverlay(); };
   $('aAd').onclick=()=>{
@@ -1709,9 +1804,9 @@ function onKill(e){
   if(p.killHeal>0) heal(p,p.maxHp*p.killHeal);
   if(px.killShield3) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.007*px.killShield3);
   if(px.killShield10) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.0075*px.killShield10);
-  if(px.aspdKill) addBuff(p,'aspd',0.20*px.aspdKill,4,3);
-  if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff)) addBuff(p,'critR',14,4,3);
-  if(px.killDefBuff) addBuff(p,'def',10*px.killDefBuff,3,3);
+  if(px.aspdKill) addBuff(p,'aspd',0.20*px.aspdKill,4,3,'aspdKill');
+  if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff)) addBuff(p,'critR',14,4,3,'killCritBuff');
+  if(px.killDefBuff) addBuff(p,'def',10*px.killDefBuff,3,3,'killDefBuff');
   if(px.killAspd){ p.aspd*=1.01; renderStatsGrid(); }
   if(e.wave.enemies.every(x=>x.hp<=0)){
     e.wave.done=true;
@@ -1748,11 +1843,11 @@ function dealPlayerDamage(e,ratio,icon){
   addText((icon||'')+(crit?'💥':'')+fmt(d), crit?'#FFB92E':(icon?'#BFE3FF':'#FFFFFF'), e.worldX,-84,crit);
   if(p.steal>0) heal(p,d*p.steal/100);
   if(crit){
-    if(px.critChain) addBuff(p,'critR',5*px.critChain,3,5);
-    if(px.critFsmall) addBuff(p,'critF',10*px.critFsmall,3,3);
-    if(px.critFBuff) addBuff(p,'critF',34*px.critFBuff,4,3);
-    if(px.critAtkBuff) addBuff(p,'atk',0.15*px.critAtkBuff,4,3);
-    if(px.critAspdBuff) addBuff(p,'aspd',0.25*px.critAspdBuff,3,3);
+    if(px.critChain) addBuff(p,'critR',5*px.critChain,3,5,'critChain');
+    if(px.critFsmall) addBuff(p,'critF',10*px.critFsmall,3,3,'critFsmall');
+    if(px.critFBuff) addBuff(p,'critF',34*px.critFBuff,4,3,'critFBuff');
+    if(px.critAtkBuff) addBuff(p,'atk',0.15*px.critAtkBuff,4,3,'critAtkBuff');
+    if(px.critAspdBuff) addBuff(p,'aspd',0.25*px.critAspdBuff,3,3,'critAspdBuff');
     if(px.critHealS&&pkk(p,0.20*px.critHealS)){ heal(p,p.maxHp*0.01); addText('❣️','#7ED957'); }
     if(px.critHeal3&&pkk(p,0.30*px.critHeal3)){ heal(p,p.maxHp*0.04); addText('❣️','#7ED957'); }
     if(px.critReset&&pkk(p,0.45*px.critReset)) p.atkTimer=0;
@@ -1767,10 +1862,10 @@ function dealPlayerDamage(e,ratio,icon){
 function procOnAttack(){
   const p=G.player, px=p.px;
   if(px.atkPerm&&pkk(p,0.10*px.atkPerm)){ p.dmg*=1.01; addText('🌱 공격력 UP','#7ED957',p.worldX,-104); renderStatsGrid(); }
-  if(px.c_atkBuff&&pkk(p,0.30*px.c_atkBuff)) addBuff(p,'atk',0.05,3,5);
-  if(px.c_aspdBuff&&pkk(p,0.30*px.c_aspdBuff)) addBuff(p,'aspd',0.05,3,5);
-  if(px.atkBuffM&&pkk(p,0.30*px.atkBuffM)) addBuff(p,'atk',0.14,4,5);
-  if(px.atkBuffL&&pkk(p,0.25*px.atkBuffL)) addBuff(p,'atk',0.35,5,3);
+  if(px.c_atkBuff&&pkk(p,0.30*px.c_atkBuff)) addBuff(p,'atk',0.05,3,5,'c_atkBuff');
+  if(px.c_aspdBuff&&pkk(p,0.30*px.c_aspdBuff)) addBuff(p,'aspd',0.05,3,5,'c_aspdBuff');
+  if(px.atkBuffM&&pkk(p,0.30*px.atkBuffM)) addBuff(p,'atk',0.14,4,5,'atkBuffM');
+  if(px.atkBuffL&&pkk(p,0.25*px.atkBuffL)) addBuff(p,'atk',0.35,5,3,'atkBuffL');
   if(px.axe&&pkk(p,0.15*px.axe)) fireAxe(p);
   if(px.arrow2&&pkk(p,0.15*px.arrow2)) fireArrows(p);
   if(px.wave&&pkk(p,0.20*px.wave)) fireWave(p);
@@ -1785,10 +1880,10 @@ function doCounter(src,depth){
   src.hp-=cd; src.hitT=0.15;
   addText('반격 '+fmt(cd),'#FFD54F',src.worldX,-80);
   sparks(src.worldX,-40,'#FFD54F',5,130);
-  if(px.counterAtkS) addBuff(p,'atk',0.05*px.counterAtkS,3,3);
-  if(px.counterDefS) addBuff(p,'def',8*px.counterDefS,3,3);
-  if(px.counterAtkM) addBuff(p,'atk',0.14*px.counterAtkM,4,3);
-  if(px.counterCrit) addBuff(p,'critR',14,3,3);
+  if(px.counterAtkS) addBuff(p,'atk',0.05*px.counterAtkS,3,3,'counterAtkS');
+  if(px.counterDefS) addBuff(p,'def',8*px.counterDefS,3,3,'counterDefS');
+  if(px.counterAtkM) addBuff(p,'atk',0.14*px.counterAtkM,4,3,'counterAtkM');
+  if(px.counterCrit) addBuff(p,'critR',14,3,3,'counterCrit');
   if(px.counterHeal) heal(p,p.maxHp*0.04*px.counterHeal);
   if(px.counterWave&&pkk(p,1.0*px.counterWave)) fireWave(p);
   if(src.hp<=0) onKill(src);
@@ -1808,10 +1903,10 @@ function hitPlayer(dmg,isMelee,src){
   const p=G.player, px=p.px;
   if(Math.random()*100<effEvade(p)){
     AU.play('evade'); addText('회피!','#CFCFD8');
-    if(px.evadeEvBuff) addBuff(p,'evade',8*px.evadeEvBuff,3,3);
-    if(px.evadeAspd) addBuff(p,'aspd',0.05,2,3);
-    if(px.evadeDef) addBuff(p,'def',5*px.evadeDef,3,3);
-    if(px.evadeAtkBuff) addBuff(p,'atk',0.28*px.evadeAtkBuff,5,3);
+    if(px.evadeEvBuff) addBuff(p,'evade',8*px.evadeEvBuff,3,3,'evadeEvBuff');
+    if(px.evadeAspd) addBuff(p,'aspd',0.05,2,3,'evadeAspd');
+    if(px.evadeDef) addBuff(p,'def',5*px.evadeDef,3,3,'evadeDef');
+    if(px.evadeAtkBuff) addBuff(p,'atk',0.28*px.evadeAtkBuff,5,3,'evadeAtkBuff');
     if(px.evadeRush&&p.nextAtk<1.5){ p.nextAtk=Math.min(1.5,p.nextAtk+0.5*px.evadeRush); addText('🌀 공격 강화!','#9CD2FF'); }
     if(px.evadeCrit) p.nextCrit=true;
     if(px.evadeHeal&&pkk(p,0.15*px.evadeHeal)){ heal(p,p.maxHp*0.07); addText('🍀 +'+fmt(p.maxHp*0.07),'#7ED957'); }
@@ -1845,12 +1940,12 @@ function hitPlayer(dmg,isMelee,src){
       }
     }
   }
-  if(px.defHitBuff) addBuff(p,'def',3*px.defHitBuff,3,5);
-  if(px.defBuff2&&pkk(p,0.30*px.defBuff2)) addBuff(p,'def',14,4,3);
-  if(px.defBuffL&&pkk(p,0.20*px.defBuffL)) addBuff(p,'def',15,4,2);
-  if(px.wallBuff) addBuff(p,'def',10,4,2);
-  if(px.hitEvadeBuff&&pkk(p,0.22*px.hitEvadeBuff)) addBuff(p,'evade',14,3,2);
-  if(px.evadeHitBuff&&pkk(p,0.30*px.evadeHitBuff)) addBuff(p,'evade',15,3,2);
+  if(px.defHitBuff) addBuff(p,'def',3*px.defHitBuff,3,5,'defHitBuff');
+  if(px.defBuff2&&pkk(p,0.30*px.defBuff2)) addBuff(p,'def',14,4,3,'defBuff2');
+  if(px.defBuffL&&pkk(p,0.20*px.defBuffL)) addBuff(p,'def',15,4,2,'defBuffL');
+  if(px.wallBuff) addBuff(p,'def',10,4,2,'wallBuff');
+  if(px.hitEvadeBuff&&pkk(p,0.22*px.hitEvadeBuff)) addBuff(p,'evade',14,3,2,'hitEvadeBuff');
+  if(px.evadeHitBuff&&pkk(p,0.30*px.evadeHitBuff)) addBuff(p,'evade',15,3,2,'evadeHitBuff');
   if(px.shieldOnHit&&pkk(p,0.10*px.shieldOnHit)){ p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05); addText('🔋','#6CC0F0'); }
   if(px.hitHeal&&pkk(p,0.15*px.hitHeal)){ heal(p,p.maxHp*0.02); addText('🩹','#7ED957'); }
   if(px.thorns&&src&&src.hp>0&&pkk(p,0.60*px.thorns)){
@@ -1878,7 +1973,7 @@ function update(dt){
     const arr=p.buffs[k];
     for(let i=arr.length-1;i>=0;i--){ arr[i].t-=dt; if(arr[i].t<=0){ arr.splice(i,1); bc=true; } }
   }
-  if(bc) renderStatsGrid();
+  if(bc){ renderStatsGrid(); renderBuffBar(); }   /* 버프가 끝나면 아이콘 제거 (주인 지시 07:0X) */
 
   /* 파티클/텍스트 */
   for(let i=G.parts.length-1;i>=0;i--){
@@ -2044,6 +2139,49 @@ function renderStatsGrid(){
     el.textContent=d.v(p);
     el.classList.toggle('up', d.cur(p) > d.base()+0.001);
   });
+}
+/* ===== ⚑ 주인 지시(2026-09-02 07:0X) 인게임 UI 2건 (PLAN §2.3) =====
+   ① 발동 중 버프 아이콘 — 화면 왼쪽 위·챕터 표시보다 아래, 등급색 테두리 + 중첩 수 뱃지, 오래된 것이 위.
+   ② 얻은 특전 미리보기 줄 — Info 버튼 행 왼쪽 끝부터 획득 순서대로, 중복은 개수 뱃지, 넘치면 «+N».
+   둘 다 표시 전용이라 전투 수치·판정에 관여하지 않는다 (sim.js 무관). */
+const BUFF_STAT_IC={atk:'⚔️',aspd:'⚡',critR:'💥',critF:'🔥',def:'🛡️',evade:'👥'};
+function renderBuffBar(){
+  const box=$('buffBar'); if(!box) return;
+  if(!G||!G.player){ box.innerHTML=''; return; }
+  const p=G.player, groups=new Map();
+  for(const k in p.buffs) for(const b of p.buffs[k]){
+    const id=b.src||('#'+k);
+    const g=groups.get(id);
+    if(g){ g.n++; if(b.q<g.q) g.q=b.q; }
+    else groups.set(id,{n:1, q:b.q||0, k, perk:b.src?G.pxPerk[b.src]:null});
+  }
+  const html=[...groups.values()].sort((a,b)=>a.q-b.q).map(g=>{
+    const cc = g.perk ? RARITY[g.perk.r].cc : '#9EA3AC';
+    const ic = g.perk ? g.perk.ic : (BUFF_STAT_IC[g.k]||'✨');
+    return `<div class="buff-ic" style="--bc:${cc};--bg:${cc}55">${ic}`+
+      (g.n>1?`<span class="cnt">${g.n}</span>`:'')+`</div>`;
+  }).join('');
+  if(box.innerHTML!==html) box.innerHTML=html;
+}
+function renderPerkStrip(){
+  const box=$('perkStrip'); if(!box) return;
+  if(!G){ box.innerHTML=''; return; }
+  const order=[], cnt=new Map();
+  for(const pk of G.perksTaken){
+    const id=pk.id||pk.tx;
+    if(!cnt.has(id)){ cnt.set(id,0); order.push({pk,id}); }
+    cnt.set(id,cnt.get(id)+1);
+  }
+  /* 칩 28px + 간격 4px. 폭을 못 재는 상황(화면 비표시)에서는 7칸으로 잡는다. */
+  const w=box.clientWidth||224;
+  const cap=Math.max(1,Math.floor((w+4)/32));
+  let list=order, more=0;
+  if(order.length>cap){ more=order.length-(cap-1); list=order.slice(order.length-(cap-1)); }
+  const html=(more?`<div class="pv-more">+${more}</div>`:'')+list.map(o=>{
+    const c=cnt.get(o.id), cc=RARITY[o.pk.r].cc;
+    return `<div class="pv-ic" style="--bc:${cc}">${o.pk.ic}`+(c>1?`<span class="cnt">${c}</span>`:'')+`</div>`;
+  }).join('');
+  if(box.innerHTML!==html) box.innerHTML=html;
 }
 let lastBars='';
 function updateBars(){

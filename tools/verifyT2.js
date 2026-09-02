@@ -517,6 +517,107 @@ console.log('\n[⑫ 모바일 viewport — PLAN §2.1, 주인 긴급 지시]');
   else ok('#frame 높이가 100dvh 병기 — 모바일에서 주소창 제외 실높이를 채운다');
 }
 
+/* ---------- ⑬ 인게임 UI 2건 + 챕터 이동 UI (주인 지시 07:0X · T36) ---------- */
+console.log('\n[⑬ 인게임 UI — 발동 중 버프 아이콘 · 얻은 특전 미리보기 줄 · 챕터 300 이동 (PLAN §2.3, T36)]');
+{
+  /* (1) 버프 아이콘 — 마크업 위치: 챕터 표시(#chapHud)보다 아래에 놓여야 한다 */
+  if (!/<div id="buffBar"><\/div>/.test(HTML)) bad('#buffBar 가 없다 — 발동 중 버프 아이콘 표시 자리가 사라졌다 (주인 지시 07:0X)');
+  else ok('#buffBar 마크업 존재');
+  {
+    const chapTop = (HTML.match(/#chapHud\{[^}]*top:(\d+)px/) || [])[1];
+    const buffTop = (HTML.match(/#buffBar\{[^}]*top:(\d+)px/) || [])[1];
+    /* 챕터 블록(제목 24px + 진행도 바)의 실측 높이가 42px 이라 top 차이가 그 이상이어야 겹치지 않는다.
+       (헤드리스 실측: #chapHud top 64 → bottom 106) */
+    if (!chapTop || !buffTop) bad('#chapHud / #buffBar 의 top 을 읽지 못했다 — 게이트를 갱신할 것');
+    else if (+buffTop - +chapTop < 42) bad(`버프 아이콘이 챕터 표시와 겹친다 — #chapHud top ${chapTop}px(높이 42px) · #buffBar top ${buffTop}px (주인 지시: 챕터 표시보다 아래)`);
+    else ok(`버프 아이콘 위치 = 챕터 표시(top ${chapTop}px·높이 42px)보다 아래·왼쪽 (top ${buffTop}px)`);
+  }
+  if (/#buffBar\{[^}]*left:\d+px/.test(HTML)) ok('버프 아이콘이 화면 왼쪽 정렬');
+  else bad('#buffBar 가 왼쪽 정렬이 아니다 (주인 지시: 화면 왼쪽 위)');
+  /* 블록 안으로 범위를 좁힌다 — 열어 두면 뒤쪽 .pv-ic 의 --bc 테두리가 잡혀 오탐 통과한다 */
+  {
+    const blk = HTML.match(/\.buff-ic\{[^}]*\}/);
+    if (blk && /border:[^;]*var\(--bc/.test(blk[0])) ok('버프 아이콘 등급색 테두리 (--bc)');
+    else bad('.buff-ic 에 등급색 테두리가 없다 (주인 지시: 등급색 테두리 포함)');
+  }
+  if (/\.buff-ic \.cnt\{[\s\S]*?right:-?\d+px;\s*top:-?\d+px/.test(HTML)) ok('중첩 수 뱃지가 아이콘 오른쪽 위');
+  else bad('.buff-ic .cnt 가 아이콘 오른쪽 위가 아니다 (주인 지시: 아이콘 오른쪽 위에 중첩 수)');
+
+  /* (2) 버프 → 특전 추적: addBuff 가 src 를 받고, 모든 호출부가 자기 px 키를 넘긴다 */
+  const ab = HTML.match(/function addBuff\(([^)]*)\)\{[\s\S]*?\n\}/);
+  if (!ab) bad('addBuff() 를 찾지 못했다 — 게이트를 갱신할 것');
+  else {
+    /* sim.js 는 표시가 없어 5인자다. index 는 6번째 표시 전용 인자(src)만 더 받는다 — 앞 5인자는 같아야 한다. */
+    const simAb = SIM.match(/function addBuff\(([^)]*)\)/);
+    const hi = ab[1].split(',').map(s => s.trim()), si = simAb ? simAb[1].split(',').map(s => s.trim()) : [];
+    if (si.length && hi.slice(0, si.length).join(',') === si.join(',') && hi.length === si.length + 1 && hi[si.length] === 'src')
+      ok(`addBuff 인자 = sim.js ${si.length}인자 + 표시 전용 src (수치·판정 무관)`);
+    else bad(`addBuff 인자가 «sim 5인자 + src» 가 아니다 — sim(${si.join(',')}) vs index(${hi.join(',')})`);
+    if (/\{t:dur,amt,src,q:\+\+buffSeq\}/.test(ab[0])) ok('버프 객체가 src(특전 키)와 q(발동 순번)를 기록');
+    else bad('addBuff 가 src/q 를 기록하지 않는다 — 아이콘이 «어느 특전인지»·«오래된 것이 위» 를 잃는다');
+  }
+  {
+    const lines = HTML.split('\n').filter(l => l.includes('addBuff(p,') && !l.includes('function addBuff'));
+    const wrong = [];
+    for (const l of lines) {
+      const g = l.match(/if\(px\.([A-Za-z0-9_]+)/);
+      const a = l.match(/addBuff\(p,[^)]*,'([A-Za-z0-9_]+)'\)/);
+      if (!g || !a || g[1] !== a[1]) wrong.push(l.trim().slice(0, 90));
+    }
+    if (!lines.length) bad('addBuff 호출부를 하나도 찾지 못했다 — 게이트를 갱신할 것');
+    else if (wrong.length) bad(`addBuff 호출부 ${wrong.length}건이 자기 px 키를 src 로 넘기지 않는다:\n    ` + wrong.slice(0, 5).join('\n    '));
+    else ok(`addBuff 호출부 ${lines.length}건 전부 자기 px 키를 src 로 넘긴다`);
+  }
+  /* sim.js 는 손대지 않았다 — 표시용 인자가 시뮬로 새면 밸런스가 갈라진다 */
+  if (/addBuff\([^)]*,'[A-Za-z0-9_]+'\)/.test(SIM)) bad('sim.js 에 표시 전용 src 인자가 새어 들어갔다 — 시뮬은 5인자여야 한다');
+  else ok('sim.js addBuff 는 5인자 그대로 (표시 인자가 시뮬로 새지 않았다)');
+
+  /* (3) 렌더러가 존재하고, 등급색·중첩수·소멸 처리를 한다 */
+  const rb = HTML.match(/function renderBuffBar\(\)\{[\s\S]*?\n\}/);
+  if (!rb) bad('renderBuffBar() 가 없다');
+  else {
+    /rarity/i.test(rb[0]) && /RARITY\[/.test(rb[0]) ? ok('버프 아이콘이 특전 등급색(RARITY)을 쓴다') : bad('renderBuffBar 가 RARITY 등급색을 쓰지 않는다');
+    /g\.n>1/.test(rb[0]) ? ok('중첩 2 이상일 때만 중첩 수 뱃지') : bad('renderBuffBar 에 중첩 수 뱃지가 없다');
+    /sort\(\(a,b\)=>a\.q-b\.q\)/.test(rb[0]) ? ok('버프 아이콘이 오래된 순(q)으로 세로 정렬') : bad('renderBuffBar 가 발동 순서로 정렬하지 않는다 (주인 지시: 오래된 것이 위)');
+  }
+  if (/if\(bc\)\{\s*renderStatsGrid\(\);\s*renderBuffBar\(\);/.test(HTML)) ok('버프 만료 시 아이콘 제거 (버프 타이머에서 재렌더)');
+  else bad('버프가 끝나도 아이콘이 갱신되지 않는다 (주인 지시: 버프가 끝나면 아이콘 제거)');
+
+  /* (4) 얻은 특전 미리보기 줄 — Info 버튼 «행» 의 왼쪽 끝 */
+  /* 닫는 </div> 는 자기 줄에 있다 — 줄 안에서 닫히는 자식(#perkStrip)에서 끊기면 안 된다 */
+  const foot = HTML.match(/<div id="hudFoot">[\s\S]*?\n\s*<\/div>/);
+  if (!foot) bad('#hudFoot 을 찾지 못했다');
+  else if (!/id="perkStrip"/.test(foot[0])) bad('#perkStrip 이 Info 버튼 행 안에 없다 (주인 지시: 📘 Info 버튼이 있는 행의 왼쪽 끝부터)');
+  else if (foot[0].indexOf('perkStrip') > foot[0].indexOf('infoBtn')) bad('#perkStrip 이 Info 버튼보다 오른쪽에 있다 (주인 지시: 행의 왼쪽 끝)');
+  else ok('#perkStrip 이 Info 버튼 행의 왼쪽 끝');
+  const rp = HTML.match(/function renderPerkStrip\(\)\{[\s\S]*?\n\}/);
+  if (!rp) bad('renderPerkStrip() 이 없다');
+  else {
+    /for\(const pk of G\.perksTaken\)/.test(rp[0]) ? ok('미리보기 줄이 획득 순서(G.perksTaken)를 따른다') : bad('renderPerkStrip 이 획득 순서를 따르지 않는다');
+    /RARITY\[o\.pk\.r\]\.cc/.test(rp[0]) ? ok('미리보기 아이콘에 등급색') : bad('미리보기 줄에 등급색이 없다 (주인 지시: 등급색 포함)');
+    /c>1\?/.test(rp[0]) ? ok('중복 획득은 아이콘 1개 + 개수 뱃지') : bad('중복 획득 개수 뱃지가 없다');
+    /pv-more">\+\$\{more\}/.test(rp[0]) ? ok('한 줄을 넘치면 최신 것만 남기고 «+N» 으로 합침') : bad('넘침 처리(«+N»)가 없다');
+    /slice\(order\.length-\(cap-1\)\)/.test(rp[0]) ? ok('넘칠 때 «최신 것들» 이 보인다') : bad('넘칠 때 최신이 아니라 앞쪽이 남는다 (주인 지시: 최신 것들이 보이게)');
+  }
+  /* 특전을 얻는 두 경로(레벨업·천사의 축복) 모두에서 줄이 갱신돼야 한다 */
+  const tp = HTML.match(/function takePerk\(perk\)\{[\s\S]*?\n\}/);
+  (tp && /renderPerkStrip\(\)/.test(tp[0])) ? ok('takePerk 가 미리보기 줄을 갱신') : bad('takePerk 후 미리보기 줄이 갱신되지 않는다');
+  /천사의 축복[\s\S]{0,120}renderPerkStrip\(\)/.test(HTML) ? ok('천사의 축복도 미리보기 줄에 반영') : bad('천사의 축복 획득 시 미리보기 줄이 갱신되지 않는다');
+
+  /* (5) T36 — 챕터 300 이동 UI */
+  /function openChapterJump\(\)/.test(HTML) ? ok('T36 — 챕터 이동 팝업(숫자 입력·±10·최신 해금) 존재') : bad('T36 미해소 — 챕터 300 인데 점프 수단이 없다');
+  /\$\('lobbyChapName'\)\.onclick=openChapterJump/.test(HTML) ? ok('T36 — 챕터 제목을 눌러 이동 팝업') : bad('챕터 제목이 이동 팝업을 열지 않는다');
+  /holdRepeat\(\$\('chPrev'\),-1\); holdRepeat\(\$\('chNext'\),1\)/.test(HTML) ? ok('T36 — ◀▶ 길게 누르면 연속 이동') : bad('◀▶ 연속 이동(길게 누르기)이 없다');
+  {
+    const hr = HTML.match(/function holdRepeat\(btn,d\)\{[\s\S]*?\n\}/);
+    (hr && /Math\.max\(45,iv\*0\.72\)/.test(hr[0])) ? ok('연속 이동이 가속한다 (300ms → 45ms)') : bad('holdRepeat 가 가속하지 않는다 — 300챕터를 넘기기 어렵다');
+  }
+  {
+    const cs = HTML.match(/function chapStep\(d\)\{[\s\S]*?\n\}/);
+    (cs && /clamp\(save\.selChapter\+d,1,save\.maxChapter\)/.test(cs[0])) ? ok('챕터 이동이 해금 범위(1~maxChapter)를 넘지 않는다') : bad('챕터 이동이 해금 범위를 넘을 수 있다');
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
