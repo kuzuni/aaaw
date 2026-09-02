@@ -1590,74 +1590,54 @@ console.log('\n[㉗ 전투 플로팅 텍스트 표기 — addText 는 fmt 를 �
 }
 
 /* ============================================================================
-   ㉘ 절대배치 뱃지의 기준 상자 (T60)
-
-   `.bang`(합성 «!» 알림 점)은 `position:absolute; top:-6px; right:-4px` 라
-   **호스트 버튼이 positioned 여야만** 그 버튼 모서리에 붙는다. 호스트가 static 이면
-   기준 상자가 조상(`#gear`)으로 밀려 화면 우상단(-6·-4)으로 날아가고,
-   `#frame{overflow:hidden}` 에 잘린다 — 실제로 `#fuseBtn` 이 그랬다(T60 실측
-   378..394 × -6..10, 우 4px·상 6px 잘림, 정작 버튼은 267..304 에 있었다).
-
-   여기서는 되돌림과 «새 호스트» 둘 다 잡는다:
-   ① `.bang` 이 여전히 absolute + 음수 오프셋인가 (전제)
-   ② `class="bang"` 를 심는 호스트 집합이 등재분과 정확히 일치하는가
-      — 새 버튼에 뱃지를 달면 여기서 빨개져 «그 버튼도 positioned 인지» 를 강제한다
-   ③ 각 호스트를 positioned 로 만드는 CSS 규칙이 살아 있는가
-   ④ `#frame` 이 여전히 잘라내는가 (잘림이 실제 피해라는 근거)
-   실제 렌더 위치 단언은 T3 `tools/t3/gear.js` ⑤ 가 본다(정적으론 못 푸는 축).
+   ㉘ 보스 처치 ~ 클리어 확정 사이의 700ms 창 (T61)
+   ----------------------------------------------------------------------------
+   sim.js 는 `while(!G.dead && !G.cleared && G.t<maxT)` 라 **보스가 죽는 순간 챕터가 끝난다.**
+   index.html 만 클리어 화면을 `setTimeout(…,700)` 로 미루면서 그 0.7초 동안 전투를 더 굴렸다.
+   실측 재현 3종(전부 정상 엔진 경로):
+     ① 보스가 잡몹보다 먼저 죽으면(관통 창·번개 등 원거리 소환) 그 창에 플레이어가 맞아 죽어
+        «💀 쓰러졌다» 가 뜬 뒤 0.7초에 «🏆 클리어» 가 그 위를 덮었다 — 죽었는데 클리어.
+     ② 그 창에 포기하고 나가면 정당한 클리어가 해금·보너스 없이 증발한다.
+     ③ 그 창에 다른 챕터를 시작하면 `if(G)` 가 새 전투를 통과시켜 **한 대도 안 때린 챕터가
+        클리어 처리**됐다(챕터 40 을 처치 0 으로 클리어 + 보너스 280.04K 지급).
+   그래서 «한 증상» 이 아니라 «창» 자체를 못박는다 — 네 자리 전부가 상시 감시 대상이다.
    ============================================================================ */
+console.log('\n[㉘ 보스 처치~클리어 확정 700ms 창 (T61)]');
 {
-  console.log('\n[㉘ 절대배치 뱃지의 기준 상자 — .bang 호스트는 positioned (T60)]');
+  /* ⓐ 정본 근거 — sim 은 보스 사망 즉시 루프를 빠져나간다 (이 규칙이 «옳은 동작» 의 기준이다) */
+  /while\s*\(\s*!G\.dead\s*&&\s*!G\.cleared\s*&&/.test(SIM)
+    ? ok('sim.js 전투 루프가 `!G.dead && !G.cleared` 로 보스 사망 즉시 끝난다 (정본 기준)')
+    : bad('sim.js 전투 루프가 더 이상 G.cleared 로 끝나지 않는다 — T61 의 기준 자체가 사라졌다');
 
-  /* ① .bang 정의 */
-  const bangRule = (HTML.match(/\.bang\s*\{[^}]*\}/) || [''])[0];
-  /position:\s*absolute/.test(bangRule)
-    ? ok('.bang 이 position:absolute 다 (호스트 positioned 전제가 성립)')
-    : bad('.bang 이 absolute 가 아니다 — ㉘ 전제가 깨졌다. 규칙을 다시 세울 것');
-  /top:\s*-\d/.test(bangRule) && /right:\s*-\d/.test(bangRule)
-    ? ok('.bang 오프셋이 음수다 (top/right 모두) — 기준 상자가 틀리면 프레임 밖으로 나간다')
-    : bad('.bang 의 음수 오프셋(top/right)이 사라졌다 — ㉘ 이 지키던 실패 모드가 바뀌었다');
+  /* ⓑ 게임의 update() 가 같은 규칙을 따른다 — 보스가 죽으면 그 틱부터 전투 정지 */
+  const upGuard = /const\s+alive\s*=\s*aliveEnemies\(\);[\s\S]{0,900}?if\s*\(\s*!alive\.length\s*\|\|\s*G\.cleared\s*\)\s*return;/;
+  upGuard.test(HTML)
+    ? ok('index.html update() 조기 반환이 `!alive.length || G.cleared` 다 (보스 사망 = 전투 종료)')
+    : bad('index.html update() 조기 반환에 G.cleared 가 없다 — 보스 사망 뒤 700ms 동안 전투가 계속 돈다');
 
-  /* ② class="bang" 호스트 전수 수집 */
-  const BANG_HOSTS = {                       /* 호스트 id → 그를 positioned 로 만드는 CSS 셀렉터 */
-    fuseBtn: '#fuseBtn',                     /* 장비 탭 «🔨 합성» (T60 에서 position:relative 추가) */
-    fgAuto: '.forge-actionbar button',       /* 합성 화면 «⚙️ 자동» (T2 5단계부터 relative) */
-  };
-  const found = new Set();
-  for (const line of HTML.split('\n')) {
-    if (!line.includes('class="bang"')) continue;
-    const direct = line.match(/\$\('(\w+)'\)\.innerHTML\s*=/);
-    if (direct) { found.add(direct[1]); continue; }
-    const viaVar = line.match(/(\w+)\.innerHTML\s*=/);
-    if (viaVar) {
-      const re = new RegExp('(?:const|let|var)\\s+' + viaVar[1] + '\\s*=\\s*\\$\\(\'(\\w+)\'\\)');
-      const m = HTML.match(re);
-      if (m) { found.add(m[1]); continue; }
-    }
-    bad(`class="bang" 를 심는 호스트를 못 읽었다: «${line.trim().slice(0, 70)}» — ㉘ 파서를 고칠 것`);
-  }
-  const want = Object.keys(BANG_HOSTS).sort().join(',');
-  const got = [...found].sort().join(',');
-  got === want
-    ? ok(`.bang 호스트 ${found.size}곳 전부 등재분과 일치 — ${got}`)
-    : bad(`.bang 호스트 집합이 바뀌었다: 등재 «${want}» ≠ 실제 «${got}»` +
-          ' — 새 호스트라면 그 버튼도 positioned 인지 확인하고 BANG_HOSTS 에 등재할 것');
+  /* ⓒ 예약된 클리어 화면이 «그 전투» 에만 열린다 (종전 `if(G)` 되돌림 감시) */
+  const cap = /const\s+g\s*=\s*G;\s*[\s\S]{0,120}?setTimeout\(\s*\(\)\s*=>\s*\{\s*if\s*\(\s*G\s*===\s*g\s*\)\s*openClear\(\);\s*\}\s*,\s*700\s*\)/;
+  cap.test(HTML)
+    ? ok('openClear 예약이 캡처한 전투(G===g)에서만 열린다')
+    : bad('openClear 예약이 전역 G 를 그대로 본다 — 창 안에 시작한 다른 챕터가 공짜로 클리어된다');
+  /\bif\s*\(\s*G\s*\)\s*openClear\(\)/.test(HTML)
+    ? bad('종전 `if(G) openClear()` 가 되살아났다 (T61 되돌림)')
+    : ok('종전 `if(G) openClear()` 가 남아 있지 않다');
 
-  /* ③ 각 호스트가 positioned 인가 */
-  for (const [id, sel] of Object.entries(BANG_HOSTS)) {
-    const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const rule = (HTML.match(new RegExp(esc + '\\s*\\{[^}]*\\}')) || [''])[0];
-    if (!rule) { bad(`${id} 를 positioned 로 만들 CSS 규칙 «${sel}» 이 없다`); continue; }
-    /position:\s*(relative|absolute|sticky|fixed)/.test(rule)
-      ? ok(`${id} 호스트가 positioned 다 — «${sel}»`)
-      : bad(`${id} 호스트 규칙 «${sel}» 에 position 이 없다 — .bang 이 조상으로 날아간다 (T60 재발)`);
-  }
+  /* ⓓ 창 안에서는 일시정지·포기가 막힌다 (클리어 증발 · 공짜 클리어 양쪽의 입구) */
+  /\$\('menuBtn'\)\.onclick\s*=\s*\(\)\s*=>\s*\{[\s\S]{0,400}?if\s*\(\s*!G\|\|G\.over\|\|G\.paused\|\|G\.cleared\s*\)\s*return;/.test(HTML)
+    ? ok('일시정지 버튼 가드에 G.cleared 가 있다 (창 안 포기 불가)')
+    : bad('일시정지 버튼 가드에 G.cleared 가 없다 — 창 안에 포기하면 정당한 클리어가 증발한다');
 
-  /* ④ 프레임이 잘라낸다 = 기준 상자가 틀리면 실제 피해가 난다 */
-  const frameRule = (HTML.match(/#frame\s*\{[^}]*\}/) || [''])[0];
-  /overflow:\s*hidden/.test(frameRule)
-    ? ok('#frame 이 overflow:hidden 이다 — 밖으로 나간 뱃지는 잘린다(피해 근거)')
-    : bad('#frame 의 overflow:hidden 이 사라졌다 — ㉘ 의 피해 전제가 바뀌었다. 항목을 재작성할 것');
+  /* ⓔ 사망 화면은 클리어 확정 뒤에는 뜨지 않는다 (다른 경로로 새어도 «죽었는데 클리어» 재발 금지) */
+  /function\s+openDead\(\)\s*\{[\s\S]{0,400}?if\s*\(\s*G\.cleared\s*\)\s*return;/.test(HTML)
+    ? ok('openDead 가 G.cleared 면 즉시 반환한다')
+    : bad('openDead 에 G.cleared 가드가 없다 — 보스 처치 뒤 사망 화면이 뜰 수 있다');
+
+  /* ⓕ 두 엔진이 같은 «클리어 확정» 지점을 쓴다 (보스 onKill 안) */
+  (/if\(e\.isBoss\)G\.cleared=true;/.test(SIM) && /if\(e\.isBoss\)\{\s*\n?\s*G\.cleared=true;/.test(HTML))
+    ? ok('두 엔진 모두 보스 onKill 에서 G.cleared 를 세운다')
+    : bad('보스 onKill 의 G.cleared 확정 지점이 두 엔진에서 어긋난다');
 }
 
 /* ---------- 결과 ---------- */
