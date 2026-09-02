@@ -1077,6 +1077,68 @@ console.log('\n[⑳ 적 회피 10% · 적중률(명중) 스탯 금지 (PLAN §2.
   }
 }
 
+/* ---------- ㉑ 소환 적중 = «공격» 트리거 (주인 확정 15:3X · T45) ---------- */
+/* 주인 원문: «공격 시 50% 창이면, 창이 적 때렸을 때도 그 50% 적용. 치명타 시 창이면 창이 치명 뜨면 창 또 나가야 함.»
+   두 파일이 같은 동사(summonHit/pushProj)·같은 성능 가드 상수를 쓰는지, 그리고 기본공격 전용 3종이
+   여전히 기본공격에만 남아 있는지 본다. 실제 «굴러가는가» 단언은 verifyCombatConst ③ 이 vm 으로 본다. */
+console.log('\n[㉑ 소환 적중 = 공격 트리거 (PLAN §4, T45)]');
+{
+  /* (1) 성능 가드 상수가 두 파일에서 같아야 한다 (주인 위임 — 확률·연쇄가 아니라 프레임 보호 장치) */
+  const capOf = (src, who, name) => {
+    const m = src.match(new RegExp(name + '\\s*=\\s*(\\d+)'));
+    if (!m) { bad(`${who} 에서 ${name} 을 못 찾았다 — 성능 가드가 사라졌다`); return null; }
+    return Number(m[1]);
+  };
+  for (const nm of ['PROJ_CAP', 'PROC_TICK_CAP']) {
+    const sv = capOf(SIM, 'sim.js', nm), hv = capOf(HTML, 'index.html', nm);
+    if (sv !== null && hv !== null)
+      sv === hv ? ok(`${nm} = ${sv} — 두 파일 일치`)
+                : bad(`${nm} 이 두 파일에서 다르다 — sim.js ${sv} · index.html ${hv}`);
+  }
+  /* (2) 소환 적중 경로가 전부 트리거를 굴리는 동사(summonHit)를 거쳐야 한다.
+     번개(즉발)·자동번개·투사체 적중 3경로 중 하나라도 옛 직접 호출로 돌아가면 그 소환만 조용히 트리거를 잃는다. */
+  const paths = [
+    ['sim.js 번개(fireBolts)',      SIM,  /function fireBolts\(p\)\{[^}]*summonHit\(/],
+    ['sim.js 자동번개(autoBolt)',   SIM,  /autoBolt;k\+\+\)\{const t2=randTarget\(G\);if\(t2\)summonHit\(/],
+    ['sim.js 관통 투사체 적중',     SIM,  /pr\.hit\.add\(e\);summonHit\(/],
+    ['sim.js 단일 투사체 적중',     SIM,  /pr\.x>=pr\.tgt\.worldX-10\)\{summonHit\(/],
+    ['index.html 번개(castBolt)',   HTML, /function castBolt\(t\)\{[\s\S]*?summonHit\(t,0\.75/],
+    ['index.html 관통 투사체 적중', HTML, /pr\.hit\.add\(e\);\s*summonHit\(/],
+    ['index.html 단일 투사체 적중', HTML, /pr\.x>=pr\.tgt\.worldX-10\)\{\s*summonHit\(/],
+  ];
+  for (const [what, src, re] of paths)
+    re.test(src) ? ok(`${what} → summonHit`) : bad(`${what} 이 summonHit 을 안 거친다 — 그 소환만 «공격 시» 트리거를 잃는다 (T45)`);
+  /* (3) 투사체 생성은 pushProj 를 거쳐야 한다 (상한 초과분을 즉발 판정으로 대체하는 지점) */
+  for (const [src, who] of [[SIM, 'sim.js'], [HTML, 'index.html']]) {
+    const body = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    const direct = (body.match(/G\.pprojs\.push\(\{type:'/g) || []).length;
+    direct === 0 ? ok(`${who}: 소환 투사체 생성이 전부 pushProj 를 거친다`)
+                 : bad(`${who}: G.pprojs.push 직접 호출 ${direct}건 — 투사체 상한(PROJ_CAP) 가드를 우회한다`);
+    /function pushProj\(/.test(body) ? ok(`${who}: pushProj 존재`) : bad(`${who}: pushProj 가 없다`);
+  }
+  /* (4) 기본공격 전용 3종은 그대로 기본공격에만 남아야 한다 (주인 위임: nextCrit/nextAtk 소모 · 분신 · 추가타).
+     sim 은 fromBasic 인자, index.html 은 «아이콘 인자 없음» 이 기본공격 표시다. */
+  /if\(fromBasic&&p\.nextCrit\)/.test(SIM)
+    ? ok('sim.js: nextCrit 소모가 기본공격 전용(fromBasic)으로 남아 있다')
+    : bad('sim.js: nextCrit 소모의 기본공격 전용 가드가 사라졌다 (주인 위임 범위 밖)');
+  /if\(icon===undefined&&p\.nextCrit\)/.test(HTML)
+    ? ok('index.html: nextCrit 소모가 기본공격 전용으로 남아 있다')
+    : bad('index.html: nextCrit 소모의 기본공격 전용 가드가 사라졌다');
+  for (const [src, who, re] of [
+    [SIM, 'sim.js', /function playerStrike\(G,e\)\{[\s\S]*?px\.clone[\s\S]*?px\.extraHit[\s\S]*?procOnAttack\(G\);/],
+    [HTML, 'index.html', /function playerStrike\(e\)\{[\s\S]*?px\.clone[\s\S]*?px\.extraHit[\s\S]*?procOnAttack\(\);/]])
+    re.test(src) ? ok(`${who}: 분신·추가타가 기본공격(playerStrike)에만 있다`)
+                 : bad(`${who}: playerStrike 의 분신·추가타 구조가 바뀌었다 — 소환으로 새면 주인 위임 범위 밖이다`);
+  /* (5) 소환 적중이 nextCrit 을 소모하면 안 된다 — sim 은 fromBasic 미전달, 게임은 아이콘 인자 필수 */
+  {
+    const m = SIM.match(/function summonHit\(G,e,ratio\)\{[\s\S]*?\n\}/);
+    if (!m) bad('sim.js: summonHit 을 못 찾았다 — 게이트를 갱신할 것');
+    else /dealDmg\(G,\s*e,\s*ratio\s*\)/.test(m[0])
+      ? ok('sim.js: summonHit 이 fromBasic 없이 dealDmg 를 부른다 (nextCrit 미소모)')
+      : bad('sim.js: summonHit 이 dealDmg 를 fromBasic 으로 부른다 — 소환이 nextCrit 을 먹는다');
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');

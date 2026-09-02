@@ -673,13 +673,35 @@ function dealDmg(G,e,ratio,fromBasic){
   if(e.hp<=0)onKill(G,e);
   return crit;
 }
-function fireAxe(p){const G=p.G,n=p.px.axeCount?14:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'axe',x:p.worldX+14,tgt:t,ratio:0.50,spd:430});}}
-function fireArrows(p){const G=p.G,n=p.px.arrowCount?24:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560});}}
-function fireBolts(p){const G=p.G,n=p.px.boltCount?20:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)dealDmg(G,t,0.75);}}
-function fireWave(p){const G=p.G;G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?1400:340),hit:new Set(),pierce:p.px.waveKing?20:2,node:frontNode(G)});}
+/* ⚑ 주인 확정(2026-09-02 15:3X) — 소환 적중도 «공격» 이다: 소환(창/도끼/화살/번개/검기)이 적을 맞히면
+   «공격 시 n%» 트리거를 굴린다(창이 창을 부르는 연쇄 허용). «치명타 시» 트리거는 `dealDmg` 안에 있어
+   기본공격 전용이 아니었으므로 소환 적중에도 이미 걸린다 — 즉 이 규칙에서 새로 추가되는 것은 «공격 시» 쪽이다.
+   **기본공격 전용으로 남는 것은 `nextCrit`/`nextAtk` 소모 · 분신 · 추가타 셋뿐**(PLAN §4, 주인 위임).
+   확률·연쇄 자체에는 인위적 제한을 두지 않는다(세면 T1 이 수치로 잡는다). 아래 둘은 주인이 명시 허용한 **성능 가드**다:
+     · `PROJ_CAP`      동시 활성 투사체 상한 — 초과분은 «즉발 판정» 으로 대체(데미지는 사라지지 않는다).
+     · `PROC_TICK_CAP` 한 틱에 굴리는 소환 적중 트리거 수 상한 — 번개처럼 즉발로 꼬리를 무는 연쇄가
+       한 틱 안에서 무한히 자라는 것을 막는다(상한을 넘겨도 데미지는 그대로, 트리거만 안 굴린다).
+   index.html 도 같은 상수·같은 동사를 쓴다(게이트가 두 파일을 대조한다). */
+const PROJ_CAP=200, PROC_TICK_CAP=200;
+function summonHit(G,e,ratio){
+  dealDmg(G,e,ratio);
+  if(G.procN<PROC_TICK_CAP){G.procN++;procOnAttack(G);}
+}
+function pushProj(G,pr){
+  if(G.pprojs.length<PROJ_CAP){G.pprojs.push(pr);return;}
+  if(pr.hit){                                   /* 관통형(창·검기): 사거리 안 적을 앞에서부터 pierce 마리 */
+    const list=aliveList(G).filter(e=>(!pr.node||e.wave===pr.node)&&e.worldX>=pr.x-16&&e.worldX<=pr.maxX)
+                           .sort((a,b)=>a.worldX-b.worldX);   /* pr.node = 미스폰·대기 웨이브 피격 금지 (주인 15:2X · T44) */
+    for(const e of list.slice(0,pr.pierce))summonHit(G,e,pr.ratio);
+  }else if(pr.tgt&&pr.tgt.hp>0)summonHit(G,pr.tgt,pr.ratio);
+}
+function fireAxe(p){const G=p.G,n=p.px.axeCount?14:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)pushProj(G,{type:'axe',x:p.worldX+14,tgt:t,ratio:0.50,spd:430});}}
+function fireArrows(p){const G=p.G,n=p.px.arrowCount?24:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)pushProj(G,{type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560});}}
+function fireBolts(p){const G=p.G,n=p.px.boltCount?20:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)summonHit(G,t,0.75);}}
+function fireWave(p){const G=p.G;pushProj(G,{type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?1400:340),hit:new Set(),pierce:p.px.waveKing?20:2,node:frontNode(G)});}
 /* 창 관통 상한 8마리 — PLAN §3.3 l_spear «일직선 8명 거리(88px×8) 관통» 의 «8명» 이 엔진에 없어
    12마리 웨이브에서 총출력이 162배까지 갔다(T34). 신화 m_spear200 은 데미지만 올리고 관통 수는 그대로. */
-function fireSpear(p){const G=p.G;G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set(),pierce:8,node:frontNode(G)});}
+function fireSpear(p){const G=p.G;pushProj(G,{type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set(),pierce:8,node:frontNode(G)});}
 function procOnAttack(G){
   const p=G.player,px=p.px;
   if(px.atkPerm&&pkk(p,0.10*px.atkPerm))p.dmg*=1.01;
@@ -799,7 +821,7 @@ function perkChoice(G){
 /* ---------- 챕터 1회 실행 ---------- */
 function runChapter(chapter,build,opts){
   opts=opts||{};
-  const G={chapter,player:null,nodes:[],pprojs:[],arrows:[],gold:0,kills:0,
+  const G={chapter,player:null,nodes:[],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
     perkChances:0,taken:[],legendOnly:false,overBoltCd:0,autoBoltT:2,
     dead:false,cleared:false,t:0,atkTries:0,miss:0,   /* 적 회피 10% 실측용 (PLAN §2.3) */
     rarityLockOn:opts.rarityLock!==undefined,rarityLock:opts.rarityLock};
@@ -828,6 +850,7 @@ function runChapter(chapter,build,opts){
   const maxT=900;
   while(!G.dead&&!G.cleared&&G.t<maxT){
     G.t+=dt;
+    G.procN=0;   /* 성능 가드: 소환 적중 트리거 예산은 틱마다 리셋 (PROC_TICK_CAP) */
     if(G.overBoltCd>0)G.overBoltCd-=dt;
     for(const k in p.buffs){const arr=p.buffs[k];for(let i=arr.length-1;i>=0;i--){arr[i].t-=dt;if(arr[i].t<=0)arr.splice(i,1);}}
     const alive=aliveList(G);
@@ -859,7 +882,7 @@ function runChapter(chapter,build,opts){
     const dist=tgt.worldX-p.worldX;
     if(dist>74){p.worldX+=132*p.walkMul*dt;p.atkTimer=Math.min(p.atkTimer,0.35);}
     else{p.atkTimer-=dt*effAspd(p);if(p.atkTimer<=0){p.atkTimer+=1;playerStrike(G,tgt);}}
-    if(p.px.autoBolt){G.autoBoltT-=dt;if(G.autoBoltT<=0){G.autoBoltT=2.4;for(let k=0;k<p.px.autoBolt;k++){const t2=randTarget(G);if(t2)dealDmg(G,t2,0.75);}}}
+    if(p.px.autoBolt){G.autoBoltT-=dt;if(G.autoBoltT<=0){G.autoBoltT=2.4;for(let k=0;k<p.px.autoBolt;k++){const t2=randTarget(G);if(t2)summonHit(G,t2,0.75);}}}
     /* 적 */
     for(const e of alive){
       if(e.hp<=0)continue;
@@ -902,14 +925,14 @@ function runChapter(chapter,build,opts){
         for(const e of aliveList(G)){
           if(pr.node&&e.wave!==pr.node)continue;   /* 미스폰·대기 웨이브 피격 금지 (주인 15:2X) */
           if(!pr.hit.has(e)&&Math.abs(e.worldX-pr.x)<16){
-            pr.hit.add(e);dealDmg(G,e,pr.ratio);
+            pr.hit.add(e);summonHit(G,e,pr.ratio);
             if(pr.hit.size>=pr.pierce){done=true;break;}
           }
         }
         if(pr.x>pr.maxX)done=true;
       }else{
         if(!pr.tgt||pr.tgt.hp<=0)done=true;
-        else if(pr.x>=pr.tgt.worldX-10){dealDmg(G,pr.tgt,pr.ratio);done=true;}
+        else if(pr.x>=pr.tgt.worldX-10){summonHit(G,pr.tgt,pr.ratio);done=true;}
       }
       if(done)G.pprojs.splice(i,1);
     }
@@ -997,10 +1020,12 @@ function exp1_rarityLadder(){
   }
 }
 function exp2_perkWinrate(){
-  const h=harness('EXP2_GEAR',0,7,0);
+  const h=harness('EXP2_GEAR',0,6,0);
   /* T31 재보정 (2026-09-02 · 변별점 규칙 ②): 종전 «신화 6부위·슬롯 0렙» 은 스탯 사다리 개편 후 챕터8 클리어율이
      100.0%(천장 포화)라 특전별 승률 차가 전혀 안 벌어졌다. 300판 실측으로 목표 밴드 60~70% 에 맞춘 값이다:
        일반+6 52.0% · **일반+7 66.3%** · 일반+8 84.3% → 일반+7 슬롯0 채택 (종전 규칙값의 66.7% 와 사실상 같은 지점).
+     **T45 재보정 (소환 적중 트리거 반영 · 정본 ④):** 같은 하니스가 66.3% → 77.7% 로 밀려 목표 밴드를 벗어났다.
+     재측정 300판 — 일반+5 41.3% · **일반+6 63.7%** · 일반+7 77.7% → **일반+6 슬롯0** 으로 한 칸 내렸다.
      축 선택 근거·픽스처 성격·옵션 0개 부작용은 실험1 주석과 동일하다. */
   /* 진단 전용 오버라이드 (채점용 기본값은 PLAN §7 의 1200판 그대로).
      EXP2_N: 표본 수를 늘려 «측정 노이즈 대 실제 아웃라이어» 를 분리할 때만 사용.

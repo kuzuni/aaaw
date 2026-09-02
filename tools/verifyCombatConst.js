@@ -40,6 +40,10 @@ function planHas(re){ return PLAN.match(re); }
 /* ---------- ① PLAN 문서값 ↔ 엔진 대조 ---------- */
 /* [항목, 엔진 정규식, PLAN 정규식(캡처 1개), PLAN 위치] */
 const CHECKS=[
+  /* T45 성능 가드 — 주인 위임 기본값. 밸런스 노브가 아니라 프레임 보호 장치라 PLAN §4 에 값이 박혀 있어야 한다
+     (두 파일 사이 일치는 verifyT2 ⑳, 실제 동작은 아래 ③ 이 본다). */
+  ['투사체 상한(PROJ_CAP)',      /PROJ_CAP=(\d+)/,                          /`PROJ_CAP` = \*\*(\d+)\*\*/,            '§4'],
+  ['틱 트리거 예산(PROC_TICK_CAP)',/PROC_TICK_CAP=(\d+)/,                    /`PROC_TICK_CAP` = \*\*(\d+)\*\*/,       '§4'],
   ['플레이어 이동속도',     /p\.worldX\+=(\d+)\*p\.walkMul\*dt/,        /속도 `(\d+)\*walkMul`/,                    '§2.3'],
   ['플레이어 정지 거리',    /if\(dist>(\d+)\)\{p\.worldX/,              /가장 가까운 적이 (\d+)px 안이면/,           '§2.3'],
   ['플레이어 공격 쿨',      /p\.atkTimer\+=([\d.]+);playerStrike/,      /공격당 ([\d.]+) 쿨/,                        '§2.3'],
@@ -113,6 +117,75 @@ for(const [name,engRe,planRe] of UNDOC){
   if(planHas(planRe)){ pass(`${name} = ${e.v} — PLAN 에 문서화됨`); continue; }
   if(KNOWN[name]){ undocKnown++; console.log(`  🔵 ${name} = ${e.v} — PLAN 에 값 없음`); console.log(`        └ 등재됨: ${KNOWN[name]}`); }
   else { undocNew++; fail(`${name} = ${e.v} — PLAN 에 값이 없고 PROGRESS 에도 미등재 (신규)`); }
+}
+
+/* ---------- ③ 소환 적중 = «공격» 트리거 — 실행 단언 (주인 확정 15:3X · T45) ---------- */
+/* 정적 대조(두 파일 같은 동사·같은 상수)는 verifyT2 ⑳ 이 본다. 여기서는 «실제로 굴러가는가» 를 본다:
+   소환 적중 한 번이 procOnAttack 을 굴리는지, 기본공격 전용 3종이 소환으로 새지 않는지.
+   sim.js 는 CLI 디스패처 앞까지 잘라 vm 에서 평가한다(verifyHarness·verifyGearEcon 과 같은 방식). */
+console.log('\n=== ③ 소환 적중 트리거 (PLAN §4 주인 확정 15:3X · T45) ===');
+{
+  const vm=require('vm');
+  const CUT="const mode=process.argv[2]||'all';";
+  const at=SIM.indexOf(CUT);
+  if(at<0) fail('sim.js 에서 CLI 디스패처를 못 찾았다 — 잘림 기준이 바뀌었다');
+  else{
+    const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
+    vm.createContext(ctx);
+    vm.runInContext(SIM.slice(0,at)+
+      '\n;globalThis.__X={summonHit,pushProj,dealDmg,procOnAttack,PROJ_CAP,PROC_TICK_CAP};',ctx);
+    const X=ctx.__X||ctx.globalThis.__X;
+    /* 최소 가짜 전장: 적 1마리 · 플레이어는 «공격 시 확정 공격력 +1%»(atkPerm ×100 = 확률 10 → 확정)만 가진다.
+       atkPerm 은 타겟·사거리와 무관해 «트리거가 굴었는가» 를 p.dmg 변화 하나로 관측할 수 있다. */
+    const mkG=()=>{
+      const e={worldX:100,hp:1e12,maxHp:1e12,dead:false,isBoss:false};
+      const p={worldX:0,dmg:100,px:{atkPerm:100},nextCrit:false,nextAtk:0,
+               buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
+               sh:0,maxSh:0,hp:100,maxHp:100,steal:0,goldMul:1,level:1,exp:0,
+               critR:0,critF:150,def:0,evade:0,counter:0,atkTimer:1,aspd:1,walkMul:1,killHeal:0};
+      const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
+               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,overBoltCd:0};
+      p.G=G; return {G,p,e};
+    };
+    /* (1) 소환 적중이 «공격 시» 트리거를 굴린다 */
+    {
+      const {G,p,e}=mkG(); const d0=p.dmg;
+      X.summonHit(G,e,0.75);
+      p.dmg>d0 ? pass('소환 적중 1회 → «공격 시» 트리거가 굴었다 (창이 창을 부르는 연쇄의 전제)')
+               : fail('소환 적중이 «공격 시» 트리거를 안 굴린다 — 주인 확정 15:3X 위반');
+    }
+    /* (2) 소환 적중은 nextCrit / nextAtk 를 소모하지 않는다 (기본공격 전용 잔존) */
+    {
+      const {G,p,e}=mkG(); p.nextCrit=true; p.nextAtk=0.5;
+      X.summonHit(G,e,0.75);
+      (p.nextCrit===true&&p.nextAtk===0.5)
+        ? pass('소환 적중이 nextCrit·nextAtk 를 소모하지 않는다 (기본공격 전용 잔존)')
+        : fail(`소환 적중이 기본공격 전용 자원을 먹었다 — nextCrit ${p.nextCrit} · nextAtk ${p.nextAtk}`);
+    }
+    /* (3) 성능 가드 ① — 한 틱 트리거 예산(PROC_TICK_CAP)을 넘기면 데미지는 그대로, 트리거만 멈춘다 */
+    {
+      const {G,p,e}=mkG(); G.procN=X.PROC_TICK_CAP;
+      const d0=p.dmg, hp0=e.hp;
+      X.summonHit(G,e,0.75);
+      (p.dmg===d0&&e.hp<hp0)
+        ? pass(`틱 예산 ${X.PROC_TICK_CAP} 초과 시 트리거만 멈추고 데미지는 그대로 들어간다`)
+        : fail('틱 예산 초과 처리가 스펙과 다르다 (데미지까지 사라지거나 트리거가 계속 굴었다)');
+    }
+    /* (4) 성능 가드 ② — 투사체 상한 초과분은 «즉발 판정» 으로 대체된다 (데미지가 사라지지 않는다) */
+    {
+      const {G,p,e}=mkG();
+      for(let i=0;i<X.PROJ_CAP;i++)G.pprojs.push({type:'axe',x:0,tgt:e,ratio:0,spd:1});
+      const hp0=e.hp, len0=G.pprojs.length;
+      X.pushProj(G,{type:'axe',x:0,tgt:e,ratio:0.5,spd:430});
+      (G.pprojs.length===len0&&e.hp<hp0)
+        ? pass(`투사체 상한 ${X.PROJ_CAP} 초과분이 즉발 판정으로 대체된다 (데미지 유실 없음)`)
+        : fail('투사체 상한 초과 처리가 스펙과 다르다 (투사체가 계속 쌓이거나 데미지가 사라졌다)');
+    }
+    /* (5) PLAN §4 에 주인 확정 문구가 살아 있는가 (문서 ↔ 엔진 동시 회귀 방지) */
+    planHas(/소환 적중도 «공격» 으로 친다/)
+      ? pass('PLAN §4 에 주인 확정 «소환 적중도 공격» 문구가 있다')
+      : fail('PLAN §4 에서 «소환 적중도 «공격» 으로 친다» 문구가 사라졌다');
+  }
 }
 
 console.log(`\n대조 ${CHECKS.length}항목 · 일치 ${okN}개 · 불일치 ${bad}건 · 미문서화 신규 ${undocNew}건 · 등재된 기존 ${undocKnown}건`);
