@@ -106,7 +106,38 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('⚑ 고유가 아닌 특전에는 «(고유)» 가 안 붙는다',
     uniqTx.plainExtra.length === 0, `일반 ${uniqTx.plainN}종 · 오표기 [${uniqTx.plainExtra.join(',')}]`);
 
+  /* ---------- ⚑ 팝업 열림 중 게임 시간 완전 정지 (T79 · 주인 확정 2026-09-03 불변 규약) ----------
+     정적 게이트(verifyT2 ㊴)는 «G.paused 로 update 를 막는가» 를 보지만, «실제로 아무것도 안 흐르는가» 는
+     여기서만 확인된다. 지금 레벨업 팝업이 떠 있으므로 그대로 재 두고 상태가 얼어붙는지 본다.
+     (쉼터 무한 대기로 회복·쿨다운을 공짜로 버는 악용을 원천 차단하는 규약이다) */
+  console.log('\n=== ⚑ 팝업 중 게임 시간 정지 (T79) ===');
+  const snap = () => p.evaluate(() => ({
+    paused: G.paused, t: +G.t.toFixed(4),
+    hp: +G.player.hp.toFixed(4), sh: +G.player.sh.toFixed(4),
+    atkT: +G.player.atkTimer.toFixed(4), boltT: +G.autoBoltT.toFixed(4),
+    ex: G.nodes.flatMap(n => (n.enemies || [])).map(e => `${e.worldX.toFixed(2)}:${e.hp.toFixed(2)}`).join(','),
+    frames: (window.__t3frames = (window.__t3frames || 0)),
+  }));
+  const froze0 = await snap();
+  await p.evaluate(() => { window.__t3frames = 0; const tick = () => { window.__t3frames++; requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
+  await p.waitForTimeout(800);
+  const froze1 = await snap();
+  chk('팝업이 뜨면 G.paused = true', froze0.paused === true, `paused=${froze0.paused}`);
+  chk('그 사이 화면은 계속 돈다 (프레임이 흘렀다 = 관측이 유효하다)', froze1.frames >= 10, `${froze1.frames} 프레임`);
+  chk('⚑ 게임 시계 G.t 가 한 틱도 안 흐른다', froze0.t === froze1.t, `t ${froze0.t} → ${froze1.t}`);
+  chk('⚑ 체력·실드가 안 변한다 (쉼터 무한 대기 악용 차단)',
+    froze0.hp === froze1.hp && froze0.sh === froze1.sh, `hp ${froze0.hp}→${froze1.hp} · sh ${froze0.sh}→${froze1.sh}`);
+  chk('⚑ 쿨다운(공격 타이머·뇌신 주기)이 안 줄어든다',
+    froze0.atkT === froze1.atkT && froze0.boltT === froze1.boltT, `atkT ${froze0.atkT}→${froze1.atkT} · boltT ${froze0.boltT}→${froze1.boltT}`);
+  chk('⚑ 적이 한 걸음도 안 움직인다', froze0.ex === froze1.ex, `적 ${froze0.ex.split(',').length}마리`);
+
   await p.click('.perk-card'); await p.waitForTimeout(300);
+  const resumed = await p.evaluate(async () => {
+    const t0 = G.t; await new Promise(r => setTimeout(r, 400)); return { paused: G.paused, moved: G.t > t0, t0, t1: G.t };
+  });
+  chk('⚑ 팝업을 닫으면 시간이 다시 흐른다', resumed.paused === false && resumed.moved,
+    `paused=${resumed.paused} · t ${resumed.t0.toFixed(2)}→${resumed.t1.toFixed(2)}`);
+
   const strip1 = await p.evaluate(() => ({ chips: document.querySelectorAll('#perkStrip .pv-ic').length, taken: G.perksTaken.length }));
   chk('⚑ 특전 미리보기 줄에 칩이 쌓인다', strip1.chips === 1 && strip1.taken === 1, `칩 ${strip1.chips} / 획득 ${strip1.taken}`);
 

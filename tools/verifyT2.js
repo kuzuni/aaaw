@@ -2514,6 +2514,98 @@ console.log('\n[㊲ 전투 무관 특전 금지 — 경제·이속류 (T77 · �
   }
 }
 
+/* ---------- ㊳ 주기형 회복 금지 (T79 · 주인 확정 2026-09-03) ----------
+   ⚑ «N초마다 체력 회복 / 실드 수리» 류 시간 경과형 회복은 특전·장비 옵션에 존재 금지(예방 조항 —
+   현행 목록엔 원래 없다). 시간형 «공격» 은 허용이다(⚡👑 뇌신 2.4초마다 번개 · 💫🌀 위압 2.5초마다 기절).
+   그래서 «초마다» 라는 낱말이 아니라 **주기 블록의 몸통이 무엇을 하는가** 로 본다:
+   두 엔진의 주기 패턴 `X -= dt; if (X <= 0) { X = <주기>; …몸통… }` 을 전부 떠서
+   몸통에 회복·실드 충전이 들어 있으면 빨개진다. 문구 쪽은 «초마다 … 회복/수리/충전» 을 따로 막는다. */
+console.log('\n[㊳ 주기형 회복 금지 — «N초마다 회복/수리» (T79 · 주인 확정 2026-09-03)]');
+{
+  /* 주기 블록 몸통 뽑기 — `<이름> -= dt` 다음에 오는 `if(<이름><=0){ … }` 의 중괄호를 세어 자른다 */
+  const periodicBodies = src => {
+    const out = [];
+    const re = /([A-Za-z_$][\w.$]*)\s*-=\s*dt\s*;/g;
+    let m;
+    while ((m = re.exec(src))) {
+      const name = m[1];
+      const rest = src.slice(m.index + m[0].length, m.index + m[0].length + 4000);
+      const gm = rest.match(new RegExp('^\\s*if\\s*\\(\\s*' + name.replace(/[.$]/g, '\\$&') + '\\s*<=\\s*0\\s*\\)\\s*\\{'));
+      if (!gm) continue;
+      let i = gm[0].length, d = 1, body = '';
+      while (i < rest.length && d > 0) {
+        const ch = rest[i];
+        if (ch === '{') d++;
+        if (ch === '}') { d--; if (d === 0) break; }
+        body += ch; i++;
+      }
+      out.push({ name, body });
+    }
+    return out;
+  };
+  const HEALCALL = /\bheal\s*\(|\.hp\s*\+=|\.sh\s*=\s*Math\.min|\.sh\s*\+=|gainWard\s*\(/;
+  for (const [nm, src] of [['sim.js', SIM], ['index.html', HTML]]) {
+    const bodies = periodicBodies(src);
+    const hit = bodies.filter(b => HEALCALL.test(b.body)).map(b => b.name);
+    if (bodies.length === 0) bad(`① ${nm} — 주기 블록을 하나도 못 찾았다 (파서가 낡았다: 뇌신·위압이 있어야 정상)`);
+    else if (hit.length === 0) ok(`① ${nm} — 주기 블록 ${bodies.length}개(${bodies.map(b => b.name).join(', ')}) 전부 회복·실드 충전 없음`);
+    else bad(`① ${nm} — 주기형 회복이 생겼다: ${hit.join(', ')} — 주인 확정으로 금지된 축이다(시간형 «공격» 만 허용)`);
+  }
+  /* ② 문구 금지 — 특전 tx · PLAN §3·§11.6 표 칸 · GOPT 설명문.
+     ⚑ 태그를 먼저 걷어낸다 — «3초마다 체력 <b>3%</b> 회복» 처럼 <b> 하나로 검사를 빠져나가지 못하게. */
+  {
+    const strip = t => String(t).replace(/<[^>]+>/g, '');
+    const PERIOD_HEAL = /(\d+(?:\.\d+)?\s*초\s*마다|주기적으로|일정\s*시간\s*마다)[^\n]{0,24}(회복|수리|충전)/;
+    const hits = t => PERIOD_HEAL.test(strip(t));
+    const H79 = htmlPerks() || [];
+    const txHit = H79.filter(p => hits(p.tx)).map(p => p.id);
+    const PL79 = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
+    /* PLAN 은 «표 칸» 단위로 본다 — 한 줄 안의 다른 칸과 섞여 우연히 걸리거나 새어나가지 않게 */
+    const planHit = PL79.split('\n').filter(l => l.startsWith('|'))
+      .flatMap(l => l.split('|')).filter(hits).length;
+    /* 장비 옵션 설명문 — GOPT 의 d: '…' 전수 */
+    const optHit = (HTML.match(/d\s*:\s*'([^']*)'/g) || []).filter(hits);
+    (txHit.length === 0 && planHit === 0 && optHit.length === 0)
+      ? ok(`② 특전 문구 ${H79.length}종·PLAN 표 칸·장비 옵션 설명문에 «N초마다 … 회복/수리/충전» 0건`)
+      : bad(`② 주기형 회복 문구가 있다 — 특전 [${txHit.join(', ')}] · PLAN 표 ${planHit}칸 · 장비 옵션 [${optHit.join(' | ')}]`);
+  }
+}
+
+/* ---------- ㊴ 이벤트/팝업 열림 중 게임 시간 완전 정지 (T79 · 불변 규약 승격) ----------
+   ⚑ 주인 확정(2026-09-03): 쉼터·악마·천사·레벨업·일시정지 등 팝업이 떠 있는 동안 게임 시간이 흐르면
+   «쉼터 무한 대기» 로 회복·쿨다운을 공짜로 벌 수 있다. 그래서 세 고리를 전부 못박는다:
+   ① 팝업을 여는 자리는 openOverlay 하나뿐이고 거기서 G.paused=true, 닫을 때 false
+   ② 메인 루프가 G.paused 일 때 update(dt) 를 아예 안 부른다(그려주기만 한다)
+   ③ 게임 시계 G.t 는 update 안에서만 흐른다. */
+console.log('\n[㊴ 이벤트/팝업 중 게임 시간 정지 — 불변 규약 (T79)]');
+{
+  const H = HTML.replace(/\/\*[\s\S]*?\*\//g, '');
+  const openOK = /function openOverlay\([^)]*\)\s*\{[\s\S]{0,400}?G\.paused\s*=\s*true;[\s\S]{0,40}?\}/.test(H);
+  openOK ? ok('① openOverlay() 가 G.paused = true 로 시간을 세운다')
+    : bad('① openOverlay() 안에서 G.paused = true 를 못 찾았다 — 팝업이 떠도 게임이 계속 돈다');
+  const closeOK = /function closeOverlay\(\)\s*\{[\s\S]{0,300}?G\.paused\s*=\s*false;[\s\S]{0,20}?\}/.test(H);
+  closeOK ? ok('② closeOverlay() 가 G.paused = false 로 되돌린다')
+    : bad('② closeOverlay() 가 G.paused 를 안 되돌린다');
+  /* ③ 오버레이를 여는 다른 뒷문이 없다 — ov.classList.add('on') 은 openOverlay 안에서만 */
+  const addOn = (H.match(/ov\.classList\.add\(\s*'on'\s*\)/g) || []).length;
+  addOn === 1 ? ok("③ 오버레이를 켜는 자리는 openOverlay 한 곳뿐 (ov.classList.add('on') 1건)")
+    : bad(`③ ov.classList.add('on') 이 ${addOn}곳 — openOverlay 를 우회해 팝업을 열면 시간이 안 멈춘다`);
+  /* ④ 메인 루프: update 는 !G.paused 일 때만 */
+  const loopOK = /if\s*\(\s*!G\.paused\s*&&\s*!G\.over\s*\)\s*update\(/.test(H);
+  loopOK ? ok('④ 메인 루프가 !G.paused && !G.over 일 때만 update(dt) 를 부른다')
+    : bad('④ 메인 루프의 update 호출이 G.paused 로 막혀 있지 않다');
+  /* ⑤ update 호출은 그 한 자리뿐 (다른 곳에서 시간을 밀지 않는다) */
+  const upN = (H.match(/(?<!function\s)(?<![\w.])update\s*\(\s*dt/g) || []).length;
+  upN === 1 ? ok('⑤ update(dt) 호출은 한 자리뿐')
+    : bad(`⑤ update(dt) 호출이 ${upN}곳 — 정지 중에 시간을 미는 우회로가 생겼다`);
+  /* ⑥ 게임 시계 G.t 는 update 안에서만 흐른다 (두 파일 공통) */
+  for (const [nm, src] of [['sim.js', SIM], ['index.html', HTML]]) {
+    const n = (src.match(/G\.t\s*\+=/g) || []).length;
+    n === 1 ? ok(`⑥ ${nm} — 게임 시계 G.t 를 미는 자리 1곳`)
+      : bad(`⑥ ${nm} — G.t 를 미는 자리가 ${n}곳이다 (1곳이어야 한다)`);
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
