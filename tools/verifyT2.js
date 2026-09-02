@@ -245,8 +245,10 @@ if (!TS || !TH) bad(`TUNE 리터럴 파싱 실패 (${!TS ? 'sim.js' : ''}${!TS &
 else {
   /* index.html 은 장비·다이아 경제가 아직 없으므로 sim 쪽에만 있는 키가 있을 수 있다 — 공통 키만 값 대조하되,
      아래 필수 키는 index.html 에 반드시 존재해야 한다 (없으면 이식 누락). */
-  const MUST = ['eBaseHp','eBaseDmg','eHpG','eDmgG','wallHp','wallDmg','wall2Hp','wall2Dmg','waveHp','waveDmg',
+  /* ⚑ T35: 단일 성장률 eHpG·eDmgG 폐기 → 구간별 성장률 배열(아래에서 따로 대조) · 실드 기본치 pSh0 신설 */
+  const MUST = ['eBaseHp','eBaseDmg','wallHp','wallDmg','wall2Hp','wall2Dmg','waveHp','waveDmg',
                 'wall3Hp','wall3Dmg','wall4Hp','wall4Dmg','bossHp','bossDmg','maxChapter',
+                'pAtk0','pHp0','pSh0','pAspd0','pCrit0',
                 'goldKillBase','goldKillPer','goldClearPer','goldGrowth','expKill','expBoss'];
   const missing = MUST.filter(k => !(k in TH));
   const diff = MUST.filter(k => k in TH && TS[k] !== TH[k]).map(k => `${k} sim=${TS[k]} html=${TH[k]}`);
@@ -255,6 +257,25 @@ else {
   if (TS.bossHp === 8 && TS.bossDmg === 1.8) ok('보스 = HP ×8 · DMG ×1.8 (주인 확정 상수, 07:3X)');
   else bad(`보스 배수가 주인 확정값이 아니다 — HP ×${TS.bossHp} · DMG ×${TS.bossDmg} (확정: ×8 · ×1.8)`);
   if (TS.maxChapter === 300) ok('챕터 상한 300 (PLAN §2.4)'); else bad(`챕터 상한이 ${TS.maxChapter} (확정: 300)`);
+  if (TH.pAtk0 === 25 && TH.pHp0 === 150 && TH.pSh0 === 250) ok('노템 기본치 공 25 · 체 150 · 실드 250 (주인 확정, PLAN §11.5-a)');
+  else bad(`노템 기본치가 주인 확정값이 아니다 — 공 ${TH.pAtk0}(25) · 체 ${TH.pHp0}(150) · 실 ${TH.pSh0}(250)`);
+}
+/* 구간별 성장률(PLAN §11.7) — 배열 문자열과 적용 함수를 함께 본다 */
+{
+  const seg = (src, k) => { const m = src.match(new RegExp(k + ':\\s*(\\[\\[[^\\n]*?\\]\\])\\s*,')); return m ? norm(m[1]) : null; };
+  for (const k of ['eHpSeg', 'eDmgSeg']) {
+    const a = seg(SIM, k), b = seg(HTML, k);
+    if (!a || !b) bad(`${k} 파싱 실패 (${!a ? 'sim.js' : 'index.html'}) — 단일 상수 시대의 게이트가 남아 있으면 갱신할 것`);
+    else if (a !== b) bad(`${k} 불일치 — sim ${a} vs index ${b}`);
+    else ok(`${k} 구간별 성장률 일치 (${a.slice(0, 46)}…)`);
+  }
+  const FN = [['segRate', /function segRate\([\s\S]*?\n(?=function|const)/], ['segGrow', /function segGrow\(seg,cache,c\)\{[\s\S]*?\n\}/], ['enemyStats', /function enemyStats\(c,w\)\{[\s\S]*?\n\}/]];
+  for (const [nm, re] of FN) {
+    const a = SIM.match(re), b = HTML.match(re);
+    if (!a || !b) { bad(`${nm}() — ${!a ? 'sim.js' : 'index.html'} 에서 찾지 못했다`); continue; }
+    const strip = s => norm(s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, ''));
+    strip(a[0]) === strip(b[0]) ? ok(`${nm}() 본문 1:1`) : bad(`${nm}() 본문이 두 파일에서 다르다`);
+  }
 }
 
 /* ---------- ⑧ chapterLayout — 두 파일이 같은 배치를 내놓는가 + 주인 확정 제약 ---------- */
@@ -315,23 +336,41 @@ function gtConsts(src) {
   const GS = gtConsts(SIM), GH = gtConsts(HTML);
   if (!GS || !GH) bad(`GT 리터럴 파싱 실패 (${!GS ? 'sim.js' : ''}${!GS && !GH ? ' / ' : ''}${!GH ? 'index.html' : ''}) — 게이트를 갱신할 것`);
   else {
-    /* 주인 확정 상수(§11.2·§11.5)는 값까지 못박는다 */
-    const MUST = ['atkUnit','hpUnit','rarStep','plusStep','slotG','slotCostBase','slotCostG',
+    /* 주인 확정 상수(§11.2·§11.5)는 값까지 못박는다. T35 로 등비 생성(atkUnit/hpUnit/rarStep/slotG)은 폐기됐다 */
+    const MUST = ['plusStep','slotLvMax','slotStep','slotCostBase','slotCostG',
                   'evenStep','evenPer','pullCost','dailyGem','iapGem','legendToMythPlus'];
     const missing = MUST.filter(k => !(k in GH));
     const diff = MUST.filter(k => k in GH && GS[k] !== GH[k]).map(k => `${k} sim=${GS[k]} html=${GH[k]}`);
     missing.length ? bad(`index.html GT 누락 ${missing.length}개: ${missing.join(' ')}`) : ok(`GT 상수 ${MUST.length}개 전부 존재`);
-    diff.length ? bad(`GT 값 불일치 ${diff.length}건: ${diff.join(' / ')}`) : ok(`GT 값 ${MUST.length}개 전수 일치 (plusStep ${GS.plusStep} · slotG ${GS.slotG} · 슬롯비용 ${GS.slotCostBase}×${GS.slotCostG}^L)`);
+    diff.length ? bad(`GT 값 불일치 ${diff.length}건: ${diff.join(' / ')}`) : ok(`GT 값 ${MUST.length}개 전수 일치 (plusStep ${GS.plusStep} · 슬롯 +${GS.slotStep * 100}%/렙·상한 ${GS.slotLvMax} · 슬롯비용 ${GS.slotCostBase}×${GS.slotCostG}^L)`);
+    if (GH.slotLvMax === 150 && GH.slotStep === 0.01 && GH.plusStep === 0.13) ok('주인 확정 성장 상수 — 슬롯 1렙당 +1% · 상한 150 · 강화 1렙당 +13% (PLAN §11.4·§11.5-a)');
+    else bad(`주인 확정 성장 상수 위반 — slotStep ${GH.slotStep}(0.01) · slotLvMax ${GH.slotLvMax}(150) · plusStep ${GH.plusStep}(0.13)`);
     if (GH.pullCost === 400 && GH.dailyGem === 2500 && GH.iapGem === 12000) ok('주인 확정 경제 상수 — 뽑기 400 · 일일 2500 · IAP 12000 (PLAN §11.2·§11.5)');
     else bad(`주인 확정 경제 상수 위반 — 뽑기 ${GH.pullCost}(400) · 일일 ${GH.dailyGem}(2500) · IAP ${GH.iapGem}(12000)`);
     if (GH.legendToMythPlus === 10) ok('전설 +10강 → 신화 0강 변환 임계 10 (PLAN §11.3)');
     else bad(`전설→신화 변환 임계가 ${GH.legendToMythPlus} (확정: 10)`);
   }
-  /* 파생식 4개는 문자열로 대조 (등비 생성·슬롯 배수·비용·옵션 개수) */
+  /* ⚑ T35 주인 확정: 등급별 «절대 기여표» 3종(공/체/실)을 배열 값으로 직접 대조한다.
+     종전 «등비 생성식 문자열 대조» 는 rarStep 폐기로 대상 소멸 — PLAN §11.5-a 표와도 맞춘다. */
+  {
+    const PLAN = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
+    const arr = (src, k) => {
+      const m = src.match(new RegExp('\\n\\s*' + k + '\\s*:\\s*\\[([^\\]]*)\\]'));
+      return m ? m[1].split(',').map(x => Number(x.trim())) : null;
+    };
+    for (const [k, nm] of [['atk', '공격력'], ['hp', '체력'], ['sh', '실드']]) {
+      const a = arr(SIM, k), b = arr(HTML, k);
+      if (!a || !b) { bad(`GT.${k} 등급별 기여 배열 파싱 실패 (${!a ? 'sim.js' : 'index.html'})`); continue; }
+      if (a.length !== 5 || b.length !== 5) { bad(`GT.${k} 배열 길이가 5가 아니다 (sim ${a.length} / index ${b.length})`); continue; }
+      const d = a.map((v, i) => v === b[i] ? null : `${i}: sim=${v} html=${b[i]}`).filter(Boolean);
+      if (d.length) { bad(`GT.${k}(${nm}) 등급별 기여 불일치: ${d.join(' / ')}`); continue; }
+      const planMiss = a.filter(v => !PLAN.includes(String(v.toFixed(3))) && !PLAN.includes(String(v)));
+      planMiss.length ? bad(`GT.${k}(${nm}) 값 ${planMiss.join(',')} 이 PLAN §11.5-a 표에 없다`)
+        : ok(`GT.${k} 등급별 기여 5칸 일치 + PLAN §11.5-a 표와 대조 (${nm} 일반 ${a[0]} → 신화 ${a[4]})`);
+    }
+  }
   const DERIV = [
-    ['GT.atk 등급 생성식', /GT\.atk=\[0,1,2,3,4\]\.map\(i=>GT\.atkUnit\/Math\.pow\(GT\.rarStep,4-i\)\)/],
-    ['GT.hp 등급 생성식', /GT\.hp\s*=\[0,1,2,3,4\]\.map\(i=>GT\.hpUnit\s*\/Math\.pow\(GT\.rarStep,4-i\)\)/],
-    ['GT.slotMul', /GT\.slotMul=L=>Math\.pow\(GT\.slotG,L\)/],
+    ['GT.slotMul (가산 +1%/렙 · 상한 강제)', /GT\.slotMul=L=>1\+GT\.slotStep\*Math\.min\(L,GT\.slotLvMax\)/],
     ['GT.slotCost', /GT\.slotCost=L=>Math\.floor\(GT\.slotCostBase\*Math\.pow\(GT\.slotCostG,L\)\)/],
   ];
   for (const [nm, re] of DERIV) {
@@ -445,6 +484,12 @@ console.log('\n[⑪ 장비 엔진 함수 1:1 + 영구강화 4종 폐지 (PLAN §
   /* 장비가 실제로 전투 스탯에 연결됐는가 */
   /function playerBase\(\)\{[\s\S]{0,220}buildPower\(/.test(HTML) ? ok('playerBase() 가 buildPower(장비) 로 전투 스탯을 만든다')
     : bad('playerBase() 가 장비와 연결돼 있지 않다');
+  /* ⚑ T35 주인 확정: 실드는 독립 스탯이다 — `maxHp*0.8` 파생이 되살아나면 잡는다 */
+  const SH_DERIV = /max(Sh|Hp)\s*[:=][^\n]*max(Hp|Sh)\s*\*\s*0\.8/;
+  const noCmt = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');   /* 주석의 «폐기» 설명이 오탐되지 않게 */
+  const shOK = /maxSh:\s*pw\.sh\s*,\s*sh:\s*pw\.sh/.test(HTML) && !SH_DERIV.test(noCmt(HTML)) && !SH_DERIV.test(noCmt(SIM));
+  shOK ? ok('실드 = 독립 스탯 (maxSh = pw.sh · `maxHp*0.8` 파생 잔재 0 — PLAN §11.5-a)')
+    : bad('실드가 독립 스탯이 아니다 — `maxHp*0.8` 파생이 남아 있거나 maxSh 가 pw.sh 가 아니다');
   /for\(const pt of GT\.parts\)\{[\s\S]{0,200}GT\.optCount\(g\.rar,g\.plus\)[\s\S]{0,120}tbl\[i\]\.ap\(p\)/.test(HTML)
     ? ok('계열 옵션이 전투 시작 시 적용된다 (상위 등급 = 하위 옵션 포함)')
     : bad('계열 옵션 적용 루프가 index.html 에 없다');
