@@ -131,6 +131,15 @@ ok(/⚠ 이 원시 출력의 재시도 상한\(400회\)/.test(oldRuler.out),
    '⑩ 재시도 상한 ≤ 목표 상한인 옛 출력에 경고가 뜬다');
 ok(!/⚠ 이 원시 출력의 재시도 상한/.test(wallDead.out),
    '⑩ 상한 1000 짜리 출력에는 그 경고가 뜨지 않는다');
+/* 상한을 아는 경로가 둘(헤더 · 실패 셀 폴백)이라 하나씩만 쓰는 입력으로 따로 지킨다 —
+   안 그러면 한쪽을 지워도 다른 쪽이 가려 준다. */
+const oldNoFail = score(raw(100, fitTries, HI));                    /* 헤더만: 실패 셀이 없다 */
+ok(/⚠ 이 원시 출력의 재시도 상한\(400회\)/.test(oldNoFail.out),
+   '⑩ 실패 셀이 없어도 헤더의 상한만으로 경고한다');
+const oldNoHeader = raw(100, c => (c === 90 ? null : fitTries(c)), HI)
+  .replace(/=== 실험3:[^\n]*\n/, '');                                /* 폴백만: 헤더가 없는 옛 출력 */
+ok(/⚠ 이 원시 출력의 재시도 상한\(400회\)/.test(score(oldNoHeader).out),
+   '⑩ 헤더 없는 옛 출력도 «400회 실패» 셀로 상한을 알아채 경고한다');
 
 /* ── ⑪ 엔진 기본 상한이 목표 상한보다 크다 (자가 성립하는 최소 조건) ── */
 const SIM = fs.readFileSync(path.join(__dirname, '..', 'sim.js'), 'utf8');
