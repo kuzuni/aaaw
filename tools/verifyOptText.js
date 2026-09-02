@@ -144,11 +144,28 @@ function callsIn(s) {
 
 /* 소비부: 키가 등장하는 줄부터 중괄호가 닫힐 때까지(최대 6줄)를 한 덩어리로 본다.
    `if(px.backDmg){` 처럼 상수가 다음 줄에 있는 경우를 놓치지 않기 위함. */
+/* 최상위 «이름 붙은 상수» → 값 (T48 신설).
+   엔진이 숫자를 리터럴 대신 상수 이름으로 쓰면(`applyStun(G,e,sec*STUN_BOSS_MUL)`) 그 줄에 숫자가 없어
+   설명문의 수치가 «엔진에 없다» 로 오판된다. 이름을 값으로 풀어서 같은 pool 에 넣는다.
+   대상은 `const NAME=<숫자식>` 꼴의 대문자 상수뿐 — 임의 식은 풀지 않는다. */
+const NAMED_CONST = (() => {
+  const m = new Map();
+  for (const L of SIMLINES) {
+    if (!/^const\s/.test(L)) continue;
+    for (const g of L.matchAll(/([A-Z][A-Z0-9_]{2,})\s*=\s*(-?[\d.]+(?:\s*[*/]\s*[\d.]+)*)/g)) {
+      const v = g[2].split(/\s*([*/])\s*/).reduce((acc, tok, idx, arr) =>
+        idx === 0 ? Number(tok) : (arr[idx - 1] === '*' ? acc * Number(tok) : arr[idx - 1] === '/' ? acc / Number(tok) : acc), 0);
+      if (Number.isFinite(v)) m.set(g[1], v);
+    }
+  }
+  return m;
+})();
 function blockNums(i, set) {
   let depth = 0;
   for (let j = i; j < Math.min(i + 6, SIMLINES.length); j++) {
     const L = SIMLINES[j];
     for (const n of numsIn(L)) set.add(n);
+    for (const g of L.matchAll(/\b([A-Z][A-Z0-9_]{2,})\b/g)) if (NAMED_CONST.has(g[1])) set.add(NAMED_CONST.get(g[1]));
     for (const c of callsIn(L)) for (const n of numsOfFn(c, 1)) set.add(n);
     for (const ch of L) { if (ch === '{') depth++; else if (ch === '}') depth--; }
     if (j > i && depth <= 0) break;

@@ -1,7 +1,7 @@
 'use strict';
 /* T2 이식 게이트 — index.html ↔ sim.js 1:1 대조
  *
- * ROUTINE §2 T2 완료 게이트: 「node --check 급 문법 검사 + 특전 102종 전수 존재 확인」.
+ * ROUTINE §2 T2 완료 게이트: 「node --check 급 문법 검사 + 특전 전수 존재 확인」(개수는 PERK_TOTAL).
  * 그 위에, T8·T9·T11·T12·T16 이 반복해서 겪은 「두 파일이 조용히 벌어진다」를 막기 위해
  * 특전 ap 본문·px 키 집합·대표 수식까지 문자열로 대조한다.
  *
@@ -92,13 +92,17 @@ else {
   catch (e) { bad('구문 오류: ' + e.message); }
 }
 
-/* ---------- ② 특전 102종 전수 대조 ---------- */
-console.log('\n[② 특전 102종 — id·등급·고유·ap 본문 전수 대조]');
+/* ---------- ② 특전 전수 대조 (T48 로 102 → 117종) ---------- */
+/* ⚑ 개수는 더 이상 고정이 아니다 — 주인 확정(16:0X): «등급당 30~40 까지 허용, 단 등급 간 개수는 골고루».
+   그래서 «102 인가» 가 아니라 «두 파일이 같은가 + 등급별 편차 ≤ PERK_RAR_GAP» 을 본다.
+   T48 최종 목표는 각 등급 33종(총 132)이고 지금은 1단계(스턴·빗맞음 축)까지 반영된 상태다. */
+const PERK_TOTAL = 117, PERK_RAR_GAP = 6;
+console.log(`\n[② 특전 ${PERK_TOTAL}종 — id·등급·고유·ap 본문 전수 대조]`);
 const S = simPerks(), H = htmlPerks();
 if (!H) { bad('index.html 에서 const PERKS=[...] 를 찾지 못했다'); }
 else {
-  if (S.length === 102) ok(`sim.js mkPerks() = ${S.length}종`);
-  else bad(`sim.js mkPerks() 가 ${S.length}종 (102 이어야 함)`);
+  if (S.length === PERK_TOTAL) ok(`sim.js mkPerks() = ${S.length}종`);
+  else bad(`sim.js mkPerks() 가 ${S.length}종 (${PERK_TOTAL} 이어야 함 — 특전을 늘렸으면 이 게이트의 PERK_TOTAL 도 같이 올릴 것)`);
   if (H.length === S.length) ok(`index.html PERKS = ${H.length}종`);
   else bad(`index.html PERKS = ${H.length}종 (sim ${S.length}종과 다름)`);
 
@@ -108,6 +112,14 @@ else {
     const [a, b] = cnt(r);
     if (a === b) ok(`${RN[r]} ${a}종 일치`);
     else bad(`${RN[r]} 개수 불일치 — sim ${a} vs index ${b}`);
+  }
+
+  /* ⚑ 주인 확정 16:0X — 등급 간 개수가 골고루여야 한다(일반만 잔뜩 금지). 위임 기준: 최다−최소 ≤ 6종 */
+  {
+    const ns = [0, 1, 2, 3].map(r => S.filter(x => x.r === r).length);
+    const gap = Math.max(...ns) - Math.min(...ns);
+    if (gap <= PERK_RAR_GAP) ok(`등급별 개수 편차 ${gap}종 (${ns.join('/')}) ≤ ${PERK_RAR_GAP}`);
+    else bad(`등급별 개수 편차 ${gap}종 (${ns.join('/')}) — 최다·최소 차가 ${PERK_RAR_GAP}종을 넘었다 (주인 확정 16:0X «등급 간 골고루»)`);
   }
 
   const hm = new Map(H.map(x => [x.id, x]));
@@ -124,11 +136,11 @@ else {
   extra.length ? bad(`sim.js 에 없는 특전 ${extra.length}종: ${extra.join(' ')}`) : ok('잉여 특전 0');
   rdiff.length ? bad(`등급 불일치 ${rdiff.length}건: ${rdiff.join(' ')}`) : ok('등급 전수 일치');
   udiff.length ? bad(`고유(u) 불일치 ${udiff.length}건: ${udiff.join(' ')}`) : ok('고유 플래그 전수 일치');
-  apdiff.length ? bad(`ap 본문 불일치 ${apdiff.length}건:\n    ` + apdiff.join('\n    ')) : ok('ap 본문 102종 전수 일치');
+  apdiff.length ? bad(`ap 본문 불일치 ${apdiff.length}건:\n    ` + apdiff.join('\n    ')) : ok(`ap 본문 ${S.length}종 전수 일치`);
 
   /* 표시 텍스트가 PLAN §3 표에서 온 것인지 (빈 tx·아이콘 누락 검출) */
   const noTx = H.filter(x => !x.tx || !x.ic).map(x => x.id);
-  noTx.length ? bad(`표시 텍스트·아이콘 누락 ${noTx.length}종: ${noTx.join(' ')}`) : ok('표시 텍스트·아이콘 102종 전부 존재');
+  noTx.length ? bad(`표시 텍스트·아이콘 누락 ${noTx.length}종: ${noTx.join(' ')}`) : ok(`표시 텍스트·아이콘 ${H.length}종 전부 존재`);
 }
 
 /* ---------- ③ px 키 집합 ---------- */
@@ -204,8 +216,8 @@ for (const [name, fn] of DIRECTIVES) {
   r ? ok(name) : bad(name);
 }
 
-/* ---------- ⑥ 특전 102종 실행 (예외 0) ---------- */
-console.log('\n[⑥ 특전 102종 ap 실행 — 런타임 예외 검출]');
+/* ---------- ⑥ 특전 전수 실행 (예외 0) ---------- */
+console.log(`\n[⑥ 특전 ${PERK_TOTAL}종 ap 실행 — 런타임 예외 검출]`);
 if (H) {
   const sandbox = {
     Math, console,
@@ -227,7 +239,7 @@ if (H) {
       f(mkP());
     } catch (e) { thrown.push(`${h.id}: ${e.message}`); }
   }
-  thrown.length ? bad(`ap 실행 예외 ${thrown.length}건:\n    ` + thrown.join('\n    ')) : ok('102종 전부 예외 없이 적용됨');
+  thrown.length ? bad(`ap 실행 예외 ${thrown.length}건:\n    ` + thrown.join('\n    ')) : ok(`${PERK_TOTAL}종 전부 예외 없이 적용됨`);
 }
 
 /* ---------- ⑦ TUNE 상수 대조 (적 성장·벽·보스·경제·챕터 상한) ---------- */
@@ -1137,6 +1149,74 @@ console.log('\n[㉑ 소환 적중 = 공격 트리거 (PLAN §4, T45)]');
       ? ok('sim.js: summonHit 이 fromBasic 없이 dealDmg 를 부른다 (nextCrit 미소모)')
       : bad('sim.js: summonHit 이 dealDmg 를 fromBasic 으로 부른다 — 소환이 nextCrit 을 먹는다');
   }
+}
+
+/* ---------- ㉒ 신규 축 2개 — 스턴 · 빗맞음(onMiss) (주인 지시 15:5X · T48 1단계) ---------- */
+/* 주인 원문: «스턴 메커니즘 신설(적 공격 정지 n초)» · «빗맞음 트리거 신설 — 회피 10% 로 빗나갔을 때 발동».
+   두 축 다 «한 곳으로 모았는가» 가 핵심이다 — 스턴은 applyStun, 빗맞음은 procOnMiss.
+   호출 지점이 하나라도 빠지면 그 경로만 조용히 축을 잃는다(T45 가 «공격 시» 하나를 잃고 있던 것과 같은 실패 모드). */
+console.log('\n[㉒ 스턴 · 빗맞음 축 (PLAN §3.0·§4, T48 1단계)]');
+{
+  /* (1) 위임 기본값 상수 4종이 두 파일에서 같아야 한다 */
+  const constOf = (src, who, name) => {
+    const m = src.match(new RegExp(name + '\\s*=\\s*([\\d./]+)'));
+    if (!m) { bad(`${who} 에서 ${name} 을 못 찾았다 — 스턴·빗맞음 위임 기본값이 사라졌다`); return null; }
+    return m[1];
+  };
+  for (const nm of ['STUN_BOSS_MUL', 'STUN_LORD_MUL', 'STUN_LORD_DMG', 'MISS_STACK_CAP']) {
+    const sv = constOf(SIM, 'sim.js', nm), hv = constOf(HTML, 'index.html', nm);
+    if (sv !== null && hv !== null)
+      sv === hv ? ok(`${nm} = ${sv} — 두 파일 일치`)
+                : bad(`${nm} 이 두 파일에서 다르다 — sim.js ${sv} · index.html ${hv}`);
+  }
+  /* (2) 스턴은 applyStun 한 곳으로만 걸린다 — e.stun 을 직접 대입하는 곳이 있으면 보스 1/3·합산금지 규칙을 우회한다 */
+  for (const [src, who] of [[SIM, 'sim.js'], [HTML, 'index.html']]) {
+    const body = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    /function applyStun\(/.test(body) ? ok(`${who}: applyStun 존재`) : bad(`${who}: applyStun 이 없다`);
+    const direct = (body.match(/\be\d?\.stun\s*=/g) || []).filter(x => true).length;
+    /* applyStun 본문 자신의 대입 1건은 정상 */
+    direct <= 1 ? ok(`${who}: e.stun 직접 대입 ${direct}건 (applyStun 본문뿐)`)
+                : bad(`${who}: e.stun 직접 대입 ${direct}건 — 보스 1/3·«더 긴 쪽만» 규칙을 우회한다`);
+    /STUN_BOSS_MUL/.test(body.match(/function applyStun\([\s\S]*?\n\}/)?.[0] || '')
+      ? ok(`${who}: applyStun 이 보스 지속 배수를 적용한다`)
+      : bad(`${who}: applyStun 에 보스 스턴 지속 배수가 없다 (주인 명시 — 보스 영구 스턴락 방지)`);
+    /Math\.max\(e\.stun\|\|0,\s*s\)/.test(body)
+      ? ok(`${who}: 스턴 재적용이 «더 긴 쪽만» 이다 (합산 금지)`)
+      : bad(`${who}: 스턴 재적용이 합산으로 바뀌었다 — 저등급 연타로 영구 스턴락이 된다`);
+  }
+  /* (3) 스턴 중인 적은 그 틱의 공격을 통째로 건너뛴다 (근접·원거리 둘 다). 타이머도 흐르면 안 된다. */
+  [[SIM, 'sim.js', /if\(e\.stun>0\)\{e\.stun-=dt;continue;\}/],
+   [HTML, 'index.html', /if\(e\.stun>0\)\{ e\.stun-=dt; e\.aggro=false; continue; \}/]]
+    .forEach(([src, who, re]) => re.test(src)
+      ? ok(`${who}: 스턴 중 적은 공격 루프를 건너뛴다 (근접·화살 공통, 타이머 정지)`)
+      : bad(`${who}: 스턴이 적 공격을 실제로 막는 자리가 없다 — 표시만 뜨고 효과가 없다`));
+  /* (4) 빗맞음은 procOnMiss 한 곳으로 모으고, «MISS» 가 뜨는 두 자리 전부에서 불러야 한다 */
+  for (const [src, who] of [[SIM, 'sim.js'], [HTML, 'index.html']]) {
+    const body = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    /function procOnMiss\(/.test(body) ? ok(`${who}: procOnMiss 존재`) : bad(`${who}: procOnMiss 가 없다`);
+    const calls = (body.match(/procOnMiss\(/g) || []).length - 1;   /* 정의부 1건 제외 */
+    calls === 2 ? ok(`${who}: procOnMiss 호출 2곳 (기본·소환 타격 + 반격)`)
+                : bad(`${who}: procOnMiss 호출이 ${calls}곳 — 빗맞음이 일어나는 두 자리(dealDmg·doCounter) 전부여야 한다`);
+    /* 회피 분기 안에서 불러야 한다 — 분기 밖이면 적중에도 굴러간다 */
+    const evadeBlocks = (body.match(/Math\.random\(\)<ENEMY_EVADE[\s\S]{0,220}?procOnMiss\(/g) || []).length;
+    evadeBlocks === 2 ? ok(`${who}: 두 호출 다 적 회피 분기 안에 있다`)
+                      : bad(`${who}: 적 회피 분기 안의 procOnMiss 가 ${evadeBlocks}곳 — 적중에도 굴러가면 축이 무너진다`);
+  }
+  /* (5) 빗맞음 데미지 스택은 «가산» 이어야 한다 (주인 정정) — 배수 대입 금지, 적중 1타당 1장 소모 */
+  for (const [src, who] of [[SIM, 'sim.js'], [HTML, 'index.html']]) {
+    const body = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    /p\.missStk--;\s*addBonus\s*\+=\s*1\.00;/.test(body)
+      ? ok(`${who}: 스택 소모가 «적중 1타당 1장 · 가산 +100%» 이다`)
+      : bad(`${who}: 빗맞음 스택이 가산 풀(addBonus)로 들어가지 않는다 — 주인 정정(«×2 배수 아님») 위반`);
+    /MISS_STACK_CAP,\s*p\.missStk\+1/.test(body)
+      ? ok(`${who}: 스택 적립이 상한(MISS_STACK_CAP)을 지킨다`)
+      : bad(`${who}: 빗맞음 스택 상한이 걸려 있지 않다`);
+  }
+  /* (6) 주인이 원문으로 명시한 필수 4종이 실제로 존재해야 한다 */
+  for (const id of ['l_stunHit3', 'l_stunCrit3', 'l_missCrit', 'l_missStack'])
+    (SIM.includes(`'${id}'`) && HTML.includes(`'${id}'`))
+      ? ok(`주인 필수 예시 ${id} — 두 파일에 존재`)
+      : bad(`주인이 원문으로 지목한 필수 특전 ${id} 가 없다`);
 }
 
 /* ---------- 결과 ---------- */

@@ -65,6 +65,15 @@ const REST_HEAL=260, REST_EXP=26;
    제외(위임 판단, PROGRESS T43 에 근거 등재): 가시 반사·오발 화살 — 플레이어가 겨눈 타격이 아니라
    적의 공격이 되돌아온 것이라 «적이 회피한다» 가 성립하지 않는다. */
 const ENEMY_EVADE=0.10;
+/* ⚑ T48 1단계 — 주인 지시 15:5X 신규 축 2개의 메커니즘 상수 (PLAN §3.0·§4).
+   전부 «위임 기본값» 이라 주인이 바꾸라면 이 두 줄만 고치면 된다. index.html 도 같은 값(게이트가 대조).
+   · STUN_BOSS_MUL — 보스는 스턴 지속 1/3 (치명타 스턴으로 보스를 영구 스턴락하는 것 방지, 주인 명시).
+   · STUN_LORD_MUL — 신화 m_stunLord 의 지속 배수. STUN_LORD_DMG — 스턴 중인 적에게 주는 데미지 배수.
+   · MISS_STACK_CAP — 빗맞음 데미지 스택(l_missStack) 상한 5장.
+     주인 정정(16:3X): ×2 배수가 아니라 **가산 +100%** 이고 한 타에 한 장만 소모된다.
+     그래서 엔진에서도 배수(`d*=2`)가 아니라 firstHit 과 같은 «가산 보너스 풀» 에 +1.00 을 더한다
+     (execute·backDmg 같은 순수 배수 계열과는 여전히 곱 — 기존 밸런스를 건드리지 않기 위한 위임 판단). */
+const STUN_BOSS_MUL=1/3, STUN_LORD_MUL=2, STUN_LORD_DMG=1.6, MISS_STACK_CAP=5;
 function chapterLayout(c){
   const rnd=mulberry(c*1013904223+77);
   let waveCount=4+(rnd()<0.4?1:0);
@@ -100,12 +109,12 @@ function enemyStats(c,w){
   return {hp:Math.round(hp), dmg:Math.round(dmg)};
 }
 
-/* ---------- 특전 정의 (102종) ---------- */
+/* ---------- 특전 정의 (117종 — T48 1단계에서 102 → 117) ---------- */
 /* ap(p): 적용. u: 고유. 이름은 게임과 동일 키 */
 function mkPerks(){
   const P=[];
   const add=(id,r,ap,u)=>P.push({id,r,ap,u:!!u});
-  /* 일반 26 */
+  /* 일반 29 */
   add('c_aspdBuff',0,p=>p.px.c_aspdBuff++);
   add('c_atkBuff',0,p=>p.px.c_atkBuff++);
   add('c_atkPerm',0,p=>p.px.atkPerm++);
@@ -132,7 +141,10 @@ function mkPerks(){
   add('c_sh15',0,p=>p.maxSh*=1.15);
   add('c_walk20',0,p=>p.walkMul+=0.2);
   add('c_def3',0,p=>p.def+=3);
-  /* 희귀 26 */
+  add('c_stunHit',0,p=>p.px.stunHitS++);
+  add('c_missAtk',0,p=>p.px.missAtk++);
+  add('c_missDef',0,p=>p.px.missDef++);
+  /* 희귀 29 */
   add('r_axe',1,p=>p.px.axe++);
   add('r_arrow',1,p=>p.px.arrow2++);
   add('r_wave',1,p=>p.px.wave++);
@@ -159,7 +171,10 @@ function mkPerks(){
   add('r_lastStand',1,p=>p.px.lastStand=true,1);
   add('r_refresh',1,p=>{},1); // 새로고침: 시뮬에서는 효과 없음(선택 정책 랜덤)
   add('r_def6',1,p=>p.def+=6);
-  /* 전설 28 */
+  add('r_stunCrit',1,p=>p.px.stunCritM++);
+  add('r_missAspd',1,p=>p.px.missAspd++);
+  add('r_missReset',1,p=>p.px.missReset++);
+  /* 전설 32 */
   add('l_spear',2,p=>p.px.spear++);
   add('l_bolt',2,p=>p.px.bolt++);
   add('l_atkBuffL',2,p=>p.px.atkBuffL++);
@@ -188,7 +203,11 @@ function mkPerks(){
   add('l_misfire',2,p=>p.misfire+=0.30);
   add('l_legendOnly',2,p=>p.G.legendOnly=true,1);
   add('l_def10',2,p=>p.def+=10);
-  /* 신화 22 */
+  add('l_stunHit3',2,p=>p.px.stunHitL++);
+  add('l_stunCrit3',2,p=>p.px.stunCritL++);
+  add('l_missCrit',2,p=>p.px.missCrit=true,1);
+  add('l_missStack',2,p=>p.px.missStack++);
+  /* 신화 27 */
   add('m_revive',3,p=>p.px.revive++,1);
   add('m_clone',3,p=>p.px.clone=true,1);
   add('m_execKill',3,p=>p.px.execKill=true,1);
@@ -211,6 +230,11 @@ function mkPerks(){
   add('m_choice4',3,p=>p.px.choice4=true,1);
   add('m_fortress',3,p=>p.maxSh*=2.4);
   add('m_wallBuff',3,p=>p.px.wallBuff++);
+  add('m_stunLord',3,p=>p.px.stunLord=true,1);
+  add('m_stunKill',3,p=>p.px.stunKill=true,1);
+  add('m_stunAura',3,p=>p.px.stunAura++);
+  add('m_missRush',3,p=>p.px.missRush=true,1);
+  add('m_missSpear',3,p=>p.px.missSpear++);
   return P;
 }
 const PERKS=mkPerks();
@@ -553,6 +577,9 @@ function basePx(){
     revive:0,clone:false,execKill:false,procX2:false,arsenal:0,guardCrystal:false,autoBolt:0,
     axeCount:0,arrowCount:0,spearMaster:0,boltCount:0,waveKing:0,sage:false,choice4:false,wallBuff:0,
     evadeAxe:0,
+    /* ⚑ T48 1단계 — 신규 축 2개 (주인 15:5X): 스턴 · 빗맞음(onMiss) */
+    stunHitS:0,stunHitL:0,stunCritM:0,stunCritL:0,stunLord:false,stunKill:false,stunAura:0,
+    missAtk:0,missDef:0,missAspd:0,missReset:0,missCrit:false,missStack:0,missRush:false,missSpear:0,
   };
 }
 function mkPlayer(build,G){
@@ -562,7 +589,7 @@ function mkPlayer(build,G){
     dmg:pw.atk, aspd:TUNE.pAspd0, critR:TUNE.pCrit0, critF:200,
     def:5, counter:10, evade:8, steal:0, killHeal:0, misfire:0, goldMul:1, walkMul:1, healAmp:0,
     maxHp, hp:maxHp, maxSh:pw.sh, sh:pw.sh,   /* ⚑ T35: 실드 독립 스탯 (`maxHp*0.8` 파생 폐기) */
-    level:1, exp:0, buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]}, px:basePx()};
+    level:1, exp:0, missStk:0, buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]}, px:basePx()};
   /* 장비 계열 옵션 적용 (PLAN §11.1 — 상위 등급은 하위 옵션 포함) */
   for(const pt of GT.parts){
     const g=build.eq[pt]; if(!g)continue;
@@ -630,6 +657,8 @@ function onKill(G,e){
   if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff))addBuff(p,'critR',14,4,3);
   if(px.killDefBuff)addBuff(p,'def',10*px.killDefBuff,3,3);
   if(px.killAspd)p.aspd*=1.01;
+  /* 신화 m_stunKill «충격파» — 처치 시 사거리 안의 남은 적 전부 스턴 (randTarget 과 같은 사거리 필터) */
+  if(px.stunKill)for(const e2 of aliveList(G)){const dx=e2.worldX-p.worldX;if(dx>-30&&dx<540)applyStun(G,e2,1.2);}
   /* 웨이브 전멸 실드 충전 폐지 (PLAN §2.3 주인 지시) — 실드 충전은 특전으로만 */
   if(e.isBoss)G.cleared=true;   /* 클리어 확정을 먼저 — 보스 경험치로 레벨업해도 특전 3택 없음 (PLAN §2.4 주인 지시) */
   gainExp(G,(e.isBoss?TUNE.expBoss:TUNE.expKill)+(px.sage?1:0));
@@ -638,6 +667,33 @@ function gainExp(G,n){
   const p=G.player;
   p.exp+=n;
   while(p.exp>=TUNE.expNeed(p.level)){p.exp-=TUNE.expNeed(p.level);p.level++;if(!G.cleared)perkChoice(G);}
+}
+/* ⚑ T48 1단계 — 스턴 메커니즘 (주인 15:5X · PLAN §3.0).
+   적은 원래 제자리 고정이라 «정지» 할 것이 공격뿐이다 — 스턴 중엔 근접 타격도 화살도 나가지 않는다.
+   갱신 규칙(위임): 이미 스턴 중이면 «더 긴 쪽» 을 남긴다(합산 금지 — 합산이면 저등급 연타로 영구 스턴락).
+   보스는 STUN_BOSS_MUL(1/3) 배 지속(주인 명시). index.html 과 같은 동사·같은 상수. */
+function applyStun(G,e,sec){
+  if(!e||e.hp<=0)return;
+  const p=G.player;
+  let s=sec*(p.px.stunLord?STUN_LORD_MUL:1);
+  if(e.isBoss)s*=STUN_BOSS_MUL;
+  e.stun=Math.max(e.stun||0,s);
+  G.stuns=(G.stuns||0)+1;
+}
+/* ⚑ T48 1단계 — 빗맞음(onMiss) 트리거 (주인 15:5X · PLAN §3.0).
+   «적 회피 10% 로 내 공격이 빗나갔을 때» 발동. 적중률 금지 규칙과 공존 — 빗맞음을 없애는 것이 아니라
+   빗맞음에서 이득을 얻는 축이다. 호출 지점은 빗맞음이 실제로 일어나는 두 곳(dealDmg · doCounter)뿐. */
+function procOnMiss(G,e){
+  const p=G.player,px=p.px;
+  G.misses=(G.misses||0)+1;
+  if(px.missAtk)addBuff(p,'atk',0.06*px.missAtk,3,5);
+  if(px.missDef)addBuff(p,'def',6*px.missDef,3,3);
+  if(px.missAspd)addBuff(p,'aspd',0.12*px.missAspd,2,3);
+  if(px.missReset&&pkk(p,0.30*px.missReset))p.atkTimer=0;
+  if(px.missCrit)p.nextCrit=true;                                  /* 주인 필수 예시 ① */
+  if(px.missStack)p.missStk=Math.min(MISS_STACK_CAP,p.missStk+1);  /* 주인 필수 예시 ② */
+  if(px.missRush){p.atkTimer=0;p.nextAtk=Math.min(1.5,Math.max(p.nextAtk,1.0));}
+  if(px.missSpear&&pkk(p,0.30*px.missSpear))fireSpear(p);
 }
 function dealDmg(G,e,ratio,fromBasic){
   if(e.hp<=0)return false;
@@ -652,9 +708,15 @@ function dealDmg(G,e,ratio,fromBasic){
      빗맞아도 그 «공격» 은 일어난 것이라 nextCrit(여기) 과 nextAtk(playerStrike) 가 함께 소모된다 — 위임 기본값.
      여기가 유일한 빗맞음 지점이므로 신설될 «빗맞음 트리거» 축(주인 15:5X)도 이 자리에 붙는다. */
   G.atkTries++;
-  if(Math.random()<ENEMY_EVADE){G.miss++;return false;}
+  if(Math.random()<ENEMY_EVADE){G.miss++;procOnMiss(G,e);return false;}
   let d=effDmg(p)*ratio*(crit?effCritF(p)/100:1)*rand(0.92,1.08);
-  if(full&&px.firstHit)d*=1+0.20*px.firstHit;
+  /* 가산 보너스 풀 — «+n%» 로 적히는 데미지 보너스는 서로 합연산 (주인 정정 16:3X).
+     스택은 «적중 1타당 1개» 소모하고, 몇 장이 쌓여 있든 한 타에는 +100% 한 번만 붙는다. */
+  let addBonus=0;
+  if(full&&px.firstHit)addBonus+=0.20*px.firstHit;
+  if(px.missStack&&p.missStk>0){p.missStk--;addBonus+=1.00;}
+  if(addBonus)d*=1+addBonus;
+  if(px.stunLord&&e.stun>0)d*=STUN_LORD_DMG;   /* 신화 m_stunLord — 스턴 중인 적에게 추가 피해 */
   if(px.execute&&e.hp<=e.maxHp*0.5)d*=2.2;
   if(px.backDmg){
     let front=null;for(const en of aliveList(G))if(!front||en.worldX<front.worldX)front=en;
@@ -671,6 +733,8 @@ function dealDmg(G,e,ratio,fromBasic){
     if(px.critHealS&&pkk(p,0.20*px.critHealS))heal(p,p.maxHp*0.01);
     if(px.critHeal3&&pkk(p,0.30*px.critHeal3))heal(p,p.maxHp*0.04);
     if(px.critReset&&pkk(p,0.45*px.critReset))p.atkTimer=0;
+    if(px.stunCritM&&pkk(p,0.15*px.stunCritM))applyStun(G,e,2.0);
+    if(px.stunCritL&&pkk(p,0.35*px.stunCritL))applyStun(G,e,3.0);   /* 주인 필수 예시 «치명타 시 3초 스턴» */
   }
   if(px.execKill&&!e.isBoss&&e.hp>0&&e.hp<=e.maxHp*0.25)e.hp=0;
   if(e.hp<=0)onKill(G,e);
@@ -725,7 +789,7 @@ function doCounter(G,src,depth){
   /* 반격도 «플레이어의 타격» 이라 적 회피 10% 를 탄다 (PLAN §2.3 주인 명시 3종 중 하나).
      빗맞으면 반격 연쇄(counterChain)도 끊긴다 — 위임 기본값. */
   G.atkTries++;
-  if(Math.random()<ENEMY_EVADE){G.miss++;return;}
+  if(Math.random()<ENEMY_EVADE){G.miss++;procOnMiss(G,src);return;}
   const cd=effDmg(p)*0.7*(1+px.counterX);
   src.hp-=cd;
   if(px.counterAtkS)addBuff(p,'atk',0.05*px.counterAtkS,3,3);
@@ -771,6 +835,9 @@ function hitPlayer(G,dmg,isMelee,src){
   if(px.shieldOnHit&&pkk(p,0.10*px.shieldOnHit))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05);
   if(px.hitHeal&&pkk(p,0.15*px.hitHeal))heal(p,p.maxHp*0.02);
   if(px.thorns&&src&&src.hp>0&&pkk(p,0.60*px.thorns)){src.hp-=dmg*1.5;if(src.hp<=0)onKill(G,src);}
+  /* 피격 시 스턴 — 주인 필수 예시 «피격 시 (n% 확률로) 공격한 적 3초 스턴» (전설 l_stunHit3) */
+  if(px.stunHitS&&src&&pkk(p,0.12*px.stunHitS))applyStun(G,src,1.5);
+  if(px.stunHitL&&src&&pkk(p,0.55*px.stunHitL))applyStun(G,src,3.0);
   if(isMelee&&src&&src.hp>0){
     const cc=Math.random()*100<p.counter;
     const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.10*px.hitCounterS));
@@ -825,7 +892,7 @@ function perkChoice(G){
 function runChapter(chapter,build,opts){
   opts=opts||{};
   const G={chapter,player:null,nodes:[],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
-    perkChances:0,taken:[],legendOnly:false,overBoltCd:0,autoBoltT:2,
+    perkChances:0,taken:[],legendOnly:false,overBoltCd:0,autoBoltT:2,stunAuraT:2.5,stuns:0,misses:0,
     dead:false,cleared:false,t:0,atkTries:0,miss:0,   /* 적 회피 10% 실측용 (PLAN §2.3) */
     rarityLockOn:opts.rarityLock!==undefined,rarityLock:opts.rarityLock};
   const p=mkPlayer(build,G);G.player=p;p.G=G;
@@ -838,14 +905,14 @@ function runChapter(chapter,build,opts){
       for(let j=0;j<node.size;j++){
         const ranged=Math.random()<0.4&&j>0;
         nd.enemies.push({worldX:x+j*88,hp:st.hp,maxHp:st.hp,dmg:st.dmg,ranged,
-          atkTimer:rand(0.4,1.2),wave:nd,dead:false,isBoss:false,exp:0});
+          atkTimer:rand(0.4,1.2),stun:0,wave:nd,dead:false,isBoss:false,exp:0});
       }
       wi++;x+=(node.size-1)*88+560;
     }else if(node.t==='boss'){
       const st=enemyStats(chapter,wi);
       const bh=st.hp*TUNE.bossHp,bd=st.dmg*TUNE.bossDmg;   /* 챕터 무관 항상 동일 (PLAN §6 주인 확정) */
       nd.enemies.push({worldX:x+60,hp:bh,maxHp:bh,dmg:bd,ranged:false,
-        atkTimer:1.2,wave:nd,dead:false,isBoss:true,hits:0});
+        atkTimer:1.2,stun:0,wave:nd,dead:false,isBoss:true,hits:0});
     }else x+=470;
     G.nodes.push(nd);
   }
@@ -889,9 +956,14 @@ function runChapter(chapter,build,opts){
     if(dist>74){p.worldX+=132*p.walkMul*dt;p.atkTimer=Math.min(p.atkTimer,0.35);}
     else{p.atkTimer-=dt*effAspd(p);if(p.atkTimer<=0){p.atkTimer+=1;playerStrike(G,tgt);}}
     if(p.px.autoBolt){G.autoBoltT-=dt;if(G.autoBoltT<=0){G.autoBoltT=2.4;for(let k=0;k<p.px.autoBolt;k++){const t2=randTarget(G);if(t2)summonHit(G,t2,0.75);}}}
+    /* 신화 m_stunAura «위압» — 2.5초마다 랜덤 적 1명 스턴 (중첩 시 횟수 +1. autoBolt 와 같은 구조) */
+    if(p.px.stunAura){G.stunAuraT-=dt;if(G.stunAuraT<=0){G.stunAuraT=2.5;for(let k=0;k<p.px.stunAura;k++){const t3=randTarget(G);if(t3)applyStun(G,t3,2.5);}}}
     /* 적 */
     for(const e of alive){
       if(e.hp<=0)continue;
+      /* ⚑ 스턴 (T48) — 남은 시간을 줄이고, 스턴 중이면 이번 틱 공격을 통째로 건너뛴다.
+         공격 타이머는 흐르지 않는다(스턴이 풀리자마자 밀린 공격이 몰아치지 않게 — 위임 기본값). */
+      if(e.stun>0){e.stun-=dt;continue;}
       const d=e.worldX-p.worldX;
       if(!e.ranged){
         if(d<105){

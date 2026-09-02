@@ -206,6 +206,96 @@ console.log('\n=== ③ 소환 적중 트리거 (PLAN §4 주인 확정 15:3X · 
   }
 }
 
+/* ---------- ④ 스턴 · 빗맞음 축 — 실행 단언 (주인 지시 15:5X · T48 1단계) ---------- */
+/* 정적 대조(두 파일 같은 동사·같은 상수)는 verifyT2 ㉒ 가 본다. 여기서는 «실제로 굴러가는가» 를 본다:
+   스턴이 실제 시간을 남기는지(보스는 1/3), 빗맞음 스택이 «적중 1타당 1장 · 한 타에 +100% 한 번» 인지. */
+console.log('\n=== ④ 스턴 · 빗맞음 축 (PLAN §3.0·§4 주인 지시 15:5X · T48) ===');
+{
+  const vm=require('vm');
+  const CUT="const mode=process.argv[2]||'all';";
+  const at=SIM.indexOf(CUT);
+  if(at<0) fail('sim.js 에서 CLI 디스패처를 못 찾았다 — 잘림 기준이 바뀌었다');
+  else{
+    const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
+    vm.createContext(ctx);
+    vm.runInContext(SIM.slice(0,at)+
+      '\n;globalThis.__Y={applyStun,procOnMiss,dealDmg,STUN_BOSS_MUL,STUN_LORD_MUL,MISS_STACK_CAP,effDmg};',ctx);
+    const Y=ctx.__Y||ctx.globalThis.__Y;
+    const mkG=(px,boss)=>{
+      const e={worldX:100,hp:1e12,maxHp:1e12,dead:false,isBoss:!!boss,stun:0};
+      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,
+               buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
+               sh:0,maxSh:0,hp:100,maxHp:100,steal:0,goldMul:1,level:1,exp:0,
+               critR:0,critF:150,def:0,evade:0,counter:0,atkTimer:1,aspd:1,walkMul:1,killHeal:0};
+      const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
+               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,stunAuraT:2.5,overBoltCd:0,
+               atkTries:0,miss:0};
+      p.G=G; return {G,p,e};
+    };
+    /* (1) 스턴이 실제로 시간을 남긴다 */
+    {
+      const {G,e}=mkG({});
+      Y.applyStun(G,e,3.0);
+      Math.abs(e.stun-3.0)<1e-9 ? pass('applyStun 3초 → 일반 적에게 3초가 남는다')
+                                : fail(`applyStun 이 스턴 시간을 남기지 않는다 (e.stun=${e.stun})`);
+    }
+    /* (2) 보스는 지속 1/3 (주인 명시 — 영구 스턴락 방지) */
+    {
+      const {G,e}=mkG({},true);
+      Y.applyStun(G,e,3.0);
+      Math.abs(e.stun-3.0*Y.STUN_BOSS_MUL)<1e-9
+        ? pass(`보스 스턴 지속이 ${Y.STUN_BOSS_MUL.toFixed(3)} 배로 줄어든다 (3초 → ${e.stun.toFixed(2)}초)`)
+        : fail(`보스 스턴 지속 배수가 안 걸렸다 (e.stun=${e.stun})`);
+    }
+    /* (3) 재적용은 «더 긴 쪽만» — 짧은 스턴이 긴 스턴을 덮거나 합산되면 안 된다 */
+    {
+      const {G,e}=mkG({});
+      Y.applyStun(G,e,3.0); Y.applyStun(G,e,1.0);
+      Math.abs(e.stun-3.0)<1e-9 ? pass('짧은 스턴 재적용이 긴 스턴을 덮지도 합산하지도 않는다')
+                                : fail(`스턴 재적용 규칙 위반 (3초 뒤 1초 재적용 → ${e.stun})`);
+    }
+    /* (4) 빗맞음 스택: 적립은 상한까지, 소모는 적중 1타당 1장 */
+    {
+      const {G,p,e}=mkG({missStack:1});
+      for(let i=0;i<Y.MISS_STACK_CAP+3;i++) Y.procOnMiss(G,e);
+      p.missStk===Y.MISS_STACK_CAP ? pass(`빗맞음 스택이 상한 ${Y.MISS_STACK_CAP} 에서 멈춘다`)
+                                   : fail(`빗맞음 스택 상한이 안 걸린다 (${p.missStk})`);
+      const before=p.missStk;
+      /* 확정 적중 상태에서 한 타 — 정확히 한 장만 줄어야 한다 (여러 장이 한 타에 붙으면 주인 정정 위반) */
+      const rnd=Math.random; Math.random=()=>0.99;      /* 회피(0.10)·치명(0) 둘 다 안 뜨게 */
+      Y.dealDmg(G,e,1,true);
+      Math.random=rnd;
+      p.missStk===before-1 ? pass('적중 1타에 스택이 정확히 1장만 소모된다 (한 타에 +100% 한 번)')
+                           : fail(`적중 1타에 스택이 ${before-p.missStk}장 소모됐다 — 주인 정정(«한 타에 +100% 한 번만») 위반`);
+    }
+    /* (5) 스택 +100% 가 «가산» 이다 — 풀피 보너스(firstHit)와 곱이 아니라 합이어야 한다 */
+    {
+      const rnd=Math.random; Math.random=()=>0.99;
+      const hit=(px,stk)=>{
+        const {G,p,e}=mkG(px); p.missStk=stk;
+        e.hp=e.maxHp=1e6;          /* 1e12 는 배정밀도 유효자릿수 밖이라 «맞은 만큼» 을 못 잰다 */
+        const hp0=e.hp; Y.dealDmg(G,e,1,true); return hp0-e.hp;
+      };
+      const base=hit({},0), stack=hit({missStack:1},1), both=hit({missStack:1,firstHit:1},1);
+      Math.random=rnd;
+      /* rand(0.92,1.08) 이 Math.random 고정으로 상수가 되므로 배수 비교가 성립한다 */
+      const okStack=Math.abs(stack/base-2.0)<1e-6;
+      const okBoth=Math.abs(both/base-2.2)<1e-6;      /* 합 = 1 + 1.00 + 0.20 (곱이면 2.4) */
+      okStack ? pass('빗맞음 스택 1장이 데미지 +100% 를 준다')
+              : fail(`빗맞음 스택 배수가 ${(stack/base).toFixed(3)} 배다 (2.000 이어야 함)`);
+      okBoth ? pass('풀피 보너스와 «합연산» 이다 (1+1.00+0.20 = 2.2배 — 곱이면 2.4배)')
+             : fail(`스택+풀피가 ${(both/base).toFixed(3)} 배다 — 주인 정정(«가산, 다른 보너스와 합») 위반`);
+    }
+    /* (6) PLAN 에 주인 지시 문구가 살아 있는가 */
+    planHas(/빗맞음\(온미스\) 트리거 신설/)
+      ? pass('PLAN §3.0 에 주인 지시 «빗맞음 트리거 신설» 문구가 있다')
+      : fail('PLAN §3.0 에서 «빗맞음(온미스) 트리거 신설» 문구가 사라졌다');
+    planHas(/스턴 메커니즘 신설/)
+      ? pass('PLAN §3.0 에 주인 지시 «스턴 메커니즘 신설» 문구가 있다')
+      : fail('PLAN §3.0 에서 «스턴 메커니즘 신설» 문구가 사라졌다');
+  }
+}
+
 console.log(`\n대조 ${CHECKS.length}항목 · 일치 ${okN}개 · 불일치 ${bad}건 · 미문서화 신규 ${undocNew}건 · 등재된 기존 ${undocKnown}건`);
 console.log(bad?'→ 불합격':'→ 통과');
 process.exit(bad?1:0);
