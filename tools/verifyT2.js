@@ -2226,6 +2226,121 @@ console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
     : bad('⑤ newGear 의 채번이 save.uid++ 를 안 쓴다 — 정규화가 지킨 유일성이 생성 쪽에서 깨진다');
 }
 
+/* ============================================================================
+   ㉟ «특전 기회» 두 자리 — 레벨업 · 악마 거래가 같은 동사를 쓴다 (PLAN §4 · T70)
+
+   T70 의 실패 모드: PLAN §4 는 «악마/레벨업 **모두** perkChances 증가 → perkHp 소급 로직» 인데
+   `sim.js` 의 악마 거래만 `G.perkChances++` 한 줄이라 💗 `l_perkHp`(«특전 기회 1번마다 최대 체력 +1.8%»)가
+   악마 거래에서만 안 걸렸다. `index.html` 은 두 자리 모두 `G.perkChances++; if(px.perkHp) applyPerkHp(1);`
+   이라 **두 파일이 갈라져 있었다** — ② 는 특전 ap 본문만 보고 ㉝ 은 «본문이 비었나» 만 보므로 둘 다 통과했다.
+   같은 효과를 두 자리에 손으로 적으면 한 자리만 고쳐지는 것이 이 계열의 정체라, 수리는 sim 쪽을
+   `grantPerkChance()` 한 동사로 모으는 것이고 이 게이트가 그 구조를 지킨다.
+
+     ① sim.js — perkChances 를 올리는 자리가 `grantPerkChance` 하나뿐이고 그 안에서 perkHp 소급을 건다
+     ② sim.js — 레벨업(`perkChoice`)·악마 두 호출 지점이 살아 있다
+     ③ index.html — `openPerkChoice`·`openDevil` 두 자리 모두 `perkChances++` 직후 `applyPerkHp(1)`
+     ④ 계수 0.018 이 네 곳(sim 동사·게임 applyPerkHp·두 파일 l_perkHp 본문)에서 같다
+     ⑤ 실행 단언(vm) — 두 파일의 동사를 실제로 돌려 «기회 1번 = maxHp ×1.018» · 미보유 시 불변
+     ⑥ 악마 풀 폴백(신화 풀이 비면 전설)이 두 파일 모두에 있다
+   ============================================================================ */
+{
+  console.log('\n[㉟ 특전 기회 — 레벨업·악마가 같은 동사 (PLAN §4, T70)]');
+
+  /* 구간 잘라내기 */
+  const cut = (src, from, to) => {
+    const i = src.indexOf(from); if (i < 0) return null;
+    const j = src.indexOf(to, i + from.length); return j < 0 ? null : src.slice(i, j);
+  };
+  const simDevil = cut(SIM, "}else if(n.type==='devil'){", "}else{p.dmg*=1.05;}");
+  const simChoice = cut(SIM, 'function perkChoice(G){', '\n}');
+  const simGrant = cut(SIM, 'function grantPerkChance(G){', '\n}');
+  const htmlChoice = cut(HTML, 'function openPerkChoice(){', '\n}');
+  const htmlDevil = cut(HTML, 'function openDevil(){', '\n}');
+  const htmlApply = cut(HTML, 'function applyPerkHp(', '\n}');
+
+  /* ① sim.js — 증가 지점은 한 자리 (주석은 세지 않는다 — 이 게이트를 설명하는 주석 자체가 `perkChances++` 를 인용한다) */
+  const simCode = SIM.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const simBumps = (simCode.match(/perkChances\s*(?:\+\+|\+=)/g) || []).length;
+  simBumps === 1
+    ? ok('① sim.js 에서 perkChances 를 올리는 자리는 한 곳뿐이다 (grantPerkChance)')
+    : bad(`① sim.js 에 perkChances 증가가 ${simBumps}곳이다 — 두 자리로 갈라지면 한쪽만 perkHp 소급을 빠뜨린다(T70 재발)`);
+  if (!simGrant) bad('① sim.js 의 grantPerkChance 를 못 찾았다 — 게이트 ㉟ 의 구간 파서를 고칠 것');
+  else {
+    /perkChances\s*\+\+/.test(simGrant)
+      ? ok('① grantPerkChance 가 perkChances 를 올린다')
+      : bad('① grantPerkChance 가 perkChances 를 올리지 않는다');
+    /px\.perkHp/.test(simGrant) && /maxHp\s*\*\s*0\.018/.test(simGrant)
+      ? ok('① grantPerkChance 가 perkHp 소급(+1.8%)을 함께 건다')
+      : bad('① grantPerkChance 안에 perkHp 소급이 없다 — 💗 l_perkHp 가 다시 반만 걸린다 (PLAN §4)');
+  }
+
+  /* ② sim.js — 두 호출 지점 */
+  for (const [nm, region] of [['레벨업(perkChoice)', simChoice], ['악마 거래', simDevil]]) {
+    if (!region) { bad(`② sim.js 의 «${nm}» 구간을 못 잘라냈다 — 게이트 ㉟ 의 파서를 고칠 것`); continue; }
+    /grantPerkChance\(G\)/.test(region)
+      ? ok(`② sim.js ${nm} 이 grantPerkChance 를 부른다`)
+      : bad(`② sim.js ${nm} 이 grantPerkChance 를 부르지 않는다 — PLAN §4 «악마/레벨업 모두» 위반(T70 재발)`);
+  }
+
+  /* ③ index.html — 두 자리 모두 perkChances++ 직후 applyPerkHp(1) */
+  for (const [nm, region] of [['레벨업(openPerkChoice)', htmlChoice], ['악마(openDevil)', htmlDevil]]) {
+    if (!region) { bad(`③ index.html 의 «${nm}» 구간을 못 잘라냈다 — 게이트 ㉟ 의 파서를 고칠 것`); continue; }
+    const i = region.search(/perkChances\+\+/), j = region.search(/applyPerkHp\(1\)/);
+    (i >= 0 && j > i && j - i < 120)
+      ? ok(`③ index.html ${nm} — perkChances++ 직후 applyPerkHp(1)`)
+      : bad(`③ index.html ${nm} 에서 perkChances++ ↔ applyPerkHp(1) 짝이 깨졌다 (증가 ${i} · 소급 ${j})`);
+  }
+
+  /* ④ 계수 0.018 — 네 곳 */
+  {
+    const coefOf = s => { const m = (s || '').match(/maxHp\s*\*\s*(0\.\d+)/); return m ? m[1] : null; };
+    const SPK = simPerks(), HPK = htmlPerks() || [];
+    const apOf = (arr, id) => { const x = arr.find(y => y.id === id); return x ? (x.ap || '') : ''; };
+    const got = {
+      'sim grantPerkChance': coefOf(simGrant),
+      'index.html applyPerkHp': coefOf(htmlApply),
+      'sim l_perkHp 본문': coefOf(apOf(SPK, 'l_perkHp')),
+      'index.html l_perkHp 본문': coefOf(apOf(HPK, 'l_perkHp')),
+    };
+    const vals = Object.values(got);
+    (vals.every(v => v === '0.018'))
+      ? ok('④ «특전 기회 1번 = 최대 체력 +1.8%» 계수 0.018 이 네 곳에서 같다')
+      : bad(`④ perkHp 계수가 어긋난다 — ${Object.entries(got).map(([k, v]) => `${k}=${v}`).join(' · ')} (전부 0.018 이어야 한다)`);
+  }
+
+  /* ⑤ 실행 단언 — 두 파일의 동사를 실제로 돌린다 */
+  {
+    const run = (code, label) => {
+      const ctx = { out: null }; vm.createContext(ctx);
+      try { vm.runInContext(code, ctx); } catch (e) { ctx.out = 'ERR:' + e.message; }
+      return [label, ctx.out];
+    };
+    const mkG = has => `let G={perkChances:0,player:{maxHp:1000,hp:500,px:{perkHp:${has}}}};`
+      + `const heal=(p,a)=>{p.hp=Math.min(p.maxHp,p.hp+a);};`;
+    const cases = [
+      run(`${mkG(true)}${simGrant}\n}\ngrantPerkChance(G);out=[G.perkChances,G.player.maxHp];`, 'sim.js 보유'),
+      run(`${mkG(false)}${simGrant}\n}\ngrantPerkChance(G);out=[G.perkChances,G.player.maxHp];`, 'sim.js 미보유'),
+      run(`${mkG(true)}${htmlApply}\n}\nG.perkChances++;applyPerkHp(1);out=[G.perkChances,G.player.maxHp];`, 'index.html 보유'),
+      run(`${mkG(false)}${htmlApply}\n}\nG.perkChances++;out=[G.perkChances,G.player.maxHp];`, 'index.html 미보유'),
+    ];
+    const want = [[1, 1018], [1, 1000], [1, 1018], [1, 1000]];
+    cases.forEach(([label, out], k) => {
+      const w = want[k];
+      (Array.isArray(out) && out[0] === w[0] && Math.abs(out[1] - w[1]) < 1e-9)
+        ? ok(`⑤ ${label} — 기회 ${out[0]}번 · 최대 체력 ${out[1]} (기대 ${w[1]})`)
+        : bad(`⑤ ${label} — 실행 결과 ${JSON.stringify(out)}, 기대 ${JSON.stringify(w)}`);
+    });
+  }
+
+  /* ⑥ 악마 풀 폴백 */
+  for (const [nm, region] of [['sim.js', simDevil], ['index.html', htmlDevil]]) {
+    if (!region) continue;
+    /if\s*\(!pool\.length\)\s*pool\s*=\s*PERKS\.filter/.test(region)
+      ? ok(`⑥ ${nm} 악마 — 신화 풀이 비면 전설로 폴백한다`)
+      : bad(`⑥ ${nm} 악마에 풀 폴백이 없다 — 지불만 하고 특전을 못 받는 판이 생긴다`);
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');

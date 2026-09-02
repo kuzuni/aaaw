@@ -971,10 +971,20 @@ function rollPerks(G,n){
   }
   return out;
 }
-function perkChoice(G){
+/* ⚑ PLAN §4 «악마/레벨업 모두 perkChances 증가 → perkHp 소급 로직» (T70).
+   종전엔 이 두 줄이 레벨업 경로에만 있었고 악마 거래 경로는 `G.perkChances++` 만 해서
+   💗 l_perkHp 의 «특전 기회 1번마다 최대 체력 +1.8%» 가 악마 거래에서만 안 걸렸다
+   (index.html 은 두 자리 모두 `G.perkChances++; if(px.perkHp) applyPerkHp(1);` 로 걸고 있었다 = 두 파일 괴리).
+   한 동사로 모아 두 자리가 다시 갈라질 수 없게 했다 — index.html 의 applyPerkHp 와 같은 계수 0.018·같은 순서.
+   감시: `verifyT2` ㉟ (두 파일 호출 지점 대조 + vm 실행 단언). */
+function grantPerkChance(G){
   G.perkChances++;
   const p=G.player;
   if(p.px.perkHp){const a=p.maxHp*0.018;p.maxHp+=a;heal(p,a,true);}
+}
+function perkChoice(G){
+  grantPerkChance(G);   /* 레벨업 = 특전 기회 1번 (PLAN §4) */
+  const p=G.player;
   let opts;
   if(G.rarityLockOn){ /* 등급 고정 실험 */
     const pool=PERKS.filter(x=>x.r===G.rarityLock&&!(x.u&&G.taken.includes(x)));
@@ -1037,11 +1047,17 @@ function runChapter(chapter,build,opts){
              ⚑ 주인 확정(17:1X · PLAN §2.4 · T49): 보상이 «체력 260 회복(고정값) vs 경험치 +26» 으로 개정됐다. */
           gainExp(G,REST_EXP);        /* SIM_REST_POLICY: 항상 경험치 (게이트 tools/verifyRestPolicy.js 가 감시) */
         }else if(n.type==='devil'){
+          /* SIM_DEVIL_POLICY: 가상 플레이어는 체력이 65% 를 넘을 때만 «최대 체력 30% 지불» 을 수락한다
+             (실제 게임은 유저 자유 선택 — 쉼터와 같은 구조의 시뮬 전용 정책. 문서화는 PROGRESS T70 참조). */
           if(p.hp>p.maxHp*0.65){
             p.hp=Math.max(1,p.hp-p.maxHp*0.30);
             const rar=Math.random()<0.15?3:2;
-            const pool=PERKS.filter(y=>y.r===rar&&!(y.u&&G.taken.includes(y)));
-            if(pool.length){const perk=pick(pool);perk.ap(p);G.taken.push(perk);G.perkChances++;}
+            let pool=PERKS.filter(y=>y.r===rar&&!(y.u&&G.taken.includes(y)));
+            if(!pool.length)pool=PERKS.filter(y=>y.r===2&&!(y.u&&G.taken.includes(y)));   /* 게임과 같은 폴백: 신화 풀이 비면 전설로 */
+            if(pool.length){
+              grantPerkChance(G);   /* ⚑ 악마도 «특전 기회» 다 — perkChances 증가 + perkHp 소급 (PLAN §4 · T70) */
+              const perk=pick(pool);perk.ap(p);G.taken.push(perk);
+            }
           }
         }else{p.dmg*=1.05;}
         break;
