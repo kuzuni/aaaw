@@ -1,0 +1,34 @@
+
+=== 실험2: 특전별 기여도 (챕터8, 하니스 신화 6부위 · 슬롯 0렙, 15000판) ===
+전체 클리어율: 68.1%
+-- 상위 12 --
+  l_killHeal5(전) 85% (2508판)
+  l_evadeCrit(전) 85% (2502판)
+  c_killHeal2(일) 83% (1699판)
+  l_fullHpCrit(전) 82% (2606판)
+  m_crit25(신) 82% (1450판)
+  m_wallBuff(신) 81% (1406판)
+  l_perkHp(전) 80% (2603판)
+  m_procX2(신) 79% (1518판)
+  l_def10(전) 78% (2599판)
+  l_killAspd(전) 78% (2563판)
+  l_rage(전) 77% (2559판)
+  l_counterHeal(전) 76% (2598판)
+-- 하위 12 --
+  c_atkPerm(일) 62% (1767판)
+  c_hitCounterS(일) 62% (1771판)
+  c_firstHit(일) 61% (1786판)
+  c_atkBuff(일) 61% (1604판)
+  c_evadeAspd(일) 61% (1661판)
+  c_counterAtk(일) 61% (1666판)
+  r_refresh(희) 60% (1691판)
+  c_gold30(일) 60% (1743판)
+  r_counterX(희) 60% (1725판)
+  c_critF(일) 60% (1709판)
+  r_counterAtkM(희) 60% (1671판)
+  r_critFBuff(희) 59% (1705판)
+-- 등급별 스프레드 (표본 25판 이상만) --
+  일반: 최상 c_killHeal2 82.5% / 최하 c_critF 59.6% → 폭 23.0%p OK
+  희귀: 최상 r_evadeShield 74.6% / 최하 r_critFBuff 59.0% → 폭 15.6%p OK
+  전설: 최상 l_killHeal5 85.2% / 최하 l_overBolt 63.4% → 폭 21.8%p OK
+  신화: 최상 m_crit25 82.1% / 최하 m_wave4 61.7% → 폭 20.4%p OK
