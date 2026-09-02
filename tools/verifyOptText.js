@@ -8,12 +8,19 @@
    (T8 이 12곳을 남겨 T11 이 됐고, T11 이 4곳을 남겨 T12 가 됐다).
    T16 게이트(tools/verifyPlanConst.js)는 경제·적 수치 48항목만 덮고 이 계열은 안 덮는다.
 
-   방식 3단:
+   ⚑ T42 로 «④ 산문» 이 붙었다: 표만 보던 종전 3단은 §3.0 산문의 «폭풍의 힘 = 2배» 가 §3.4 표·엔진(1.22)과
+   어긋난 것을 통과시켰다(사람이 눈으로 잡았다). 표 밖 문장도 엔진 상수를 그대로 적는 자리다.
+   ④ 의 자가 시험은 `node tools/verifyOptTextSelfTest.js` (음성 7 · 오탐 방지 3 · 양성 1).
+
+   방식 4단:
      ① §11.6 표(PLAN) ↔ `node sim.js table` 덤프를 줄 단위 완전 일치 대조 — GOPT.d 가 PLAN 으로
         옮겨질 때 생기는 드리프트(T8·T11·T12 의 표면)를 100% 잡는다.
      ② GOPT 126칸: 각 옵션의 설명문 숫자가 그 옵션이 실제로 건드리는 엔진 상수에 존재하는지 대조.
      ③ PERKS 102종: PLAN §3.1~3.4 표의 «표시 텍스트» 숫자를 같은 방식으로 대조(T9 의 계열).
-   ②③ 은 «설명문 숫자 n 이 엔진 숫자 집합 안에 n · n/100 · 1+n/100 · n/1000 중 하나로 존재하는가» 로 본다.
+     ④ PLAN §3·§4·§11.6 의 **표 밖 문장**: 그 줄이 엔진 심볼(함수명·`px` 키·특전 id)을 이름으로 부를 때만,
+        그 심볼의 숫자 집합과 문장의 숫자를 대조한다(앵커가 없는 줄은 서술문이므로 건드리지 않는다).
+        §6·§7·§11.5-a 의 경제·난이도 수치는 verifyPlanConst(T16) 관할이라 여기서 두 번 보지 않는다.
+   ②③④ 는 «설명문 숫자 n 이 엔진 숫자 집합 안에 n · n/100 · 1+n/100 · n/1000 중 하나로 존재하는가» 로 본다.
    숫자가 아닌 표기(개수·명수 등 엔진에 안 나타나는 수사)는 아래 ALLOW 에 사유와 함께 등재해 통과시킨다.
    → ALLOW 에 없는 새 불일치가 뜨면 그건 실제 드리프트이거나 새 수사(그때 ALLOW 에 사유를 적어 추가)다. */
 
@@ -35,12 +42,58 @@ const ALLOW = {
   'l_misfire|2': '«오사 데미지 2배» 의 2 는 p.misfire 에서 두 단계 떨어진 곳(화살에 friendly 플래그를 심고, 화살 처리부 sim.js:819 `e.hp-=a.dmg*2`)에 있어 자동 추적 밖이다. 수동 확인 완료 — 2배 일치',
 };
 
+/* ── ④ 산문 허용목록 (T42) ─ 키는 `산문:<앵커들>|<숫자>`, 값은 `{ctx, why}`.
+   «폐기된 옛 수치를 인용한 정정 문구» 와 «엔진 상수가 아닌 관측치·수사» 만 등재한다. 사유(why) 없이 추가 금지.
+
+   ⚑ ctx 가 핵심이다 — 숫자만으로 면제하면 «그 숫자로 드리프트한 진짜 오류» 까지 같이 통과한다.
+   실제로 처음 구현에서 `m_procX2|2` 를 숫자만으로 면제했더니, T42 를 낳은 그 버그(«확률 1.22배» → «확률 2배»)를
+   게이트가 그대로 통과시켰다(음성 테스트 ①이 잡았다). 그래서 면제는 «그 숫자가 이 문맥에 있을 때만» 으로 건다.
+   ctx 는 숫자 주변 ±24자 안에 그대로 들어 있어야 하는 조각이며, 숫자를 포함시키는 것이 안전하다. */
+const ALLOW_PROSE = {
+  '산문:m_procX2|2': {
+    ctx: '적혀 있던 «2배',
+    why: '§3.0 T2 정정문이 «인용한» 폐기값(«여기 적혀 있던 «2배 / pk()» 는 …낡은 문장이었다»). 실제 값 1.22 는 같은 줄에서 대조돼 통과한다. ctx 덕에 본문 수치가 2배로 되돌아가면 그건 잡힌다',
+  },
+  '산문:rollRarity()|35': {
+    ctx: '«일반 35%»',
+    why: '§3.0 T25 정정문이 인용한 폐기값. 엔진 rollRarity(sim.js:743)는 처음부터 30%',
+  },
+  '산문:rollRarity()|105': {
+    ctx: '합이 105%',
+    why: '§3.0 T25 정정문의 «네 값의 합이 105%» — 폐기값 4개를 더한 산술이지 엔진 상수가 아니다',
+  },
+  '산문:rollRarity()|100': {
+    ctx: '(합 100%',
+    why: '§3.0 «(합 100%.)» — 확률 4종의 합을 확인시키는 산술이지 엔진 상수가 아니다',
+  },
+  '산문:rollRarity()|25': {
+    ctx: '전설 25%',
+    why: '§3.0 «전설 25%» — 엔진은 등급 확률을 *누적 임계* 로 들고 있어(`r<0.15?3:r<0.40?2:r<0.70?1:0`) 구간 폭 25%p 는 리터럴로 존재하지 않는다(0.40−0.15). 수동 확인 완료 — 일치. ⚠ 같은 이유로 30·15 는 우연히(0.70·0.15) 통과하니, rollRarity 임계를 바꾸면 이 줄 네 값을 손으로 다시 볼 것',
+  },
+  '산문:l_killShield10+m_revive+l_perkHp+m_time|97': {
+    ctx: 'l_killShield10 97%',
+    why: '§3.0 R03 조정 기록의 관측 승률(조정 *전* 실험2 측정치)이라 엔진 상수로 존재하지 않는다',
+  },
+  '산문:fireAxe()+fireArrows()+fireBolts()+fireWave()+fireSpear()+m_axe3|5': {
+    ctx: '이 5개 중 랜덤',
+    why: '§4 «arsenal은 이 5개 중 랜덤 호출» 의 5 = 소환 함수 개수를 센 수사다(m_arsenal 의 랜덤 범위는 엔진에서 배열 길이로 잡는다)',
+  },
+};
+
 /* ── sim.js 파싱 ─────────────────────────────────────────── */
 function numsIn(s) {
   const out = [];
   const re = /(?<![A-Za-z_$][A-Za-z0-9_$]*)(\d+(?:\.\d+)?)/g;
   let m;
   while ((m = re.exec(s))) out.push(Number(m[1]));
+  return out;
+}
+/* numsIn 과 같은 규칙이되 «어디에 있었는가»(문자 위치)까지 돌려준다 — ④ 산문 허용목록의 ctx 판정용 */
+function numsWithIdx(s) {
+  const out = [];
+  const re = /(?<![A-Za-z_$][A-Za-z0-9_$]*)(\d+(?:\.\d+)?)/g;
+  let m;
+  while ((m = re.exec(s))) out.push({ n: Number(m[1]), at: m.index });
   return out;
 }
 function pxKeysIn(s) {
@@ -154,6 +207,79 @@ for (const L of PLAN.split('\n')) {
   if (m) planPerkText.set(m[1], m[2]);
 }
 
+/* ── ④ 산문 대조용 심볼 인덱스 (T42) ────────────────────────
+   표 밖 문장에도 엔진 상수가 그대로 적힌다(«폭풍의 힘 확률 1.22배» 처럼). 표만 보던 종전 게이트는
+   §3.0 산문의 «2배» 가 §3.4 표·엔진의 1.22 와 어긋난 것을 통과시켰다(T42 등재 사유).
+   문장 전체의 숫자를 다 보면 오탐 천지라 «앵커» 로 좁힌다 —
+   그 줄이 엔진 심볼(함수명·px 키·특전 id)을 직접 이름으로 부를 때만, 그 심볼의 숫자 집합과 대조한다.
+   앵커가 없는 줄은 아예 건드리지 않는다(설명문이 아니라 서술문이므로). */
+const FNNAMES = new Set(FN.keys());
+const PXNAMES = new Set();
+for (const m of SIM.matchAll(/px\.([A-Za-z0-9_]+)/g)) PXNAMES.add(m[1]);
+const PERKIDS = new Map(perks.map(p => [p.id, p]));
+
+/* 산문 대조 구간: 이 게이트가 관할하는 «효과 설명» 절만 본다(§3 특전 · §4 엔진 세부 · §11.6 옵션).
+   §6·§7·§11.5-a 등 경제·난이도 수치는 verifyPlanConst(T16) 관할이라 여기서 두 번 보지 않는다. */
+const PROSE_SECTIONS = [/^## 3\. /, /^### 3\./, /^## 4\. /, /^### 11\.6 /];
+const SECTION_RE = /^#{2,4} /;
+
+/* 문서 참조 표기 — 효과 수치가 아니므로 숫자 추출 전에 지운다 */
+const DOCREF = [
+  /§\s*\d+(?:\.\d+)?(?:-[a-zA-Z])?/g,   // §11.5-a
+  /\b[TR]\d+\b/g,                        // T42 · R07
+  /\d{4}-\d{2}-\d{2}/g,                  // 날짜
+  /\b\d{1,2}:\d{2}X?\b/g,                // 07:3X (시각)
+  /[A-Za-z0-9_./]+\.(?:js|html|md)\s*:\s*\d+/g, // sim.js:700
+  /#[0-9A-Fa-f]{3,8}\b/g,                // 색상
+  /\b\d+\s*(?:단계|종|칸|장|판|회차)\b/g,  // 문서 단위 수사
+];
+
+function anchorsOf(line) {
+  const out = new Map(); // 표시용 이름 → 숫자 pool
+  const addSym = (tok) => {
+    if (PERKIDS.has(tok)) { out.set(tok, poolFor(PERKIDS.get(tok).ap)); return; }
+    if (FNNAMES.has(tok)) { out.set(tok + '()', numsOfFn(tok, 1)); return; }
+    if (PXNAMES.has(tok)) { out.set('px.' + tok, consumersOf(tok, 'px')); return; }
+  };
+  for (const m of line.matchAll(/`([^`]+)`/g))
+    for (const tok of m[1].split(/[^A-Za-z0-9_$]+/)) if (tok) addSym(tok);
+  for (const m of line.matchAll(/\b([cmrl]_[A-Za-z0-9_]+)\b/g)) addSym(m[1]);
+  return out;
+}
+
+function auditProse() {
+  const lines = PLAN.split('\n');
+  const flagsP = [];
+  let inScope = false;
+  for (let i = 0; i < lines.length; i++) {
+    const L = lines[i];
+    if (SECTION_RE.test(L)) inScope = PROSE_SECTIONS.some(re => re.test(L));
+    if (!inScope) continue;
+    if (/^\s*\|/.test(L)) continue;          // 표는 ①②③ 몫
+    const anc = anchorsOf(L);
+    if (!anc.size) continue;
+    proseLines++;
+    /* 문서 참조 표기를 «같은 길이의 공백» 으로 지운다 — 인덱스가 원문 L 과 그대로 맞아야 ctx 를 뜰 수 있다 */
+    let masked = L;
+    for (const re of DOCREF) masked = masked.replace(re, m => ' '.repeat(m.length));
+    const pool = new Set();
+    for (const s of anc.values()) for (const n of s) pool.add(n);
+    const akeyBase = `산문:${[...anc.keys()].join('+')}`;
+    for (const { n, at } of numsWithIdx(masked)) {
+      proseChecked++;
+      const win = L.slice(Math.max(0, at - 24), at + 24);
+      let usedKey = null;
+      for (const k of [`${akeyBase}|${n}`, `산문:${i + 1}|${n}`]) {
+        const e = ALLOW_PROSE[k];
+        if (e && win.includes(e.ctx)) { usedKey = k; break; }
+      }
+      if (usedKey) { proseAllowed++; proseAllowUsed.add(usedKey); if (LIST) console.log(`  · 허용  ${usedKey.padEnd(34)} ${ALLOW_PROSE[usedKey].why}`); continue; }
+      if (!explained(n, pool)) flagsP.push({ ln: i + 1, n, anc: [...anc.keys()], text: L, pool: [...pool].sort((a, b) => a - b) });
+    }
+  }
+  return flagsP;
+}
+
 /* ── 대조 ─────────────────────────────────────────────────── */
 function explained(n, pool) {
   for (const c of pool) {
@@ -184,6 +310,8 @@ function poolFor(apText) {
 
 const flags = [];
 let checked = 0, allowed = 0;
+let proseChecked = 0, proseAllowed = 0, proseLines = 0;
+const proseAllowUsed = new Set();
 function audit(itemId, text, apText, where) {
   const pool = poolFor(apText);
   for (const n of numsIn(text)) {
@@ -222,6 +350,8 @@ for (const p of perks) {
   if (!t) { perkTextMissing++; console.log(`  ⚠ PLAN §3 에 특전 «${p.id}» 행이 없다`); continue; }
   audit(p.id, t.replace(/^[^ ]*\s/, ''), p.ap, `§3 ${p.id}`);
 }
+/* ④ 산문(표 밖 문장) 대조 — T42 */
+const proseFlags = auditProse();
 
 console.log('=== 특전·옵션 설명문 ↔ 엔진 상수 대조 (T17 게이트) ===');
 console.log(`  대상: GOPT ${gopts.length}칸 · 특전 ${perks.length}종 · 대조한 숫자 ${checked}개(허용목록 ${allowed}개)`);
@@ -231,8 +361,16 @@ for (const f of flags) {
   console.log(`      설명문: ${f.text}`);
   console.log(`      엔진 숫자: ${f.pool.join(', ') || '(없음)'}`);
 }
-console.log(`\n불일치 ${flags.length}건 · PLAN §3 누락 ${perkTextMissing}종 · 표 대조 ${tableOk ? 'OK' : 'NG'}`);
-if (flags.length || perkTextMissing || !tableOk) {
+console.log(`  산문(§3·§4·§11.6 표 밖 문장): 앵커 있는 줄 ${proseLines}줄 · 대조한 숫자 ${proseChecked}개(허용목록 ${proseAllowed}개)`);
+for (const f of proseFlags) {
+  console.log(`  ✗ PLAN:${f.ln} 산문 — «${f.n}» 이 앵커(${f.anc.join(', ')})의 엔진 상수에 없다`);
+  console.log(`      문장: ${f.text.trim().slice(0, 160)}`);
+  console.log(`      엔진 숫자: ${f.pool.join(', ') || '(없음)'}`);
+}
+const proseAllowStale = Object.keys(ALLOW_PROSE).filter(k => !proseAllowUsed.has(k));
+if (proseAllowStale.length) console.log(`  ⚠ 산문 허용목록 중 이번에 안 걸린 항목 ${proseAllowStale.length}개(문장이 바뀌었으면 지울 것): ${proseAllowStale.join(' · ')}`);
+console.log(`\n불일치 ${flags.length}건 · 산문 불일치 ${proseFlags.length}건 · PLAN §3 누락 ${perkTextMissing}종 · 표 대조 ${tableOk ? 'OK' : 'NG'}`);
+if (flags.length || proseFlags.length || perkTextMissing || !tableOk) {
   console.log('→ 실패: 설명문과 엔진이 어긋났다. 엔진이 옳으면 설명문을, 설명문이 옳으면 엔진을 고쳐라(엔진 수치 변경은 T1 회차 절차).');
   process.exit(1);
 }
