@@ -61,14 +61,17 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     G.player.px.arrowCount = 1;                       /* 신화 화살 폭풍(m_arrow4) 보유 상태 */
     /* ⚑ T78 — 발수를 숫자로 박아 두면 밸런스 튜닝(소환 연쇄 임계 ≤ 0.8)마다 이 검사가 헛되이 빨개진다.
        엔진 함수 본문에서 그 값을 그대로 읽어 «코드가 쏘겠다는 발수만큼 낱발로 나갔는가» 를 본다. */
-    const mN = String(fireArrows).match(/arrowCount\s*\?\s*(\d+)\s*:\s*(\d+)/);
-    const wantN = mN ? Number(mN[1]) : -1;
+    /* ⚑ P1(T83) — fireArrows 가 «발수 인자» 를 받게 바뀌었다. 기본 발수는 특전 텍스트(«화살 2발»)가
+       정하고, 장비 «화살 3발로 증가»(arrowCount)가 배수로 곱한다. 그 배수를 엔진 본문에서 읽는다. */
+    const BASE_N = 2;
+    const mN = String(fireArrows).match(/arrowCount\)\s*n=Math\.round\(n\*([\d.]+)\)/);
+    const wantN = mN ? Math.round(BASE_N * Number(mN[1])) : -1;
     /* 예약된 지연값 자체를 잡는다 — 이것이 «코드가 요구한 간격» 이고 판정의 근거다 */
     const wanted = [], origST = window.setTimeout;
     window.setTimeout = (f, ms, ...a) => { if (typeof ms === 'number' && ms > 0 && ms < 5000) wanted.push(ms); return origST(f, ms, ...a); };
     /* 적이 있어야 randTarget 이 대상을 준다 — 없으면 첫 웨이브를 깨운다 */
     for (const n of G.nodes) if (n.type === 'wave') { n.enemies.forEach(e => { e.aggro = true; }); break; }
-    fireArrows(G.player);
+    fireArrows(G.player, BASE_N);
     window.setTimeout = origST;          /* 예약은 fireArrows 동기 구간에서 전부 끝난다 */
     await new Promise(r => origST(r, 2600));
     AU.play = origPlay; G.pprojs.push = origPush; G.arrows.push = origArr;

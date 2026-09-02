@@ -159,9 +159,9 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     let key = Object.keys(G.pxPerk)[0] || null;
     for (let i = 0; !key && i < PERKS.length; i++) { takePerk(PERKS[i]); key = Object.keys(G.pxPerk)[0] || null; }
     const perk = key ? G.pxPerk[key] : G.perksTaken[0];
-    addBuff(G.player, 'atk', 0.2, 4, 5, key);
-    addBuff(G.player, 'atk', 0.2, 4, 5, key);   /* 같은 출처 2중첩 → 개수 뱃지 */
-    addBuff(G.player, 'aspd', 0.15, 4, 5, null); /* 출처 불명 → 스탯 폴백 아이콘 */
+    addBuff(G.player, 'atk', 0.2, 4, key);
+    addBuff(G.player, 'atk', 0.2, 4, key);   /* 같은 출처 2중첩 → 개수 뱃지 */
+    addBuff(G.player, 'aspd', 0.15, 4, null); /* 출처 불명 → 스탯 폴백 아이콘 */
     const ics = [...document.querySelectorAll('#buffBar .buff-ic:not(.ward-ic)')];   /* 방어막 뱃지는 시간제 버프가 아니라 제외 (T48) */
     const hud = document.getElementById('chapHud').getBoundingClientRect();
     const bar = document.getElementById('buffBar').getBoundingClientRect();
