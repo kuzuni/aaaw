@@ -41,18 +41,23 @@ function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a
 let RNG_GACHA=null;
 function setSeed(s){ const m=mulberry(s|0); Math.random=()=>m(); RNG_GACHA=mulberry((s^0x9E3779B9)|0); }
 const grand=()=>(RNG_GACHA||Math.random)();
+/* ⚑ 주인 확정 제약 (PLAN §2.4, 2026-09-02 14:2X) — 전 300 챕터 공통:
+   ① 적 총 수 ≤ 100 (보스 제외 웨이브 적 합) ② 쉼터 1~4 ③ 악마 정확히 1 ④ 천사 정확히 1.
+   가중치(45/30/25) 배치는 폐기 — 악마1·천사1 을 먼저 깔고 남는 슬롯을 전부 쉼터로 채운 뒤 순서만 시드 셔플한다. */
+const LAYOUT_MAXENEMY=100;
 function chapterLayout(c){
   const rnd=mulberry(c*1013904223+77);
-  const waveCount=4+(rnd()<0.4?1:0);
-  const size=rnd()<0.5?10:12;
-  const evs=[];
-  for(let i=0;i<waveCount-1;i++){
-    const r=rnd();
-    evs.push(r<0.45?'rest':(r<0.75?'devil':'angel'));
-  }
-  if(!evs.includes('rest')) evs[Math.floor(rnd()*evs.length)]='rest';
+  let waveCount=4+(rnd()<0.4?1:0);
+  let size=rnd()<0.5?10:12;
+  while(waveCount*size>LAYOUT_MAXENEMY&&size>10) size-=2;      /* ① 마릿수부터 줄이고 */
+  while(waveCount*size>LAYOUT_MAXENEMY&&waveCount>4) waveCount--; /* 그래도 넘치면 웨이브 수 */
+  const evs=['devil','angel'];                                  /* ③④ 정확히 하나씩 */
+  const rest=clamp(waveCount-3,1,4);                            /* ② 남는 슬롯 = 쉼터, 1~4 클램프 */
+  for(let i=0;i<rest;i++) evs.push('rest');
+  for(let i=evs.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); const t=evs[i]; evs[i]=evs[j]; evs[j]=t; }
   const out=[];
-  for(let i=0;i<waveCount;i++){ out.push({t:'wave',size}); if(i<waveCount-1) out.push({t:evs[i]}); }
+  for(let i=0;i<evs.length;i++){ out.push({t:'wave',size}); out.push({t:evs[i]}); }
+  out.push({t:'wave',size});
   out.push({t:'boss'});
   return out;
 }

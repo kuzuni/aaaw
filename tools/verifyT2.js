@@ -230,6 +230,73 @@ if (H) {
   thrown.length ? bad(`ap 실행 예외 ${thrown.length}건:\n    ` + thrown.join('\n    ')) : ok('102종 전부 예외 없이 적용됨');
 }
 
+/* ---------- ⑦ TUNE 상수 대조 (적 성장·벽·보스·경제·챕터 상한) ---------- */
+console.log('\n[⑦ TUNE 상수 — sim.js ↔ index.html 값 대조]');
+function tuneConsts(src) {
+  const m = src.match(/const TUNE\s*=\s*\{([\s\S]*?)\n\};/);
+  if (!m) return null;
+  const body = m[1].replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const out = {};
+  for (const mm of body.matchAll(/([A-Za-z_]\w*)\s*:\s*(-?\d+(?:\.\d+)?)\s*(?=,|$)/gm)) out[mm[1]] = Number(mm[2]);
+  return out;
+}
+const TS = tuneConsts(SIM), TH = tuneConsts(HTML);
+if (!TS || !TH) bad(`TUNE 리터럴 파싱 실패 (${!TS ? 'sim.js' : ''}${!TS && !TH ? ' / ' : ''}${!TH ? 'index.html' : ''}) — 게이트를 갱신할 것`);
+else {
+  /* index.html 은 장비·다이아 경제가 아직 없으므로 sim 쪽에만 있는 키가 있을 수 있다 — 공통 키만 값 대조하되,
+     아래 필수 키는 index.html 에 반드시 존재해야 한다 (없으면 이식 누락). */
+  const MUST = ['eBaseHp','eBaseDmg','eHpG','eDmgG','wallHp','wallDmg','wall2Hp','wall2Dmg','waveHp','waveDmg',
+                'wall3Hp','wall3Dmg','wall4Hp','wall4Dmg','bossHp','bossDmg','maxChapter',
+                'goldKillBase','goldKillPer','goldClearPer','goldGrowth','expKill','expBoss'];
+  const missing = MUST.filter(k => !(k in TH));
+  const diff = MUST.filter(k => k in TH && TS[k] !== TH[k]).map(k => `${k} sim=${TS[k]} html=${TH[k]}`);
+  missing.length ? bad(`index.html TUNE 누락 ${missing.length}개: ${missing.join(' ')}`) : ok(`필수 TUNE 상수 ${MUST.length}개 전부 존재`);
+  diff.length ? bad(`TUNE 값 불일치 ${diff.length}건: ${diff.join(' / ')}`) : ok(`TUNE 값 ${MUST.length}개 전수 일치 (보스 ×${TS.bossHp}·×${TS.bossDmg}, 챕터 ${TS.maxChapter})`);
+  if (TS.bossHp === 8 && TS.bossDmg === 1.8) ok('보스 = HP ×8 · DMG ×1.8 (주인 확정 상수, 07:3X)');
+  else bad(`보스 배수가 주인 확정값이 아니다 — HP ×${TS.bossHp} · DMG ×${TS.bossDmg} (확정: ×8 · ×1.8)`);
+  if (TS.maxChapter === 300) ok('챕터 상한 300 (PLAN §2.4)'); else bad(`챕터 상한이 ${TS.maxChapter} (확정: 300)`);
+}
+
+/* ---------- ⑧ chapterLayout — 두 파일이 같은 배치를 내놓는가 + 주인 확정 제약 ---------- */
+console.log('\n[⑧ 챕터 레이아웃 — 1:1 동일 + 주인 확정 제약 (PLAN §2.4, 14:2X)]');
+function loadLayout(src, label) {
+  const mul = src.split('\n').find(l => l.startsWith('function mulberry'));
+  const lines = src.split('\n');
+  const a = lines.findIndex(l => l.startsWith('const LAYOUT_MAXENEMY'));
+  const b = lines.findIndex((l, i) => i > a && l === '}');
+  if (!mul || a < 0 || b < 0) return null;
+  const code = mul + '\nconst clamp=(v,x,y)=>Math.max(x,Math.min(y,v));\n' + lines.slice(a, b + 1).join('\n') + '\n;chapterLayout';
+  try { return vm.runInNewContext(code, { Math }); } catch (e) { return null; }
+}
+const LS = loadLayout(SIM), LH = loadLayout(HTML);
+if (!LS || !LH) bad(`chapterLayout 추출 실패 (${!LS ? 'sim.js' : ''}${!LS && !LH ? ' / ' : ''}${!LH ? 'index.html' : ''}) — 게이트를 갱신할 것`);
+else {
+  const key = L => L.map(n => n.t === 'wave' ? 'w' + n.size : n.t[0]).join('>');
+  let mism = [], viol = [], maxE = 0, minE = 1e9;
+  for (let c = 1; c <= 300; c++) {
+    const A = LS(c), B = LH(c);
+    if (key(A) !== key(B)) { if (mism.length < 3) mism.push(`ch${c}: sim=${key(A)} html=${key(B)}`); else mism.push(''); }
+    const cnt = t => A.filter(n => n.t === t).length;
+    const tot = A.filter(n => n.t === 'wave').reduce((s, n) => s + n.size, 0);
+    minE = Math.min(minE, tot); maxE = Math.max(maxE, tot);
+    const why = [];
+    if (tot > 100) why.push(`적 ${tot}마리>100`);
+    if (cnt('devil') !== 1) why.push(`악마 ${cnt('devil')}개≠1`);
+    if (cnt('angel') !== 1) why.push(`천사 ${cnt('angel')}개≠1`);
+    if (cnt('rest') < 1 || cnt('rest') > 4) why.push(`쉼터 ${cnt('rest')}개(1~4 밖)`);
+    if (cnt('boss') !== 1 || A[A.length - 1].t !== 'boss') why.push('보스 배치 이상');
+    if (why.length && viol.length < 3) viol.push(`ch${c}: ${why.join(', ')}`);
+    else if (why.length) viol.push('');
+  }
+  const nm = mism.filter(Boolean);
+  mism.length ? bad(`두 파일 레이아웃 불일치 ${mism.length}챕터: ${nm.join(' / ')}`) : ok('챕터 1~300 레이아웃 전수 동일 (sim.js ↔ index.html)');
+  const nv = viol.filter(Boolean);
+  viol.length ? bad(`주인 확정 제약 위반 ${viol.length}챕터: ${nv.join(' / ')}`) : ok(`제약 4종 전수 만족 — 적 총수 ${minE}~${maxE}(≤100) · 쉼터 1~4 · 악마 1 · 천사 1`);
+  /* 가중치 배치 폐기 흔적: 45/30/25 잔재가 남아 있으면 안 된다 */
+  const legacy = /r<0\.45\?'rest'/;
+  (legacy.test(SIM) || legacy.test(HTML)) ? bad('폐기된 가중치(45/30/25) 배치 코드가 남아 있다') : ok('가중치(45/30/25) 배치 잔재 0');
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
