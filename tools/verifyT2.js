@@ -707,6 +707,92 @@ console.log('\n[⑭ 합성 화면 — 수동 3칸 선택 (PLAN §11.3, 스크린
     ? ok('장비 탭·합성 화면이 같은 invCellHTML 을 쓴다') : bad('두 화면이 인벤 칸을 따로 그린다 — 구도가 갈라진다');
 }
 
+/* ---------- ⑮ 장비 아이콘 — 인라인 SVG 18종 (참고: docs/ref/캐릭터 장비.jpg · T2 6단계) ---------- */
+/* 왜 게이트인가 — 아이콘은 «18계열이 화면에서 서로 구별되는가» 라는 요구를 지고 있다.
+   계열이 늘거나(장비 확장) 아이콘 하나를 지우면 그 칸이 조용히 빈 사각형이 되는데,
+   렌더 결과가 아니라 데이터라서 문법 검사(①)에도 안 걸린다. 여기서 18종 전수 + 마크업 유효성 +
+   중복 0 + «이모지로 되돌아가지 않았는가» 를 본다. */
+console.log('\n[⑮ 장비 아이콘 — 인라인 SVG 18종 (스크린샷 구도, 이모지 폐지)]');
+{
+  /* (1) 이모지로 되돌아가지 않았는가 */
+  /GT\.typeIcon\s*=/.test(HTML) ? bad('GT.typeIcon(이모지 표) 가 되살아났다 — 6단계에서 SVG 로 교체된 항목이다')
+    : ok('이모지 아이콘 표(GT.typeIcon) 폐지 상태 유지');
+  /GT\.typeSvg\s*=\s*\{/.test(HTML) ? ok('GT.typeSvg — 인라인 SVG 아이콘 표 존재') : bad('GT.typeSvg 가 없다 — 장비 칸이 빈다');
+  /function gearIcon\(t\)\{/.test(HTML) ? ok('gearIcon(type) — 아이콘 1개를 그리는 공용 함수')
+    : bad('gearIcon() 공용 함수가 없다 — 화면마다 아이콘 마크업이 갈라진다');
+  /\.gicon\{[^}]*width:1em[^}]*height:1em/.test(HTML)
+    ? ok('.gicon 크기가 1em — 칸의 font-size 가 그대로 크기 노브(인벤 22 · 결과 30 · 재료 19px)')
+    : bad('.gicon 이 1em 크기가 아니다 — 칸마다 아이콘 크기가 어긋난다');
+  /* (2) 아이콘을 쓰는 6개 지점이 전부 gearIcon 을 부른다 (한 곳이라도 빠지면 그 화면만 옛 표기) */
+  {
+    const SITES = [
+      ['장착 슬롯 카드(slotCardHTML)', /function slotCardHTML\(pt\)\{[\s\S]*?\n\}/],
+      ['인벤 칸(invCellHTML)', /function invCellHTML\(g,o\)\{[\s\S]*?\n\}/],
+      ['합성 재료·결과 칸(renderForge)', /function renderForge\(\)\{[\s\S]*?\n\}/],
+      ['장비 세부 팝업(openGearDetail)', /function openGearDetail\(u\)\{[\s\S]*?\n\}/],
+    ];
+    for (const [nm, re] of SITES) {
+      const m = HTML.match(re);
+      if (!m) { bad(`${nm} 을(를) 찾지 못했다 — 게이트를 갱신할 것`); continue; }
+      /gearIcon\(/.test(m[0]) ? ok(`${nm} 이 gearIcon() 을 쓴다`) : bad(`${nm} 이 아이콘을 그리지 않는다`);
+    }
+    /뽑기[\s\S]{0,4000}?gearIcon\(g\.type\)/.test(HTML) ? ok('뽑기 결과 목록도 gearIcon() 을 쓴다')
+      : bad('뽑기 결과에 장비 아이콘이 없다');
+  }
+  /* (3) 18계열 전수 + 마크업 유효성 + 중복 0 — GT.typeSvg 를 실제로 평가해서 본다 */
+  {
+    const mSvg = HTML.match(/GT\.typeSvg=\{[\s\S]*?\n\};/);
+    const mName = HTML.match(/typeName:\{[\s\S]*?\},/);
+    if (!mSvg || !mName) bad('GT.typeSvg / GT.typeName 을 읽지 못했다 — 게이트를 갱신할 것');
+    else {
+      const ctx = { GT: {} }; vm.createContext(ctx);
+      vm.runInContext(mSvg[0], ctx);
+      vm.runInContext('NAMES=({' + mName[0].replace(/^typeName:\{/, '').replace(/\},$/, '') + '})', ctx);
+      const svg = ctx.GT.typeSvg, names = Object.keys(ctx.NAMES);
+      const miss = names.filter(t => !svg[t]);
+      const extra = Object.keys(svg).filter(t => !names.includes(t));
+      names.length === 18 ? ok('계열 18종 (PLAN §11 — 부위 6 × 종류 3)') : bad(`계열이 18종이 아니다 (${names.length}종)`);
+      miss.length === 0 ? ok('18계열 전부 아이콘이 있다') : bad(`아이콘 없는 계열 ${miss.length}종: ${miss.join(',')}`);
+      extra.length === 0 ? ok('존재하지 않는 계열의 아이콘 없음') : bad(`계열에 없는 아이콘 ${extra.join(',')}`);
+      /* 마크업 유효성 — 태그 짝이 맞고, 좌표가 24×24 뷰박스를 벗어나지 않는가 */
+      let broke = 0, spill = 0, emo = 0;
+      for (const t of names) {
+        const s = svg[t] || '';
+        const stack = [];
+        for (const m of s.matchAll(/<(\/?)([a-zA-Z]+)[^>]*?(\/?)>/g)) {
+          if (m[3] === '/') continue;                       /* 자기 완결 태그 */
+          if (m[1] === '/') { if (stack.pop() !== m[2]) { broke++; break; } }
+          else stack.push(m[2]);
+        }
+        if (stack.length) broke++;
+        for (const d of s.matchAll(/\sd="([^"]*)"/g))
+          for (const n of d[1].match(/-?\d+(\.\d+)?/g) || []) if (+n < -0.5 || +n > 24.5) { spill++; break; }
+        if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(s)) emo++;
+      }
+      broke === 0 ? ok('아이콘 18종 마크업 태그 짝 정상') : bad(`태그 짝이 맞지 않는 아이콘 ${broke}종`);
+      spill === 0 ? ok('아이콘 좌표가 24×24 뷰박스 안') : bad(`뷰박스를 벗어난 아이콘 ${spill}종 — 칸에서 잘린다`);
+      emo === 0 ? ok('아이콘 마크업에 이모지 잔재 없음') : bad(`이모지가 남은 아이콘 ${emo}종`);
+      const uniq = new Set(names.map(t => norm(svg[t] || '')));
+      uniq.size === names.length ? ok(`아이콘 18종이 서로 다르다 (중복 0 — 계열 구별 가능)`)
+        : bad(`같은 그림을 쓰는 계열이 있다 (서로 다른 그림 ${uniq.size}종/${names.length}종)`);
+      /* 부위별 3종이 같은 부위 안에서도 갈라지는지 — 무기 3종이 같으면 «구별» 요구가 깨진다 */
+      const mParts = HTML.match(/types:\{[\s\S]*?\},\n/);
+      if (mParts) {
+        vm.runInContext('TYPES=({' + mParts[0].replace(/^types:\{/, '').replace(/\},\n$/, '') + '})', ctx);
+        let dup = 0;
+        for (const pt of Object.keys(ctx.TYPES)) {
+          const set = new Set(ctx.TYPES[pt].map(t => norm(svg[t] || '')));
+          if (set.size !== ctx.TYPES[pt].length) dup++;
+        }
+        dup === 0 ? ok('부위 6곳 모두 종류 3개가 서로 다른 그림') : bad(`같은 부위 안에서 그림이 겹치는 부위 ${dup}곳`);
+      }
+    }
+  }
+  /* (4) 표시 전용 — sim.js 는 아이콘을 모른다 (엔진 무관 = T1 회차 무효 사유 아님) */
+  /typeSvg|gearIcon/.test(SIM) ? bad('sim.js 에 아이콘이 새어 들어갔다 — 표시 메타는 게임 전용이다')
+    : ok('sim.js 무관 (표시 전용 메타 — 밸런스 영향 0)');
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');

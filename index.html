@@ -114,6 +114,9 @@
   .inv-cell .ptag,.fg-cell .ptag{position:absolute; top:-6px; left:-5px; font-size:8px; line-height:1.35; z-index:2;
     padding:1px 4px; border-radius:5px 5px 5px 0; color:#12121A; font-family:inherit;
     box-shadow:0 1px 0 rgba(0,0,0,.35);}
+  /* 장비 아이콘(인라인 SVG) — 크기는 담는 칸의 font-size 를 그대로 따른다(1em). T2 6단계 */
+  .gicon{display:inline-block; width:1em; height:1em; vertical-align:-.14em; flex:none;
+    filter:drop-shadow(0 1px 0 rgba(0,0,0,.35));}
   .inv-empty{grid-column:1/-1; text-align:center; color:var(--ink-dim); font-size:13px; padding:26px 10px; line-height:1.5;}
   /* ---------- 합성(대장간) 화면 — 참고: docs/ref/장비 합성 업글창.jpg ---------- */
   #forge{background:radial-gradient(120% 70% at 50% 0%, #35353E, #1E1E24 60%, #17171B);}
@@ -749,9 +752,78 @@ function buildPower(b){
 /* ---- 표시용 메타 (게임 전용 — sim.js 에는 없다) ---- */
 GT.rarColor=['#9AA3AF','#4FA3E3','#B96CE8','#F2C14E','#FF5FA2'];   /* 일반·희귀·영웅(보라 위임)·전설·신화 */
 GT.rarGlow =['rgba(154,163,175,.35)','rgba(79,163,227,.40)','rgba(185,108,232,.45)','rgba(242,193,78,.45)','rgba(255,95,162,.50)'];
-GT.typeIcon={greatsword:'🗡️',axe:'🪓',bow:'🏹',helmet:'⛑️',crown:'👑',hood:'🧥',
-  plate:'🛡️',chain:'⛓️',robe:'🥋',gauntlet:'🥊',leather:'🧤',handwrap:'✋',
-  sandal:'👡',boots:'🥾',greave:'👢',pendant:'📿',amulet:'🔮',beads:'🧿'};
+/* ⚑ T2 6단계 — 장비 아이콘: 이모지 → 인라인 SVG 아이콘 18종 (참고: docs/ref/캐릭터 장비.jpg).
+   스크린샷의 부위별 손그림을 «캡처 PNG·대용량 바이너리 커밋 금지» 규칙 안에서 재현하려면 외부 이미지가
+   아니어야 한다 → 24×24 뷰박스 인라인 SVG. 굵은 어두운 외곽선 + 납작한 단색 면 + 음영 1겹 구성으로
+   스크린샷 톤을 맞췄다. 크기 노브는 CSS 를 새로 만들지 않고 `width/height:1em` 으로 **기존 칸의
+   font-size**(인벤 22px · 합성 결과 30px · 재료칸 19px · 슬롯카드 22px)를 그대로 물려받는다. */
+GT.typeSvg={
+  /* --- 무기 --- */
+  greatsword:'<path d="M12 1.6 15.6 6.6V13.5H8.4V6.6Z" fill="#DCE3EC"/><path d="M12 1.6 15.6 6.6V13.5H12Z" fill="#A9B4C3" stroke="none"/>'+
+    '<path d="M5.5 13.5H18.5V16.4H5.5Z" fill="#E8B23C"/><path d="M10.5 16.4H13.5V20H10.5Z" fill="#7A4E24"/><circle cx="12" cy="20.9" r="1.8" fill="#E8B23C"/>',
+  axe:'<path d="M10.8 2.6H13.2V21.4H10.8Z" fill="#7A4E24"/><path d="M10.8 5.6 5.4 7.6 10.8 10.8Z" fill="#C9D2DC"/>'+
+    '<path d="M12.6 2.6C20.6 3.4 22.6 9.8 19.2 16L12.6 14.2C14.9 10.4 14.9 6.4 12.6 2.6Z" fill="#C9D2DC"/>'+
+    '<path d="M17.2 4.4C19.8 7.8 20.2 12 18.4 15.8L19.2 16C22.6 9.8 20.6 3.4 12.6 2.6Z" fill="#97A2B0" stroke="none"/>',
+  bow:'<path d="M7.6 2.4C15 6.4 15 17.6 7.6 21.6H9.8C16.8 17.4 16.8 6.6 9.8 2.4Z" fill="#8A5A2B"/>'+
+    '<path d="M8.4 3.1H9V20.9H8.4Z" fill="#E6E6EE" stroke-width=".8"/><path d="M4.6 11.2H15.6V12.8H4.6Z" fill="#C9A063"/>'+
+    '<path d="M20.2 12 15.2 9.3V14.7Z" fill="#DCE3EC"/><path d="M4.6 9.4 7.6 12 4.6 14.6Z" fill="#E05A5A"/>',
+  /* --- 투구 --- */
+  helmet:'<path d="M4.6 15.4A7.4 8.6 0 0 1 19.4 15.4Z" fill="#C9D2DC"/><path d="M12 6.8A7.4 8.6 0 0 1 19.4 15.4H12Z" fill="#A9B4C3" stroke="none"/>'+
+    '<circle cx="12" cy="5.8" r="1.9" fill="#4A86E8"/><path d="M7.6 11.2H16.4V13.8H7.6Z" fill="#2A2F3A"/><path d="M3 15.2H21V18.2H3Z" fill="#E1E8F0"/>',
+  crown:'<path d="M3.6 19V7.2L8 11.6 12 5.2 16 11.6 20.4 7.2V19Z" fill="#F0C040"/><path d="M3.6 19H20.4V21.6H3.6Z" fill="#D09A1E"/>'+
+    '<circle cx="12" cy="15.2" r="1.6" fill="#E0483F"/><circle cx="7" cy="16" r="1.1" fill="#4FA3E3"/><circle cx="17" cy="16" r="1.1" fill="#4FA3E3"/>',
+  hood:'<path d="M12 2.4C6.2 2.4 4.4 7.4 5.4 12.6L7 21.2H17L18.6 12.6C19.6 7.4 17.8 2.4 12 2.4Z" fill="#5D6B8A"/>'+
+    '<path d="M12 2.4C17.8 2.4 19.6 7.4 18.6 12.6L17 21.2H12Z" fill="#47536C" stroke="none"/><ellipse cx="12" cy="12.6" rx="3.6" ry="4.3" fill="#221C2C"/>',
+  /* --- 갑옷 --- */
+  plate:'<path d="M3.8 6.2C5.2 4 7.8 3.2 9.6 4.4L8.6 8.8 4.4 9.4Z" fill="#A9B4C3"/><path d="M20.2 6.2C18.8 4 16.2 3.2 14.4 4.4L15.4 8.8 19.6 9.4Z" fill="#A9B4C3"/>'+
+    '<path d="M8.8 4.2 12 6.4 15.2 4.2 16.6 12C16.6 17 14.4 20.4 12 21.6 9.6 20.4 7.4 17 7.4 12Z" fill="#C9D2DC"/>'+
+    '<path d="M12 6.4 15.2 4.2 16.6 12C16.6 17 14.4 20.4 12 21.6Z" fill="#A9B4C3" stroke="none"/>'+
+    '<path d="M7.7 10.4H16.3" stroke="#E8B23C" stroke-width="1.5"/>',
+  chain:'<path d="M3.8 6.2C5.2 4 7.8 3.2 9.6 4.4L8.6 8.8 4.4 9.4Z" fill="#6E7B8C"/><path d="M20.2 6.2C18.8 4 16.2 3.2 14.4 4.4L15.4 8.8 19.6 9.4Z" fill="#6E7B8C"/>'+
+    '<path d="M8.8 4.2 12 6.4 15.2 4.2 16.6 12C16.6 17 14.4 20.4 12 21.6 9.6 20.4 7.4 17 7.4 12Z" fill="#8E9AA8"/>'+
+    '<g fill="#5A6675" stroke="none"><circle cx="9.9" cy="9.4" r=".95"/><circle cx="12" cy="9.4" r=".95"/><circle cx="14.1" cy="9.4" r=".95"/>'+
+    '<circle cx="9.9" cy="12.6" r=".95"/><circle cx="12" cy="12.6" r=".95"/><circle cx="14.1" cy="12.6" r=".95"/>'+
+    '<circle cx="10.6" cy="15.8" r=".95"/><circle cx="13.4" cy="15.8" r=".95"/><circle cx="12" cy="18.6" r=".95"/></g>',
+  robe:'<path d="M12 2.8 15.8 4.6 19 21.4H5L8.2 4.6Z" fill="#4C6FBF"/><path d="M12 2.8 15.8 4.6 19 21.4H12Z" fill="#3A5699" stroke="none"/>'+
+    '<path d="M8.2 4.6 12 8.8 15.8 4.6 12 2.8Z" fill="#E6E6EE"/><path d="M6.9 13.2H17.1V15.4H6.9Z" fill="#7A4E24"/>',
+  /* --- 장갑 --- */
+  /* 건틀릿·가죽장갑은 «손가락 4 + 손바닥 + 엄지 + 소맷단» 실루엣(색·장식만 다르다), 핸드랩은 «감은 주먹» 이라 셋이 갈라진다 */
+  gauntlet:'<path d="M6.4 11H17.6A1.6 1.6 0 0 1 19.2 12.6V15.8A3 3 0 0 1 16.2 18.8H9.4A3 3 0 0 1 6.4 15.8Z" fill="#C9D2DC"/>'+
+    '<path d="M6.4 12.6H4.6A2 2 0 0 0 4.6 16.6H6.4Z" fill="#C9D2DC"/>'+
+    '<g fill="#DDE4EC"><path d="M7.4 12V6.6A1.2 1.2 0 0 1 9.8 6.6V12Z"/><path d="M10.2 12V4.8A1.2 1.2 0 0 1 12.6 4.8V12Z"/>'+
+    '<path d="M13 12V5.4A1.2 1.2 0 0 1 15.4 5.4V12Z"/><path d="M15.8 12V7.2A1.2 1.2 0 0 1 18.2 7.2V12Z"/></g>'+
+    '<path d="M7.6 18.4H17V21.4H7.6Z" fill="#A9B4C3"/><circle cx="12.3" cy="19.9" r=".9" fill="#E8B23C"/>',
+  leather:'<path d="M6.4 11H17.6A1.6 1.6 0 0 1 19.2 12.6V15.8A3 3 0 0 1 16.2 18.8H9.4A3 3 0 0 1 6.4 15.8Z" fill="#B4762F"/>'+
+    '<path d="M6.4 12.6H4.6A2 2 0 0 0 4.6 16.6H6.4Z" fill="#B4762F"/>'+
+    '<g fill="#C98A3E"><path d="M7.4 12V6.6A1.2 1.2 0 0 1 9.8 6.6V12Z"/><path d="M10.2 12V4.8A1.2 1.2 0 0 1 12.6 4.8V12Z"/>'+
+    '<path d="M13 12V5.4A1.2 1.2 0 0 1 15.4 5.4V12Z"/><path d="M15.8 12V7.2A1.2 1.2 0 0 1 18.2 7.2V12Z"/></g>'+
+    '<path d="M7.6 18.4H17V21.4H7.6Z" fill="#7A4E24"/><path d="M7.8 20H16.8" stroke="#5E3A16" stroke-width="1" stroke-dasharray="1.5 1.3"/>',
+  handwrap:'<path d="M6.4 9.4H15A3.4 3.4 0 0 1 18.4 12.8V15.8A4.2 4.2 0 0 1 14.2 20H9.8A3.4 3.4 0 0 1 6.4 16.6Z" fill="#E8DCC8"/>'+
+    '<path d="M6.4 12.6H4.2A1.8 1.8 0 0 0 4.2 16.2H6.4Z" fill="#E8DCC8"/>'+
+    '<path d="M8.4 9.6 6.6 13.4M12.4 9.4 10.4 13.6M16.2 10.4 14.4 14" stroke="#C4B294" stroke-width="1.6"/><path d="M5.4 5.4H13.6V9.4H5.4Z" fill="#D6C4A8"/>',
+  /* --- 신발 --- */
+  sandal:'<path d="M4 16.8H20A1.9 1.9 0 0 1 20 20.6H4A1.9 1.9 0 0 1 4 16.8Z" fill="#B98A50"/>'+
+    '<path d="M6.8 16.8 12.2 10.2M17.2 16.8 12.2 10.2M7.6 13.4H16.6" stroke="#7A4E24" stroke-width="2"/>'+
+    '<circle cx="12.2" cy="9.4" r="1.5" fill="#C9A063"/>',
+  boots:'<path d="M7.6 2.8H13.8V13.2L18.8 15.6V20.6H7.6Z" fill="#B4762F"/><path d="M7.2 2.6H14.4V5.4H7.2Z" fill="#E0CFAE"/>'+
+    '<path d="M7.6 18.2H19.2V20.8H7.6Z" fill="#4A3A2C"/>',
+  greave:'<path d="M8 2.4H14V13.4L18.8 15.8V20.6H8Z" fill="#5C6470"/><path d="M7.4 2.2H14.8V5.6H7.4Z" fill="#9AA6B4"/>'+
+    '<path d="M11 5.6V13.4" stroke="#8E9AA8" stroke-width="1.4"/><path d="M8 18.2H19.2V20.8H8Z" fill="#2E333C"/>',
+  /* --- 목걸이 --- */
+  pendant:'<path d="M5.6 3.2C5.6 12.6 18.4 12.6 18.4 3.2" stroke="#C9A040" stroke-width="1.8"/>'+
+    '<path d="M12 10 15.3 14.2 12 21.2 8.7 14.2Z" fill="#4FA3E3"/><path d="M12 10 15.3 14.2 12 21.2Z" fill="#2E7CB8" stroke="none"/>',
+  amulet:'<path d="M5.6 3.2C5.6 11.4 18.4 11.4 18.4 3.2" stroke="#C9A040" stroke-width="1.8"/>'+
+    '<circle cx="12" cy="15.8" r="4.6" fill="#E8B23C"/><circle cx="12" cy="15.8" r="2.2" fill="#B8801E"/>',
+  beads:'<g fill="#6FC7B6"><circle cx="5.6" cy="4.8" r="1.5"/><circle cx="4.6" cy="8.4" r="1.5"/><circle cx="4.6" cy="12.2" r="1.5"/>'+
+    '<circle cx="6" cy="15.4" r="1.5"/><circle cx="8.6" cy="17.6" r="1.5"/><circle cx="15.4" cy="17.6" r="1.5"/>'+
+    '<circle cx="18" cy="15.4" r="1.5"/><circle cx="19.4" cy="12.2" r="1.5"/><circle cx="19.4" cy="8.4" r="1.5"/><circle cx="18.4" cy="4.8" r="1.5"/></g>'+
+    '<circle cx="12" cy="18.9" r="2.4" fill="#E8B23C"/>',
+};
+/* 장비 아이콘 1개를 그린다. `GT.typeSvg` 에 없는 종류는 있을 수 없다(게이트 ⑮ 가 18종 전수를 본다). */
+function gearIcon(t){
+  return `<svg class="gicon" viewBox="0 0 24 24" aria-hidden="true">`+
+    `<g fill="none" stroke="#14141C" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">${GT.typeSvg[t]}</g></svg>`;
+}
 GT.lineName={greatsword:'검기',axe:'도끼 소환',bow:'화살 소환',helmet:'방어',crown:'치명타 확률',hood:'번개 소환',
   plate:'체력·피격',chain:'가시 반사',robe:'실드',gauntlet:'치명타 배율',leather:'공격속도',handwrap:'연타·분신',
   sandal:'회피',boots:'반격',greave:'체력',pendant:'회복',amulet:'처치',beads:'창 소환'};
@@ -993,7 +1065,7 @@ function slotCardHTML(pt){
   const g=equippedGear(pt), lv=save.slots[pt]|0;
   if(!g) return `<button class="slot-card empty" data-pt="${pt}"><span class="pt">${GT.partName[pt]}</span>➕<span class="lv">Lv.${lv}</span></button>`;
   return `<button class="slot-card" data-pt="${pt}" style="border-color:${GT.rarColor[g.rar]};box-shadow:0 0 10px ${GT.rarGlow[g.rar]}">`+
-    `<span class="pt">${GT.partName[pt]}</span>${GT.typeIcon[g.type]}<span class="lv">Lv.${lv}</span>`+
+    `<span class="pt">${GT.partName[pt]}</span>${gearIcon(g.type)}<span class="lv">Lv.${lv}</span>`+
     `${g.plus?`<span class="plus">+${g.plus}</span>`:''}</button>`;
 }
 function renderGear(){
@@ -1032,7 +1104,7 @@ function invCellHTML(g,o){
   return `<button class="inv-cell${o.cls?' '+o.cls:''}" data-u="${g.u}" `+
     `style="border-color:${GT.rarColor[g.rar]};background:linear-gradient(${GT.rarColor[g.rar]}55,${GT.rarColor[g.rar]}22)">`+
     `<span class="ptag" style="background:${GT.rarColor[g.rar]}">${GT.partName[g.part]}</span>`+
-    `${GT.typeIcon[g.type]}${g.plus?`<span class="plus">+${g.plus}</span>`:''}`+
+    `${gearIcon(g.type)}${g.plus?`<span class="plus">+${g.plus}</span>`:''}`+
     `${isEquipped(g)?'<span class="eqm">장착</span>':''}${o.fus?'<span class="fus">3</span>':''}</button>`;
 }
 $('fuseBtn').onclick=()=>{ AU.play('click'); openForge(); };
@@ -1056,7 +1128,7 @@ function renderForge(){
     const g=mats[i];
     if(!g) return `<button class="fg-cell empty" data-i="${i}">＋</button>`;
     return `<button class="fg-cell" data-i="${i}" style="border-color:${GT.rarColor[g.rar]};background:linear-gradient(${GT.rarColor[g.rar]}55,${GT.rarColor[g.rar]}22)">`+
-      `<span class="ptag" style="background:${GT.rarColor[g.rar]}">${GT.partName[g.part]}</span>${GT.typeIcon[g.type]}</button>`;
+      `<span class="ptag" style="background:${GT.rarColor[g.rar]}">${GT.partName[g.part]}</span>${gearIcon(g.type)}</button>`;
   }).join('');
   $('fgMats').querySelectorAll('.fg-cell').forEach(b=>b.onclick=()=>{
     const g=mats[+b.dataset.i]; if(!g) return;
@@ -1069,7 +1141,7 @@ function renderForge(){
     res.className='fg-slot';
     res.style.borderColor=GT.rarColor[made.rar];
     res.style.boxShadow=`0 0 14px ${GT.rarGlow[made.rar]}`;
-    res.innerHTML=`${GT.typeIcon[made.type]}${made.plus?`<span class="plus">+${made.plus}</span>`:''}`;
+    res.innerHTML=`${gearIcon(made.type)}${made.plus?`<span class="plus">+${made.plus}</span>`:''}`;
     $('fgBanner').innerHTML=`<div><b>${GT.rarName[made.rar]} ${GT.typeName[made.type]}</b>${made.plus?` <b>+${made.plus}</b>`:''}<br>`+
       `<span style="font-size:12px;color:var(--ink-dim)">재료 3개가 사라지고 위 장비 1개가 됩니다</span></div>`;
   }else{
@@ -1163,7 +1235,7 @@ function openGearDetail(u){
   const g=invById(u);
   if(!g){ closeOverlay(); return; }
   const lv=save.slots[g.part]|0, cost=GT.slotCost(lv), eqd=isEquipped(g);
-  openOverlay(`<div class="ov-banner" style="font-size:22px;color:${GT.rarColor[g.rar]}">${GT.typeIcon[g.type]} ${gearName(g)}${g.plus?` +${g.plus}`:''}</div>
+  openOverlay(`<div class="ov-banner" style="font-size:22px;color:${GT.rarColor[g.rar]}">${gearIcon(g.type)} ${gearName(g)}${g.plus?` +${g.plus}`:''}</div>
     <div class="ov-sub">${GT.partName[g.part]} · ${GT.lineName[g.type]} 계열 · 슬롯 Lv.${lv}</div>
     <div style="width:100%;text-align:left">
       ${gearContribHTML(g)}
@@ -1266,7 +1338,7 @@ function doPull(n){
     <div class="ov-sub">최고 등급 <b style="color:${GT.rarColor[best.rar]}">${GT.rarName[best.rar]}</b> · 빈 부위는 자동 장착됩니다</div>
     <div class="pull-list">${got.map(g=>
       `<div class="inv-cell" style="border-color:${GT.rarColor[g.rar]};box-shadow:0 0 9px ${GT.rarGlow[g.rar]};background:linear-gradient(${GT.rarColor[g.rar]}55,${GT.rarColor[g.rar]}22)">`+
-      `<span class="ptag" style="background:${GT.rarColor[g.rar]}">${GT.partName[g.part]}</span>${GT.typeIcon[g.type]}</div>`).join('')}</div>
+      `<span class="ptag" style="background:${GT.rarColor[g.rar]}">${GT.partName[g.part]}</span>${gearIcon(g.type)}</div>`).join('')}</div>
     <div style="font-size:12.5px;color:var(--ink-dim);line-height:1.5">${got.map(g=>`${GT.rarName[g.rar]} ${GT.typeName[g.type]}`).join(' · ')}</div>
     <button class="ghost-btn" id="pullClose">닫기</button>`,{rays:best.rar>=3});
   $('pullClose').onclick=()=>{ AU.play('click'); closeOverlay(); renderShop(); };
