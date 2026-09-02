@@ -99,6 +99,10 @@ const ENEMY_EVADE=0.10;
      그래서 엔진에서도 배수(`d*=2`)가 아니라 firstHit 과 같은 «가산 보너스 풀» 에 +1.00 을 더한다
      (execute·backDmg 같은 순수 배수 계열과는 여전히 곱 — 기존 밸런스를 건드리지 않기 위한 위임 판단). */
 const STUN_BOSS_MUL=1/3, STUN_LORD_MUL=2, STUN_LORD_DMG=1.6, MISS_STACK_CAP=5;
+/* ⚑ T1 회귀2 R02 — 신화 m_stunKill «충격파» 의 스턴 사거리. 종전에는 randTarget 과 같은 540 이라
+   «처치 = 화면 안 전부 기절» 이라 등급 고정 승률 1위(91.5%)였다. 등급 총량 하향의 일부로 절반(260)으로
+   줄였다 — 특전 텍스트에 사거리 숫자가 없어 문면은 그대로다(«사거리 안 모든 적»). index.html 도 같은 값. */
+const STUN_KILL_RANGE=260;
 /* ⚑ T48 3단계 — 횟수형 방어막 (주인 17:2X) · 회피 즉사 (주인 16:5X). 둘 다 위임 기본값이다.
    · WARD_CAP / WARD_CAP_KING — 방어막 «장수» 상한. 주인: «존나 쌓여서» → 기본 5장, 신화 변형 10장.
      수치형 실드와 완전히 별개 축이다 — 실드는 데미지를 «흡수» 하고 방어막은 타격 «1회» 를 통째로 무효화한다.
@@ -253,18 +257,18 @@ function mkPerks(){
   add('m_arsenal',3,p=>p.px.arsenal++);
   add('m_guard',3,p=>p.px.guardCrystal=true,1);
   add('m_autoBolt',3,p=>p.px.autoBolt++);
-  add('m_time',3,p=>{p.aspd*=1.21;p.walkMul+=0.21;});
+  add('m_time',3,p=>{p.aspd*=1.10;p.walkMul+=0.10;});
   add('m_axe3',3,p=>p.px.axeCount=1,1);
   add('m_arrow4',3,p=>p.px.arrowCount=1,1);
   add('m_spear200',3,p=>p.px.spearMaster=1,1);
   add('m_bolt3',3,p=>p.px.boltCount=1,1);
   add('m_wave4',3,p=>p.px.waveKing=1,1);
-  add('m_def20',3,p=>p.def+=8);
-  add('m_crit25',3,p=>p.critR+=9);
-  add('m_giant',3,p=>{const a=p.maxHp*0.16;p.maxHp+=a;heal(p,a,true);});
-  add('m_lucky',3,p=>{p.evade+=11;p.counter+=11;});
+  add('m_def20',3,p=>p.def+=5);
+  add('m_crit25',3,p=>p.critR+=10);
+  add('m_giant',3,p=>{const a=p.maxHp*0.15;p.maxHp+=a;heal(p,a,true);});
+  add('m_lucky',3,p=>{p.evade+=10;p.counter+=10;});
   add('m_choice4',3,p=>p.px.choice4=true,1);
-  add('m_fortress',3,p=>p.maxSh*=2.4);
+  add('m_fortress',3,p=>p.maxSh*=2.0);
   add('m_wallBuff',3,p=>p.px.wallBuff++);
   add('m_stunLord',3,p=>p.px.stunLord=true,1);
   add('m_stunKill',3,p=>p.px.stunKill=true,1);
@@ -386,9 +390,9 @@ const GOPT={
     {d:'피격 시 방어 +3 3초(누적)', ap:p=>p.px.defHitBuff++},
     {d:'방어 +8',               ap:p=>p.def+=8},
     {d:'피격 시 30% 확률 방어 +14 4초', ap:p=>p.px.defBuff2++},
-    {d:'피격 시 방어 +10 4초(최대 2중첩)', ap:p=>p.px.wallBuff++},
+    {d:'피격 시 방어 +5 4초(최대 2중첩)', ap:p=>p.px.wallBuff++},
     {d:'피격 시 20% 확률 방어 +15 4초', ap:p=>p.px.defBuffL++},
-    {d:'실드가 있으면 받는 피해 38% 감소', ap:p=>p.px.guardCrystal=true},
+    {d:'실드가 있으면 받는 피해 20% 감소', ap:p=>p.px.guardCrystal=true},
   ],
   crown:[ /* 치명타 확률 계열 */
     {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
@@ -404,7 +408,7 @@ const GOPT={
     {d:'공격 시 5% 확률 번개 1회', ap:p=>p.px.bolt++},
     {d:'치명타 시 치명 배율 +34 4초', ap:p=>p.px.critFBuff++},
     {d:'번개 2회로 증가',       ap:p=>p.px.boltCount=1},
-    {d:'2.4초마다 번개 자동 발사', ap:p=>p.px.autoBolt++},
+    {d:'3초마다 번개 자동 발사', ap:p=>p.px.autoBolt++},
     {d:'치명타 시 공격속도 +25% 3초', ap:p=>p.px.critAspdBuff++},
     {d:'공격 시 5% 확률 소환 무작위 발사', ap:p=>p.px.arsenal++},
   ],
@@ -719,7 +723,7 @@ function onKill(G,e){
   if(px.killDefBuff)addBuff(p,'def',10*px.killDefBuff,3,3);
   if(px.killAspd)p.aspd*=1.01;
   /* 신화 m_stunKill «충격파» — 처치 시 사거리 안의 남은 적 전부 스턴 (randTarget 과 같은 사거리 필터) */
-  if(px.stunKill)for(const e2 of aliveList(G)){const dx=e2.worldX-p.worldX;if(dx>-30&&dx<540)applyStun(G,e2,1.2);}
+  if(px.stunKill)for(const e2 of aliveList(G)){const dx=e2.worldX-p.worldX;if(dx>-30&&dx<STUN_KILL_RANGE)applyStun(G,e2,1.2);}
   /* 웨이브 전멸 실드 충전 폐지 (PLAN §2.3 주인 지시) — 실드 충전은 특전으로만 */
   if(e.isBoss)G.cleared=true;   /* 클리어 확정을 먼저 — 보스 경험치로 레벨업해도 특전 3택 없음 (PLAN §2.4 주인 지시) */
   gainExp(G,(e.isBoss?TUNE.expBoss:TUNE.expKill)+(px.sage?1:0));
@@ -754,7 +758,7 @@ function procOnMiss(G,e){
   if(px.missCrit)p.nextCrit=true;                                  /* 주인 필수 예시 ① */
   if(px.missStack)p.missStk=Math.min(MISS_STACK_CAP,p.missStk+1);  /* 주인 필수 예시 ② */
   if(px.missRush){p.atkTimer=0;p.nextAtk=Math.min(1.5,Math.max(p.nextAtk,1.0));}
-  if(px.missSpear&&pkk(p,0.30*px.missSpear))fireSpear(p);
+  if(px.missSpear&&pkk(p,0.20*px.missSpear))fireSpear(p);
 }
 /* ⚑ T48 3단계 — 횟수형 방어막 (주인 17:2X · PLAN §3.0).
    «공격 시 10% 확률로 적 공격 1회를 완전히 막아주는 방어막 1장» — 5장이면 5번 막는다.
@@ -774,7 +778,7 @@ function procOnRanged(G,src){
   if(px.rangeShield&&pkk(p,0.10*px.rangeShield))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.04);   /* ⚑ T1 R01 등급 내 재분배: 확률 20% → 10% (일반 1위 87.4% 하향) */
   if(px.rangeThorns&&src&&src.hp>0&&pkk(p,0.30*px.rangeThorns)){src.hp-=effDmg(p)*0.8;if(src.hp<=0)onKill(G,src);}
   if(px.rangeBolt&&pkk(p,0.30*px.rangeBolt)){const t=randTarget(G);if(t)summonHit(G,t,0.75);}
-  if(px.rangeSpear&&pkk(p,0.30*px.rangeSpear))fireSpear(p);
+  if(px.rangeSpear&&pkk(p,0.10*px.rangeSpear))fireSpear(p);
 }
 function dealDmg(G,e,ratio,fromBasic){
   if(e.hp<=0)return false;
@@ -919,26 +923,26 @@ function hitPlayer(G,dmg,isMelee,src){
     if(px.wardBurst&&src&&src.hp>0){src.hp-=effDmg(p)*3;if(src.hp<=0)onKill(G,src);}
   }
   let d=warded?0:dmg*(1-effDef(p)/100);
-  if(!warded&&px.guardCrystal&&p.sh>0)d*=0.62;
+  if(!warded&&px.guardCrystal&&p.sh>0)d*=0.80;
   if(!warded&&p.sh>0){const ab=Math.min(p.sh,d);p.sh-=ab;d-=ab;}
   if(d>0){
     p.hp-=d;
     if(p.hp<=0){
-      if(px.revive>0){px.revive--;p.hp=p.maxHp*0.07;p.sh=p.maxSh*0.07;}
+      if(px.revive>0){px.revive--;p.hp=p.maxHp*0.05;p.sh=p.maxSh*0.05;}
       else{p.hp=0;G.dead=true;return;}
     }
   }
   if(px.defHitBuff)addBuff(p,'def',3*px.defHitBuff,3,5);
   if(px.defBuff2&&pkk(p,0.30*px.defBuff2))addBuff(p,'def',14,4,3);
   if(px.defBuffL&&pkk(p,0.20*px.defBuffL))addBuff(p,'def',15,4,2);
-  if(px.wallBuff)addBuff(p,'def',10,4,2);
+  if(px.wallBuff)addBuff(p,'def',5,4,2);
   if(px.hitEvadeBuff&&pkk(p,0.22*px.hitEvadeBuff))addBuff(p,'evade',14,3,2);
   if(px.evadeHitBuff&&pkk(p,0.30*px.evadeHitBuff))addBuff(p,'evade',15,3,2);
   if(px.shieldOnHit&&pkk(p,0.05*px.shieldOnHit))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05);   /* ⚑ T1 R01 등급 내 재분배: 확률 10% → 5% (일반 3위 83.9% 하향 · 주인 «예외적 5% 허용» 단위) */
   if(px.hitHeal&&pkk(p,0.15*px.hitHeal))heal(p,p.maxHp*0.02);
   if(px.thornsS&&src&&src.hp>0&&pkk(p,0.30*px.thornsS)){src.hp-=dmg*0.70;if(src.hp<=0)onKill(G,src);}
   if(px.thorns&&src&&src.hp>0&&pkk(p,0.60*px.thorns)){src.hp-=dmg*1.5;if(src.hp<=0)onKill(G,src);}
-  if(px.thornsKing&&src&&src.hp>0){src.hp-=dmg*3;if(src.hp<=0)onKill(G,src);}
+  if(px.thornsKing&&src&&src.hp>0){src.hp-=dmg*1.5;if(src.hp<=0)onKill(G,src);}
   /* 피격 시 스턴 — 주인 필수 예시 «피격 시 (n% 확률로) 공격한 적 3초 스턴» (전설 l_stunHit3) */
   gainWard(p,0.08*px.wardHit);
   if(px.stunHitS&&src&&pkk(p,0.20*px.stunHitS))applyStun(G,src,1.5);  /* ⚑ T1 R01 등급 내 재분배(하위권 상향) */
@@ -956,7 +960,7 @@ function playerStrike(G,e){
   let ratio=1;
   if(p.nextAtk>0){ratio*=1+p.nextAtk;p.nextAtk=0;}
   const crit=dealDmg(G,e,ratio,true);
-  if(px.clone&&e.hp>0)dealDmg(G,e,0.37);
+  if(px.clone&&e.hp>0)dealDmg(G,e,0.25);
   if(crit&&px.extraHit&&pkk(p,0.75*px.extraHit)&&e.hp>0)dealDmg(G,e,2.3);
   procOnAttack(G);
 }
@@ -1009,7 +1013,7 @@ function perkChoice(G){
 function runChapter(chapter,build,opts){
   opts=opts||{};
   const G={chapter,player:null,nodes:[],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
-    perkChances:0,taken:[],legendOnly:false,refreshBonus:0,overBoltCd:0,autoBoltT:2,stunAuraT:2.5,stuns:0,misses:0,
+    perkChances:0,taken:[],legendOnly:false,refreshBonus:0,overBoltCd:0,autoBoltT:3,stunAuraT:2.5,stuns:0,misses:0,
     dead:false,cleared:false,t:0,atkTries:0,miss:0,   /* 적 회피 10% 실측용 (PLAN §2.3) */
     rarityLockOn:opts.rarityLock!==undefined,rarityLock:opts.rarityLock};
   const p=mkPlayer(build,G);G.player=p;p.G=G;
@@ -1078,9 +1082,9 @@ function runChapter(chapter,build,opts){
     const dist=tgt.worldX-p.worldX;
     if(dist>74){p.worldX+=132*p.walkMul*dt;p.atkTimer=Math.min(p.atkTimer,0.35);}
     else{p.atkTimer-=dt*effAspd(p);if(p.atkTimer<=0){p.atkTimer+=1;playerStrike(G,tgt);}}
-    if(p.px.autoBolt){G.autoBoltT-=dt;if(G.autoBoltT<=0){G.autoBoltT=2.4;for(let k=0;k<p.px.autoBolt;k++){const t2=randTarget(G);if(t2)summonHit(G,t2,0.75);}}}
+    if(p.px.autoBolt){G.autoBoltT-=dt;if(G.autoBoltT<=0){G.autoBoltT=3;for(let k=0;k<p.px.autoBolt;k++){const t2=randTarget(G);if(t2)summonHit(G,t2,0.75);}}}
     /* 신화 m_stunAura «위압» — 2.5초마다 랜덤 적 1명 스턴 (중첩 시 횟수 +1. autoBolt 와 같은 구조) */
-    if(p.px.stunAura){G.stunAuraT-=dt;if(G.stunAuraT<=0){G.stunAuraT=2.5;for(let k=0;k<p.px.stunAura;k++){const t3=randTarget(G);if(t3)applyStun(G,t3,2.5);}}}
+    if(p.px.stunAura){G.stunAuraT-=dt;if(G.stunAuraT<=0){G.stunAuraT=5;for(let k=0;k<p.px.stunAura;k++){const t3=randTarget(G);if(t3)applyStun(G,t3,2.5);}}}
     /* 적 */
     for(const e of alive){
       if(e.hp<=0)continue;

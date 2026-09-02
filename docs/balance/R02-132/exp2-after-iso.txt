@@ -1,0 +1,39 @@
+
+=== 실험2: 특전별 기여도 (챕터30, 하니스 희귀 6부위 · 슬롯 8렙, 12000판) ===
+전체 클리어율: 64.1%
+-- 상위 12 --
+  m_autoBolt(신) 86% (606판)
+  r_evadeShield(희) 85% (862판)
+  l_killShield10(전) 82% (1128판)
+  m_stunKill(신) 81% (611판)
+  l_stunHit3(전) 80% (1175판)
+  c_killShield3(일) 78% (918판)
+  m_rangeSpear(신) 78% (584판)
+  r_killDef(희) 78% (906판)
+  r_ward(희) 77% (886판)
+  m_clone(신) 77% (613판)
+  l_spear(전) 77% (1126판)
+  m_lucky(신) 76% (597판)
+-- 하위 12 --
+  c_sh15(일) 56% (932판)
+  r_refresh(희) 56% (890판)
+  l_overBolt(전) 56% (1117판)
+  c_atkBuff(일) 56% (989판)
+  l_stunCrit3(전) 55% (1118판)
+  c_missAtk(일) 55% (967판)
+  r_counterAtkM(희) 55% (870판)
+  m_wardBurst(신) 55% (563판)
+  m_axe3(신) 54% (591판)
+  r_stunCrit(희) 54% (880판)
+  c_critF(일) 54% (976판)
+  m_choice4(신) 54% (586판)
+-- 등급별 스프레드 (표본 25판 이상만) --
+  일반: 최상 c_killShield3 77.9% / 최하 c_critF 54.1% → 폭 23.8%p OK
+  희귀: 최상 r_evadeShield 84.6% / 최하 r_stunCrit 54.3% → 폭 30.3%p 초과
+  전설: 최상 l_killShield10 82.4% / 최하 l_stunCrit3 55.1% → 폭 27.3%p 초과
+  신화: 최상 m_autoBolt 85.6% / 최하 m_choice4 54.1% → 폭 31.5%p 초과
+-- [진단] 등급별 전 특전 승률 (표본 25판 이상, 내림차순) --
+  [일반] c_killShield3 78%(918) · c_rangeShield 71%(928) · c_shieldHit 71%(970) · c_killHeal2 71%(925) · c_evadeEv 71%(1000) · c_evadeDef 70%(954) · c_critHeal1 68%(991) · c_defHit 66%(962) · c_def3 66%(984) · c_hp12 66%(979) · c_wardHit 65%(968) · c_hitHeal 65%(971) · c_firstHit 64%(967) · c_stunHit 63%(945) · c_missDef 62%(910) · c_wardEvade 60%(950) · c_hitCounterS 60%(954) · c_atkPerm 59%(936) · c_evadeAspd 59%(995) · c_healDef 58%(934) · c_healShield 57%(1029) · c_counterAtk 57%(957) · c_critChain 57%(915) · c_healBoost 56%(989) · c_counterDef 56%(968) · c_aspdBuff 56%(967) · c_thornsS 56%(989) · c_sh15 56%(932) · c_atkBuff 56%(989) · c_missAtk 55%(967) · c_critF 54%(976)
+  [희귀] r_evadeShield 85%(862) · r_killDef 78%(906) · r_ward 77%(886) · r_defBuff2 74%(904) · r_restHp 74%(876) · r_aspdKill 69%(906) · r_critHeal3 69%(878) · r_evadeHeal 68%(900) · r_lastStand 68%(923) · r_wave 66%(932) · r_rangeThorns 65%(901) · r_def6 65%(896) · r_arrow 64%(901) · r_evadeRush 64%(896) · r_healShield5 64%(901) · r_hitEvade 63%(901) · r_atkBuffM 63%(914) · r_axe 61%(922) · r_killCrit 61%(888) · r_critReset 60%(901) · r_aspdStack10 60%(933) · r_missReset 60%(942) · r_hitCounter 59%(927) · r_wardCrit 59%(894) · r_critFBuff 58%(880) · r_counterCrit 58%(887) · r_healAmp 57%(856) · r_missAspd 56%(905) · r_counterX 56%(889) · r_healAtk 56%(884) · r_refresh 56%(890) · r_counterAtkM 55%(870) · r_stunCrit 54%(880)
+  [전설] l_killShield10 82%(1128) · l_stunHit3 80%(1175) · l_spear 77%(1126) · l_misfire 75%(1164) · l_evadeAtk 75%(1136) · l_atkBuffL 75%(1134) · l_fullHpCrit 75%(1197) · l_def10 74%(1124) · l_perkHp 73%(1133) · l_evadeCounter 72%(1179) · l_rage 71%(1102) · l_killHeal5 71%(1160) · l_killAspd 71%(1130) · l_rangeBolt 68%(1079) · l_evadeCrit 67%(1123) · l_counterHeal 67%(1108) · l_critAspd 66%(1150) · l_defBuffL 66%(1115) · l_thorns 66%(1140) · l_evadeHitBuff 65%(1141) · l_counterWave 63%(1084) · l_critAtk 62%(1106) · l_missStack 61%(1146) · l_legendOnly 61%(1107) · l_execute 61%(1168) · l_extraHit 61%(1185) · l_bolt 60%(1144) · l_overheal 59%(1085) · l_missCrit 58%(1122) · l_counterChain 58%(1109) · l_backDmg 56%(1120) · l_overBolt 56%(1117) · l_stunCrit3 55%(1118)
+  [신화] m_autoBolt 86%(606) · m_stunKill 81%(611) · m_rangeSpear 78%(584) · m_clone 77%(613) · m_lucky 76%(597) · m_revive 74%(608) · m_missRush 74%(639) · m_wallBuff 71%(635) · m_guard 71%(567) · m_execKill 70%(582) · m_thornsKing 70%(570) · m_giant 69%(607) · m_crit25 69%(590) · m_arsenal 69%(581) · m_stunAura 68%(597) · m_def20 66%(580) · m_missSpear 64%(608) · m_time 64%(583) · m_procX2 61%(575) · m_stunLord 60%(626) · m_reaper 58%(582) · m_bolt3 58%(616) · m_spear200 57%(602) · m_arrow4 57%(626) · m_fortress 57%(623) · m_wardKing 57%(616) · m_stackMaster 57%(604) · m_wave4 56%(615) · m_wardBurst 55%(563) · m_axe3 54%(591) · m_choice4 54%(586)

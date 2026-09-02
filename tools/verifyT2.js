@@ -170,20 +170,33 @@ const FORMULAS = [
   ['처형(execute) 배수', /execute&&e\.hp<=e\.maxHp\*0\.5\)d\*=2\.2/, /execute&&e\.hp<=e\.maxHp\*0\.5\)\s*d\*=2\.2/],
   ['배후(backDmg) 배수', /front&&e!==front\)d\*=3\.2/, /front&&e!==front\)\s*d\*=3\.2/],
   ['처형자(execKill) 임계', /execKill&&!e\.isBoss&&e\.hp>0&&e\.hp<=e\.maxHp\*0\.25/, /execKill&&!e\.isBoss&&e\.hp>0&&e\.hp<=e\.maxHp\*0\.25/],
-  ['수호의 결정 감쇄', /guardCrystal&&p\.sh>0\)d\*=0\.62/, /guardCrystal&&p\.sh>0\)\s*d\*=0\.62/],
-  ['부활 회복률', /revive--;p\.hp=p\.maxHp\*0\.07;p\.sh=p\.maxSh\*0\.07/, /revive--;[\s\S]{0,40}p\.hp=p\.maxHp\*0\.07;\s*p\.sh=p\.maxSh\*0\.07/],
+  ['수호의 결정 감쇄', /guardCrystal&&p\.sh>0\)d\*=([\d.]+)/, v => new RegExp(`guardCrystal&&p\\.sh>0\\)\\s*d\\*=${numRe(v)}`)],
+  ['부활 회복률', /revive--;p\.hp=p\.maxHp\*([\d.]+);p\.sh=p\.maxSh\*([\d.]+)/, (a,b) => new RegExp(`revive--;[\\s\\S]{0,40}p\\.hp=p\\.maxHp\\*${numRe(a)};\\s*p\\.sh=p\\.maxSh\\*${numRe(b)}`)],
   ['가시(thorns) 확률·계수', /thorns&&src&&src\.hp>0&&pkk\(p,0\.60\*px\.thorns\)/, /thorns&&src&&src\.hp>0&&pkk\(p,0\.60\*px\.thorns\)/],
   ['반격 피해 계수', /effDmg\(p\)\*0\.7\*\(1\+px\.counterX\)/, /effDmg\(p\)\*0\.7\*\(1\+px\.counterX\)/],
   ['추가타(extraHit) 확률·배수', /extraHit&&pkk\(p,0\.75\*px\.extraHit\)&&e\.hp>0\)dealDmg\(G,e,2\.3\)/, /extraHit&&pkk\(p,0\.75\*px\.extraHit\)&&e\.hp>0\)\s*dealPlayerDamage\(e,2\.3/],
-  ['분신(clone) 계수', /clone&&e\.hp>0\)dealDmg\(G,e,0\.37\)/, /clone&&e\.hp>0\)\s*dealPlayerDamage\(e,0\.37/],
+  ['분신(clone) 계수', /clone&&e\.hp>0\)dealDmg\(G,e,([\d.]+)\)/, v => new RegExp(`clone&&e\\.hp>0\\)\\s*dealPlayerDamage\\(e,${numRe(v)}`)],
   ['초과회복→실드 계수', /overheal\)\s*p\.sh=Math\.min\(p\.maxSh,p\.sh\+over\*7\)/, /overheal\)\s*p\.sh=Math\.min\(p\.maxSh,p\.sh\+over\*7\)/],
-  ['뇌신 주기', /autoBoltT=2\.4/, /autoBoltT=2\.4/],
+  ['뇌신 주기', /autoBoltT=([\d.]+)/, v => new RegExp(`autoBoltT=${numRe(v)}`)],
+  /* ⚑ T1 회귀2 R02 신설 — 충격파(m_stunKill) 스턴 사거리. 특전 문면에 숫자가 없는 «문면 무변» 노브라
+     문자열 대조(②)로는 잡히지 않는다. 상수 값이 두 파일에서 같은지 + 두 엔진이 리터럴이 아니라
+     그 상수를 실제로 쓰는지를 함께 본다(한쪽만 540 으로 되돌리면 빨개진다). */
+  ['충격파 스턴 사거리 상수', /const STUN_KILL_RANGE=([\d.]+)/, v => new RegExp(`const STUN_KILL_RANGE=${numRe(v)}`)],
+  ['충격파 스턴 사거리 적용', /stunKill\)\s*for\(const e2 of aliveList\(G\)\)\{const dx=e2\.worldX-p\.worldX;if\(dx>-30&&dx<STUN_KILL_RANGE\)/, /stunKill\)\s*for\(const e2 of aliveEnemies\(\)\)\{\s*const dx=e2\.worldX-p\.worldX;\s*if\(dx>-30&&dx<STUN_KILL_RANGE\)/],
   ['등급 굴림 확률', /r<0\.15\?3\s*:\s*r<0\.40\?2\s*:\s*r<0\.70\?1\s*:\s*0/, /r<0\.15\?3\s*:\s*r<0\.40\?2\s*:\s*r<0\.70\?1\s*:\s*0/],
   ['👼 전설이상 신화 비율', /legendOnly\)\s*return Math\.random\(\)<0\.375\?3:2/, /legendOnly\)\s*return Math\.random\(\)<0\.375\?3:2/],
   ['경험치 요구식', /expNeed:lv=>4\+4\*lv/, /expNeed=lv=>4\+4\*lv/],
 ];
+/* ⚑ T1 회귀2 R02 — 세 번째 칸이 «함수» 면 sim.js 에서 뽑은 값을 넣어 index.html 쪽 정규식을 만든다.
+   종전에는 양쪽에 같은 «숫자» 를 박아 둬서 밸런스 튜닝을 할 때마다 게이트가 빨개졌고(이번 회차 4건),
+   그때마다 게이트를 손대면 «게이트가 엔진을 따라가는» 꼴이라 대조 능력이 떨어진다.
+   값 추출형은 «두 파일의 값이 같은가» 만 보므로 튜닝과 무관하고, 한쪽만 고치면 여전히 빨개진다. */
+const numRe = v => String(v).replace(/\./g, '\\.');
 for (const [name, reSim, reHtml] of FORMULAS) {
-  const a = reSim.test(SIM), b = reHtml.test(HTML);
+  const m = SIM.match(reSim);
+  const a = !!m;
+  const rh = typeof reHtml === 'function' ? (a ? reHtml(...m.slice(1)) : null) : reHtml;
+  const b = rh ? rh.test(HTML) : false;
   if (a && b) ok(name);
   else if (!a && !b) bad(`${name} — 양쪽 다 파싱 실패 (코드 모양이 바뀌었다 — 게이트를 갱신할 것)`);
   else bad(`${name} — ${a ? 'index.html' : 'sim.js'} 쪽에서 찾지 못했다`);
@@ -2371,7 +2384,7 @@ console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
   /* «(Rnn↑)»·«(Rnn↓)»·«(Tnn↑)»·«(Tnn↓)» 는 PLAN 쪽 튜닝 이력 주석이지 표시 문자열이 아니다 — 그것만 면제한다.
      (T78 이 회차(R) 밖에서 소환 발수를 내리면서 «(T78↓)» 표기가 생겼다 — 같은 성격이라 같이 면제한다.)
      그 밖의 모든 글자·숫자·괄호는 화면과 한 글자도 다르면 안 된다. */
-  const norm = t => t.replace(/\s*\([RT]\d+[↑↓]\)\s*/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, '').trim();
+  const norm = t => t.replace(/\s*\([RT]\d+[↑↓](?:·[RT]\d+[↑↓])*\)\s*/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, '').trim();
   /* ⚑ 화면 문자열을 게이트가 «다시 적지» 않는다 — index.html 이 실제로 쓰는 perkText 정의를
      그대로 꺼내 실행한다. 게이트가 규칙을 복사해 두면 페이지에서 그 규칙이 사라져도 ② 는
      자기 복사본으로 계산해 통과한다(음성 ① 이 그 구멍을 찾았다). */
