@@ -168,8 +168,8 @@ function mkPerks(){
   add('c_healShield',0,p=>p.px.healShield3++);
   add('c_firstHit',0,p=>p.px.firstHit++);
   add('c_hp12',0,p=>{const a=p.maxHp*0.12;p.maxHp+=a;heal(p,a,true);});
-  add('c_sh15',0,p=>p.maxSh*=1.15);
-  add('c_def3',0,p=>p.def+=3);
+  add('c_sh15',0,p=>p.maxSh*=1.20);
+  add('c_def3',0,p=>p.def+=5);
   add('c_stunHit',0,p=>p.px.stunHitS++);
   add('c_missAtk',0,p=>p.px.missAtk++);
   add('c_missDef',0,p=>p.px.missDef++);
@@ -415,7 +415,7 @@ const GOPT={
     {d:'최대 체력 +10%',        ap:p=>{const a=p.maxHp*0.10;p.maxHp+=a;heal(p,a,true);}},
     {d:'피격 시 22% 확률 회피 +14 3초', ap:p=>p.px.hitEvadeBuff++},
     {d:'최대 체력 +12%',        ap:p=>{const a=p.maxHp*0.12;p.maxHp+=a;heal(p,a,true);}},
-    {d:'피격 시 10% 확률 실드 5% 충전', ap:p=>p.px.shieldOnHit++},
+    {d:'피격 시 5% 확률 실드 5% 충전', ap:p=>p.px.shieldOnHit++},
     {d:'사망 시 1회 부활',       ap:p=>p.px.revive++},
   ],
   chain:[ /* 가시 계열 */
@@ -439,7 +439,7 @@ const GOPT={
   /* 장갑 */
   gauntlet:[ /* 치명타 배율 계열 */
     {d:'치명타 배율 +30',       ap:p=>p.critF+=30},
-    {d:'치명타 시 치명 배율 +10 3초', ap:p=>p.px.critFsmall++},
+    {d:'치명타 시 치명 배율 +20 3초', ap:p=>p.px.critFsmall++},
     {d:'치명타 배율 +40',       ap:p=>p.critF+=40},
     {d:'치명타 시 30% 확률 체력 4% 회복', ap:p=>p.px.critHeal3++},
     {d:'치명타 배율 +50',       ap:p=>p.critF+=50},
@@ -712,7 +712,7 @@ function onKill(G,e){
   G.kills++;
   G.gold+=Math.round(TUNE.goldKill(G.chapter)*p.goldMul);
   if(p.killHeal>0)heal(p,p.maxHp*p.killHeal);
-  if(px.killShield3)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.007*px.killShield3);
+  if(px.killShield3)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.005*px.killShield3);   /* ⚑ T1 R01 등급 내 재분배: 0.007 → 0.005 (일반 2위 85.0% 하향) */
   if(px.killShield10)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.0075*px.killShield10);
   if(px.aspdKill)addBuff(p,'aspd',0.20*px.aspdKill,4,3);
   if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff))addBuff(p,'critR',14,4,3);
@@ -747,8 +747,8 @@ function applyStun(G,e,sec){
 function procOnMiss(G,e){
   const p=G.player,px=p.px;
   G.misses=(G.misses||0)+1;
-  if(px.missAtk)addBuff(p,'atk',0.06*px.missAtk,3,5);
-  if(px.missDef)addBuff(p,'def',6*px.missDef,3,3);
+  if(px.missAtk)addBuff(p,'atk',0.10*px.missAtk,3,5);   /* ⚑ T1 R01 등급 내 재분배: +6% → +10% (일반 하위 60.4% 상향 · 숫자 청결 5% 단위) */
+  if(px.missDef)addBuff(p,'def',10*px.missDef,3,3);  /* ⚑ T1 R01 등급 내 재분배(하위권 상향) */
   if(px.missAspd)addBuff(p,'aspd',0.12*px.missAspd,2,3);
   if(px.missReset&&pkk(p,0.30*px.missReset))p.atkTimer=0;
   if(px.missCrit)p.nextCrit=true;                                  /* 주인 필수 예시 ① */
@@ -771,7 +771,7 @@ function gainWard(p,ch){
    원거리 피격은 둘 다 굴린다(주인 위임 기본값). 회피에 성공하면 «맞은» 것이 아니라 굴리지 않는다. */
 function procOnRanged(G,src){
   const p=G.player,px=p.px;
-  if(px.rangeShield&&pkk(p,0.20*px.rangeShield))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.04);
+  if(px.rangeShield&&pkk(p,0.10*px.rangeShield))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.04);   /* ⚑ T1 R01 등급 내 재분배: 확률 20% → 10% (일반 1위 87.4% 하향) */
   if(px.rangeThorns&&src&&src.hp>0&&pkk(p,0.30*px.rangeThorns)){src.hp-=effDmg(p)*0.8;if(src.hp<=0)onKill(G,src);}
   if(px.rangeBolt&&pkk(p,0.30*px.rangeBolt)){const t=randTarget(G);if(t)summonHit(G,t,0.75);}
   if(px.rangeSpear&&pkk(p,0.30*px.rangeSpear))fireSpear(p);
@@ -807,11 +807,11 @@ function dealDmg(G,e,ratio,fromBasic){
   if(p.steal>0)heal(p,d*p.steal/100);
   if(crit){
     if(px.critChain)addBuff(p,'critR',5*px.critChain,3,5);
-    if(px.critFsmall)addBuff(p,'critF',10*px.critFsmall,3,3);
+    if(px.critFsmall)addBuff(p,'critF',20*px.critFsmall,3,3);   /* ⚑ T1 R01 등급 내 재분배: +10 → +20 (일반 최하 58.5% 상향) */
     if(px.critFBuff)addBuff(p,'critF',34*px.critFBuff,4,3);
     if(px.critAtkBuff)addBuff(p,'atk',0.15*px.critAtkBuff,4,3);
     if(px.critAspdBuff)addBuff(p,'aspd',0.25*px.critAspdBuff,3,3);
-    if(px.critHealS&&pkk(p,0.20*px.critHealS))heal(p,p.maxHp*0.01);
+    if(px.critHealS&&pkk(p,0.20*px.critHealS))heal(p,p.maxHp*0.05);  /* ⚑ T1 R01 등급 내 재분배(하위권 상향) */
     if(px.critHeal3&&pkk(p,0.30*px.critHeal3))heal(p,p.maxHp*0.04);
     if(px.critReset&&pkk(p,0.45*px.critReset))p.atkTimer=0;
     if(px.stunCritM&&pkk(p,0.15*px.stunCritM))applyStun(G,e,2.0);
@@ -877,7 +877,7 @@ function doCounter(G,src,depth){
   const cd=effDmg(p)*0.7*(1+px.counterX);
   src.hp-=cd;
   if(px.counterAtkS)addBuff(p,'atk',0.05*px.counterAtkS,3,3);
-  if(px.counterDefS)addBuff(p,'def',8*px.counterDefS,3,3);
+  if(px.counterDefS)addBuff(p,'def',10*px.counterDefS,3,3);  /* ⚑ T1 R01 등급 내 재분배(하위권 상향) */
   if(px.counterAtkM)addBuff(p,'atk',0.14*px.counterAtkM,4,3);
   if(px.counterCrit)addBuff(p,'critR',14,3,3);
   if(px.counterHeal)heal(p,p.maxHp*0.04*px.counterHeal);
@@ -895,13 +895,13 @@ function hitPlayer(G,dmg,isMelee,src){
   const p=G.player,px=p.px;
   if(Math.random()*100<effEvade(p)){
     if(px.evadeEvBuff)addBuff(p,'evade',8*px.evadeEvBuff,3,3);
-    if(px.evadeAspd)addBuff(p,'aspd',0.05,2,3);
-    if(px.evadeDef)addBuff(p,'def',5*px.evadeDef,3,3);
+    if(px.evadeAspd)addBuff(p,'aspd',0.10,2,3);   /* ⚑ T1 R01 등급 내 재분배: +5% → +10% (일반 하위 61.4% 상향) */
+    if(px.evadeDef)addBuff(p,'def',10*px.evadeDef,3,3);  /* ⚑ T1 R01 등급 내 재분배(하위권 상향) */
     if(px.evadeAtkBuff)addBuff(p,'atk',0.28*px.evadeAtkBuff,5,3);
     if(px.evadeRush&&p.nextAtk<1.5)p.nextAtk=Math.min(1.5,p.nextAtk+0.5*px.evadeRush);
     if(px.evadeCrit)p.nextCrit=true;
     if(px.evadeHeal&&pkk(p,0.15*px.evadeHeal))heal(p,p.maxHp*0.07);
-    if(px.evadeShield&&pkk(p,0.15*px.evadeShield))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.14);
+    if(px.evadeShield&&pkk(p,0.15*px.evadeShield))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.10);   /* ⚑ T1 R01 등급 내 재분배: 수리 14% → 10% (희귀 1위 87.9% 하향 · 숫자 청결 5% 단위) */
     if(px.evadeCounter&&pkk(p,1.0*px.evadeCounter))doCounter(G,src);
     if(px.evadeAxe&&pkk(p,0.10*px.evadeAxe))fireAxe(p);   /* 장비 계열 옵션(샌들) — 주인 예시 */
     gainWard(p,0.10*px.wardEvade);
@@ -934,20 +934,20 @@ function hitPlayer(G,dmg,isMelee,src){
   if(px.wallBuff)addBuff(p,'def',10,4,2);
   if(px.hitEvadeBuff&&pkk(p,0.22*px.hitEvadeBuff))addBuff(p,'evade',14,3,2);
   if(px.evadeHitBuff&&pkk(p,0.30*px.evadeHitBuff))addBuff(p,'evade',15,3,2);
-  if(px.shieldOnHit&&pkk(p,0.10*px.shieldOnHit))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05);
+  if(px.shieldOnHit&&pkk(p,0.05*px.shieldOnHit))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05);   /* ⚑ T1 R01 등급 내 재분배: 확률 10% → 5% (일반 3위 83.9% 하향 · 주인 «예외적 5% 허용» 단위) */
   if(px.hitHeal&&pkk(p,0.15*px.hitHeal))heal(p,p.maxHp*0.02);
-  if(px.thornsS&&src&&src.hp>0&&pkk(p,0.30*px.thornsS)){src.hp-=dmg*0.5;if(src.hp<=0)onKill(G,src);}
+  if(px.thornsS&&src&&src.hp>0&&pkk(p,0.30*px.thornsS)){src.hp-=dmg*0.70;if(src.hp<=0)onKill(G,src);}
   if(px.thorns&&src&&src.hp>0&&pkk(p,0.60*px.thorns)){src.hp-=dmg*1.5;if(src.hp<=0)onKill(G,src);}
   if(px.thornsKing&&src&&src.hp>0){src.hp-=dmg*3;if(src.hp<=0)onKill(G,src);}
   /* 피격 시 스턴 — 주인 필수 예시 «피격 시 (n% 확률로) 공격한 적 3초 스턴» (전설 l_stunHit3) */
   gainWard(p,0.08*px.wardHit);
-  if(px.stunHitS&&src&&pkk(p,0.12*px.stunHitS))applyStun(G,src,1.5);
+  if(px.stunHitS&&src&&pkk(p,0.20*px.stunHitS))applyStun(G,src,1.5);  /* ⚑ T1 R01 등급 내 재분배(하위권 상향) */
   if(px.stunHitL&&src&&pkk(p,0.55*px.stunHitL))applyStun(G,src,3.0);
   /* 원거리 피격 축 — 위 «피격 시» 트리거를 전부 굴린 «뒤» 에 추가로 굴린다 (별개 축, 주인 16:1X) */
   if(!isMelee)procOnRanged(G,src);
   if(isMelee&&src&&src.hp>0){
     const cc=Math.random()*100<p.counter;
-    const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.10*px.hitCounterS));
+    const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.20*px.hitCounterS));
     if(cc||pc)doCounter(G,src);
   }
 }
@@ -1205,6 +1205,11 @@ function harness(env,defRar,defPlus,defSlot){
   const rar=Number.isFinite(s[0])?s[0]:defRar, plus=Number.isFinite(s[1])?s[1]:defPlus, slot=Number.isFinite(s[2])?s[2]:defSlot;
   return {b:mkBuild(rar,plus,slot),desc:`${GT.rarName[rar]}${plus?'+'+plus:''} 6부위 · 슬롯 ${slot}렙`};
 }
+/* ⚑⚑ 주인 확정 «실험1 등급 과녁» (2026-09-03) — 등급을 하나만 뜨게 강제했을 때의 클리어율.
+   종전 판정 «일반<희귀<전설<신화 단조증가» 를 이 과녁이 대체한다. 허용 오차 ±5%p (주인 원문).
+   게이트 `tools/verifyScoreCriteria.js` 가 PLAN §7 문면과 이 두 상수를 대조한다. */
+const EXP1_TARGET=[15,25,35,45];   // 일반 · 희귀 · 전설 · 신화
+const EXP1_TOL=5;                  // ±%p
 function exp1_rarityLadder(){
   const h=harness('EXP1_GEAR',1,0,0), CH=hCh('EXP1_CH',30);
   /* ⚑⚑ T72 재선정 (2026-09-03, 주인 확정 «밸런스 기준점» + 기본 스탯 개편 · 정본 ②③④).
@@ -1242,6 +1247,7 @@ function exp1_rarityLadder(){
        변별점 규칙(⑤)은 대표성을 요구하지 않는다. 부작용: `GT.optCount(0,plus)=0` 이라 실험1·2 는 **장비 옵션 0개** 환경에서 돈다
        (특전 효과만 분리해 재는 데는 오히려 유리하지만, «특전 × 장비 옵션» 상호작용은 이 두 실험이 못 본다 — 실험4·5 의 몫). */
   console.log(`\n=== 실험1: 등급 고정 파워 사다리 (챕터${CH}, 하니스 ${h.desc}, 300판) ===`);
+  const rates=[];
   for(const rar of [null,0,1,2,3]){
     let wins=0,times=0,n=300;
     for(let i=0;i<n;i++){
@@ -1249,8 +1255,26 @@ function exp1_rarityLadder(){
       if(r.clear){wins++;times+=r.time;}
     }
     const nm=rar===null?'혼합':['일반','희귀','전설','신화'][rar];
-    console.log(`${nm}: 클리어 ${(wins/n*100).toFixed(1)}%  평균시간 ${wins?(times/wins).toFixed(0):'-'}s`);
+    const rate=wins/n*100;
+    if(rar!==null)rates[rar]=rate;
+    console.log(`${nm}: 클리어 ${rate.toFixed(1)}%  평균시간 ${wins?(times/wins).toFixed(0):'-'}s`);
   }
+  /* ⚑⚑ T1 R01 (2026-09-03 주인 확정 «실험1 과녁 개정(4등급)») — 종전 «단조증가» 판정을 이 과녁이 **대체**한다.
+     주인 원문: «등급 강제 클리어율 일반 15% · 희귀 25% · 전설 35% · 신화 45% (±5%p. 신화 45 는 위임)».
+     단조증가는 «희귀가 신화보다 낮기만 하면 통과» 라 등급 간 격차에 상한이 없었고, 실제로 신화가 81% 까지 부풀어도
+     3점 만점이 나왔다. 과녁은 격차 자체에 상한을 두므로 «신화 뻥튀기» 류 인플레 튜닝이 구조적으로 불가능해진다.
+     ±5%p 는 주인이 준 허용 오차이고, 300판 표준오차(±2%p 남짓)를 감안하면 한 시드로 판정하지 말 것 —
+     회차 채점은 시드 3벌 이상의 평균으로 한다(R01 실측: 시드 1/2/3 에서 일반 18.7·18.7·17.7 로 ±0.5%p 폭). */
+  console.log(`\n  — 등급 과녁 판정 (주인 확정: 일반 15 · 희귀 25 · 전설 35 · 신화 45, 허용 ±${EXP1_TOL}%p) —`);
+  console.log('  | 등급 | 과녁 | 실측 | 편차 | 판정 |');
+  console.log('  |---|---|---|---|---|');
+  let pass=0;
+  for(let r=0;r<4;r++){
+    const t=EXP1_TARGET[r],v=rates[r],d=v-t;
+    const ok=Math.abs(d)<=EXP1_TOL;if(ok)pass++;
+    console.log(`  | ${['일반','희귀','전설','신화'][r]} | ${t}% | ${v.toFixed(1)}% | ${(d>=0?'+':'')+d.toFixed(1)}%p | ${ok?'✓':'✗'} |`);
+  }
+  console.log(`  과녁 합격 ${pass}/4`);
 }
 function exp2_perkWinrate(){
   const h=harness('EXP2_GEAR',1,0,5), CH=hCh('EXP2_CH',30);

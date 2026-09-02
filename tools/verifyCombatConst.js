@@ -350,9 +350,14 @@ console.log('\n=== ⑤ 원거리 피격 축 · 고중첩 (PLAN §3.0 주인 16:1
       p.G=G; return {G,p,e};
     };
     const rnd=Math.random;
+    /* ⚑ T1 R01 — «5스택이면 확정» 을 상수로 박아 두면 c_rangeShield 확률을 튜닝할 때마다 이 게이트가 빨개진다.
+       (실제로 R01 이 20% → 10% 로 내리자 0.20*5=1.0 가정이 깨져 ①③ 이 빨개졌다.)
+       기저 확률을 sim.js 에서 읽어 «확정이 되는 최소 스택» 을 계산한다 — 튜닝과 무관하게 결정적이다. */
+    const RS_BASE=Number((SIM.match(/pkk\(p,([\d.]+)\*px\.rangeShield\)/)||[])[1]);
+    const RS_N=RS_BASE>0?Math.ceil(1/RS_BASE):5;
     /* (1) 원거리 피격이 원거리 축을 굴린다 — 확률 100% 로 키워 결정적으로 만든다 */
     {
-      const {G,p,e}=mkG({rangeShield:5});   /* 0.20*5 = 1.0 = 확정 */
+      const {G,p,e}=mkG({rangeShield:RS_N});   /* RS_BASE*RS_N ≥ 1.0 = 확정 */
       Math.random=()=>0.5;                  /* 회피(evade 0) 는 어차피 안 뜬다 */
       Z.hitPlayer(G,10,false,e);
       Math.random=rnd;
@@ -361,7 +366,7 @@ console.log('\n=== ⑤ 원거리 피격 축 · 고중첩 (PLAN §3.0 주인 16:1
     }
     /* (2) 근접 피격은 원거리 축을 굴리지 않는다 (별개 축) */
     {
-      const {G,p,e}=mkG({rangeShield:5});
+      const {G,p,e}=mkG({rangeShield:RS_N});
       Math.random=()=>0.5;
       Z.hitPlayer(G,10,true,e);
       Math.random=rnd;
@@ -370,7 +375,7 @@ console.log('\n=== ⑤ 원거리 피격 축 · 고중첩 (PLAN §3.0 주인 16:1
     }
     /* (3) 원거리 피격은 «일반 피격 시» 트리거도 함께 굴린다 (주인 위임: 둘 다 굴림) */
     {
-      const {G,p,e}=mkG({rangeShield:5,defHitBuff:1});
+      const {G,p,e}=mkG({rangeShield:RS_N,defHitBuff:1});
       Math.random=()=>0.5;
       Z.hitPlayer(G,10,false,e);
       Math.random=rnd;
@@ -380,7 +385,7 @@ console.log('\n=== ⑤ 원거리 피격 축 · 고중첩 (PLAN §3.0 주인 16:1
     }
     /* (4) 회피에 성공하면 «맞은» 것이 아니라 원거리 축을 굴리지 않는다 */
     {
-      const {G,p,e}=mkG({rangeShield:5});
+      const {G,p,e}=mkG({rangeShield:RS_N});
       p.evade=100;
       Math.random=()=>0.0;                  /* 회피 굴림 0 < 100 → 회피 성공 */
       Z.hitPlayer(G,10,false,e);

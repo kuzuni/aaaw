@@ -653,7 +653,7 @@ const GOPT={
     {d:'최대 체력 +10%',        ap:p=>{const a=p.maxHp*0.10;p.maxHp+=a;heal(p,a,true);}},
     {d:'피격 시 22% 확률 회피 +14 3초', ap:p=>p.px.hitEvadeBuff++},
     {d:'최대 체력 +12%',        ap:p=>{const a=p.maxHp*0.12;p.maxHp+=a;heal(p,a,true);}},
-    {d:'피격 시 10% 확률 실드 5% 충전', ap:p=>p.px.shieldOnHit++},
+    {d:'피격 시 5% 확률 실드 5% 충전', ap:p=>p.px.shieldOnHit++},
     {d:'사망 시 1회 부활',       ap:p=>p.px.revive++},
   ],
   chain:[ /* 가시 계열 */
@@ -677,7 +677,7 @@ const GOPT={
   /* 장갑 */
   gauntlet:[ /* 치명타 배율 계열 */
     {d:'치명타 배율 +30',       ap:p=>p.critF+=30},
-    {d:'치명타 시 치명 배율 +10 3초', ap:p=>p.px.critFsmall++},
+    {d:'치명타 시 치명 배율 +20 3초', ap:p=>p.px.critFsmall++},
     {d:'치명타 배율 +40',       ap:p=>p.critF+=40},
     {d:'치명타 시 30% 확률 체력 4% 회복', ap:p=>p.px.critHeal3++},
     {d:'치명타 배율 +50',       ap:p=>p.critF+=50},
@@ -1672,31 +1672,31 @@ const PERKS=[
   {id:'c_atkBuff', r:0, ic:'🗡️', tx:'공격 시 <b>30%</b> 확률로 <b>3초간</b> 공격력 <b>+5%</b> (최대 <b>5중첩</b>)', ap:p=>p.px.c_atkBuff++},
   {id:'c_atkPerm', r:0, ic:'🌱', tx:'공격 시 <b>10%</b> 확률로 공격력 영구 <b>+1%</b>', ap:p=>p.px.atkPerm++},
   {id:'c_critChain', r:0, ic:'💥', tx:'치명타 시 <b>3초간</b> 치명타 확률 <b>+5%</b> (최대 <b>5중첩</b>)', ap:p=>p.px.critChain++},
-  {id:'c_critF', r:0, ic:'🔥', tx:'치명타 시 <b>3초간</b> 치명타 배율 <b>+10%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.critFsmall++},
-  {id:'c_critHeal1', r:0, ic:'❣️', tx:'치명타 시 <b>20%</b> 확률로 체력 <b>1%</b> 회복', ap:p=>p.px.critHealS++},
+  {id:'c_critF', r:0, ic:'🔥', tx:'치명타 시 <b>3초간</b> 치명타 배율 <b>+20%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.critFsmall++},
+  {id:'c_critHeal1', r:0, ic:'❣️', tx:'치명타 시 <b>20%</b> 확률로 체력 <b>5%</b> 회복', ap:p=>p.px.critHealS++},
   {id:'c_killHeal2', r:0, ic:'🍖', tx:'처치 시 체력 <b>0.37%</b> 회복', ap:p=>p.killHeal+=0.0037},
-  {id:'c_killShield3', r:0, ic:'🔰', tx:'처치 시 실드 <b>0.7%</b> 충전', ap:p=>p.px.killShield3++},
+  {id:'c_killShield3', r:0, ic:'🔰', tx:'처치 시 실드 <b>0.5%</b> 충전', ap:p=>p.px.killShield3++},
   {id:'c_defHit', r:0, ic:'🛡️', tx:'피격 시 <b>3초간</b> 방어력 <b>+3%</b> (최대 <b>5중첩</b>)', ap:p=>p.px.defHitBuff++},
-  {id:'c_shieldHit', r:0, ic:'🔋', tx:'피격 시 <b>10%</b> 확률로 실드 <b>5%</b> 충전', ap:p=>p.px.shieldOnHit++},
+  {id:'c_shieldHit', r:0, ic:'🔋', tx:'피격 시 <b>5%</b> 확률로 실드 <b>5%</b> 충전', ap:p=>p.px.shieldOnHit++},
   {id:'c_hitHeal', r:0, ic:'🩹', tx:'피격 시 <b>15%</b> 확률로 체력 <b>2%</b> 회복', ap:p=>p.px.hitHeal++},
   {id:'c_evadeEv', r:0, ic:'👥', tx:'회피 시 <b>3초간</b> 회피 <b>+8%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.evadeEvBuff++},
-  {id:'c_evadeAspd', r:0, ic:'💨', tx:'회피 시 <b>2초간</b> 공격속도 <b>+5%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.evadeAspd++},
-  {id:'c_evadeDef', r:0, ic:'🧱', tx:'회피 시 <b>3초간</b> 방어력 <b>+5%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.evadeDef++},
-  {id:'c_hitCounterS', r:0, ic:'🔁', tx:'피격 시 <b>10%</b> 확률로 즉시 반격', ap:p=>p.px.hitCounterS++},
+  {id:'c_evadeAspd', r:0, ic:'💨', tx:'회피 시 <b>2초간</b> 공격속도 <b>+10%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.evadeAspd++},
+  {id:'c_evadeDef', r:0, ic:'🧱', tx:'회피 시 <b>3초간</b> 방어력 <b>+10%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.evadeDef++},
+  {id:'c_hitCounterS', r:0, ic:'🔁', tx:'피격 시 <b>20%</b> 확률로 즉시 반격', ap:p=>p.px.hitCounterS++},
   {id:'c_counterAtk', r:0, ic:'⚔️', tx:'반격 시 <b>3초간</b> 공격력 <b>+5%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.counterAtkS++},
-  {id:'c_counterDef', r:0, ic:'🛡️', tx:'반격 시 <b>3초간</b> 방어력 <b>+8%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.counterDefS++},
+  {id:'c_counterDef', r:0, ic:'🛡️', tx:'반격 시 <b>3초간</b> 방어력 <b>+10%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.counterDefS++},
   {id:'c_healBoost', r:0, ic:'💚', tx:'회복 시 <b>20%</b> 확률로 최대 체력의 <b>2%</b> 추가 회복', ap:p=>p.px.healBoost2++},
   {id:'c_healDef', r:0, ic:'🫧', tx:'회복 시 <b>30%</b> 확률로 <b>3초간</b> 방어력 <b>+5%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.healDefBuff++},
   {id:'c_healShield', r:0, ic:'💦', tx:'회복 시 <b>20%</b> 확률로 실드 <b>3%</b> 수리', ap:p=>p.px.healShield3++},
   {id:'c_firstHit', r:0, ic:'🎯', tx:'체력이 가득 찬 적에게 데미지 <b>+20%</b>', ap:p=>p.px.firstHit++},
   {id:'c_hp12', r:0, ic:'❤️', tx:'최대 체력 <b>+12%</b> (즉시 회복)', ap:p=>{const a=p.maxHp*0.12;p.maxHp+=a;heal(p,a,true);}},
-  {id:'c_sh15', r:0, ic:'🔷', tx:'실드 최대치 <b>+15%</b>', ap:p=>p.maxSh*=1.15},
-  {id:'c_def3', r:0, ic:'🧱', tx:'방어력 <b>+3%</b>', ap:p=>p.def+=3},
-  {id:'c_stunHit', r:0, ic:'💫', tx:'피격 시 <b>12%</b> 확률로 공격한 적 <b>1.5초</b> 기절', ap:p=>p.px.stunHitS++},
-  {id:'c_missAtk', r:0, ic:'💨', tx:'빗나갈 시 <b>3초간</b> 공격력 <b>+6%</b> (최대 <b>5중첩</b>)', ap:p=>p.px.missAtk++},
-  {id:'c_missDef', r:0, ic:'🧱💨', tx:'빗나갈 시 <b>3초간</b> 방어력 <b>+6%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.missDef++},
-  {id:'c_rangeShield', r:0, ic:'🏹🔋', tx:'원거리 피격 시 <b>20%</b> 확률로 실드 <b>4%</b> 충전', ap:p=>p.px.rangeShield++},
-  {id:'c_thornsS', r:0, ic:'🌿', tx:'피격 시 <b>30%</b> 확률로 받은 피해의 <b>50%</b> 반사', ap:p=>p.px.thornsS++},
+  {id:'c_sh15', r:0, ic:'🔷', tx:'실드 최대치 <b>+20%</b>', ap:p=>p.maxSh*=1.20},
+  {id:'c_def3', r:0, ic:'🧱', tx:'방어력 <b>+5%</b>', ap:p=>p.def+=5},
+  {id:'c_stunHit', r:0, ic:'💫', tx:'피격 시 <b>20%</b> 확률로 공격한 적 <b>1.5초</b> 기절', ap:p=>p.px.stunHitS++},
+  {id:'c_missAtk', r:0, ic:'💨', tx:'빗나갈 시 <b>3초간</b> 공격력 <b>+10%</b> (최대 <b>5중첩</b>)', ap:p=>p.px.missAtk++},
+  {id:'c_missDef', r:0, ic:'🧱💨', tx:'빗나갈 시 <b>3초간</b> 방어력 <b>+10%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.missDef++},
+  {id:'c_rangeShield', r:0, ic:'🏹🔋', tx:'원거리 피격 시 <b>10%</b> 확률로 실드 <b>4%</b> 충전', ap:p=>p.px.rangeShield++},
+  {id:'c_thornsS', r:0, ic:'🌿', tx:'피격 시 <b>30%</b> 확률로 받은 피해의 <b>70%</b> 반사', ap:p=>p.px.thornsS++},
   {id:'c_wardHit', r:0, ic:'🔰✨', tx:'피격 시 <b>8%</b> 확률로 <b>방어막 1장</b> (적 공격 1회 완전 방어)', ap:p=>p.px.wardHit++},
   {id:'c_wardEvade', r:0, ic:'👥✨', tx:'회피 시 <b>10%</b> 확률로 <b>방어막 1장</b> (적 공격 1회 완전 방어)', ap:p=>p.px.wardEvade++},
   /* ---------- 희귀 (26종) ---------- */
@@ -1714,7 +1714,7 @@ const PERKS=[
   {id:'r_hitEvade', r:1, ic:'🌫️', tx:'피격 시 <b>22%</b> 확률로 <b>3초간</b> 회피 <b>+14%</b> (최대 <b>2중첩</b>)', ap:p=>p.px.hitEvadeBuff++},
   {id:'r_hitCounter', r:1, ic:'💢', tx:'피격 시 <b>30%</b> 확률로 즉시 반격', ap:p=>p.px.hitCounter++},
   {id:'r_evadeHeal', r:1, ic:'🍀', tx:'회피 시 <b>15%</b> 확률로 체력 <b>7%</b> 회복', ap:p=>p.px.evadeHeal++},
-  {id:'r_evadeShield', r:1, ic:'🔶', tx:'회피 시 <b>15%</b> 확률로 실드 <b>14%</b> 수리', ap:p=>p.px.evadeShield++},
+  {id:'r_evadeShield', r:1, ic:'🔶', tx:'회피 시 <b>15%</b> 확률로 실드 <b>10%</b> 수리', ap:p=>p.px.evadeShield++},
   {id:'r_evadeRush', r:1, ic:'🌀', tx:'회피 시 다음 공격 데미지 <b>+50%</b> (최대 <b>+150%</b>) — nextAtk 스택', ap:p=>p.px.evadeRush++},
   {id:'r_counterX', r:1, ic:'⚜️', tx:'반격 피해 <b>+100%</b>', ap:p=>p.px.counterX++},
   {id:'r_counterAtkM', r:1, ic:'🗡️', tx:'반격 시 <b>4초간</b> 공격력 <b>+14%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.counterAtkM++},
@@ -2385,7 +2385,7 @@ function onKill(e){
      챕터 240 부터는 JS 지수표기(«+9.25e+22 🪙»)가 캔버스에 그대로 떴다 — 게임 표기 규약(T54) 밖이다. */
   addText('+'+fmt(drop)+' 🪙','#FFD54F',e.worldX,-100);
   if(p.killHeal>0) heal(p,p.maxHp*p.killHeal);
-  if(px.killShield3) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.007*px.killShield3);
+  if(px.killShield3) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.005*px.killShield3);   /* ⚑ T1 R01 등급 내 재분배: 0.007 → 0.005 */
   if(px.killShield10) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.0075*px.killShield10);
   if(px.aspdKill) addBuff(p,'aspd',0.20*px.aspdKill,4,3,'aspdKill');
   if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff)) addBuff(p,'critR',14,4,3,'killCritBuff');
@@ -2427,8 +2427,8 @@ function applyStun(e,sec){
    일어나는 두 곳(dealPlayerDamage · doCounter)뿐 — «MISS» 팝이 뜨는 자리와 같다. */
 function procOnMiss(e){
   const p=G.player, px=p.px;
-  if(px.missAtk) addBuff(p,'atk',0.06*px.missAtk,3,5,'missAtk');
-  if(px.missDef) addBuff(p,'def',6*px.missDef,3,3,'missDef');
+  if(px.missAtk) addBuff(p,'atk',0.10*px.missAtk,3,5,'missAtk');   /* ⚑ T1 R01 등급 내 재분배: +6% → +10% */
+  if(px.missDef) addBuff(p,'def',10*px.missDef,3,3,'missDef');
   if(px.missAspd) addBuff(p,'aspd',0.12*px.missAspd,2,3,'missAspd');
   if(px.missReset&&pkk(p,0.30*px.missReset)) p.atkTimer=0;
   if(px.missCrit){ p.nextCrit=true; addText('🎯 확정 치명타!','#FFB92E'); }
@@ -2451,7 +2451,7 @@ function gainWard(p,ch){
    일반 «피격 시» 트리거와 별개 축이라 원거리 피격은 둘 다 굴린다. 회피에 성공하면 굴리지 않는다. */
 function procOnRanged(src){
   const p=G.player, px=p.px;
-  if(px.rangeShield&&pkk(p,0.20*px.rangeShield)){ p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.04); addText('🏹🔋','#6CC0F0'); }
+  if(px.rangeShield&&pkk(p,0.10*px.rangeShield)){ p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.04); addText('🏹🔋','#6CC0F0'); }
   if(px.rangeThorns&&src&&src.hp>0&&pkk(p,0.30*px.rangeThorns)){
     const rd=effDmg(p)*0.8; src.hp-=rd; src.hitT=0.15;
     addText('🏹🌵 '+fmt(rd),'#9CE87E',src.worldX,-92);
@@ -2500,11 +2500,11 @@ function dealPlayerDamage(e,ratio,icon){
   if(p.steal>0) heal(p,d*p.steal/100);
   if(crit){
     if(px.critChain) addBuff(p,'critR',5*px.critChain,3,5,'critChain');
-    if(px.critFsmall) addBuff(p,'critF',10*px.critFsmall,3,3,'critFsmall');
+    if(px.critFsmall) addBuff(p,'critF',20*px.critFsmall,3,3,'critFsmall');   /* ⚑ T1 R01 등급 내 재분배: +10 → +20 */
     if(px.critFBuff) addBuff(p,'critF',34*px.critFBuff,4,3,'critFBuff');
     if(px.critAtkBuff) addBuff(p,'atk',0.15*px.critAtkBuff,4,3,'critAtkBuff');
     if(px.critAspdBuff) addBuff(p,'aspd',0.25*px.critAspdBuff,3,3,'critAspdBuff');
-    if(px.critHealS&&pkk(p,0.20*px.critHealS)){ heal(p,p.maxHp*0.01); addText('❣️','#7ED957'); }
+    if(px.critHealS&&pkk(p,0.20*px.critHealS)){ heal(p,p.maxHp*0.05); addText('❣️','#7ED957'); }
     if(px.critHeal3&&pkk(p,0.30*px.critHeal3)){ heal(p,p.maxHp*0.04); addText('❣️','#7ED957'); }
     if(px.critReset&&pkk(p,0.45*px.critReset)) p.atkTimer=0;
     if(px.stunCritM&&pkk(p,0.15*px.stunCritM)) applyStun(e,2.0);
@@ -2550,7 +2550,7 @@ function doCounter(src,depth){
   addText('반격 '+fmt(cd),'#FFD54F',src.worldX,-80);
   sparks(src.worldX,-40,'#FFD54F',5,130);
   if(px.counterAtkS) addBuff(p,'atk',0.05*px.counterAtkS,3,3,'counterAtkS');
-  if(px.counterDefS) addBuff(p,'def',8*px.counterDefS,3,3,'counterDefS');
+  if(px.counterDefS) addBuff(p,'def',10*px.counterDefS,3,3,'counterDefS');
   if(px.counterAtkM) addBuff(p,'atk',0.14*px.counterAtkM,4,3,'counterAtkM');
   if(px.counterCrit) addBuff(p,'critR',14,3,3,'counterCrit');
   if(px.counterHeal) heal(p,p.maxHp*0.04*px.counterHeal);
@@ -2573,13 +2573,13 @@ function hitPlayer(dmg,isMelee,src){
   if(Math.random()*100<effEvade(p)){
     AU.play('evade'); addText('회피!','#CFCFD8');
     if(px.evadeEvBuff) addBuff(p,'evade',8*px.evadeEvBuff,3,3,'evadeEvBuff');
-    if(px.evadeAspd) addBuff(p,'aspd',0.05,2,3,'evadeAspd');
-    if(px.evadeDef) addBuff(p,'def',5*px.evadeDef,3,3,'evadeDef');
+    if(px.evadeAspd) addBuff(p,'aspd',0.10,2,3,'evadeAspd');   /* ⚑ T1 R01 등급 내 재분배: +5% → +10% */
+    if(px.evadeDef) addBuff(p,'def',10*px.evadeDef,3,3,'evadeDef');
     if(px.evadeAtkBuff) addBuff(p,'atk',0.28*px.evadeAtkBuff,5,3,'evadeAtkBuff');
     if(px.evadeRush&&p.nextAtk<1.5){ p.nextAtk=Math.min(1.5,p.nextAtk+0.5*px.evadeRush); addText('🌀 공격 강화!','#9CD2FF'); }
     if(px.evadeCrit) p.nextCrit=true;
     if(px.evadeHeal&&pkk(p,0.15*px.evadeHeal)){ heal(p,p.maxHp*0.07); addText('🍀 +'+fmt(p.maxHp*0.07),'#7ED957'); }
-    if(px.evadeShield&&pkk(p,0.15*px.evadeShield)){ p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.14); addText('🔶 실드 수리','#6CC0F0'); }
+    if(px.evadeShield&&pkk(p,0.15*px.evadeShield)){ p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.10); addText('🔶 실드 수리','#6CC0F0'); }
     if(px.evadeCounter&&pkk(p,1.0*px.evadeCounter)) doCounter(src);
     if(px.evadeAxe&&pkk(p,0.10*px.evadeAxe)) fireAxe(p);
     gainWard(p,0.10*px.wardEvade);
@@ -2636,14 +2636,14 @@ function hitPlayer(dmg,isMelee,src){
   if(px.wallBuff) addBuff(p,'def',10,4,2,'wallBuff');
   if(px.hitEvadeBuff&&pkk(p,0.22*px.hitEvadeBuff)) addBuff(p,'evade',14,3,2,'hitEvadeBuff');
   if(px.evadeHitBuff&&pkk(p,0.30*px.evadeHitBuff)) addBuff(p,'evade',15,3,2,'evadeHitBuff');
-  if(px.shieldOnHit&&pkk(p,0.10*px.shieldOnHit)){ p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05); addText('🔋','#6CC0F0'); }
+  if(px.shieldOnHit&&pkk(p,0.05*px.shieldOnHit)){ p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05); addText('🔋','#6CC0F0'); }
   if(px.hitHeal&&pkk(p,0.15*px.hitHeal)){ heal(p,p.maxHp*0.02); addText('🩹','#7ED957'); }
   /* 피격 시 스턴 — 주인 필수 예시 «피격 시 (n% 확률로) 공격한 적 3초 스턴» (전설 l_stunHit3) */
   gainWard(p,0.08*px.wardHit);
-  if(px.stunHitS&&src&&pkk(p,0.12*px.stunHitS)) applyStun(src,1.5);
+  if(px.stunHitS&&src&&pkk(p,0.20*px.stunHitS)) applyStun(src,1.5);
   if(px.stunHitL&&src&&pkk(p,0.55*px.stunHitL)) applyStun(src,3.0);
   if(px.thornsS&&src&&src.hp>0&&pkk(p,0.30*px.thornsS)){
-    src.hp-=dmg*0.5; src.hitT=0.15;
+    src.hp-=dmg*0.70; src.hitT=0.15;
     addText('🌿 '+fmt(dmg*0.5),'#A5D6A7',src.worldX,-92);
     if(src.hp<=0) onKill(src);
   }
@@ -2662,7 +2662,7 @@ function hitPlayer(dmg,isMelee,src){
   if(!isMelee) procOnRanged(src);
   if(isMelee&&src&&src.hp>0){
     const cc=Math.random()*100<p.counter;
-    const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.10*px.hitCounterS));
+    const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.20*px.hitCounterS));
     if(cc||pc) doCounter(src);
   }
 }
