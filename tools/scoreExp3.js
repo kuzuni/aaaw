@@ -37,11 +37,19 @@ const BANDS = [
    종전에는 맵에 없는 챕터를 전부 «안 돈 챕터» 로 보고 분모에서 뺐는데, 실패로 런이 끊긴 뒤의
    미도달 챕터까지 같이 빠져서 «일찍 죽을수록 남은 구간의 적합률만 남아 점수가 오르는» 역전이 생겼다.
    상한(EXP3_MAX)은 설정이고 조기 사망은 결과다 — 둘을 구별해야 자(尺)가 단조로워진다. */
+/* ⚑ T75 수리 — «하니스 재시도 상한» 은 «채점 목표 상한»(벽 400회)보다 커야 이 자가 성립한다.
+   같은 숫자였을 때는 400 에 닿은 셀이 언제나 «400회 실패» 로 적혀 목표 상한이 도달 불가능했고,
+   «401회면 뚫었을 계정» 과 «4,000회여도 못 뚫을 계정» 이 한 칸에 뭉개졌다. sim.js 가 헤더에
+   상한을 적어 주므로(«재시도 상한 N회») 옛 원시 출력도 여기서 판별해 경고한다. */
+const HI_MAX = Math.max(...BANDS.map(b => b.hi));
+
 function parse(txt) {
   const out = new Map();
-  let maxc = 0, failedAt = 0;
+  let maxc = 0, failedAt = 0, limit = 0;
   const h = txt.match(/실험3:[^\n]*챕터\s*1\s*→\s*(\d+)/);
   if (h) maxc = Number(h[1]);
+  const hl = txt.match(/재시도 상한\s*(\d+)\s*회/);
+  if (hl) limit = Number(hl[1]);
   for (const line of txt.split('\n')) {
     const m = line.match(/^챕터\s+(\d+):\s*시도\s+(\d+)회/);
     if (m) {
@@ -52,11 +60,13 @@ function parse(txt) {
   }
   /* 헤더를 못 읽은 예전 원시 출력은 «돈 챕터의 최대값» 을 상한으로 본다 (그 경우 미도달 판정이 없다). */
   if (!maxc) maxc = out.size ? Math.max(...out.keys()) : 0;
-  return { map: out, maxc, failedAt };
+  /* 헤더에 상한이 없는 옛 출력은 «실패 셀의 시도 횟수» 가 곧 그때의 상한이다 (T75 이전 = 400). */
+  if (!limit) for (const r of out.values()) if (r.failed) { limit = r.tries; break; }
+  return { map: out, maxc, failedAt, limit };
 }
 
 function scoreRun(run, label) {
-  const { map, maxc, failedAt } = run;
+  const { map, maxc, failedAt, limit } = run;
   const rows = [], strays = [];
   let eGot = 0, eMax = 0, lGot = 0, lMax = 0, unreached = 0;
   for (const b of BANDS) {
@@ -84,7 +94,7 @@ function scoreRun(run, label) {
   }
   const early = eMax ? eGot / eMax * 1.5 : 0;
   const late  = lMax ? lGot / lMax * 1.5 : 0;
-  return { label, rows, strays, early, late, total: early + late, eGot, eMax, lGot, lMax, unreached, failedAt, maxc };
+  return { label, rows, strays, early, late, total: early + late, eGot, eMax, lGot, lMax, unreached, failedAt, maxc, limit };
 }
 
 const args = process.argv.slice(2);
@@ -110,6 +120,9 @@ for (const r of runs) {
   console.log(`구간 배점 합: 1~20 ${r.eGot.toFixed(2)}/${r.eMax} · 21+ ${r.lGot.toFixed(2)}/${r.lMax}`);
   console.log(`실험3 환산(균등 1.5/1.5 기본값): 1~20 ${r.early.toFixed(2)} + 21+ ${r.late.toFixed(2)} = **${r.total.toFixed(2)}/3**`);
   if (r.failedAt) console.log(`⚑ 런 조기 종료: 챕터 ${r.failedAt} 에서 실패 — 이후 ${r.unreached}칸을 «미도달(부적합)» 로 센다 (상한 ${r.maxc})`);
+  /* ⚑ T75 — 재시도 상한이 목표 상한 이하인 원시 출력은 벽 구간을 «원리적으로» 통과시킬 수 없다. */
+  if (r.limit && r.limit <= HI_MAX)
+    console.log(`⚠ 이 원시 출력의 재시도 상한(${r.limit}회)이 채점 목표 상한(${HI_MAX}회) 이하다 — 벽 구간은 절대 적합이 될 수 없고 «느리지만 결국 클리어» 가 «영구 정체» 와 구별되지 않는다 (T75). 상한을 목표 상한보다 크게 두고 다시 재라.`);
   if (r.strays.length) {
     const head = r.strays.filter(s => !s.unreached).slice(0, 24)
       .map(s => `${s.c}장 ${s.failed ? `${s.tries}회 실패` : `${s.tries}회`}(목표 ${s.lo}~${s.hi})`).join(' · ');

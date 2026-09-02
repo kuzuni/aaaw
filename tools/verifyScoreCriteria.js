@@ -141,9 +141,26 @@ const HAR_RE = /장비 «(전설|신화|영웅|희귀|일반)(?:\+(\d+))? 6부�
     cmp(`실험3 구간 ${w.name} 하한`, w.lo, g.lo);
     cmp(`실험3 구간 ${w.name} 상한`, w.hi, g.hi);
   }
-  /* 실험3 시도 상한: 벽 구간 상한(400회)과 엔진 EXP3_LIMIT 기본값이 같아야 «400회 안에는 뚫려야» 를 잴 수 있다 */
-  const simLimit = pick(SIM, 'sim EXP3_LIMIT', /EXP3_LIMIT\|\|'(\d+)'/, 1);
-  cmp('실험3 시도 상한(EXP3_LIMIT)', b3 ? b3[2] : null, simLimit, 'PLAN «400회 안에는 뚫려야» 와 같아야 벽 상한을 관측할 수 있다');
+  /* ⚑ T75 — 종전 이 자리는 «EXP3_LIMIT 기본값 == 벽 목표 상한(400)» 을 요구했다. 그게 결함의 원인이었다:
+     둘이 같으면 400 에 닿은 셀이 언제나 «400회 실패» 라 목표 «30~400» 이 실제로는 «30~399» 이고,
+     «401회면 뚫었을 계정» 과 «영구 정체» 가 한 칸에 뭉개진다. 이제 요구는 **엄격히 크다** 로 뒤집힌다.
+     T80 선례대로 두 자리를 같이 본다 — ① 이름 붙은 상수 선언 ② 그 상수가 실제로 기본값 자리에 쓰이는가.
+     (값만 보면 «상수는 1000, 기본값 자리엔 400 리터럴» 우회를 놓친다.)
+     ③ 헤더가 상한을 찍는지도 본다 — 채점기가 «옛 자로 잰 원시 출력» 을 판별하는 근거가 그 한 줄이다. */
+  const simTryLimit = pick(SIM, 'sim EXP3_TRY_LIMIT', /const EXP3_TRY_LIMIT\s*=\s*(\d+)\s*;/, 1);
+  const usesTryConst = /LIMIT=parseInt\(process\.env\.EXP3_LIMIT\|\|String\(EXP3_TRY_LIMIT\),10\)/.test(SIM);
+  cmp('실험3 재시도 상한 기본값이 EXP3_TRY_LIMIT 을 쓴다', 'yes', usesTryConst ? 'yes' : 'no',
+    '리터럴로 되돌리면 상수만 바꿔 둔 채 실제 상한은 400 인 상태가 된다');
+  const printsLimit = /실험3: 전체 진행 시뮬 \(챕터 1→\$\{MAXC\}, 재시도 상한 \$\{LIMIT\}회,/.test(SIM);
+  cmp('실험3 원시 출력 헤더가 재시도 상한을 찍는다', 'yes', printsLimit ? 'yes' : 'no',
+    '이 표기가 없으면 채점기가 «옛 자(상한 400)로 잰 출력» 을 구별하지 못한다');
+  /* 채점 목표 상한은 scoreExp3 BANDS 중 최대(= 벽 구간 400). PLAN 의 «400회 안에는 뚫려야» 와도 대조한다. */
+  const hiMax = got.size ? Math.max(...[...got.values()].map(g => Number(g.hi))) : null;
+  if (b3) cmp('실험3 벽 목표 상한(PLAN↔BANDS)', b3[2], hiMax === null ? null : String(hiMax));
+  if (simTryLimit && hiMax !== null)
+    rows.push({ name: '실험3 재시도 상한 > 채점 목표 상한', plan: `>${hiMax}`, impl: simTryLimit,
+      ok: Number(simTryLimit) > hiMax,
+      note: '같거나 작으면 벽 목표가 원리적으로 도달 불가능하고 «느리지만 결국 클리어» 가 관측되지 않는다 (T75)' });
   const simMax = pick(SIM, 'sim maxChapter 기본', /EXP3_MAX\|\|String\(TUNE\.maxChapter\)/) ? 'TUNE.maxChapter' : null;
   cmp('실험3 기본 최대 챕터', 'TUNE.maxChapter', simMax, '전 구간 채점 가능 여부 — 잘라 돌리려면 EXP3_MAX 명시');
 }

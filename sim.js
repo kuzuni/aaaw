@@ -1366,8 +1366,19 @@ function exp2_perkWinrate(){
 }
 function exp3_progression(){
   const MAXC=parseInt(process.env.EXP3_MAX||String(TUNE.maxChapter),10);
-  const LIMIT=parseInt(process.env.EXP3_LIMIT||'400',10);
-  console.log(`\n=== 실험3: 전체 진행 시뮬 (챕터 1→${MAXC}, 골드=슬롯강화 · 다이아=뽑기 자동) ===`);
+  /* ⚑ T75 — «하니스 재시도 상한» 과 «채점 목표 상한» 은 다른 숫자여야 한다 (종전엔 둘 다 400 이었다).
+     같은 숫자였을 때 생긴 두 결함:
+     ① 벽 목표 «30~400회» 가 실제로는 «30~399회» 였다 — 400 에 닿은 셀은 언제나 «400회 실패» 로 적혀
+        `tools/scoreExp3.js` 가 무조건 부적합으로 세기 때문이다(목표 상한이 원리적으로 도달 불가능).
+     ② 400 에서 끊긴 계정이 «401회면 뚫었을» 계정인지 «4,000회여도 못 뚫을» 계정인지 구별되지 않았다.
+        벽을 올리면 그 뒤 챕터가 되레 쉬워지는 관측(재시도가 곧 수입)도 이 절단이 만든 착시다.
+     그래서 상한을 목표 상한보다 넉넉히 위(1,000회)에 두고 «400 초과 = 진짜 목표 미달» 을 **관측**한다.
+     채점 목표 400 은 `tools/scoreExp3.js` BANDS 에 그대로 있고, 두 숫자가 다시 같아지면
+     게이트 `verifyScoreCriteria`(상한 대소 단언)와 `verifyScoreExp3` ⑧~⑪ 가 빨개진다.
+     ⚠ 자(尺)를 고친 것이라 **T75 이전 회차의 실험3 총점과 직접 비교 금지** (T67 선례와 같은 취급). */
+  const EXP3_TRY_LIMIT=1000;   // 하니스 재시도 상한 (채점 목표 상한 400 보다 반드시 커야 한다)
+  const LIMIT=parseInt(process.env.EXP3_LIMIT||String(EXP3_TRY_LIMIT),10);
+  console.log(`\n=== 실험3: 전체 진행 시뮬 (챕터 1→${MAXC}, 재시도 상한 ${LIMIT}회, 골드=슬롯강화 · 다이아=뽑기 자동) ===`);
   const a=newAccount(0);
   let total=0;
   for(let c=1;c<=MAXC;c++){
