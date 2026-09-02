@@ -1723,7 +1723,7 @@ function playerBase(){
   p.hp=p.maxHp; p.sh=p.maxSh=Math.round(p.maxSh);
   return p;
 }
-const expNeed=lv=>4+2*lv;
+const expNeed=lv=>4+4*lv;
 
 /* ================= TUNE — sim.js 와 1:1 (T2 3단계 이식) ================= */
 const TUNE={
@@ -1750,7 +1750,7 @@ const TUNE={
   pAtk0:25, pHp0:150, pSh0:250, pAspd0:1.0, pCrit0:5,
   goldKillBase:0.6, goldKillPer:0.10, goldClearPer:3,
   goldGrowth:1.22,              // 챕터당 골드 성장 배수 (R07: 1.185 → 1.22. 1.185 는 챕터 90 대형 벽에서 슬롯 13 에 갇혀 F2P·과금 둘 다 영구 정체했다 — 실험4 실측. eHpG 보다 높게 둬야 후반 벽에서 수입이 적 성장을 따라잡는다)
-  expKill:3, expBoss:9, expNeed:lv=>4+2*lv,
+  expKill:3, expBoss:9, expNeed:lv=>4+4*lv,
 };
 TUNE.goldKill=c=>(TUNE.goldKillBase+TUNE.goldKillPer*c)*Math.pow(TUNE.goldGrowth,c-1)*rand(1,1.8);
 TUNE.goldClear=c=>TUNE.goldClearPer*c*Math.pow(TUNE.goldGrowth,c-1);

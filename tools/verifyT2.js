@@ -179,7 +179,7 @@ const FORMULAS = [
   ['뇌신 주기', /autoBoltT=2\.4/, /autoBoltT=2\.4/],
   ['등급 굴림 확률', /r<0\.15\?3\s*:\s*r<0\.40\?2\s*:\s*r<0\.70\?1\s*:\s*0/, /r<0\.15\?3\s*:\s*r<0\.40\?2\s*:\s*r<0\.70\?1\s*:\s*0/],
   ['👼 전설이상 신화 비율', /legendOnly\)\s*return Math\.random\(\)<0\.375\?3:2/, /legendOnly\)\s*return Math\.random\(\)<0\.375\?3:2/],
-  ['경험치 요구식', /expNeed:lv=>4\+2\*lv/, /expNeed=lv=>4\+2\*lv/],
+  ['경험치 요구식', /expNeed:lv=>4\+4\*lv/, /expNeed=lv=>4\+4\*lv/],
 ];
 for (const [name, reSim, reHtml] of FORMULAS) {
   const a = reSim.test(SIM), b = reHtml.test(HTML);
@@ -1217,6 +1217,57 @@ console.log('\n[㉒ 스턴 · 빗맞음 축 (PLAN §3.0·§4, T48 1단계)]');
     (SIM.includes(`'${id}'`) && HTML.includes(`'${id}'`))
       ? ok(`주인 필수 예시 ${id} — 두 파일에 존재`)
       : bad(`주인이 원문으로 지목한 필수 특전 ${id} 가 없다`);
+}
+
+/* ---------- ㉓ 레벨업 필요 경험치 4+4*Lv (주인 확정 17:0X · T47) ---------- */
+console.log('\n[㉓ 레벨업 필요 경험치 = 4+4*Lv (PLAN §2.4, T47)]');
+{
+  const strip = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
+  const SIMC = strip(SIM), HTMLC = strip(HTML);
+
+  /* (1) 두 엔진의 식이 «4+4*lv» 인가. index.html 은 정의가 둘(전역 상수 + TUNE) 이라 둘 다 본다 —
+     T47 조사에서 실제로 두 곳에 같은 식이 중복돼 있었다(게임 로직은 전역 쪽만 쓴다). */
+  const forms = [
+    ['sim.js TUNE.expNeed',      SIMC,  /expNeed:lv=>(\d+)\+(\d+)\*lv/],
+    ['index.html 전역 expNeed',  HTMLC, /const expNeed=lv=>(\d+)\+(\d+)\*lv/],
+    ['index.html TUNE.expNeed',  HTMLC, /expNeed:lv=>(\d+)\+(\d+)\*lv/],
+  ];
+  const got = [];
+  for (const [who, src, re] of forms) {
+    const m = src.match(re);
+    if (!m) { bad(`${who}: 경험치 요구식을 못 찾았다 — 코드 모양이 바뀌었나 (게이트를 갱신할 것)`); got.push(null); continue; }
+    const base = Number(m[1]), step = Number(m[2]);
+    got.push(`${base}+${step}`);
+    (base === 4 && step === 4)
+      ? ok(`${who} = ${base}+${step}*Lv`)
+      : bad(`${who} = ${base}+${step}*Lv — 주인 확정(17:0X)은 4+4*Lv`);
+  }
+  const uniq = [...new Set(got.filter(Boolean))];
+  uniq.length <= 1 ? ok('세 정의가 전부 같은 식 (sim↔게임·게임 내부 중복 일치)')
+                   : bad(`경험치 요구식이 갈렸다: ${uniq.join(' / ')} — sim↔게임 괴리`);
+
+  /* (2) 레벨업 루프가 리터럴이 아니라 expNeed 를 쓰는가 (T34 의 «리터럴 >=2» 실패 모드 재발 방지). */
+  for (const [who, src, re] of [
+    ['sim.js',     SIMC,  /while\(p\.exp>=TUNE\.expNeed\(p\.level\)\)\{p\.exp-=TUNE\.expNeed\(p\.level\)/],
+    ['index.html', HTMLC, /while\(p\.exp>=expNeed\(p\.level\)\)\{\s*p\.exp-=expNeed\(p\.level\)/]]) {
+    re.test(src) ? ok(`${who}: 레벨업 루프가 expNeed() 를 호출한다 (리터럴 박기 아님)`)
+                 : bad(`${who}: 레벨업 루프에서 expNeed() 호출을 못 찾았다 — 리터럴이 박혔나`);
+  }
+
+  /* (3) 게임 HUD 의 경험치 바도 같은 식을 쓰는가 (표시와 실제가 어긋나면 유저가 먼저 본다). */
+  (/expTxt'\)\.textContent=`\$\{p\.exp\}\/\$\{expNeed\(p\.level\)\}`/.test(HTMLC) &&
+   /expBar[^\n]*p\.exp\/expNeed\(p\.level\)/.test(HTMLC))
+    ? ok('index.html 경험치 바·숫자 표시가 expNeed() 기준')
+    : bad('index.html 경험치 HUD 가 expNeed() 를 안 쓴다 — 표시와 실제 레벨업 조건이 어긋난다');
+
+  /* (4) PLAN 잔재 — 확정 이전 식(4+2*Lv)이 «취소선» 밖에 남아 있으면 T2 이식자가 옛 값을 가져간다(T9 실패 모드). */
+  const PLAN = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
+  const stale = PLAN.split('\n')
+    .map((l, i) => [i + 1, l])
+    .filter(([, l]) => /4\+2\*[Ll]v/.test(l) && !/~~`?4\+2\*[Ll]v`?~~/.test(l));
+  stale.length === 0
+    ? ok('PLAN 에 남은 구식 «4+2*Lv» 없음 (취소선 표기 제외)')
+    : bad(`PLAN 에 구식 경험치식 잔재 ${stale.length}곳: ` + stale.map(([n]) => `L${n}`).join(' '));
 }
 
 /* ---------- 결과 ---------- */
