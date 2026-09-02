@@ -1495,6 +1495,100 @@ console.log('\n[㉖ 대형 수치 표기 — 1만 이상 축약 (docs/ref, T54)]
                                      : bad('sim.js 에 표기 포맷터가 들어갔다 — 표기는 게임 전용이어야 한다');
 }
 
+/* ============================================================================
+   ㉗ 전투 플로팅 텍스트 표기 (T57)
+   ----------------------------------------------------------------------------
+   왜 ㉖ 과 따로 두는가 — ㉖ 은 «포맷터가 옳은가 + 로비/상점 호출부가 규약대로인가» 만 본다.
+   T57 은 그 게이트가 초록인 채로 새어 나온 건이다: 캔버스에 뜨는 전투 팝업 42곳 중
+   `addText('+'+drop+' 🪙', …)` 한 줄만 raw number 였다. 골드는 챕터당 ×1.22 로 자라
+   챕터 150 에서 19자, 챕터 240 부터는 JS 지수표기(«+9.25e+22 🪙»)가 그대로 떴다.
+   그래서 «한 줄» 이 아니라 «축» 을 못박는다 — addText 의 문구에 들어가는 모든 값은
+   fmt 를 거치거나, 상한이 코드로 묶인 소수치 화이트리스트여야 한다.
+   ============================================================================ */
+console.log('\n[㉗ 전투 플로팅 텍스트 표기 — addText 는 fmt 를 거친다 (T57)]');
+{
+  /* addText( 의 첫 인자(문구)만 괄호 깊이를 세어 뽑는다 */
+  function addTextArgs(src) {
+    const out = [];
+    const re = /addText\(/g; let m;
+    while ((m = re.exec(src))) {
+      if (/function\s+$/.test(src.slice(Math.max(0, m.index - 12), m.index))) continue;   /* 정의부 제외 */
+      let i = m.index + m[0].length, d = 1, q = null, cur = '';
+      for (; i < src.length && d > 0; i++) {
+        const ch = src[i];
+        if (q) { cur += ch; if (ch === q && src[i - 1] !== '\\') q = null; continue; }
+        if (ch === "'" || ch === '"' || ch === '`') { q = ch; cur += ch; continue; }
+        if ('([{'.includes(ch)) d++;
+        if (')]}'.includes(ch)) { d--; if (d === 0) break; }
+        if (ch === ',' && d === 1) break;          /* 첫 인자 끝 */
+        cur += ch;
+      }
+      out.push({ arg: cur.trim(), at: src.slice(0, m.index).split('\n').length });
+    }
+    return out;
+  }
+  /* 상한이 코드로 묶여 있어 축약이 필요 없는 값들. 늘릴 때는 «왜 작은가» 를 여기 적을 것. */
+  const SMALL = [
+    ['p.missStk', 'MISS_STACK_CAP 으로 상한'], ['p.ward', 'WARD_CAP 으로 상한'],
+    ['REST_EXP', '상수 26 (PLAN §2.4)'], ['p.level', '레벨은 두 자리'],
+  ];
+  const calls = addTextArgs(HTML);
+  calls.length >= 30 ? ok(`index.html: addText 호출부 ${calls.length}곳을 파싱했다`)
+                     : bad(`addText 호출부가 ${calls.length}곳뿐이다 — 파서가 깨졌거나 전투 연출이 사라졌다`);
+
+  const raw = [];
+  for (const c of calls) {
+    /* ① fmt(...) 로 감싼 부분과 ② 문자열 리터럴을 지운다 — 남는 것이 «맨 값» 이다 */
+    let s = c.arg;
+    for (let n = 0; n < 6; n++) s = s.replace(/\bfmt\(([^()]*)\)/g, 'F');
+    s = s.replace(/'(?:[^'\\]|\\.)*'/g, '').replace(/"(?:[^"\\]|\\.)*"/g, '')
+         .replace(/`(?:[^`\\$]|\\.)*`/g, '');
+    for (const [w] of SMALL) s = s.split(w).join('');
+    /* 남은 식별자(연출용 이모지 변수 icon·문자열 결합 흔적 제외)를 찾는다 */
+    const ids = (s.match(/[A-Za-z_$][A-Za-z0-9_$.]*/g) || []).filter(x => x !== 'icon' && x !== 'crit' && x !== 'F');
+    if (ids.length) raw.push({ at: c.at, arg: c.arg.slice(0, 60), ids: [...new Set(ids)] });
+  }
+  raw.length === 0
+    ? ok(`전투 팝업 ${calls.length}곳 전부가 fmt 또는 상한 있는 소수치만 쓴다 (화이트리스트 ${SMALL.length}종)`)
+    : bad(`fmt 를 안 거친 전투 팝업 ${raw.length}곳: ` +
+          raw.map(r => `index.html:${r.at} «${r.arg}» → ${r.ids.join(',')}`).join(' / '));
+
+  /* T57 본체 — 골드 드랍 팝업. 위 전수 검사가 잡지만, 되돌림을 이름으로도 못박아 둔다. */
+  /addText\('\+'\+fmt\(drop\)\+' 🪙'/.test(HTML)
+    ? ok('골드 드랍 팝업이 fmt(drop) 을 쓴다 (T57)')
+    : bad("골드 드랍 팝업이 `'+'+fmt(drop)+' 🪙'` 가 아니다 — 챕터 240+ 에서 «+9.25e+22 🪙» 로 뜬다");
+
+  /* 실제 도달값으로 폭을 잰다 — 게임의 goldKill 식과 fmt 를 index.html 에서 그대로 읽어 실행한다 */
+  const vmFmt2 = (() => {
+    const m = HTML.match(/const NUM_SUF[\s\S]*?const fmtQty = [^\n]*\n/);
+    if (!m) return null;
+    try { const sb = { exports: {} }; new vm.Script(m[0] + ';module.exports={fmt};')
+      .runInNewContext(Object.assign(sb, { module: sb, require })); return sb.exports.fmt; } catch (e) { return null; }
+  })();
+  const gk = (() => {
+    const g = HTML.match(/goldKillBase:\s*([\d.]+),\s*goldKillPer:\s*([\d.]+)/);
+    const gg = HTML.match(/goldGrowth:\s*([\d.]+)/);
+    if (!g || !gg) return null;
+    return c => (+g[1] + +g[2] * c) * Math.pow(+gg[1], c - 1) * 1.8;   /* rand 최대치 */
+  })();
+  if (vmFmt2 && gk) {
+    const worst = [50, 100, 150, 200, 250, 300].map(c => ({ c, s: vmFmt2(Math.round(gk(c))) }));
+    /* 9자 이내 + «도달 가능한» 구간은 접미사 사다리로 읽혀야 한다. 지수표기(«3.65e27»)는
+       ㉖ 이 슬롯 Lv150(2.45e84) 용으로 남겨 둔 최후 폴백이고, 골드 드랍 최대치는 ~5e27 이라
+       사다리(1e36·Dc)가 전부 덮는다 — 여기서 지수표기가 나오면 사다리가 잘린 것이다. */
+    const over = worst.filter(w => w.s.length > 9 || /e\d/.test(w.s));
+    over.length === 0
+      ? ok(`도달 가능한 골드 드랍이 전부 9자 이내 + 접미사 표기 — 챕터150 «${worst[2].s}» · 챕터300 «${worst[5].s}»`)
+      : bad(`골드 드랍 표기가 규약 밖이다: ${over.map(w => `챕터${w.c}→«${w.s}»`).join(', ')}` +
+            ' (fmt 되돌림이거나, 골드 성장률이 올라 NUM_SUF 사다리를 넘었다 — 후자면 사다리를 늘릴 것)');
+  } else bad('goldKill 식 또는 fmt 를 index.html 에서 읽지 못했다 — ㉗ 실측 단언 불가');
+
+  /* 인게임 HUD 누적 골드도 같은 규약 (팝업만 고치고 HUD 를 놓치는 되돌림 방지) */
+  /\$\('gGold'\)\.textContent=fmt\(G\.gold\)/.test(HTML)
+    ? ok('인게임 HUD 누적 골드가 fmt 를 쓴다')
+    : bad('인게임 HUD 누적 골드가 fmt 를 거치지 않는다');
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');

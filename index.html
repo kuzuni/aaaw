@@ -2266,7 +2266,10 @@ function onKill(e){
   $('gGold').textContent=fmt(G.gold);
   AU.play('poof'); AU.play('coin');
   poof(e.worldX,0);
-  addText('+'+drop+' 🪙','#FFD54F',e.worldX,-100);
+  /* ⚑ T57 — 전투 중 유일하게 fmt 를 안 거치던 표기였다. 데미지·회복·반격은 전부 fmt 를 쓰는데
+     이 한 줄만 raw number 라, 골드가 챕터당 1.22 배로 자라면서 챕터 150 에서 19자,
+     챕터 240 부터는 JS 지수표기(«+9.25e+22 🪙»)가 캔버스에 그대로 떴다 — 게임 표기 규약(T54) 밖이다. */
+  addText('+'+fmt(drop)+' 🪙','#FFD54F',e.worldX,-100);
   if(p.killHeal>0) heal(p,p.maxHp*p.killHeal);
   if(px.killShield3) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.007*px.killShield3);
   if(px.killShield10) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.0075*px.killShield10);
