@@ -944,7 +944,10 @@ function exp2_perkWinrate(){
     const rr=rows.filter(x=>x.r===r);
     if(!rr.length){console.log(`  ${['일반','희귀','전설','신화'][r]}: 표본 없음`);continue;}
     const hi=rr[0],lo=rr[rr.length-1],sp=hi.wr-lo.wr;
-    console.log(`  ${['일반','희귀','전설','신화'][r]}: 최상 ${hi.id} ${hi.wr.toFixed(0)}% / 최하 ${lo.id} ${lo.wr.toFixed(0)}% → 폭 ${sp.toFixed(0)}%p ${sp<25?'OK':'초과'}`);
+    /* R09: 소수점 1자리로 출력한다. 정수 반올림이면 «최상 80% / 최하 55% → 폭 25%p OK» 처럼
+       끝값과 폭이 서로 안 맞아 보여(실제 79.8−55.2=24.6) 읽는 쪽이 판정 오류로 오해한다 —
+       R09 비평가 2명이 독립적으로 같은 오독을 했다. 판정(sp<25)은 원래부터 미반올림 값이라 무변경. */
+    console.log(`  ${['일반','희귀','전설','신화'][r]}: 최상 ${hi.id} ${hi.wr.toFixed(1)}% / 최하 ${lo.id} ${lo.wr.toFixed(1)}% → 폭 ${sp.toFixed(1)}%p ${sp<25?'OK':'초과'}`);
   }
   if(process.env.EXP2_FULL){
     console.log('-- [진단] 등급별 전 특전 승률 (표본 25판 이상, 내림차순) --');
