@@ -1,0 +1,34 @@
+
+=== 실험2: 특전별 기여도 (챕터30, 하니스 희귀 6부위 · 슬롯 5렙, 1200판) ===
+전체 클리어율: 71.0%
+-- 상위 12 --
+  m_rangeSpear(신) 93% (57판)
+  m_stunAura(신) 91% (57판)
+  r_wave(희) 91% (78판)
+  m_stunKill(신) 90% (52판)
+  c_killShield3(일) 90% (108판)
+  r_evadeShield(희) 90% (96판)
+  c_rangeShield(일) 89% (83판)
+  m_arsenal(신) 88% (50판)
+  m_missSpear(신) 88% (58판)
+  m_autoBolt(신) 87% (62판)
+  m_clone(신) 87% (54판)
+  l_killShield10(전) 87% (113판)
+-- 하위 12 --
+  r_critReset(희) 60% (86판)
+  c_atkBuff(일) 60% (90판)
+  m_stackMaster(신) 60% (62판)
+  r_critFBuff(희) 59% (96판)
+  m_reaper(신) 59% (59판)
+  r_aspdStack10(희) 58% (89판)
+  c_critChain(일) 58% (86판)
+  c_healBoost(일) 55% (94판)
+  m_bolt3(신) 53% (49판)
+  m_wardKing(신) 52% (66판)
+  r_missReset(희) 50% (66판)
+  m_wave4(신) 45% (47판)
+-- 등급별 스프레드 (표본 25판 이상만) --
+  일반: 최상 c_killShield3 89.8% / 최하 c_healBoost 55.3% → 폭 34.5%p 초과
+  희귀: 최상 r_wave 91.0% / 최하 r_missReset 50.0% → 폭 41.0%p 초과
+  전설: 최상 l_killShield10 86.7% / 최하 l_overBolt 61.6% → 폭 25.1%p 초과
+  신화: 최상 m_rangeSpear 93.0% / 최하 m_wave4 44.7% → 폭 48.3%p 초과

@@ -1,0 +1,34 @@
+
+=== 실험2: 특전별 기여도 (챕터30, 하니스 희귀 6부위 · 슬롯 5렙, 1200판) ===
+전체 클리어율: 70.3%
+-- 상위 12 --
+  m_stunAura(신) 91% (46판)
+  c_rangeShield(일) 91% (85판)
+  m_clone(신) 90% (71판)
+  m_autoBolt(신) 90% (39판)
+  r_arrow(희) 89% (109판)
+  m_guard(신) 88% (75판)
+  m_stunKill(신) 88% (58판)
+  l_stunHit3(전) 88% (107판)
+  m_arsenal(신) 88% (56판)
+  c_killShield3(일) 87% (85판)
+  m_rangeSpear(신) 86% (65판)
+  r_evadeShield(희) 85% (82판)
+-- 하위 12 --
+  r_healAmp(희) 60% (107판)
+  m_wardKing(신) 60% (72판)
+  c_evadeAspd(일) 59% (96판)
+  r_stunCrit(희) 59% (93판)
+  c_atkBuff(일) 58% (99판)
+  r_counterX(희) 57% (105판)
+  r_missAspd(희) 57% (83판)
+  r_aspdStack10(희) 56% (87판)
+  m_axe3(신) 56% (61판)
+  c_critF(일) 55% (118판)
+  m_reaper(신) 55% (40판)
+  m_stackMaster(신) 43% (51판)
+-- 등급별 스프레드 (표본 25판 이상만) --
+  일반: 최상 c_rangeShield 90.6% / 최하 c_critF 55.1% → 폭 35.5%p 초과
+  희귀: 최상 r_arrow 89.0% / 최하 r_aspdStack10 56.3% → 폭 32.7%p 초과
+  전설: 최상 l_stunHit3 87.9% / 최하 l_overheal 60.2% → 폭 27.7%p 초과
+  신화: 최상 m_stunAura 91.3% / 최하 m_stackMaster 43.1% → 폭 48.2%p 초과

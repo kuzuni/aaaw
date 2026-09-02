@@ -83,8 +83,19 @@ const HAR_RE = /장비 «(전설|신화|영웅|희귀|일반)(?:\+(\d+))? 6부�
   }
   const e2ch = pick(e2sec, 'PLAN 실험2 챕터', /챕터(\d+)에서 (\d+)판/);
   const simE2ch = pick(SIM, 'sim 실험2 챕터', /hCh\('EXP2_CH',\s*(\d+)\s*\)/, 1);
-  const simE2n = pick(SIM, 'sim 실험2 판수', /N=parseInt\(process\.env\.EXP2_N\|\|'(\d+)'/, 1);
+  /* ⚑ T80: 채점 판수가 리터럴에서 이름 붙은 상수 `EXP2_SCORE_N` 으로 옮겨졌다.
+     상수 값만 보면 «상수는 12000 인데 기본값은 다른 리터럴» 인 우회를 놓치므로 **두 자리를 같이 본다**:
+     ① 선언 `const EXP2_SCORE_N=<값>` ② 그 값이 실제로 기본값 자리에 쓰이는가(`EXP2_N||String(EXP2_SCORE_N)`). */
+  const simE2n = pick(SIM, 'sim 실험2 판수', /const EXP2_SCORE_N\s*=\s*(\d+)\s*;/, 1);
+  const usesConst = /N\s*=\s*parseInt\(process\.env\.EXP2_N\s*\|\|\s*String\(EXP2_SCORE_N\)\s*,\s*10\)/.test(SIM);
+  cmp('실험2 판수 기본값이 EXP2_SCORE_N 을 쓴다', 'yes', usesConst ? 'yes' : 'no',
+      'EXP2_N 미지정 시 상수가 그대로 채점 판수가 되어야 한다 (리터럴 우회 차단)');
   if (e2ch) { cmp('실험2 측정 챕터', e2ch[1], simE2ch); cmp('실험2 판수', e2ch[2], simE2n); }
+  /* 주인 확정 하한 (2026-09-03 «①측정은 12,000판 이상») — PLAN·엔진이 사이좋게 같이 내려가는 것도 막는다. */
+  const EXP2_N_FLOOR = 12000;
+  if (simE2n !== null)
+    rows.push({ name: '실험2 판수 주인 확정 하한(≥12000)', plan: `≥${EXP2_N_FLOOR}`, impl: String(simE2n),
+                ok: Number(simE2n) >= EXP2_N_FLOOR, note: '2026-09-03 주인 지시 ① — 1,200판에서는 신화 칸이 잡음만으로 25%p 를 넘어 측정 자체가 불가' });
   const e2sp = pick(e2sec, 'PLAN 실험2 스프레드 임계', /(\d+)%p 이상\)이면/, 1);
   const simE2sp = pick(SIM, 'sim 실험2 스프레드 임계', /sp<(\d+)\?'OK':'초과'/, 1);
   cmp('실험2 스프레드 임계(%p)', e2sp, simE2sp);

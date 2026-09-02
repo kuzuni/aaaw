@@ -1,0 +1,34 @@
+
+=== 실험2: 특전별 기여도 (챕터30, 하니스 희귀 6부위 · 슬롯 5렙, 1200판) ===
+전체 클리어율: 70.8%
+-- 상위 12 --
+  m_rangeSpear(신) 93% (67판)
+  m_stunKill(신) 92% (51판)
+  m_autoBolt(신) 92% (74판)
+  c_rangeShield(일) 91% (103판)
+  l_killShield10(전) 89% (108판)
+  m_thornsKing(신) 89% (54판)
+  m_arsenal(신) 89% (61판)
+  r_arrow(희) 88% (93판)
+  m_lucky(신) 86% (51판)
+  c_shieldHit(일) 86% (99판)
+  c_killShield3(일) 86% (90판)
+  c_evadeEv(일) 85% (101판)
+-- 하위 12 --
+  c_aspdBuff(일) 61% (108판)
+  r_healAmp(희) 60% (96판)
+  r_atkBuffM(희) 60% (100판)
+  c_atkPerm(일) 59% (91판)
+  c_thornsS(일) 59% (93판)
+  m_arrow4(신) 59% (73판)
+  m_choice4(신) 57% (56판)
+  r_stunCrit(희) 57% (86판)
+  c_healDef(일) 55% (83판)
+  c_critChain(일) 53% (88판)
+  r_refresh(희) 53% (89판)
+  r_healAtk(희) 52% (79판)
+-- 등급별 스프레드 (표본 25판 이상만) --
+  일반: 최상 c_rangeShield 91.3% / 최하 c_critChain 53.4% → 폭 37.9%p 초과
+  희귀: 최상 r_arrow 88.2% / 최하 r_healAtk 51.9% → 폭 36.3%p 초과
+  전설: 최상 l_killShield10 88.9% / 최하 l_counterHeal 62.8% → 폭 26.1%p 초과
+  신화: 최상 m_rangeSpear 92.5% / 최하 m_choice4 57.1% → 폭 35.4%p 초과
