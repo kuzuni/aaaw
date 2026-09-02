@@ -257,9 +257,9 @@ const GOPT={
     {d:'피격 시 방어 +3 3초(누적)', ap:p=>p.px.defHitBuff++},
     {d:'방어 +8',               ap:p=>p.def+=8},
     {d:'피격 시 30% 확률 방어 +14 4초', ap:p=>p.px.defBuff2++},
-    {d:'피격 시 방어 +14 4초(확정)', ap:p=>p.px.wallBuff++},
+    {d:'피격 시 방어 +10 4초(최대 2중첩)', ap:p=>p.px.wallBuff++},
     {d:'피격 시 20% 확률 방어 +15 4초', ap:p=>p.px.defBuffL++},
-    {d:'실드가 있으면 받는 피해 절반', ap:p=>p.px.guardCrystal=true},
+    {d:'실드가 있으면 받는 피해 38% 감소', ap:p=>p.px.guardCrystal=true},
   ],
   crown:[ /* 치명타 확률 계열 */
     {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
@@ -275,9 +275,9 @@ const GOPT={
     {d:'공격 시 10% 확률 번개 2발', ap:p=>p.px.bolt++},
     {d:'치명타 시 치명 배율 +34 4초', ap:p=>p.px.critFBuff++},
     {d:'번개 20회로 증가',       ap:p=>p.px.boltCount=1},
-    {d:'2초마다 번개 자동 발사', ap:p=>p.px.autoBolt++},
-    {d:'치명타 시 공격속도 +15% 3초', ap:p=>p.px.critAspdBuff++},
-    {d:'공격 시 20% 확률 소환 무작위 발사', ap:p=>p.px.arsenal++},
+    {d:'2.4초마다 번개 자동 발사', ap:p=>p.px.autoBolt++},
+    {d:'치명타 시 공격속도 +25% 3초', ap:p=>p.px.critAspdBuff++},
+    {d:'공격 시 16% 확률 소환 무작위 발사', ap:p=>p.px.arsenal++},
   ],
   /* 갑옷 */
   plate:[ /* 체력·피격 계열 */
@@ -315,7 +315,7 @@ const GOPT={
     {d:'치명타 시 30% 확률 체력 4% 회복', ap:p=>p.px.critHeal3++},
     {d:'치명타 배율 +50',       ap:p=>p.critF+=50},
     {d:'치명타 시 75% 확률 추가타', ap:p=>p.px.extraHit++},
-    {d:'뒤쪽 적에게 피해 2배',   ap:p=>p.px.backDmg=true},
+    {d:'뒤쪽 적에게 피해 3.2배',   ap:p=>p.px.backDmg=true},
   ],
   leather:[ /* 공격속도 계열 */
     {d:'공격속도 +8%',          ap:p=>p.aspd*=1.08},
@@ -333,14 +333,14 @@ const GOPT={
     {d:'공격 시 10% 확률 공격력 영구 +1%', ap:p=>p.px.atkPerm++},
     {d:'공격력 +9%',            ap:p=>p.dmg*=1.09},
     {d:'기본공격마다 분신 추가타', ap:p=>p.px.clone=true},
-    {d:'체력 15% 이하 적 즉사',  ap:p=>p.px.execKill=true},
+    {d:'체력 25% 이하 적 즉사',  ap:p=>p.px.execKill=true},
   ],
   /* 신발 (주인 예시 계열 그대로) */
   sandal:[ /* 회피 계열 */
     {d:'회피 +7',               ap:p=>p.evade+=7},
     {d:'회피 시 10% 확률 도끼 1개 발사', ap:p=>p.px.evadeAxe++},
     {d:'회피 +8',               ap:p=>p.evade+=8},
-    {d:'회피 시 공격력 +10% 4초', ap:p=>p.px.evadeAtkBuff++},
+    {d:'회피 시 공격력 +28% 5초', ap:p=>p.px.evadeAtkBuff++},
     {d:'회피 시 15% 확률 체력 7% 회복', ap:p=>p.px.evadeHeal++},
     {d:'회피 시 회피 +8 3초(누적)', ap:p=>p.px.evadeEvBuff++},
     {d:'회피 시 다음 공격 치명타 확정', ap:p=>p.px.evadeCrit=true},
@@ -351,8 +351,8 @@ const GOPT={
     {d:'반격 확률 +8',          ap:p=>p.counter+=8},
     {d:'반격 시 공격력 +14% 4초', ap:p=>p.px.counterAtkM++},
     {d:'반격 피해 +100%',        ap:p=>p.px.counterX++},
-    {d:'반격 시 체력 2% 회복',   ap:p=>p.px.counterHeal++},
-    {d:'반격 시 50% 확률 연쇄 반격', ap:p=>p.px.counterChain=true},
+    {d:'반격 시 체력 4% 회복',   ap:p=>p.px.counterHeal++},
+    {d:'반격 시 연쇄 반격(확정)', ap:p=>p.px.counterChain=true},
   ],
   greave:[ /* 체력 계열 */
     {d:'최대 체력 +8%',         ap:p=>{const a=p.maxHp*0.08;p.maxHp+=a;heal(p,a,true);}},
