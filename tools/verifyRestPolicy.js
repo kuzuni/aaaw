@@ -6,8 +6,9 @@
  *      (체력 회복 분기 금지 — 전 실험 공통 측정 조건)
  *   ⓑ 그 정책은 **시뮬 전용**이다. 실제 게임(index.html)은 유저 자유 선택이라 두 선택지가 남아 있어야 한다.
  *      («정책 이식» 을 이유로 게임에서 회복 버튼을 지우는 반대 방향 회귀를 막는다)
- *   ⓒ 게임 쉼터는 PLAN §2.4 확정 스펙 — «❤️ 체력 N 회복(최대체력 40%·실제 숫자)» vs «🌟 경험치 +10».
- *      구버전 «체력 50% / 즉시 레벨 업» 잔재 금지.
+ *   ⓒ 게임 쉼터는 PLAN §2.4 확정 스펙 — ⚑ 주인 확정(17:1X · T49) «❤️ 체력 260 회복(고정값)» vs «🌟 경험치 +26».
+ *      구버전 «체력 50% / 즉시 레벨 업» 도, 그 앞 «최대체력 40% / 경험치 +10» 도 잔재 금지.
+ *      두 값은 `REST_HEAL`·`REST_EXP` 로 sim.js·index.html 양쪽에 같은 이름·같은 값이어야 한다.
  *
  * 사용: node tools/verifyRestPolicy.js      (exit 0 = 통과, 1 = 불합격)
  */
@@ -32,16 +33,16 @@ if (!mSim) {
   bad("sim.js 의 쉼터 분기(if(n.type==='rest'){…}else if(n.type==='devil'))를 찾지 못했다 — 게이트를 갱신할 것");
 } else {
   const body = strip(mSim[1]);
-  /gainExp\(G,\s*10\)/.test(body)
-    ? ok('쉼터에서 gainExp(G,10) 을 준다 (PLAN §2.4 «🌟 경험치 +10»)')
-    : bad('쉼터에 gainExp(G,10) 이 없다 — 경험치 선택 정책이 깨졌다');
+  /gainExp\(G,\s*REST_EXP\)/.test(body)
+    ? ok('쉼터에서 gainExp(G,REST_EXP) 를 준다 (PLAN §2.4 «🌟 경험치»)')
+    : bad('쉼터에 gainExp(G,REST_EXP) 가 없다 — 경험치 선택 정책이 깨졌거나 수치를 상수 밖에 박았다');
   /* 회복 분기 = heal(...) 호출 중 restHp 특전(최대 체력 증가분 회복)이 아닌 것 */
   const heals = (body.match(/heal\s*\(/g) || []).length;
   const restHpHeal = /p\.px\.restHp\)\{[^}]*heal\(p,a,true\)/.test(body) ? 1 : 0;
   heals - restHpHeal === 0
     ? ok('쉼터에 체력 회복 분기가 없다 (restHp 특전분 제외)')
     : bad(`쉼터에 체력 회복이 ${heals - restHpHeal}개 남아 있다 — 주인 확정 16:4X 위반(시뮬은 회복 선택 금지)`);
-  /^\s*(?:if\(p\.px\.restHp\)[^\n]*\n)?\s*gainExp\(G,\s*10\);\s*$/.test(body.replace(/\n\s*\n/g, '\n'))
+  /^\s*(?:if\(p\.px\.restHp\)[^\n]*\n)?\s*gainExp\(G,\s*REST_EXP\);\s*$/.test(body.replace(/\n\s*\n/g, '\n'))
     ? ok('경험치 지급이 무조건 실행된다 (체력 조건부 분기 없음)')
     : bad('쉼터 본문이 «restHp 특전 + 무조건 gainExp» 형태가 아니다 — 조건부 선택이 남아 있는지 확인할 것');
   /p\.hp\s*<\s*p\.maxHp\s*\*\s*0\.6/.test(body)
@@ -66,15 +67,15 @@ if (!mHtml) {
 
   /* ---------- ⓒ PLAN §2.4 확정 스펙 ---------- */
   console.log('\n[③] index.html 쉼터가 PLAN §2.4 스펙과 일치 (구버전 잔재 금지)');
-  /heal\(p2,\s*p2\.maxHp\s*\*\s*0\.40?\)/.test(code)
-    ? ok('회복량 = 최대 체력의 40% (PLAN §2.4)')
-    : bad('회복량이 최대 체력의 40% 가 아니다 (PLAN §2.4 — 구버전은 50% 였다)');
-  /체력\s*\$\{fmt\(restHeal\)\}\s*회복/.test(code) && /restHeal\s*=\s*Math\.round\(p\.maxHp\s*\*\s*0\.40?\)/.test(code)
+  /heal\(p2,\s*REST_HEAL\)/.test(code) && !/heal\(p2,\s*p2\.maxHp\s*\*/.test(code)
+    ? ok('회복량 = REST_HEAL 고정값 (PLAN §2.4 · 최대체력 비율 아님)')
+    : bad('회복량이 REST_HEAL 고정값이 아니다 (PLAN §2.4 — 주인 17:1X 로 «최대체력 40%» 는 폐기됐다)');
+  /체력\s*\$\{fmt\(REST_HEAL\)\}\s*회복/.test(code)
     ? ok('회복 버튼이 회복량을 «실제 숫자» 로 표시한다 (PLAN §2.4)')
     : bad('회복 버튼이 회복량을 실제 숫자로 표시하지 않는다 (PLAN §2.4)');
-  /gainExp\(10\)/.test(code)
-    ? ok('🌟 선택이 경험치 +10 을 준다 (PLAN §2.4)')
-    : bad('🌟 선택이 gainExp(10) 이 아니다 — 구버전 «즉시 레벨 업» 인지 확인할 것');
+  /gainExp\(REST_EXP\)/.test(code)
+    ? ok('🌟 선택이 경험치 +REST_EXP 를 준다 (PLAN §2.4)')
+    : bad('🌟 선택이 gainExp(REST_EXP) 가 아니다 — 구버전 «즉시 레벨 업»·«+10» 인지 확인할 것');
   /G\.player\.level\+\+/.test(code)
     ? bad('구버전 «즉시 레벨 업»(level++)이 남아 있다 — PLAN §2.4 는 «경험치 +10» 이다')
     : ok('구버전 «즉시 레벨 업»(level++) 잔재 없음');
@@ -84,6 +85,30 @@ if (!mHtml) {
   /체력\s*50%/.test(code)
     ? bad('쉼터 문구에 구버전 «체력 50% 회복» 이 남아 있다 (PLAN §2.4 = 40%)')
     : ok('쉼터 문구에 구버전 «체력 50%» 없음');
+}
+
+/* ---------- ⓕ 쉼터 보상 상수 REST_HEAL·REST_EXP — PLAN ↔ sim.js ↔ index.html ---------- */
+console.log('\n[⑥] 쉼터 보상 «체력 260 / 경험치 +26» (주인 확정 17:1X · T49) — 3자 일치');
+{
+  const rd = src => {
+    const m = src.match(/const REST_HEAL=(\d+),\s*REST_EXP=(\d+);/);
+    return m ? { heal: +m[1], exp: +m[2] } : null;
+  };
+  const sv = rd(SIM), hv = rd(HTML);
+  /* PLAN §2.4 는 개정 전 값을 취소선으로 남겨 두므로 «주인 확정» 뒤쪽만 읽는다 */
+  const planLine = PLAN.split('\n').find(l => l.includes('쉼터 🏕️')) || '';
+  const seg = planLine.slice(planLine.indexOf('주인 확정'));
+  const pm = seg.match(/체력 (\d+) 회복/), pe = seg.match(/경험치 \+(\d+)/);
+  if (!sv || !hv || !pm || !pe) {
+    bad(`REST_HEAL/REST_EXP 를 못 읽었다 (sim ${!!sv} · index.html ${!!hv} · PLAN 회복 ${!!pm} · PLAN 경험치 ${!!pe}) — 게이트를 갱신할 것`);
+  } else {
+    sv.heal === hv.heal && sv.heal === +pm[1]
+      ? ok(`회복량 ${sv.heal} 고정 — 3자 일치`)
+      : bad(`회복량 불일치: PLAN ${pm[1]} · sim ${sv.heal} · index.html ${hv.heal}`);
+    sv.exp === hv.exp && sv.exp === +pe[1]
+      ? ok(`경험치 +${sv.exp} — 3자 일치`)
+      : bad(`경험치 불일치: PLAN ${pe[1]} · sim ${sv.exp} · index.html ${hv.exp}`);
+  }
 }
 
 /* ---------- ⓓ r_restHp 계수 3자 일치 ---------- */

@@ -1760,6 +1760,9 @@ function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a
    ① 적 총 수 ≤ 100 (보스 제외 웨이브 적 합) ② 쉼터 1~4 ③ 악마 정확히 1 ④ 천사 정확히 1.
    가중치(45/30/25) 배치는 폐기 — 악마1·천사1 을 먼저 깔고 남는 슬롯을 전부 쉼터로 채운 뒤 순서만 시드 셔플한다. */
 const LAYOUT_MAXENEMY=100;
+/* ⚑ 쉼터 보상 (PLAN §2.4 · 주인 확정 2026-09-02 17:1X · T49) — «❤️ 체력 260 회복(고정값)» vs «🌟 경험치 +26».
+   고정값이라 최대체력 비율로 되돌리지 말 것. sim.js 와 이름·값이 같아야 한다(게이트 verifyRestPolicy). */
+const REST_HEAL=260, REST_EXP=26;
 /* ⚑ 주인 확정 상수 (PLAN §2.3, 2026-09-02 15:4X) — 적 전원 회피율 10%. sim.js 와 같은 값·같은 적용 범위.
    튜닝 노브가 아니다. 적중률(명중) 스탯·특전·장비 옵션·버프는 이 게임에 존재 금지(흡혈 증가 금지와 같은 축).
    적용: 기본공격 · 소환 5종 · 반격. 제외(위임): 가시 반사·오발 화살 — PROGRESS T43 근거. */
@@ -1916,17 +1919,16 @@ function openRest(){
     p.maxHp+=a; heal(p,a,true); renderStatsGrid(); updateBars();
     bonus=`<div class="ov-sub" style="color:#7ED957">🏕️ 특전 발동! 최대 체력 +${15*p.px.restHp}%</div>`;
   }
-  /* PLAN §2.4 확정 스펙: 선택지 2개 = «❤️ 체력 N 회복»(최대체력 40%, 실제 숫자 표시) vs «🌟 경험치 +10».
-     구버전의 «체력 50% / 즉시 레벨 업» 은 폐기(레벨업 선택지가 아니다 — PLAN §2.4·§12 주석).
+  /* PLAN §2.4 확정 스펙: 선택지 2개 = «❤️ 체력 260 회복»(⚑ 주인 확정 17:1X — **고정값**, 최대체력 비율 아님)
+     vs «🌟 경험치 +26». 구버전의 «체력 50% / 즉시 레벨 업» 도, 그 앞의 «최대체력 40% / 경험치 +10» 도 폐기다.
      시뮬(sim.js)은 주인 확정 16:4X 정책대로 항상 경험치를 고르지만, 실제 게임은 유저 자유 선택이다. */
-  const restHeal=Math.round(p.maxHp*0.40);
   openOverlay(`<div class="big-emoji">🏕️</div>
     <div class="ov-banner">쉼터</div>
     <div class="ov-sub">모닥불 앞에서 잠시 쉬어갑니다</div>${bonus}
-    <button class="choice-btn gold" id="rHeal">❤️ 체력 ${fmt(restHeal)} 회복<small>지친 몸을 달랩니다</small></button>
-    <button class="choice-btn" id="rExp">🌟 경험치 +10<small>다음 레벨에 가까워집니다</small></button>`);
-  $('rHeal').onclick=()=>{ AU.play('heal'); const p2=G.player; heal(p2,p2.maxHp*0.40); addText('+'+fmt(p2.maxHp*0.40),'#7ED957'); updateBars(); closeOverlay(); };
-  $('rExp').onclick=()=>{ closeOverlay(); addText('EXP +10','#FFD54A'); gainExp(10); };
+    <button class="choice-btn gold" id="rHeal">❤️ 체력 ${fmt(REST_HEAL)} 회복<small>지친 몸을 달랩니다</small></button>
+    <button class="choice-btn" id="rExp">🌟 경험치 +${REST_EXP}<small>다음 레벨에 가까워집니다</small></button>`);
+  $('rHeal').onclick=()=>{ AU.play('heal'); const p2=G.player; heal(p2,REST_HEAL); addText('+'+fmt(REST_HEAL),'#7ED957'); updateBars(); closeOverlay(); };
+  $('rExp').onclick=()=>{ closeOverlay(); addText('EXP +'+REST_EXP,'#FFD54A'); gainExp(REST_EXP); };
 }
 function openDevil(){
   AU.play('devil');
