@@ -1,0 +1,117 @@
+'use strict';
+/* 쉼터(🏕️) 게이트 — T46
+ *
+ * 감시 대상 3가지가 서로 다른 방향으로 어긋나기 쉬워 한 파일에 묶었다.
+ *   ⓐ ⚑ 주인 확정(2026-09-02 16:4X · PLAN §7): **시뮬**의 가상 플레이어는 쉼터에서 항상 «🌟 경험치» 를 고른다.
+ *      (체력 회복 분기 금지 — 전 실험 공통 측정 조건)
+ *   ⓑ 그 정책은 **시뮬 전용**이다. 실제 게임(index.html)은 유저 자유 선택이라 두 선택지가 남아 있어야 한다.
+ *      («정책 이식» 을 이유로 게임에서 회복 버튼을 지우는 반대 방향 회귀를 막는다)
+ *   ⓒ 게임 쉼터는 PLAN §2.4 확정 스펙 — «❤️ 체력 N 회복(최대체력 40%·실제 숫자)» vs «🌟 경험치 +10».
+ *      구버전 «체력 50% / 즉시 레벨 업» 잔재 금지.
+ *
+ * 사용: node tools/verifyRestPolicy.js      (exit 0 = 통과, 1 = 불합격)
+ */
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..');
+const SIM = fs.readFileSync(path.join(ROOT, 'sim.js'), 'utf8');
+const HTML = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const PLAN = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
+
+let fail = 0, pass = 0;
+const ok = m => { pass++; console.log('  ✓ ' + m); };
+const bad = m => { fail++; console.log('  ✗ ' + m); };
+/* 주석에 옛 코드가 인용돼 있으므로(수리 근거) 검사 전에 반드시 벗긴다 */
+const strip = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+/* ---------- ⓐ sim.js — 쉼터는 언제나 경험치 ---------- */
+console.log('\n[①] sim.js 쉼터 분기 = 항상 «경험치» (주인 확정 16:4X · PLAN §7)');
+const mSim = SIM.match(/if\(n\.type==='rest'\)\{([\s\S]*?)\}else if\(n\.type==='devil'\)/);
+if (!mSim) {
+  bad("sim.js 의 쉼터 분기(if(n.type==='rest'){…}else if(n.type==='devil'))를 찾지 못했다 — 게이트를 갱신할 것");
+} else {
+  const body = strip(mSim[1]);
+  /gainExp\(G,\s*10\)/.test(body)
+    ? ok('쉼터에서 gainExp(G,10) 을 준다 (PLAN §2.4 «🌟 경험치 +10»)')
+    : bad('쉼터에 gainExp(G,10) 이 없다 — 경험치 선택 정책이 깨졌다');
+  /* 회복 분기 = heal(...) 호출 중 restHp 특전(최대 체력 증가분 회복)이 아닌 것 */
+  const heals = (body.match(/heal\s*\(/g) || []).length;
+  const restHpHeal = /p\.px\.restHp\)\{[^}]*heal\(p,a,true\)/.test(body) ? 1 : 0;
+  heals - restHpHeal === 0
+    ? ok('쉼터에 체력 회복 분기가 없다 (restHp 특전분 제외)')
+    : bad(`쉼터에 체력 회복이 ${heals - restHpHeal}개 남아 있다 — 주인 확정 16:4X 위반(시뮬은 회복 선택 금지)`);
+  /^\s*(?:if\(p\.px\.restHp\)[^\n]*\n)?\s*gainExp\(G,\s*10\);\s*$/.test(body.replace(/\n\s*\n/g, '\n'))
+    ? ok('경험치 지급이 무조건 실행된다 (체력 조건부 분기 없음)')
+    : bad('쉼터 본문이 «restHp 특전 + 무조건 gainExp» 형태가 아니다 — 조건부 선택이 남아 있는지 확인할 것');
+  /p\.hp\s*<\s*p\.maxHp\s*\*\s*0\.6/.test(body)
+    ? bad('폐지된 «체력 60% 미만이면 회복» 조건이 되돌아왔다 (주인 확정 16:4X 위반)')
+    : ok('폐지된 «체력 60% 미만 → 회복» 조건 없음');
+}
+
+/* ---------- ⓑ index.html — 게임은 유저 자유 선택 ---------- */
+console.log('\n[②] index.html 쉼터 = 유저 자유 선택 2택 (시뮬 정책의 오이식 방지)');
+const mHtml = HTML.match(/function openRest\(\)\{([\s\S]*?)\n\}/);
+if (!mHtml) {
+  bad('index.html 의 openRest() 를 찾지 못했다 — 게이트를 갱신할 것');
+} else {
+  const body = mHtml[1];
+  const code = strip(body);
+  /id="rHeal"/.test(code) && /\$\('rHeal'\)\.onclick/.test(code)
+    ? ok('❤️ 회복 버튼(rHeal)이 살아 있다 — 실제 게임은 유저가 고른다')
+    : bad('❤️ 회복 버튼이 사라졌다 — 시뮬 전용 정책(16:4X)을 게임에 잘못 이식했다');
+  /id="rExp"/.test(code) && /\$\('rExp'\)\.onclick/.test(code)
+    ? ok('🌟 경험치 버튼(rExp)이 살아 있다')
+    : bad('🌟 경험치 버튼이 없다');
+
+  /* ---------- ⓒ PLAN §2.4 확정 스펙 ---------- */
+  console.log('\n[③] index.html 쉼터가 PLAN §2.4 스펙과 일치 (구버전 잔재 금지)');
+  /heal\(p2,\s*p2\.maxHp\s*\*\s*0\.40?\)/.test(code)
+    ? ok('회복량 = 최대 체력의 40% (PLAN §2.4)')
+    : bad('회복량이 최대 체력의 40% 가 아니다 (PLAN §2.4 — 구버전은 50% 였다)');
+  /체력\s*\$\{fmt\(restHeal\)\}\s*회복/.test(code) && /restHeal\s*=\s*Math\.round\(p\.maxHp\s*\*\s*0\.40?\)/.test(code)
+    ? ok('회복 버튼이 회복량을 «실제 숫자» 로 표시한다 (PLAN §2.4)')
+    : bad('회복 버튼이 회복량을 실제 숫자로 표시하지 않는다 (PLAN §2.4)');
+  /gainExp\(10\)/.test(code)
+    ? ok('🌟 선택이 경험치 +10 을 준다 (PLAN §2.4)')
+    : bad('🌟 선택이 gainExp(10) 이 아니다 — 구버전 «즉시 레벨 업» 인지 확인할 것');
+  /G\.player\.level\+\+/.test(code)
+    ? bad('구버전 «즉시 레벨 업»(level++)이 남아 있다 — PLAN §2.4 는 «경험치 +10» 이다')
+    : ok('구버전 «즉시 레벨 업»(level++) 잔재 없음');
+  /즉시\s*레벨\s*업/.test(code)   /* 주석에는 «폐지» 근거로 인용돼 있으므로 주석 벗긴 code 로 본다 */
+    ? bad('쉼터 문구에 구버전 «즉시 레벨 업» 이 남아 있다 (PLAN §2.4)')
+    : ok('쉼터 문구에 «즉시 레벨 업» 없음');
+  /체력\s*50%/.test(code)
+    ? bad('쉼터 문구에 구버전 «체력 50% 회복» 이 남아 있다 (PLAN §2.4 = 40%)')
+    : ok('쉼터 문구에 구버전 «체력 50%» 없음');
+}
+
+/* ---------- ⓓ r_restHp 계수 3자 일치 ---------- */
+console.log('\n[④] 🏕️ r_restHp «최대 체력 +15%» — PLAN ↔ sim.js ↔ index.html 3자 일치');
+{
+  const planPct = (PLAN.match(/r_restHp[^|]*\|[^|]*?\+(\d+)%/) || [])[1];
+  const simPct = (strip(SIM).match(/p\.px\.restHp\)\{const a=p\.maxHp\*([\d.]+)\*p\.px\.restHp/) || [])[1];
+  const htmlPct = (strip(HTML).match(/p\.px\.restHp\)\{\s*const a=p\.maxHp\*([\d.]+)\*p\.px\.restHp/) || [])[1];
+  const htmlTxt = (HTML.match(/id:'r_restHp'[^\n]*?\+(\d+)%/) || [])[1];
+  const htmlShow = (HTML.match(/최대 체력 \+\$\{(\d+)\*p\.px\.restHp\}%/) || [])[1];
+  const vals = { PLAN: planPct && planPct / 100, sim: simPct && Number(simPct), 'index.html': htmlPct && Number(htmlPct),
+                 '특전 설명문': htmlTxt && htmlTxt / 100, '쉼터 팝업 표시': htmlShow && htmlShow / 100 };
+  const missing = Object.keys(vals).filter(k => !vals[k]);
+  if (missing.length) bad('r_restHp 계수를 못 읽었다: ' + missing.join(', ') + ' — 게이트를 갱신할 것');
+  else {
+    const uniq = [...new Set(Object.values(vals).map(v => v.toFixed(4)))];
+    uniq.length === 1 && Number(uniq[0]) === 0.15
+      ? ok('5곳 전부 +15% 로 일치 (PLAN §3 표 · sim · 엔진 · 설명문 · 팝업)')
+      : bad('r_restHp 계수 불일치: ' + Object.entries(vals).map(([k, v]) => `${k} ${(v * 100).toFixed(1)}%`).join(' · '));
+  }
+}
+
+/* ---------- ⓔ PLAN 에 정책이 문서로 남아 있는가 ---------- */
+console.log('\n[⑤] PLAN 문서 — 시뮬 쉼터 정책 조항 존속');
+/시뮬 공통 정책[\s\S]{0,80}쉼터[\s\S]{0,40}경험치/.test(PLAN)
+  ? ok('PLAN §7 에 «가상 플레이어는 쉼터에서 항상 경험치» 조항이 있다')
+  : bad('PLAN §7 의 시뮬 쉼터 정책 조항이 사라졌다 (주인 확정 16:4X)');
+
+console.log(`\n통과 ${pass} · 불합격 ${fail}`);
+console.log(fail === 0 ? '→ 통과' : '→ 불합격');
+process.exit(fail === 0 ? 0 : 1);

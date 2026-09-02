@@ -1912,17 +1912,21 @@ function openRest(){
   const p=G.player;
   let bonus='';
   if(p.px.restHp){
-    const a=p.maxHp*0.10*p.px.restHp;
+    const a=p.maxHp*0.15*p.px.restHp;                    /* PLAN §3 r_restHp = «최대 체력 +15%» (sim.js 와 동일 계수) */
     p.maxHp+=a; heal(p,a,true); renderStatsGrid(); updateBars();
-    bonus=`<div class="ov-sub" style="color:#7ED957">🏕️ 특전 발동! 최대 체력 +${10*p.px.restHp}%</div>`;
+    bonus=`<div class="ov-sub" style="color:#7ED957">🏕️ 특전 발동! 최대 체력 +${15*p.px.restHp}%</div>`;
   }
+  /* PLAN §2.4 확정 스펙: 선택지 2개 = «❤️ 체력 N 회복»(최대체력 40%, 실제 숫자 표시) vs «🌟 경험치 +10».
+     구버전의 «체력 50% / 즉시 레벨 업» 은 폐기(레벨업 선택지가 아니다 — PLAN §2.4·§12 주석).
+     시뮬(sim.js)은 주인 확정 16:4X 정책대로 항상 경험치를 고르지만, 실제 게임은 유저 자유 선택이다. */
+  const restHeal=Math.round(p.maxHp*0.40);
   openOverlay(`<div class="big-emoji">🏕️</div>
     <div class="ov-banner">쉼터</div>
     <div class="ov-sub">모닥불 앞에서 잠시 쉬어갑니다</div>${bonus}
-    <button class="choice-btn gold" id="rHeal">❤️ 체력 50% 회복<small>지친 몸을 달랩니다</small></button>
-    <button class="choice-btn" id="rExp">🌟 즉시 레벨 업<small>특전을 하나 더 선택합니다</small></button>`);
-  $('rHeal').onclick=()=>{ AU.play('heal'); const p2=G.player; heal(p2,p2.maxHp*0.5); addText('+'+fmt(p2.maxHp*0.5),'#7ED957'); updateBars(); closeOverlay(); };
-  $('rExp').onclick=()=>{ G.player.level++; openPerkChoice(); };
+    <button class="choice-btn gold" id="rHeal">❤️ 체력 ${fmt(restHeal)} 회복<small>지친 몸을 달랩니다</small></button>
+    <button class="choice-btn" id="rExp">🌟 경험치 +10<small>다음 레벨에 가까워집니다</small></button>`);
+  $('rHeal').onclick=()=>{ AU.play('heal'); const p2=G.player; heal(p2,p2.maxHp*0.40); addText('+'+fmt(p2.maxHp*0.40),'#7ED957'); updateBars(); closeOverlay(); };
+  $('rExp').onclick=()=>{ closeOverlay(); addText('EXP +10','#FFD54A'); gainExp(10); };
 }
 function openDevil(){
   AU.play('devil');

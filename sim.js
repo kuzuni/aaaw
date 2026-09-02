@@ -862,8 +862,10 @@ function runChapter(chapter,build,opts){
         n.done=true;ev=true;
         if(n.type==='rest'){
           if(p.px.restHp){const a=p.maxHp*0.15*p.px.restHp;p.maxHp+=a;heal(p,a,true);}
-          if(p.hp<p.maxHp*0.6)heal(p,p.maxHp*0.4);
-          else gainExp(G,10);
+          /* ⚑ 주인 확정(2026-09-02 16:4X · PLAN §7): 가상 플레이어는 쉼터에서 «항상 🌟 경험치 +10» 을 고른다.
+             체력 회복(최대체력 40%) 분기는 시뮬에서 금지 — 전 실험(1~5·사다리·하니스) 공통 측정 조건.
+             실제 게임(index.html)은 유저 자유 선택이므로 두 선택지를 그대로 둔다. */
+          gainExp(G,10);        /* SIM_REST_POLICY: 항상 경험치 (게이트 verifyT2 ⑲ 가 감시) */
         }else if(n.type==='devil'){
           if(p.hp>p.maxHp*0.65){
             p.hp=Math.max(1,p.hp-p.maxHp*0.30);

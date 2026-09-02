@@ -95,11 +95,16 @@ const dvLine = planLine('악마 😈', '§2.4 악마 이벤트');
 check('악마 신화 확률', +(dvLine.match(/(\d+)% 확률로 신화/)[1]), +dv[1] * 100, '%');
 check('악마 체력 지불', +(dvLine.match(/최대 체력의 (\d+)% 지불/)[1]), +dvHp[1] * 100, '%');
 
-/* ── ⑥ 🏕️ 쉼터 이벤트 ────────────────────────────── */
-const rsHeal = grab(/else gainExp\(G,(\d+)\);/, '쉼터의 경험치 보상');
-const rsAmt = grab(/if\(p\.hp<p\.maxHp\*[\d.]+\)heal\(p,p\.maxHp\*([\d.]+)\);/, '쉼터의 회복량');
+/* ── ⑥ 🏕️ 쉼터 이벤트 ──────────────────────────────
+   ⚑ 주인 확정(2026-09-02 16:4X · PLAN §7): **시뮬**의 가상 플레이어는 쉼터에서 항상 «🌟 경험치» 를 고른다.
+   그래서 회복 분기는 sim.js 에서 사라졌고(T46), 회복량 40% 는 «유저가 고르는» index.html 에만 남는다.
+   따라서 경험치는 sim.js 로, 회복량은 index.html 로 대조한다 (둘 다 과녁은 PLAN §2.4 한 줄). */
+const HTML = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const rsHeal = grab(/if\(n\.type==='rest'\)\{[\s\S]*?gainExp\(G,(\d+)\);/, '쉼터의 경험치 보상');
+const rsAmtM = HTML.match(/\$\('rHeal'\)\.onclick=\(\)=>\{[^}]*?heal\(p2,\s*p2\.maxHp\s*\*\s*([\d.]+)\)/);
+if (!rsAmtM) { console.log('\n🔴 엔진 파싱 실패: 쉼터의 회복량 (index.html openRest 의 rHeal 모양이 바뀌었다 — 게이트를 함께 갱신할 것)'); process.exit(1); }
 const rsLine = planLine('쉼터 🏕️', '§2.4 쉼터 이벤트');
-check('쉼터 회복량', +(rsLine.match(/최대체력의 (\d+)%/)[1]), +rsAmt[1] * 100, '%');
+check('쉼터 회복량(게임)', +(rsLine.match(/최대체력의 (\d+)%/)[1]), +rsAmtM[1] * 100, '%');
 check('쉼터 경험치', +(rsLine.match(/경험치 \+(\d+)/)[1]), +rsHeal[1], '');
 
 /* ── ⑦ 😇 천사 이벤트 (무료분) ────────────────────── */
