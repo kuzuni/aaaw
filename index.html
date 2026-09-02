@@ -1215,8 +1215,13 @@ function renderGear(){
     `<div class="gs">🛡️ ${fmt(Math.round(pw.sh))}<small>실드</small></div>`;
   const mn=Math.min(...GT.parts.map(pt=>save.slots[pt]|0));
   const bon=Math.round((evenBonus({slots:save.slots})-1)*100);
+  /* ⚑ T63 — 다음 단계 안내는 «주인 확정 상한 150»(GT.slotLvMax) 을 넘겨 광고하면 안 된다.
+     mn=150 이면 (floor(150/5)+1)*5 = 155 라 도달 불가능한 «Lv.155 이면 +155%» 가 떴다.
+     같은 화면의 슬롯 팝업(slotUpgradeHTML)은 상한에서 «상한 Lv.150» 으로 끊는데 이 줄만 안 끊었다. */
+  const nextEven=(Math.floor(mn/GT.evenPer)+1)*GT.evenPer;
   $('evenNote').innerHTML=`균등 보너스 <b style="color:var(--gold)">+${bon}%</b> — 최저 슬롯 Lv.${mn} `+
-    `(6슬롯 전부 Lv.${(Math.floor(mn/GT.evenPer)+1)*GT.evenPer} 이면 +${bon+GT.evenStep*100}%)`;
+    (nextEven>GT.slotLvMax ? `(슬롯 상한 Lv.${GT.slotLvMax} — 균등 보너스 최대)`
+                           : `(6슬롯 전부 Lv.${nextEven} 이면 +${bon+GT.evenStep*100}%)`);
   const fk=fusableKeys();
   const fb=$('fuseBtn'); fb.disabled=false;              /* 대장간은 재료가 없어도 열린다 (스크린샷의 Forge 버튼) */
   fb.innerHTML=`🔨 합성${fk.size?`<span class="bang">!</span>`:''}`;

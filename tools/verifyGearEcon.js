@@ -252,6 +252,38 @@ console.log('\n[⑤ §11.4 슬롯 균등 보너스 — 계단 «모양» 검증 
                    : cases.map(([lv, w]) => `${lv.join('/')}→×${w.toFixed(2)}`).join('  '));
 }
 
+/* ----------------------------------------------------------------
+   ⚑ T63 — «다음 단계» 안내문이 주인 확정 슬롯 상한(GT.slotLvMax)을 넘겨 광고하면 안 된다.
+   왜 게이트인가: 균등 보너스는 «5의 배수마다 +5%» 로 상한이 없는데(위 ⑤가 그걸 단언한다)
+   슬롯 레벨 자체는 주인 확정 상한 150 이 있다. 두 규칙이 만나는 자리가 이 안내문 한 줄이고,
+   실제로 mn=150 에서 «6슬롯 전부 Lv.155 이면 +155%» 라는 도달 불가능한 문구가 떴다.
+   같은 화면의 슬롯 팝업은 «상한 Lv.150» 으로 끊는데 이 줄만 안 끊은 «형제 코드 불일치» 라
+   눈으로는 다시 놓치기 쉽다. index.html 의 그 식을 그대로 꺼내 0~상한 전 구간에서 굴린다.
+   ---------------------------------------------------------------- */
+console.log('\n[⑦ ⚑ T63 슬롯 균등 보너스 안내문 — 주인 확정 상한 Lv.' + GT.slotLvMax + ' 밖을 광고하지 않는다]');
+{
+  const HTML = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const m = HTML.match(/const nextEven=\(Math\.floor\(mn\/GT\.evenPer\)\+1\)\*GT\.evenPer;/);
+  chk('index.html 이 다음 단계 레벨을 nextEven 한 곳에서 계산한다', !!m,
+      m ? '식 1개' : '`const nextEven=…` 을 못 찾았다 — T63 수정이 되돌려졌거나 식이 흩어졌다');
+  const guard = /nextEven>GT\.slotLvMax\s*\?\s*`\(슬롯 상한 Lv\.\$\{GT\.slotLvMax\} — 균등 보너스 최대\)`/.test(HTML);
+  chk('상한에 닿으면 «슬롯 상한 Lv.150 — 균등 보너스 최대» 로 끊는다', guard,
+      guard ? '가드 있음' : '상한 가드가 없다 — mn=150 에서 «Lv.155 이면 +155%» 가 다시 뜬다');
+  /* 0~상한 전 구간에서 «광고되는 레벨» 이 상한을 넘지 않는지 실제로 굴린다 */
+  const advertise = mn => {
+    const nextEven = (Math.floor(mn / GT.evenPer) + 1) * GT.evenPer;
+    return nextEven > GT.slotLvMax ? null : nextEven;     /* null = 상한 문구로 끊긴다 */
+  };
+  const over = [];
+  for (let mn = 0; mn <= GT.slotLvMax; mn++) { const a = advertise(mn); if (a !== null && a > GT.slotLvMax) over.push(`${mn}→${a}`); }
+  chk(`슬롯 0~${GT.slotLvMax} 전수: 광고 레벨이 상한을 넘는 칸 0개`, over.length === 0,
+      over.length ? `위반 ${over.length}칸: ${over.slice(0, 6).join(', ')}` : `상한 근처 실측 — 149→150 · 150→«상한 문구»`);
+  /* 되돌림 감지: 가드를 빼면 mn=150 이 155 를 광고한다는 사실 자체를 못박아 둔다 */
+  const naive = (Math.floor(GT.slotLvMax / GT.evenPer) + 1) * GT.evenPer;
+  chk('가드 없는 옛 식은 실제로 상한을 넘는다 (이 게이트가 지키는 대상이 실재함을 확인)', naive > GT.slotLvMax,
+      `가드 없으면 최저슬롯 ${GT.slotLvMax} → «Lv.${naive}» 광고`);
+}
+
 /* ---------------------------------------------------------------- */
 console.log('\n[⑥ §11.5 경제 정합 (참고 출력 — 판정 아님)]');
 {
