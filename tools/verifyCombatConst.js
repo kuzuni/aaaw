@@ -130,7 +130,14 @@ console.log('\n=== ③ 소환 적중 트리거 (PLAN §4 주인 확정 15:3X · 
   const at=SIM.indexOf(CUT);
   if(at<0) fail('sim.js 에서 CLI 디스패처를 못 찾았다 — 잘림 기준이 바뀌었다');
   else{
-    const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
+    /* ⚑ T51 — 난수 고정. 이 블록의 단언은 «한 번 때렸을 때 무슨 일이 일어나는가» 라서
+       적 회피 10%(ENEMY_EVADE · 주인 확정 15:4X)가 그대로 들어오면 **10판에 한 번 빨개진다**
+       (실제로 HEAD 상태 8런 중 1런이 «투사체 상한» 항목에서 실패했다 — T51).
+       vm 컨텍스트에만 Math.random 을 갈아 끼운다(Object.create 라 게이트 프로세스의 Math 는 그대로).
+       RNG.v 를 바꾸면 «맞았을 때/빗맞았을 때» 를 골라 재현할 수 있다 — (6) 이 그 대조군이다. */
+    const RNG={v:0.5};                                   /* 0.5 > ENEMY_EVADE(0.10) → 항상 명중 */
+    const FakeMath=Object.create(Math); FakeMath.random=()=>RNG.v;
+    const ctx={console:{log(){}},process,Math:FakeMath,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
     vm.createContext(ctx);
     vm.runInContext(SIM.slice(0,at)+
       '\n;globalThis.__X={summonHit,pushProj,dealDmg,procOnAttack,PROJ_CAP,PROC_TICK_CAP};',ctx);
@@ -180,6 +187,17 @@ console.log('\n=== ③ 소환 적중 트리거 (PLAN §4 주인 확정 15:3X · 
       (G.pprojs.length===len0&&e.hp<hp0)
         ? pass(`투사체 상한 ${X.PROJ_CAP} 초과분이 즉발 판정으로 대체된다 (데미지 유실 없음)`)
         : fail('투사체 상한 초과 처리가 스펙과 다르다 (투사체가 계속 쌓이거나 데미지가 사라졌다)');
+    }
+    /* (6) 대조군 — 난수를 «빗맞음» 쪽으로 돌리면 같은 타격이 데미지 0 이어야 한다.
+       (1)~(4) 가 «항상 명중» 난수에 기대고 있음을 드러내 두는 자리이기도 하다 (T51). */
+    {
+      const {G,p,e}=mkG(); const hp0=e.hp;
+      RNG.v=0.05;                                        /* 0.05 < ENEMY_EVADE(0.10) → 빗맞음 */
+      X.summonHit(G,e,0.75);
+      RNG.v=0.5;
+      e.hp===hp0
+        ? pass('난수를 빗맞음 쪽으로 돌리면 소환 적중도 데미지 0 이다 (적 회피 10% 가 소환에도 걸린다)')
+        : fail('빗맞음 난수인데 데미지가 들어갔다 — 적 회피 10%(주인 확정 15:4X)가 소환에 안 걸린다');
     }
     /* (5) PLAN §4 에 주인 확정 문구가 살아 있는가 (문서 ↔ 엔진 동시 회귀 방지) */
     planHas(/소환 적중도 «공격» 으로 친다/)
