@@ -875,7 +875,13 @@ function doCounter(G,src,depth){
   if(px.counterHeal)heal(p,p.maxHp*0.04*px.counterHeal);
   if(px.counterWave&&pkk(p,1.0*px.counterWave))fireWave(p);
   if(src.hp<=0)onKill(G,src);
-  else if(px.counterChain&&depth<2&&Math.random()<1.0)doCounter(G,src,1);
+  /* ⚑ T69 — 종전 `depth<2` 는 «죽은 가드» 였다. 바깥 호출부 2곳(evadeCounter·피격 반격)이 depth 를
+     안 넘겨 undefined 가 들어오고, `undefined<2` 는 NaN 비교라 **항상 false** 다 →
+     전설 `l_counterChain`(«반격 시 반드시 한 번 더 반격») 이 sim 에서 한 번도 발동하지 않았다
+     (1200판 실측 발동 0회). index.html 은 `!depth` 라 정상 동작 — sim↔게임 괴리이자 특전 사장이었다.
+     게임 쪽 형태로 통일한다: 첫 반격(depth 미지정)에서만 한 번 더 → PLAN §3.3 «연쇄 2회 제한».
+     함께 있던 `Math.random()<1.0` 은 항상 참이라 확률처럼 읽히는 죽은 조건이어서 뺐다(«반드시» 가 스펙). */
+  else if(px.counterChain&&!depth)doCounter(G,src,1);
 }
 function hitPlayer(G,dmg,isMelee,src){
   const p=G.player,px=p.px;

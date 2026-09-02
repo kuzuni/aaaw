@@ -486,6 +486,73 @@ console.log('\n=== ⑥ 횟수형 방어막 · 회피 즉사 (PLAN §3.0 주인 1
   }
 }
 
+console.log('\n=== ⑦ 반격 연쇄 — «반드시 한 번 더, 연쇄 2회 제한» (PLAN §3.3 l_counterChain · T69) ===');
+/* T69: sim.js 의 가드가 `depth<2` 였다. 바깥 호출부는 depth 를 안 넘기므로 `undefined<2` = false —
+   즉 전설 특전이 sim 에서 한 번도 안 터졌다(1200판 발동 0회). 게임(index.html)은 `!depth` 라 정상이었다.
+   그래서 여기서는 «상수 대조» 가 아니라 **실제로 몇 번 반격하는지 세어** 본다:
+     - 특전 없음 = 1회 · 특전 있음 = 정확히 2회 (많아도 적어도 안 된다 — 2 미만이면 사장, 초과면 스턴락급 연쇄)
+     - 두 엔진의 가드 형태가 같은가 (한쪽만 고치면 sim↔게임이 다시 벌어진다)
+     - «undefined 와 비교하는» 가드로 되돌아가면 즉시 빨개진다 */
+{
+  const vm=require('vm');
+  const HTML=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const CUT="const mode=process.argv[2]||'all';";
+  const at=SIM.indexOf(CUT);
+  if(at<0) fail('sim.js 에서 CLI 디스패처를 못 찾았다 — 잘림 기준이 바뀌었다');
+  else{
+    const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
+    vm.createContext(ctx);
+    vm.runInContext(SIM.slice(0,at)+'\n;globalThis.__C={doCounter};',ctx);
+    const C=ctx.__C||ctx.globalThis.__C;
+    const rnd=Math.random;
+    /* 반격 횟수 = 적이 받은 데미지 / 1회분. 적 체력을 넉넉히 줘서 «죽어서 끊긴 것» 과 구별한다. */
+    const count=(px)=>{
+      const e={worldX:100,hp:1e12,maxHp:1e12,dead:false,isBoss:false,stun:0};
+      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,ward:0,
+               buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
+               sh:500,maxSh:500,hp:1000,maxHp:1000,steal:0,goldMul:1,level:1,exp:0,
+               critR:0,critF:150,def:0,evade:0,counter:0,atkTimer:1,aspd:1,walkMul:1,killHeal:0};
+      const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
+               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,stunAuraT:2.5,overBoltCd:0,
+               atkTries:0,miss:0};
+      p.G=G;
+      Math.random=()=>0.99;                 /* 적 회피(10%) 실패 = 반격이 전부 적중 */
+      C.doCounter(G,e);                     /* 바깥 호출부와 똑같이 depth 를 안 넘긴다 */
+      Math.random=rnd;
+      return G.atkTries;                    /* doCounter 진입 1회당 1 */
+    };
+    const n0=count({}), n1=count({counterChain:1});
+    n0===1 ? pass('특전 없으면 반격 1회 (연쇄 없음)')
+           : fail(`특전 없는 반격이 ${n0}회다 — 1회여야 한다`);
+    n1===2 ? pass('l_counterChain 이 있으면 정확히 2회 (반격 + 연쇄 1회)')
+           : fail(`l_counterChain 반격이 ${n1}회다 — PLAN §3.3 «반드시 한 번 더 · 연쇄 2회 제한» 위반`+
+                  (n1===1?' (특전이 사장돼 한 번도 안 터진다 — T69 재발)':''));
+    /* 두 엔진 가드 형태 대조 + «undefined 비교» 가드 금지 */
+    const grab=(s)=>{ const m=s.match(/else if\(px\.counterChain&&([^)]*)\)\s*doCounter/); return m?m[1].replace(/\s+/g,''):null; };
+    const gs=grab(SIM), gh=grab(HTML);
+    (gs&&gh&&gs===gh) ? pass(`두 엔진의 연쇄 가드가 같다 («${gs}»)`)
+                      : fail(`연쇄 가드가 두 엔진에서 다르다 — sim «${gs}» / index.html «${gh}»`);
+    /* depth 를 숫자와 비교하면 바깥 호출부(인자 미전달)에서 undefined 비교가 되어 죽는다 */
+    [['sim.js',gs],['index.html',gh]].forEach(([f,g])=>{
+      (g&&!/depth[<>]=?\d/.test(g))
+        ? pass(`${f} 의 가드가 depth 를 숫자와 비교하지 않는다 (undefined 비교 회귀 차단)`)
+        : fail(`${f} 의 가드 «${g}» 가 depth 를 숫자와 비교한다 — 호출부가 depth 를 안 넘기므로 항상 거짓이 된다(T69)`);
+    });
+    /* 호출부가 실제로 depth 를 안 넘기는지 (넘기기 시작하면 위 가정이 깨진다) */
+    const outer=(s)=>[...s.matchAll(/(function\s+)?doCounter\(([^)]*)\)/g)]
+                     .filter(m=>!m[1])                       /* 정의부는 제외 — 호출부만 본다 */
+                     .map(m=>m[2].replace(/\s+/g,''))
+                     .filter(a=>a!=='G,src,1'&&a!=='src,1'); /* 재귀 호출(연쇄 1회)은 정상 */
+    const so=outer(SIM).filter(a=>a!=='G,src'&&a!==''), ho=outer(HTML).filter(a=>a!=='src'&&a!=='');
+    (so.length===0&&ho.length===0)
+      ? pass('바깥 호출부는 두 엔진 모두 depth 인자를 넘기지 않는다 (재귀 호출만 1)')
+      : fail(`depth 를 넘기는 예상 밖 호출부가 있다 — sim ${JSON.stringify(so)} / index.html ${JSON.stringify(ho)}`);
+    planHas(/l_counterChain \| 🔂 반격 시 반드시 한 번 더 반격 \(연쇄 2회 제한\)/)
+      ? pass('PLAN §3.3 에 «반드시 한 번 더 반격 (연쇄 2회 제한)» 행이 있다')
+      : fail('PLAN §3.3 의 l_counterChain 행 문구가 바뀌었다 — 게이트 기준과 대조할 것');
+  }
+}
+
 console.log(`\n대조 ${CHECKS.length}항목 · 일치 ${okN}개 · 불일치 ${bad}건 · 미문서화 신규 ${undocNew}건 · 등재된 기존 ${undocKnown}건`);
 console.log(bad?'→ 불합격':'→ 통과');
 process.exit(bad?1:0);
