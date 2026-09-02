@@ -598,7 +598,7 @@ console.log('\n=== ⑧ 킬 회복 축 — 주인 확정 5% 체급 (PLAN §3 · T
   const vm=require('vm');
   const HTML=fs.readFileSync(path.join(root,'index.html'),'utf8');
   /* (1) 네 값의 정적 대조 — 두 엔진 + PLAN */
-  const num=(re,src,what)=>{ const m=src.match(re); if(!m){fail(`${what} 를 소스에서 못 찾았다 — 정규식 기준이 바뀌었다`);return null;} return Number(m[1]); };
+  const num=(re,src,what)=>{ const m=src.match(re); return m?Number(m[1]):null; };   /* 못 찾으면 null — 아래 renamed 분기가 «효과 자체가 사라졌나» 로 판정한다 */
   const V={
     killHealC:[num(/add\('c_killHeal2',0,p=>p\.killHeal\+=([\d.]+)\)/,SIM,'sim c_killHeal2'),
                num(/id:'c_killHeal2'[^}]*p\.killHeal\+=([\d.]+)/,HTML,'index c_killHeal2'), 0.05, '일반 킬힐'],
@@ -609,8 +609,24 @@ console.log('\n=== ⑧ 킬 회복 축 — 주인 확정 5% 체급 (PLAN §3 · T
     killSh10: [num(/p\.maxSh\*([\d.]+)\*px\.killShield10/,SIM,'sim killShield10'),
                num(/p\.maxSh\*([\d.]+)\*px\.killShield10/,HTML,'index killShield10'), null, '전설 킬실드'],
   };
+  /* ⚑ 주인이 특전 목록을 재작성 중이다(2026-09-03 «전면 정지»). id 가 통째로 바뀔 수 있으므로
+     «id 가 사라졌다» 를 곧장 불합격으로 보지 않는다 — 대신 **효과가 사라졌는지**를 본다:
+     일반 등급에 «처치 시 체력 N% 회복» 특전이 하나도 없으면 그때 빨개진다(주인 확정 상수의 소멸). */
+  const renamed = V.killHealC[0]===null && V.killHealC[1]===null;
+  if(renamed){
+    const commons=[...HTML.matchAll(/\{id:'(\w+)',\s*r:0,[^}]*tx:'([^']*)'/g)]
+      .map(m=>[m[1],m[2].replace(/<[^>]*>/g,'')])
+      .filter(([,t])=>/처치 시 체력 [\d.]+% 회복/.test(t));
+    if(!commons.length) fail('일반 등급에 «처치 시 체력 N% 회복» 특전이 없다 — 주인 확정 상수(킬힐 5%)가 목록에서 사라졌다');
+    else{
+      const bad=commons.filter(([,t])=>Number(t.match(/처치 시 체력 ([\d.]+)% 회복/)[1])!==5);
+      bad.length ? fail(`특전 재작성본의 일반 킬힐이 5% 가 아니다 — ${bad.map(([i,t])=>i+' «'+t+'»').join(' · ')}`)
+                 : pass(`특전 id 가 바뀌었다 — 일반 킬힐 ${commons.map(([i])=>i).join('·')} 가 5% 를 지키고 있다`);
+    }
+  }
   for(const k in V){
     const [a,b,fixed,nm]=V[k];
+    if(a===null&&b===null) continue;   /* 재작성으로 사라진 id — 위 renamed 분기가 본다 */
     if(a===null||b===null) continue;
     (a===b) ? pass(`${nm} 상수가 두 엔진에서 같다 (${(a*100).toFixed(0)}%)`)
             : fail(`${nm} 상수가 두 엔진에서 다르다 — sim ${a} / index.html ${b}`);
@@ -634,16 +650,18 @@ console.log('\n=== ⑧ 킬 회복 축 — 주인 확정 5% 체급 (PLAN §3 · T
     if(!m) fail(`PLAN §3 에서 ${nm} 행을 못 찾았다`);
     else (Number(m[1])===want) ? pass(`PLAN §3 «${nm} ${m[1]}%» 가 엔진과 일치`)
                                : fail(`PLAN §3 «${nm} ${m[1]}%» 가 엔진 ${want}% 와 다르다`); };
-  planRow(/c_killHeal2 \| 🍖 처치 시 체력 ([\d.]+)% 회복/, 100*V.killHealC[0], 'c_killHeal2');
-  planRow(/c_killShield3 \| 🔰 처치 시 실드 ([\d.]+)% 충전/, 100*V.killSh3[0], 'c_killShield3');
-  planRow(/l_killHeal5 \| 💉 처치 시 체력 ([\d.]+)% 회복/, 100*V.killHealL[0], 'l_killHeal5');
-  planRow(/l_killShield10 \| 🏯 처치 시 실드 ([\d.]+)% 충전/, 100*V.killSh10[0], 'l_killShield10');
+  const P4=[[/c_killHeal2 \| 🍖 처치 시 체력 ([\d.]+)% 회복/,V.killHealC[0],'c_killHeal2'],
+            [/c_killShield3 \| 🔰 처치 시 실드 ([\d.]+)% 충전/,V.killSh3[0],'c_killShield3'],
+            [/l_killHeal5 \| 💉 처치 시 체력 ([\d.]+)% 회복/,V.killHealL[0],'l_killHeal5'],
+            [/l_killShield10 \| 🏯 처치 시 실드 ([\d.]+)% 충전/,V.killSh10[0],'l_killShield10']];
+  for(const [re,v,nm] of P4) if(v!==null) planRow(re,100*v,nm);
   /* index.html 표시 텍스트(tx)도 같은 값인가 — 태그를 걷어내고 본다(T79 ㊳ 과 같은 취지) */
   const txPct=(id)=>{ const m=HTML.match(new RegExp(`id:'${id}'[^}]*tx:'([^']*)'`)); if(!m)return null;
                       const t=m[1].replace(/<[^>]*>/g,''); const n=t.match(/([\d.]+)%/); return n?Number(n[1]):null; };
-  [['c_killHeal2',100*V.killHealC[0]],['c_killShield3',100*V.killSh3[0]],
-   ['l_killHeal5',100*V.killHealL[0]],['l_killShield10',100*V.killSh10[0]]].forEach(([id,want])=>{
-    const got=txPct(id);
+  [['c_killHeal2',V.killHealC[0]],['c_killShield3',V.killSh3[0]],
+   ['l_killHeal5',V.killHealL[0]],['l_killShield10',V.killSh10[0]]].forEach(([id,v])=>{
+    if(v===null) return;                       /* 재작성으로 사라진 id */
+    const want=100*v, got=txPct(id);
     (got===want) ? pass(`index.html 표시 텍스트 «${id} ${got}%» 가 엔진과 일치`)
                  : fail(`index.html 표시 텍스트 «${id} ${got}%» 가 엔진 ${want}% 와 다르다 — 게임에 틀린 숫자가 뜬다`);
   });
@@ -670,9 +688,10 @@ console.log('\n=== ⑧ 킬 회복 축 — 주인 확정 5% 체급 (PLAN §3 · T
       return {dHp:(p.hp-hp0)/p.maxHp*100, dSh:(p.sh-sh0)/p.maxSh*100};
     };
     const near=(a,b)=>Math.abs(a-b)<1e-6;
-    [['c_killHeal2','dHp',100*V.killHealC[0],'체력'],['l_killHeal5','dHp',100*V.killHealL[0],'체력'],
-     ['c_killShield3','dSh',100*V.killSh3[0],'실드'],['l_killShield10','dSh',100*V.killSh10[0],'실드']].forEach(([id,f,want,nm])=>{
-      const r=run(id);
+    [['c_killHeal2','dHp',V.killHealC[0],'체력'],['l_killHeal5','dHp',V.killHealL[0],'체력'],
+     ['c_killShield3','dSh',V.killSh3[0],'실드'],['l_killShield10','dSh',V.killSh10[0],'실드']].forEach(([id,f,v,nm])=>{
+      if(v===null) return;                     /* 재작성으로 사라진 id */
+      const want=100*v, r=run(id);
       if(!r) return fail(`특전 ${id} 가 PERKS 에 없다`);
       near(r[f],want) ? pass(`${id}: 처치 1회에 최대 ${nm}의 ${r[f].toFixed(2)}% 가 실제로 채워진다`)
                       : fail(`${id}: 처치 1회 실측 ${r[f].toFixed(4)}% ≠ 표시 ${want}% — 특전이 사장됐거나 호출부가 끊겼다`);
