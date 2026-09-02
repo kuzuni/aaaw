@@ -2127,6 +2127,40 @@ console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
       else bad(`${nm} G.${k} 를 올리기만 하고 읽는 곳이 없다 — 죽은 특전이다(T66 과 같은 모양). 소비 경로를 넣거나 KNOWN 에 근거와 함께 등재할 것`);
     }
   }
+
+  /* ⑥ 같은 검사를 px 키 전체로 넓힌다 — 특전이 올리는 효과 키를 «특전표 밖 엔진» 이 실제로 읽는가.
+     ③ 은 두 파일의 px 키 «집합» 만 대조하므로, 양쪽이 똑같이 안 읽으면 역시 조용히 통과한다.
+     (T24 가 «두 특전이 같은 키를 덮어써서 하나가 사라진다» 를 봤다면, 이쪽은 «아무도 안 읽는다» 쪽이다.) */
+  {
+    const perkRegion = (src, isSim) => {
+      if (isSim) return src.slice(src.indexOf('function mkPerks()'), src.indexOf('const PERKS=mkPerks()'));
+      const m = src.match(/const PERKS=\[[\s\S]*?\n\];/);
+      return m ? m[0] : '';
+    };
+    for (const [nm, src, isSim] of [['sim.js', SIM, true], ['index.html', HTML, false]]) {
+      const clean = decomment(src);
+      const region = decomment(perkRegion(src, isSim));
+      const engine = region ? clean.split(region).join(' ') : clean;   /* 특전표를 뺀 나머지 = 엔진 */
+      if (!region) { bad(`${nm} 특전표 영역을 못 잘라냈다 — ㉝⑥ 파서를 고칠 것`); continue; }
+      const keys = new Set();
+      const re = /(?:p\.px|px)\.([A-Za-z_][A-Za-z0-9_]*)\s*(?:\+\+|--|\+=|-=|=[^=])/g;
+      let m; while ((m = re.exec(region))) keys.add(m[1]);
+      const dead = [];
+      for (const k of [...keys].sort()) {
+        const rr = new RegExp('px\\.' + k + '\\b', 'g');
+        let n = 0, mm;
+        while ((mm = rr.exec(engine))) {
+          const after = engine.slice(mm.index + mm[0].length);
+          if (/^\s*(\+\+|--|\+=|-=|=[^=])/.test(after)) continue;   /* 초기화·쓰기는 «읽는 곳» 이 아니다 */
+          n++;
+        }
+        if (n === 0) dead.push(k);
+      }
+      dead.length
+        ? bad(`${nm} 특전이 올리지만 엔진이 한 번도 읽지 않는 px 키 ${dead.length}개: ${dead.join(' ')} — 그 특전들은 툴팁만 있고 효과가 없다(T66 계열)`)
+        : ok(`${nm} 특전이 쓰는 px 키 ${keys.size}개 전부 엔진이 읽는다 (사장된 효과 0)`);
+    }
+  }
 }
 
 /* ---------- 결과 ---------- */
