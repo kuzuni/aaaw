@@ -87,6 +87,27 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     await p.setViewportSize(vp);
     await p.waitForTimeout(200);
 
+    /* --- ⚑ 대형 수치 표기 (T54) — 실제 렌더로 «후반 챕터 골드가 줄을 밀어내지 않는가» ---
+       정적 게이트 verifyT2 ㉖ 은 포맷터와 CSS 값을 보고, 실제로 줄이 프레임 안에 드는지는 여기서 본다.
+       구 구현(콤마 전체 표기)은 챕터 300 골드가 41자라 줄이 886px 로 부풀어 🔊 가 화면 밖으로 나갔다. */
+    for (const c of [40, 90, 300]) {
+      const t54 = await p.evaluate(c => {
+        const keep = save.gold, keepGem = save.gem;
+        let cum = 0; for (let i = 1; i <= c; i++) cum += TUNE.goldClear(i) * 6;
+        save.gold = cum; save.gem = 2500 * 3650; renderLobby();
+        const top = document.querySelector('.lobby-top');
+        const clip = ['lbPower', 'lbGold', 'lbGem'].map(id => { const e = document.getElementById(id); return e.scrollWidth > e.clientWidth + 1; });
+        const snd = document.getElementById('sndBtnL').getBoundingClientRect();
+        const r = { gold: document.getElementById('lbGold').textContent, scroll: top.scrollWidth, client: top.clientWidth,
+                    clipped: clip.filter(Boolean).length, sndRight: Math.round(snd.right), vw: window.innerWidth };
+        save.gold = keep; save.gem = keepGem; renderLobby();
+        return r;
+      }, c);
+      chk(`챕터 ${c} 골드 «${t54.gold}» — 상단 줄이 프레임 안에 든다`,
+        t54.scroll <= t54.client && t54.clipped === 0 && t54.sndRight <= t54.vw,
+        `줄 ${t54.scroll}/${t54.client} · 글자잘림 ${t54.clipped} · 🔊 right=${t54.sndRight} ≤ ${t54.vw}`);
+    }
+
     chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
     const realWarn = warns.filter(w => !/fonts\.googleapis|ERR_(NAME|INTERNET|BLOCKED|CONNECTION)|net::/.test(w));
     chk('콘솔 에러 0 (웹폰트 네트워크 실패 제외)', realWarn.length === 0, realWarn.slice(0, 2).join(' | ') || `(폰트 경고 ${warns.length}건은 샌드박스 무망 탓)`);
