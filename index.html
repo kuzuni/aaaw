@@ -279,7 +279,11 @@
   .perk-card:nth-child(6){animation-delay:.18s}
   .perk-card:active{transform:scale(.97);}
   .perk-card .tag{position:absolute; top:-11px; left:12px; font-size:11.5px; padding:2px 10px; border-radius:8px; background:var(--pc,#555); color:#1c1c20;}
-  .perk-card .ic{font-size:29px; width:44px; text-align:center; flex:none;}
+  /* 특전 아이콘 = 등급색 팔각 메달리온 (참고: docs/ref/perks.jpg — 이모지만 덩그러니 놓지 않는다) */
+  .perk-card .ic{font-size:25px; width:46px; height:46px; flex:none; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 32%, rgba(255,255,255,.42), rgba(255,255,255,0) 62%), var(--pc,#555);
+    box-shadow:inset 0 0 0 2.5px rgba(0,0,0,.42), inset 0 0 0 4.5px rgba(255,255,255,.28);
+    clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%);}
   .perk-card .tx{font-size:14.5px; line-height:1.35;}
   .perk-card .tx b{color:#7ED957;}
   .perk-card.static{cursor:default; animation:slideUp .35s cubic-bezier(.2,1.4,.4,1) backwards;}
@@ -290,6 +294,12 @@
   .choice-btn.danger{border-color:#A03A56;}
   .choice-btn small{display:block; font-size:12.5px; opacity:.75;}
   .ghost-btn{color:var(--ink-dim); font-size:14.5px; text-decoration:underline; padding:10px;}
+  /* 무료 새로고침 = 주황 버튼 + 아래에 «남은 횟수» 줄 (참고: docs/ref/perks.jpg 의 Refresh Free / Remain : 1) */
+  #refBtn{margin-top:8px; padding:13px 30px; border-radius:15px; font-size:16.5px;
+    background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; box-shadow:0 4px 0 #C77E12;}
+  #refBtn:active{transform:translateY(2px); box-shadow:0 2px 0 #C77E12;}
+  #refLeft{margin-top:7px; font-size:13px; color:var(--ink-dim);}
+  #refLeft b{color:var(--gold);}
   .big-emoji{font-size:62px; margin-bottom:6px; position:relative; animation:floaty 2.6s ease-in-out infinite;}
   .reward-line{font-size:19px; margin:4px 0;}
   .reward-line b{color:var(--gold);}
@@ -1784,12 +1794,13 @@ function openPerkChoice(){
     openOverlay(`<div class="ov-banner">🎉 레벨 업!</div>
       <div class="ov-sub">새로운 특전을 선택하세요</div>
       ${perks.map((p,i)=>perkCardHTML(p,i)).join('')}
-      <button class="ghost-btn" id="refBtn">🔄 무료 새로고침 (남은 횟수: ${G.refreshLeft})</button>`,{rays:true});
+      <button id="refBtn">🔄 무료 새로고침</button>
+      <div id="refLeft">남은 횟수: <b>${G.refreshLeft}</b></div>`,{rays:true});
     ov.querySelectorAll('.perk-card').forEach(el=>{
       el.onclick=()=>{ takePerk(perks[+el.dataset.i]); afterPerk(); };
     });
     const rb=$('refBtn');
-    if(G.refreshLeft<=0) rb.style.display='none';
+    if(G.refreshLeft<=0){ rb.style.display='none'; $('refLeft').style.display='none'; }
     rb.onclick=()=>{ if(G.refreshLeft>0){ AU.play('click'); G.refreshLeft--; roll(); } };
   };
   roll();

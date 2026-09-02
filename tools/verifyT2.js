@@ -793,6 +793,33 @@ console.log('\n[⑮ 장비 아이콘 — 인라인 SVG 18종 (스크린샷 구�
     : ok('sim.js 무관 (표시 전용 메타 — 밸런스 영향 0)');
 }
 
+/* ---------- ⑯ 특전 선택 화면 구도 (참고: docs/ref/perks.jpg · T2 6단계) ---------- */
+/* 스크린샷 구도의 두 축: ①특전 아이콘이 «등급색 팔각 메달리온» 안에 든다(맨 이모지 금지)
+   ②무료 새로고침은 밑줄 텍스트가 아니라 주황 버튼 + 그 아래 «남은 횟수» 줄이다. */
+console.log('\n[⑯ 특전 선택 화면 — 등급 메달리온 · 새로고침 버튼 (스크린샷 구도)]');
+{
+  const icCss = HTML.match(/\.perk-card \.ic\{[^}]*\}/);
+  if (!icCss) bad('.perk-card .ic 규칙이 없다');
+  else {
+    /clip-path:polygon/.test(icCss[0]) ? ok('특전 아이콘이 팔각 메달리온 (스크린샷 구도)')
+      : bad('특전 아이콘이 맨 이모지다 — 스크린샷의 메달리온 구도가 아니다');
+    /var\(--pc/.test(icCss[0]) ? ok('메달리온 바탕이 등급색(--pc)') : bad('메달리온이 등급색을 쓰지 않는다');
+    /width:46px;\s*height:46px/.test(icCss[0]) ? ok('메달리온이 정사각(46px) — 팔각이 찌그러지지 않는다')
+      : bad('메달리온 가로·세로가 어긋난다');
+  }
+  const refCss = HTML.match(/#refBtn\{[^}]*\}/);
+  (refCss && /linear-gradient\(#FFCB4D,#F5A623\)/.test(refCss[0]))
+    ? ok('무료 새로고침이 주황 버튼 (스크린샷의 Refresh Free)')
+    : bad('무료 새로고침이 주황 버튼이 아니다 — 밑줄 텍스트 구도로 되돌아갔다');
+  /<button id="refBtn">/.test(HTML) ? ok('#refBtn 이 ghost-btn(밑줄 텍스트) 클래스를 쓰지 않는다')
+    : bad('#refBtn 이 여전히 밑줄 텍스트 버튼이다');
+  /<div id="refLeft">남은 횟수: <b>\$\{G\.refreshLeft\}<\/b><\/div>/.test(HTML)
+    ? ok('버튼 아래 «남은 횟수» 줄 (스크린샷의 Remain : N)') : bad('«남은 횟수» 줄이 없다');
+  /G\.refreshLeft<=0\)\{ rb\.style\.display='none'; \$\('refLeft'\)\.style\.display='none'; \}/.test(HTML)
+    ? ok('횟수가 0 이면 버튼과 «남은 횟수» 줄이 함께 사라진다')
+    : bad('횟수 소진 시 두 요소가 함께 숨겨지지 않는다 — 0 인데 줄만 남는다');
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
