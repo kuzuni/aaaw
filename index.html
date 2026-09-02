@@ -135,15 +135,21 @@
   #forge{background:radial-gradient(120% 70% at 50% 0%, #35353E, #1E1E24 60%, #17171B);}
   #forgeStage{flex:none; position:relative; display:flex; align-items:center; gap:10px; padding:10px 12px 12px;
     background:linear-gradient(#5B4636,#3E2F24); border-bottom:3px solid #241A13;}
-  #forgeCol{display:flex; flex-direction:column; align-items:center; gap:2px; width:33%;}
+  /* T62 — 재료 줄(`#fgMats`)은 «칸 3개 + 간격 2개» 로 폭이 고정이라 33% 열보다 넓어질 수 있다.
+     `align-items:center` 라 넘치는 폭이 좌우로 반씩 삐져나가고, 왼쪽 초과분이 스테이지 패딩(12px)을
+     넘기면 `#frame`(overflow:hidden) 에 잘렸다 — 좁은 폰(프레임 <382px)에서만 보이던 결함.
+     세 값을 변수 한 곳에 묶어 두면 칸 크기를 바꿔도 하한이 따라 움직인다(㉚ 이 상시 감시). */
+  :root{--fgCell:44px; --fgGap:5px;}
+  #forgeCol{display:flex; flex-direction:column; align-items:center; gap:2px; width:33%;
+    min-width:calc(var(--fgCell)*3 + var(--fgGap)*2);}
   .fg-slot{position:relative; width:74px; height:74px; border-radius:13px; display:flex; align-items:center;
     justify-content:center; font-size:30px; background:rgba(16,16,20,.55); border:3px solid #6A6A78;}
   .fg-slot.empty{border-style:dashed; color:#8A8A96;}
   .fg-slot .plus{position:absolute; bottom:-7px; left:50%; transform:translateX(-50%); font-size:10px;
     background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; border-radius:99px; padding:0 5px;}
   .fg-up{font-size:19px; color:#5CD65C; line-height:1; text-shadow:0 2px 0 rgba(0,0,0,.4);}
-  #fgMats{display:flex; gap:5px;}
-  .fg-cell{position:relative; width:44px; height:44px; border-radius:10px; display:flex; align-items:center;
+  #fgMats{display:flex; gap:var(--fgGap);}
+  .fg-cell{position:relative; width:var(--fgCell); height:var(--fgCell); border-radius:10px; display:flex; align-items:center;
     justify-content:center; font-size:19px; background:rgba(16,16,20,.5); border:2.5px solid #6A6A78; padding:0;}
   .fg-cell.empty{border-style:dashed; color:#8A8A96; font-size:17px;}
   #fgBanner{flex:1; align-self:stretch; display:flex; align-items:center; justify-content:center; text-align:center;

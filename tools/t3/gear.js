@@ -253,6 +253,44 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   }
   await p.setViewportSize({ width: 390, height: 844 });
 
+  /* ---------- ⑥ 합성 재료 3칸이 프레임 안에 온전히 들어온다 (T62) ----------
+     `#fgMats` 는 «칸 3개 + 간격 2개» 로 폭이 고정인데 담는 `#forgeCol` 은 33% 라,
+     하한이 없으면 좁은 프레임에서 좌우로 반씩 삐져나가 첫 칸이 `#frame` 에 잘리고
+     셋째 칸이 `#fgBanner` 를 침범했다(T62 수정 전 실측: 프레임 303px 에서 12.9px 잘림).
+     프레임 폭은 9:19 비율이라 **뷰포트 «높이» 에도 걸린다** — 주소창이 보이는 상태를
+     흉내내려 360×640·390×750 을 함께 잰다. 정적 게이트(`verifyT2` ㉚)는 부등식만 보므로
+     **실제 좌표는 여기서 본다.** */
+  console.log('\n=== ⑥ 합성 재료 줄이 프레임 안에 들어온다 (T62) ===');
+  for (const vp of [{ width: 360, height: 640 }, { width: 360, height: 800 }, { width: 390, height: 750 }, { width: 390, height: 844 }]) {
+    await p.setViewportSize(vp);
+    await p.evaluate(() => {                     /* 재료 3개를 실제로 채운 상태로 본다(부위 태그까지 렌더된다) */
+      save.inv = []; save.eq = {};
+      for (const pt of GT.parts) { const ty = GT.types[pt][0]; for (let i = 0; i < 3; i++) save.inv.push(newGear(pt, ty, 0, 0)); }
+      save.gold = 1e9; persist(); openForge();
+      const cells = [...document.querySelectorAll('#fgGrid .inv-cell')];
+      for (const c of cells) { if (FG.length >= 3) break; c.click(); }
+    });
+    await p.waitForTimeout(350);
+    const m = await p.evaluate(() => {
+      const fr = document.getElementById('frame').getBoundingClientRect();
+      const mats = document.getElementById('fgMats').getBoundingClientRect();
+      const ban = document.getElementById('fgBanner').getBoundingClientRect();
+      const parts = [...document.querySelectorAll('#fgMats .fg-cell, #fgMats .ptag')];
+      let clip = 0;
+      for (const el of parts) {
+        const r = el.getBoundingClientRect();
+        clip = Math.max(clip, Math.max(0, fr.left - r.left), Math.max(0, r.right - fr.right));
+      }
+      return { frW: +fr.width.toFixed(1), n: document.querySelectorAll('#fgMats .fg-cell').length,
+        filled: FG.length, clip: +clip.toFixed(1), overBanner: +(mats.right - ban.left).toFixed(1) };
+    });
+    chk(`[${vp.width}×${vp.height}] 프레임 ${m.frW}px — 재료 칸·부위 태그가 프레임 밖으로 안 나간다`,
+      m.clip === 0 && m.n === 3 && m.filled === 3, `잘림 ${m.clip}px · 칸 ${m.n}개(재료 ${m.filled})`);
+    chk(`[${vp.width}×${vp.height}] 재료 줄이 결과 배너를 침범하지 않는다`,
+      m.overBanner <= 0, `침범 ${m.overBanner}px`);
+  }
+  await p.setViewportSize({ width: 390, height: 844 });
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 3).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);

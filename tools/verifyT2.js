@@ -1711,6 +1711,85 @@ console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
     : bad('보스 onKill 의 G.cleared 확정 지점이 두 엔진에서 어긋난다');
 }
 
+/* ============================================================================
+   ㉚ 합성 화면 재료 줄이 담는 열 안에 들어간다 (T62)
+
+   `#fgMats` 는 «칸 3개 + 간격 2개» 라 **폭이 내용으로 고정**인데, 담는 `#forgeCol` 은
+   `width:33%` 만 있어 하한이 없었다. `align-items:center` 라 넘치는 폭은 좌우로 반씩
+   삐져나가고, 왼쪽 초과분이 `#forgeStage` 의 좌우 패딩(12px)을 넘기는 순간
+   `#frame{overflow:hidden}` 이 첫 재료 칸을 잘라낸다 — 프레임이 좁을수록 더 잘린다.
+   T62 실측(재료 3개 선택 상태, 수정 전): 360×640 프레임 303 = **12.9px 잘림**(첫 칸의 29%
+   + 부위 태그 전체 소실) · 390×750(주소창) 프레임 355 = 4.4px · 360×800 = 3.6px.
+   같은 크기만큼 오른쪽으로도 넘쳐 셋째 칸이 `#fgBanner` 를 최대 15px 침범했다.
+
+   그래서 «지금 값이 맞나» 가 아니라 **«기하가 성립하나»** 를 못박는다 —
+   칸 크기·간격·패딩 중 무엇을 바꿔도 부등식이 깨지면 빨개진다:
+     ① 칸/간격이 변수 한 곳(`--fgCell`·`--fgGap`)에서 나온다 (세 값이 따로 놀 수 없다)
+     ② `#forgeCol` 의 min-width ≥ 재료 줄 폭  (프레임 폭과 무관하게 열 안에 들어간다)
+     ③ 스테이지 좌우 패딩 ≥ 부위 태그의 음수 오프셋 (태그도 프레임 밖으로 안 나간다)
+     ④ `width:33%` 유지 (스크린샷 구도 — min-width 는 하한일 뿐 대체가 아니다)
+     ⑤ `#frame` 이 여전히 잘라낸다 (잘림이 실제 피해라는 근거)
+   실제 렌더 좌표 단언은 T3 `tools/t3/gear.js` ⑥ 이 본다(정적으론 못 푸는 축).
+   ============================================================================ */
+{
+  console.log('\n[㉚ 합성 재료 줄이 열 안에 들어간다 — #fgMats ⊂ #forgeCol (T62)]');
+  const rule = sel => {
+    const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return (HTML.match(new RegExp(esc + '\\s*\\{[^}]*\\}')) || [''])[0];
+  };
+  const px = s => { const m = s && s.match(/(-?[\d.]+)px/); return m ? parseFloat(m[1]) : null; };
+
+  /* ① 칸·간격이 변수 한 곳에서 나온다 */
+  /* :root 는 여러 블록으로 나뉘어 있다(팔레트 · 화면별) — 전부 이어 붙여서 본다 */
+  const root = (HTML.match(/:root\s*\{[^}]*\}/g) || []).join('\n');
+  const CELL = px((root.match(/--fgCell:\s*[^;}]+/) || [''])[0]);
+  const GAP = px((root.match(/--fgGap:\s*[^;}]+/) || [''])[0]);
+  (CELL > 0 && GAP >= 0)
+    ? ok(`:root 에 --fgCell=${CELL}px · --fgGap=${GAP}px 가 있다`)
+    : bad(':root 에서 --fgCell/--fgGap 을 읽지 못했다 — 세 값이 따로 놀면 ㉚ 의 부등식이 무의미하다');
+
+  const cellRule = rule('.fg-cell');
+  (/width:\s*var\(--fgCell\)/.test(cellRule) && /height:\s*var\(--fgCell\)/.test(cellRule))
+    ? ok('.fg-cell 의 width·height 가 var(--fgCell) 이다')
+    : bad('.fg-cell 이 --fgCell 을 안 쓴다 — 칸을 키워도 열 하한이 따라오지 않는다 (T62 재발 경로)');
+  /gap:\s*var\(--fgGap\)/.test(rule('#fgMats'))
+    ? ok('#fgMats 의 gap 이 var(--fgGap) 이다')
+    : bad('#fgMats 의 gap 이 --fgGap 을 안 쓴다 — 간격을 넓혀도 열 하한이 따라오지 않는다');
+
+  /* ② min-width ≥ 재료 줄 폭 — calc 식을 변수값으로 실제 계산해 부등식을 확인한다 */
+  const colRule = rule('#forgeCol');
+  const rowW = CELL * 3 + GAP * 2;
+  const mw = (colRule.match(/min-width:\s*([^;}]+)/) || [])[1];
+  if (!mw) {
+    bad('#forgeCol 에 min-width 가 없다 — 재료 줄(폭 고정)이 33% 열보다 넓어져 프레임에 잘린다 (T62)');
+  } else {
+    const expr = mw.replace(/calc\(/g, '(').replace(/var\(--fgCell\)/g, String(CELL))
+      .replace(/var\(--fgGap\)/g, String(GAP)).replace(/px/g, '').trim();
+    let minW = null;
+    if (/^[\d\s.+\-*/()]+$/.test(expr)) { try { minW = Function(`"use strict";return (${expr})`)(); } catch (e) { minW = null; } }
+    if (minW === null) bad(`#forgeCol 의 min-width «${mw.trim()}» 를 숫자로 못 풀었다 — ㉚ 파서를 고칠 것`);
+    else if (minW + 1e-9 >= rowW) ok(`#forgeCol min-width ${minW}px ≥ 재료 줄 ${rowW}px (칸3+간격2) — 프레임 폭과 무관하게 열 안에 들어간다`);
+    else bad(`#forgeCol min-width ${minW}px < 재료 줄 ${rowW}px — 좁은 폰에서 첫 칸이 프레임 밖으로 ${((rowW - minW) / 2).toFixed(1)}px 잘린다 (T62 재발)`);
+  }
+
+  /* ③ 스테이지 패딩 ≥ 부위 태그의 음수 오프셋 (태그는 칸보다 왼쪽에서 시작한다) */
+  const padL = px((rule('#forgeStage').match(/padding:\s*[^;}]+/) || [''])[0].replace(/padding:\s*[\d.]+px\s*/, ''));
+  const tagOff = Math.abs(px((rule('.inv-cell .ptag,.fg-cell .ptag').match(/left:\s*-[\d.]+px/) || [''])[0]) || 0);
+  (padL !== null && tagOff > 0 && padL >= tagOff)
+    ? ok(`#forgeStage 좌우 패딩 ${padL}px ≥ 부위 태그 오프셋 ${tagOff}px — 태그도 프레임 안에 있다`)
+    : bad(`부위 태그가 프레임 밖으로 나간다 — 패딩 ${padL} < 태그 오프셋 ${tagOff} (T62 실측: 390×844 에서 1.6px 잘렸다)`);
+
+  /* ④ 스크린샷 구도(33%)는 유지 — min-width 는 하한일 뿐 대체가 아니다 */
+  /width:\s*33%/.test(colRule)
+    ? ok('#forgeCol 이 width:33% 를 유지한다 (docs/ref 구도)')
+    : bad('#forgeCol 의 width:33% 가 사라졌다 — min-width 로 갈아치우면 넓은 화면 구도가 스크린샷과 어긋난다');
+
+  /* ⑤ 프레임이 잘라낸다 = 넘침이 실제 피해다 */
+  /overflow:\s*hidden/.test(rule('#frame'))
+    ? ok('#frame 이 overflow:hidden 이다 — 열 밖으로 나간 칸은 잘린다(피해 근거)')
+    : bad('#frame 의 overflow:hidden 이 사라졌다 — ㉚ 의 피해 전제가 바뀌었다. 항목을 재작성할 것');
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
