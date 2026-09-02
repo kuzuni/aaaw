@@ -62,7 +62,8 @@ const HAR_RE = /장비 «(전설|신화|영웅|희귀|일반)(?:\+(\d+))? 6부�
     cmp('실험1 하니스 강화', e1m[2] || '0', simE1[2], 'PLAN 문면에 +강 표기가 없으면 0강');
   }
   const e1ch = pick(e1sec, 'PLAN 실험1 챕터', /실험1 \(등급 사다리\)\*\*:\s*챕터(\d+)/, 1);
-  const simE1ch = pick(SIM, 'sim 실험1 챕터', /runChapter\((\d+),\s*h\.b,\s*rar===null/, 1);
+  /* ⚑ T1 R01: 측정 챕터가 리터럴에서 `hCh('EXP1_CH',N)` 기본값으로 옮겨졌다(하니스에 «챕터» 축 신설). */
+  const simE1ch = pick(SIM, 'sim 실험1 챕터', /hCh\('EXP1_CH',\s*(\d+)\s*\)/, 1);
   cmp('실험1 측정 챕터', e1ch, simE1ch);
   const e1n = pick(e1sec, 'PLAN 실험1 판수', /(\d+)판씩/, 1);
   const simE1n = pick(SIM, 'sim 실험1 판수', /let wins=0,times=0,n=(\d+);/, 1);
@@ -81,7 +82,7 @@ const HAR_RE = /장비 «(전설|신화|영웅|희귀|일반)(?:\+(\d+))? 6부�
     cmp('실험2 하니스 강화', e2m[2] || '0', simE2[2], 'PLAN 문면에 +강 표기가 없으면 0강');
   }
   const e2ch = pick(e2sec, 'PLAN 실험2 챕터', /챕터(\d+)에서 (\d+)판/);
-  const simE2ch = pick(SIM, 'sim 실험2 챕터', /const r=runChapter\((\d+),\s*h\.b,\s*\{\}\);/, 1);
+  const simE2ch = pick(SIM, 'sim 실험2 챕터', /hCh\('EXP2_CH',\s*(\d+)\s*\)/, 1);
   const simE2n = pick(SIM, 'sim 실험2 판수', /N=parseInt\(process\.env\.EXP2_N\|\|'(\d+)'/, 1);
   if (e2ch) { cmp('실험2 측정 챕터', e2ch[1], simE2ch); cmp('실험2 판수', e2ch[2], simE2n); }
   const e2sp = pick(e2sec, 'PLAN 실험2 스프레드 임계', /(\d+)%p 이상\)이면/, 1);

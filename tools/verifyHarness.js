@@ -67,7 +67,19 @@ function readHarness(env) {
   if (!m) throw new Error(`sim.js 에서 harness('${env}',…) 기본값을 못 찾았다 — 하니스 선언 형태가 바뀌었다`);
   return { rar: +m[1], plus: +m[2], slot: +m[3] };
 }
-const H = { 6: readHarness('EXP1_GEAR'), 8: readHarness('EXP2_GEAR') };
+/* ⚑ T1 R01 — 하니스에 «챕터» 축이 생겼다(`hCh('EXP1_CH',N)`). 여기서도 소스에서 읽어 자동 추종한다.
+   ⚠ 두 하니스가 **같은 챕터에 앉을 수 있으므로**(R01 은 둘 다 챕터 11) 키를 챕터 번호로 잡으면 서로 덮어쓴다 —
+   실험 번호(e1/e2)를 키로 쓴다. */
+function readCh(env) {
+  const m = SRC.match(new RegExp(`hCh\\('${env}',\\s*(\\d+)\\s*\\)`));
+  if (!m) throw new Error(`sim.js 에서 hCh('${env}',…) 기본 챕터를 못 찾았다 — 하니스 선언 형태가 바뀌었다`);
+  return +m[1];
+}
+const EXPS = [
+  { k: 'e1', n: 1, ch: readCh('EXP1_CH'), h: readHarness('EXP1_GEAR') },
+  { k: 'e2', n: 2, ch: readCh('EXP2_CH'), h: readHarness('EXP2_GEAR') },
+];
+const H = { e1: EXPS[0].h, e2: EXPS[1].h };
 
 /* ---------------- 등재 기준선 (T46 재보정, 2026-09-02 «시뮬 쉼터 = 항상 경험치» 반영 후 측정) ----------------
    ⚑ 재보정 사유: 주인 확정 16:4X 로 시뮬의 쉼터 회복 선택(최대체력 40%)이 사라졌다(PLAN §7 · T46).
@@ -111,9 +123,16 @@ const BASELINE = {
      둘 다 목표 밴드 60~70% 안이다(일반+7 은 1200판 52.2% 로 낮다). 종전 등재: 6 = 24.3/-21.5 · 8(일반+9) = 73.3/51.3. */
   /* T47 최종 측정은 T49(쉼터 260/26)까지 들어온 트리에서 다시 잡았다 — 쉼터 경험치 +26 이 특전 획득을
      조금 되돌려 두 하니스가 30.7 → 36.0% · 60.3 → 62.3% 로 올라왔다(둘 다 밴드 안, 하니스 구성은 유지).
-     사다리 일반 12.3 / 희귀 25.7 / 전설 51.7 / 신화 66.7%. */
-  6: { har: { rar: 0, plus: 4, slot: 0 }, rate: 36.0, gap: 0.8 },
-  8: { har: { rar: 0, plus: 10, slot: 0 }, rate: 62.3, gap: 10.2 },
+     사다리 일반 12.3 / 희귀 25.7 / 전설 51.7 / 신화 66.7%. 종전 등재: 6 = 24.3/-21.5 · 8 = 65.0/42.5. */
+  /* ⚑ 재보정 (T1 재개 R01, 2026-09-02 / 워커 C) — 사유: R01 이 난이도 곡선을 사다리 7점에 재적합했다
+     (기저 40/8 → 26/5.2 · 구간별 성장률 재적합). 두 하니스가 함께 100.0% 천장 포화가 됐고,
+     **강화 축으로는 다시 고를 수 없었다** — 챕터 6 에서 미장착 2.3% ↔ 일반+0 99.7% 로 절벽이라
+     변별 구간(15~85%)에 앉을 값이 그 챕터에는 존재하지 않는다. 그래서 «챕터» 축을 새로 열어 재선정했다.
+     ⚠ 아래 등재값은 **T47(expNeed 4+4*Lv)·T48 2·3단계(특전 132종)까지 합류한 최종 트리에서 다시 잰 값**이다
+     (R01 최초 측정은 그 둘이 상류에 없던 트리에서 나온 42.0 / 64.7 이었다 — 리베이스 후 재측정해 갱신).
+     종전 등재: 챕터6 일반+4 = 36.0/0.8 · 챕터8 일반+10 = 62.3/10.2. */
+  e1: { ch: 11, har: { rar: 0, plus: 1, slot: 0 }, rate: 0, gap: 0 },
+  e2: { ch: 11, har: { rar: 0, plus: 2, slot: 0 }, rate: 0, gap: 0 },
 };
 const DRIFT_TOL = 12.0;   /* %p — 이만큼 밴드에서 밀리면 재보정하라는 뜻 (시드 잡음 ±3%p 대비 충분히 크게) */
 const FLOOR = 1.0, CEIL = 99.0;   /* 등급별 클리어율이 이 밖이면 포화(측정 불능) */
@@ -161,24 +180,24 @@ function rateOf(ch, b, opt) {
 }
 
 console.log(`=== 실험1·2 하니스 대표성·변별력 게이트 (T31) — 시드 ${SEEDS} · 판수 ${RUNS}${FAST ? ' [fast]' : ''} ===`);
-console.log(`소스 하니스: 실험1 ${GT.rarName[H[6].rar]}${H[6].plus ? '+' + H[6].plus : ''} 6부위·슬롯 ${H[6].slot}렙 · ` +
-            `실험2 ${GT.rarName[H[8].rar]}${H[8].plus ? '+' + H[8].plus : ''} 6부위·슬롯 ${H[8].slot}렙`);
+console.log('소스 하니스: ' + EXPS.map(e =>
+  `실험${e.n} 챕터${e.ch}·${GT.rarName[e.h.rar]}${e.h.plus ? '+' + e.h.plus : ''} 6부위·슬롯 ${e.h.slot}렙`).join(' · '));
 
 console.log('\n[실험3 경제 코어로 «도달 시점» 계정 채집]');
-const snap = collect([6, 8]);
+const snap = collect([...new Set(EXPS.map(e => e.ch))]);
 
 const result = {};
-for (const ch of [6, 8]) {
-  const h = H[ch], base = BASELINE[ch];
+for (const e of EXPS) {
+  const ch = e.ch, h = e.h;
   const hb = mkBuild(h.rar, h.plus, h.slot);
   const hRate = rateOf(ch, hb);
   const rows = snap[ch].map(sn => ({ sn, r: rateOf(ch, { eq: sn.eq, slots: sn.slots }) }));
   const obsRate = med(rows.map(x => x.r));
   const obsSlot = med([].concat(...snap[ch].map(s => s.slotLv)));
   const obsRar = med([].concat(...snap[ch].map(s => s.rar)));
-  result[ch] = { hRate, obsRate, obsSlot, obsRar, gap: hRate - obsRate, slotGap: h.slot - obsSlot };
+  result[e.k] = { hRate, obsRate, obsSlot, obsRar, gap: hRate - obsRate, slotGap: h.slot - obsSlot };
 
-  console.log(`\n[챕터 ${ch} — 실험${ch === 6 ? 1 : 2} 하니스]`);
+  console.log(`\n[챕터 ${ch} — 실험${e.n} 하니스]`);
   console.log(`  하니스 클리어율 ${hRate.toFixed(1)}%  (전투력 공 ${buildPower(hb).atk.toFixed(3)})`);
   console.log(`  실측 도달시점 계정 클리어율: 중앙값 ${obsRate.toFixed(1)}%  ` +
               `[${rows.map(x => x.r.toFixed(1)).join(' ')}]`);
@@ -188,15 +207,15 @@ for (const ch of [6, 8]) {
 /* 실험1 사다리는 ①(변별력)과 --rebase 양쪽이 쓰므로 한 번만 잰다. */
 const LADDER_NAMES = ['일반', '희귀', '전설', '신화'];
 const ladder = (() => {
-  const h = H[6], hb = mkBuild(h.rar, h.plus, h.slot);
-  return [0, 1, 2, 3].map(lock => rateOf(6, hb, { rarityLock: lock }));
+  const e = EXPS[0], hb = mkBuild(e.h.rar, e.h.plus, e.h.slot);
+  return [0, 1, 2, 3].map(lock => rateOf(e.ch, hb, { rarityLock: lock }));
 })();
 
 if (REBASE) {
   console.log('\n--rebase — 아래를 BASELINE 에 그대로 넣어라 (재보정 사유·실측표를 PROGRESS 에 함께 적을 것):');
-  for (const ch of [6, 8]) {
-    const h = H[ch], r = result[ch];
-    console.log(`  ${ch}: { har: { rar: ${h.rar}, plus: ${h.plus}, slot: ${h.slot} }, rate: ${r.hRate.toFixed(1)}, gap: ${r.gap.toFixed(1)} },`);
+  for (const e of EXPS) {
+    const h = e.h, r = result[e.k];
+    console.log(`  ${e.k}: { ch: ${e.ch}, har: { rar: ${h.rar}, plus: ${h.plus}, slot: ${h.slot} }, rate: ${r.hRate.toFixed(1)}, gap: ${r.gap.toFixed(1)} },`);
   }
   console.log(`  ※ 참고 — 실험1 사다리 ${ladder.map((r, i) => `${LADDER_NAMES[i]} ${r.toFixed(1)}%`).join(' · ')}`);
   console.log('  ※ 정본 규칙(PLAN §7)은 ② 실험2 60~70% · ③ 실험1 4단 비포화+인접 ≥2%p 다. 밴드 밖 값을 기준선으로 박지 말 것 — 하니스를 다시 고르는 게 맞다.');
@@ -216,30 +235,30 @@ console.log('\n[① 변별력 — 정본 «변별점 규칙» ①②③ (하니�
       ladder.map((r, i) => i ? `${LADDER_NAMES[i - 1]}→${LADDER_NAMES[i]} ${(r - ladder[i - 1]).toFixed(1)}%p` : '').filter(Boolean).join(' · '));
 }
 chk(`실험1 하니스가 변별 구간 안(전체 클리어율 ${BAND_LO}~${BAND_HI}%)`,
-    result[6].hRate > BAND_LO && result[6].hRate < BAND_HI,
-    `${result[6].hRate.toFixed(1)}%`);
+    result.e1.hRate > BAND_LO && result.e1.hRate < BAND_HI,
+    `${result.e1.hRate.toFixed(1)}%`);
 chk(`실험2 하니스가 변별 구간 안(전체 클리어율 ${BAND_LO}~${BAND_HI}%)`,
-    result[8].hRate > BAND_LO && result[8].hRate < BAND_HI,
-    `${result[8].hRate.toFixed(1)}%`);
+    result.e2.hRate > BAND_LO && result.e2.hRate < BAND_HI,
+    `${result.e2.hRate.toFixed(1)}%`);
 chk(`실험2 하니스가 목표 밴드 ${E2_LO}~${E2_HI}% 안(허용 ±${E2_TOL}%p)`,
-    result[8].hRate >= E2_LO - E2_TOL && result[8].hRate <= E2_HI + E2_TOL,
-    `${result[8].hRate.toFixed(1)}%  — 정본 ② 는 «변별력 최대인 60~70% 지점». 벗어났으면 하니스를 다시 골라라(강화 축이 +1강당 약 13%)`);
+    result.e2.hRate >= E2_LO - E2_TOL && result.e2.hRate <= E2_HI + E2_TOL,
+    `${result.e2.hRate.toFixed(1)}%  — 정본 ② 는 «변별력 최대인 60~70% 지점». 벗어났으면 하니스를 다시 골라라(강화 축 +1강 · 챕터 축 ±1챕터)`);
 
 /* ---------------- ② 재보정 감시 = 정본 ④ (T26 재현 방지) ---------------- */
 console.log('\n[② 재보정 감시 — 하니스가 기준선과 같은가 · 노브가 움직여 밴드를 이탈했나 (정본 ④)]');
-for (const ch of [6, 8]) {
-  const base = BASELINE[ch], r = result[ch];
-  const sameHar = base.har.rar === H[ch].rar && base.har.plus === H[ch].plus && base.har.slot === H[ch].slot;
-  const hs = h => `${GT.rarName[h.rar]}${h.plus ? '+' + h.plus : ''}·슬롯${h.slot}`;
+for (const e of EXPS) {
+  const base = BASELINE[e.k], r = result[e.k], ch = e.ch;
+  const hs = (h, c) => `챕터${c}·${GT.rarName[h.rar]}${h.plus ? '+' + h.plus : ''}·슬롯${h.slot}`;
+  const sameHar = base.har.rar === e.h.rar && base.har.plus === e.h.plus && base.har.slot === e.h.slot && base.ch === ch;
   if (!sameHar) {
-    chk(`챕터 ${ch} 기준선 유효성`, false,
-        `하니스가 기준선 측정 당시(${hs(base.har)})와 다르다(현재 ${hs(H[ch])}) ` +
+    chk(`실험${e.n} 기준선 유효성`, false,
+        `하니스가 기준선 측정 당시(${hs(base.har, base.ch)})와 다르다(현재 ${hs(e.h, ch)}) ` +
         `— 재보정했다면 \`--rebase\` 로 기준선을 갱신하고 PROGRESS 에 사유를 남겨라`);
     continue;
   }
   const drift = r.hRate - base.rate;
   const pass = Math.abs(drift) <= DRIFT_TOL + (FAST ? 5 : 0);
-  chk(`챕터 ${ch} 하니스 클리어율이 등재값 ${base.rate}% 근처(±${DRIFT_TOL}%p)`, pass,
+  chk(`실험${e.n}(챕터 ${ch}) 하니스 클리어율이 등재값 ${base.rate}% 근처(±${DRIFT_TOL}%p)`, pass,
       `현재 ${r.hRate.toFixed(1)}% (${drift >= 0 ? '+' : ''}${drift.toFixed(1)}%p)` + (pass ? '' :
       ` — 경제·난이도 노브가 움직였다는 뜻이다. 정본 ④ 는 «노브를 바꾼 회차마다 재보정» 을 요구한다: ` +
       `하니스를 다시 고르고 \`--rebase\` 로 기준선을 갱신하라 (T26 이 이 사고였다)`));
@@ -247,12 +266,12 @@ for (const ch of [6, 8]) {
 
 /* ---------------- ③ 참고 지표 = 정본 ⑤ (위반 판정 없음) ---------------- */
 console.log('\n[③ 참고 지표 — 도달 시점 실제 계정과의 괴리 (정본 ⑤ · 위반 아님 · 승인 25번 3안)]');
-for (const ch of [6, 8]) {
-  const base = BASELINE[ch], r = result[ch];
+for (const e of EXPS) {
+  const base = BASELINE[e.k], r = result[e.k];
   const d = r.gap - base.gap;
-  console.log(`  · 챕터 ${ch}: 괴리 ${r.gap.toFixed(1)}%p (등재 ${base.gap}%p, ${d >= 0 ? '+' : ''}${d.toFixed(1)}%p) ` +
+  console.log(`  · 실험${e.n}(챕터 ${e.ch}): 괴리 ${r.gap.toFixed(1)}%p (등재 ${base.gap}%p, ${d >= 0 ? '+' : ''}${d.toFixed(1)}%p) ` +
               `— 하니스 ${r.hRate.toFixed(1)}% vs 도달시점 계정 중앙값 ${r.obsRate.toFixed(1)}% · ` +
-              `슬롯 하니스 ${H[ch].slot}렙 vs 실측 중앙값 ${r.obsSlot}렙`);
+              `슬롯 하니스 ${e.h.slot}렙 vs 실측 중앙값 ${r.obsSlot}렙`);
 }
 console.log('  ※ 이 괴리는 하니스 결함이 아니라 «실험3 진행 곡선이 §7 목표 미달» 의 그림자다 — 실험3 이 목표에 들면 저절로 줄어든다.');
 

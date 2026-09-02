@@ -76,11 +76,11 @@ const CHECKS=[
   ['maxChapter',     T('maxChapter'),   /(\d+)개로 확장\*\*/,                              '§2.4 챕터 수'],
 
   /* §6 적 수치 (현재 확정값 블록만 — 초기값 블록은 되돌림용 기록이라 제외) */
-  ['eBaseHp',  T('eBaseHp'),  /적 HP\s+= (\d+) \*/,                             '§6 확정값',1,CONF],
+  ['eBaseHp',  T('eBaseHp'),  /적 HP\s+= ([\d.]+) \*/,                             '§6 확정값',1,CONF],
   ['waveHp',   T('waveHp'),   /적 HP\s+= .*\(1\+([\d.]+)\*웨이브\)/,             '§6 확정값',1,CONF],
   ['wallHp',   T('wallHp'),   /적 HP\s+= .*c>=10: ×([\d.]+)/,                   '§6 확정값',1,CONF],
   ['wall2Hp',  T('wall2Hp'),  /적 HP\s+= .*c>=15: ×([\d.]+)/,                   '§6 확정값',1,CONF],
-  ['eBaseDmg', T('eBaseDmg'), /적 DMG\s+=\s+(\d+) \*/,                          '§6 확정값',1,CONF],
+  ['eBaseDmg', T('eBaseDmg'), /적 DMG\s+=\s+([\d.]+) \*/,                          '§6 확정값',1,CONF],
   ['waveDmg',  T('waveDmg'),  /적 DMG\s+= .*\(1\+([\d.]+)\*웨이브\)/,            '§6 확정값',1,CONF],
   ['wallDmg',  T('wallDmg'),  /적 DMG\s+= .*c>=10: ×([\d.]+)/,                  '§6 확정값',1,CONF],
   ['wall2Dmg', T('wall2Dmg'), /적 DMG\s+= .*c>=15: ×([\d.]+)/,                  '§6 확정값',1,CONF],
