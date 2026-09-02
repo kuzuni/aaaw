@@ -229,9 +229,9 @@ const GOPT={
     {d:'공격 시 20% 확률 검기 발사', ap:p=>p.px.wave++},
     {d:'공격 시 30% 확률 공격력 +14% 4초', ap:p=>p.px.atkBuffM++},
     {d:'검기 관통 20·사거리 1400', ap:p=>p.px.waveKing=1},
-    {d:'공격 시 15% 확률 공격력 +25% 5초', ap:p=>p.px.atkBuffL++},
-    {d:'반격 시 30% 확률 검기 발사', ap:p=>p.px.counterWave++},
-    {d:'체력 50% 이하 적에게 피해 1.5배', ap:p=>p.px.execute=true},
+    {d:'공격 시 25% 확률 공격력 +35% 5초', ap:p=>p.px.atkBuffL++},
+    {d:'반격 시 검기 발사(확정)', ap:p=>p.px.counterWave++},
+    {d:'체력 50% 이하 적에게 피해 2.2배', ap:p=>p.px.execute=true},
   ],
   axe:[ /* 도끼 계열 */
     {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
@@ -249,7 +249,7 @@ const GOPT={
     {d:'화살 24발로 증가',       ap:p=>p.px.arrowCount=1},
     {d:'치명타 시 75% 확률 추가타', ap:p=>p.px.extraHit++},
     {d:'화살 발사 확률 +15%p',   ap:p=>p.px.arrow2++},
-    {d:'최대 체력 적에게 치명타 확정', ap:p=>p.px.fullHpCrit=true},
+    {d:'최대 체력 적에게 치명타 확률 62', ap:p=>p.px.fullHpCrit=true},
   ],
   /* 투구 */
   helmet:[ /* 방어 계열 */
@@ -333,7 +333,7 @@ const GOPT={
     {d:'공격 시 10% 확률 공격력 영구 +1%', ap:p=>p.px.atkPerm++},
     {d:'공격력 +9%',            ap:p=>p.dmg*=1.09},
     {d:'기본공격마다 분신 추가타', ap:p=>p.px.clone=true},
-    {d:'체력 25% 이하 적 즉사',  ap:p=>p.px.execKill=true},
+    {d:'체력 25% 이하 적 즉사(보스 제외)', ap:p=>p.px.execKill=true},
   ],
   /* 신발 (주인 예시 계열 그대로) */
   sandal:[ /* 회피 계열 */
@@ -371,7 +371,7 @@ const GOPT={
     {d:'회복 시 20% 확률 실드 3% 충전', ap:p=>p.px.healShield3++},
     {d:'회복 시 공격력 +8% 3초', ap:p=>p.px.healAtkBuff++},
     {d:'회복 시 20% 확률 추가 회복', ap:p=>p.px.healBoost2++},
-    {d:'과회복분이 실드로 전환',  ap:p=>p.px.overheal=true},
+    {d:'과회복분의 7배가 실드로 전환', ap:p=>p.px.overheal=true},
   ],
   amulet:[ /* 처치 계열 */
     {d:'골드 획득 +30%',        ap:p=>p.goldMul+=0.3},
