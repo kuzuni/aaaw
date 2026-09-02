@@ -894,7 +894,7 @@ function onKill(e){
   if(px.killReset&&pk(0.30*px.killReset)) p.atkTimer=0;
   if(e.wave.enemies.every(x=>x.hp<=0)){
     e.wave.done=true;
-    if(!e.isBoss){ p.sh=p.maxSh; AU.play('shield'); addText('실드 충전!','#6CC0F0'); }
+    /* 웨이브 전멸 실드 무료충전 폐지 (주인 지시 2026-09-02 06:5X·08:5X) — 실드 충전은 특전으로만 */
   }
   if(e.isBoss){ shake(10); gainExp(e.exp); setTimeout(()=>{ if(G) openClear(); },700); }
   else gainExp(e.exp);
