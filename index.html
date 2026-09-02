@@ -56,11 +56,69 @@
     box-shadow:0 6px 0 #C77E12, 0 10px 18px rgba(0,0,0,.3); letter-spacing:4px;
   }
   #startBtn:active{transform:translateY(4px); box-shadow:0 2px 0 #C77E12;}
-  #bottomNav{width:100%; display:flex; background:var(--panel); padding:8px 8px calc(8px + env(safe-area-inset-bottom));gap:6px;}
+  .bottomNav{width:100%; display:flex; background:var(--panel); padding:8px 8px calc(8px + env(safe-area-inset-bottom));gap:6px; flex:none;}
   .nav-tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 0 7px; border-radius:14px; font-size:12px; color:var(--ink-dim); background:var(--panel2);}
   .nav-tab .nic{font-size:23px;}
   .nav-tab.mid{background:linear-gradient(#4A4A54,#3A3A42); color:var(--ink); transform:translateY(-6px); border:2px solid #5A5A66;}
   .nav-tab.locked{opacity:.5;}
+  .nav-tab.sel{background:linear-gradient(#4A4A54,#3A3A42); color:var(--ink); border:2px solid #6A6A78;}
+
+  /* ---------- 장비 / 상점 (참고: docs/ref 캐릭터 장비.jpg · 장비 세부팝업.jpg · 상점 (1)(2).jpg) ---------- */
+  #gear,#shop{background:radial-gradient(120% 70% at 50% 0%, #35353E, #1E1E24 60%, #17171B);}
+  .top-bar{display:flex; gap:6px; padding:10px 10px 6px; flex:none; justify-content:center;}
+  .top-bar .pill{font-size:14px; flex:1; justify-content:center;}
+  #gearHero{flex:none; display:flex; align-items:center; gap:6px; padding:8px 8px 4px;
+    background:linear-gradient(#4A8C3D,#3E7B33); border-bottom:3px solid #2A5520;}
+  .hero-col{display:flex; flex-direction:column; gap:6px; width:29%;}
+  #gearAvatar{flex:1; height:150px; min-width:0; border-radius:14px; background:rgba(0,0,0,.12);}
+  .slot-card{position:relative; height:46px; border-radius:11px; background:rgba(20,20,24,.55);
+    border:2.5px solid #6A6A78; display:flex; align-items:center; justify-content:center; font-size:22px; padding:0;}
+  .slot-card .lv{position:absolute; top:-6px; right:-2px; font-size:9.5px; background:#1C1C22; border-radius:99px; padding:1px 5px; color:var(--gold);}
+  .slot-card .plus{position:absolute; bottom:-6px; left:50%; transform:translateX(-50%); font-size:9.5px;
+    background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; border-radius:99px; padding:0 5px;}
+  .slot-card .pt{position:absolute; top:2px; left:4px; font-size:8.5px; color:var(--ink-dim);}
+  .slot-card.empty{opacity:.6; border-style:dashed;}
+  #gearStats{flex:none; display:flex; gap:6px; padding:7px 10px; justify-content:center;}
+  #gearStats .gs{flex:1; background:rgba(20,20,24,.6); border-radius:12px; padding:6px 4px; text-align:center; font-size:14px;}
+  #gearStats .gs small{display:block; font-size:10px; color:var(--ink-dim);}
+  .gear-actionbar{flex:none; display:flex; align-items:center; gap:8px; padding:4px 10px 6px;}
+  .even-note{flex:1; font-size:11px; color:var(--ink-dim); line-height:1.25;}
+  #fuseBtn{padding:9px 16px; border-radius:12px; font-size:15px; background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; box-shadow:0 3px 0 #C77E12;}
+  #fuseBtn:disabled{filter:grayscale(.8); opacity:.55; box-shadow:none;}
+  #invGrid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(5,1fr);
+    gap:6px; padding:8px 10px 10px; align-content:start;}
+  .inv-cell{position:relative; aspect-ratio:1; border-radius:11px; background:rgba(20,20,24,.55);
+    border:2.5px solid #55555F; display:flex; align-items:center; justify-content:center; font-size:22px; padding:0;}
+  .inv-cell .plus{position:absolute; bottom:-5px; left:50%; transform:translateX(-50%); font-size:9px;
+    background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; border-radius:99px; padding:0 4px;}
+  .inv-cell .eqm{position:absolute; inset:auto 0 0 0; font-size:8.5px; background:rgba(10,10,14,.72); border-radius:0 0 8px 8px;}
+  .inv-cell .fus{position:absolute; top:-5px; right:-4px; font-size:9px; background:#E8483F; border-radius:99px; padding:0 4px;}
+  .inv-empty{grid-column:1/-1; text-align:center; color:var(--ink-dim); font-size:13px; padding:26px 10px; line-height:1.5;}
+  #shopBody{flex:1 1 auto; min-height:0; overflow-y:auto; padding:4px 10px 12px;}
+  .shop-sec{font-size:15px; color:var(--ink-dim); margin:12px 0 7px; text-align:center;}
+  .gacha-card{border-radius:18px; padding:12px; background:linear-gradient(150deg,#5A3E8C,#8A4FA8 60%,#C05C9E);
+    box-shadow:0 5px 0 rgba(0,0,0,.28);}
+  .gacha-card .ttl{font-size:20px; text-shadow:0 2px 0 rgba(0,0,0,.35);}
+  .gacha-card .pity{font-size:12px; background:rgba(10,10,14,.42); border-radius:10px; padding:5px 8px; margin:6px 0; line-height:1.45;}
+  .gacha-btns{display:flex; gap:8px;}
+  .gacha-btns button{flex:1; padding:11px 4px; border-radius:13px; font-size:15px;
+    background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; box-shadow:0 3px 0 #C77E12;}
+  .gacha-btns button:disabled{filter:grayscale(.85); opacity:.6; box-shadow:none;}
+  .gem-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+  .gem-card{border-radius:15px; padding:11px 8px; text-align:center; background:linear-gradient(#6E3B8E,#4A2A66); font-size:13px;}
+  .gem-card .amt{font-size:19px; color:#FFD9F0;}
+  .gem-card button{margin-top:7px; width:100%; padding:8px 4px; border-radius:11px; font-size:13.5px; background:var(--panel3);}
+  .gem-card button:disabled{opacity:.5;}
+  .pull-list{display:grid; grid-template-columns:repeat(5,1fr); gap:6px; width:100%; margin:6px 0 12px;}
+  .pull-list .inv-cell{font-size:20px;}
+  .gd-opt{display:flex; gap:7px; align-items:flex-start; font-size:12.5px; text-align:left; padding:5px 7px;
+    background:rgba(20,20,24,.5); border-radius:9px; margin-bottom:4px; line-height:1.3;}
+  .gd-opt.lock{opacity:.42;}
+  .gd-stat{display:flex; justify-content:space-between; font-size:13.5px; padding:4px 7px; background:rgba(20,20,24,.5); border-radius:9px; margin-bottom:4px;}
+  .gd-row{display:flex; gap:8px; width:100%; margin-top:8px;}
+  .gd-row button{flex:1; padding:12px 6px; border-radius:14px; font-size:15px; background:var(--panel3);}
+  .gd-row button.gold{background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00;}
+  .gd-row button:disabled{opacity:.5;}
   #toast{position:absolute; left:50%; bottom:16%; transform:translateX(-50%); background:rgba(10,10,14,.9); padding:10px 20px; border-radius:99px; font-size:14px; opacity:0; pointer-events:none; transition:opacity .25s; z-index:60; white-space:nowrap;}
   #toast.on{opacity:1;}
 
@@ -175,6 +233,7 @@
       <canvas id="avatar"></canvas>
       <div class="pill" id="powerPill">⚔️ <span id="lbPower">0</span></div>
       <div class="pill">🪙 <span id="lbGold">0</span></div>
+      <div class="pill">💎 <span id="lbGem">0</span></div>
       <button id="sndBtnL">🔊</button>
     </div>
     <div id="lobbyChapName">CHAPTER 1</div>
@@ -185,13 +244,39 @@
       <button class="dio-arrow" id="chNext">▶</button>
     </div>
     <button id="startBtn">START</button>
-    <div id="bottomNav">
-      <button class="nav-tab locked" data-lock="1"><span class="nic">🏪</span>상점</button>
-      <button class="nav-tab" id="navUp"><span class="nic">⚒️</span>강화</button>
-      <button class="nav-tab mid"><span class="nic">⚔️</span>전투</button>
-      <button class="nav-tab locked" data-lock="1"><span class="nic">🃏</span>카드</button>
-      <button class="nav-tab locked" data-lock="1"><span class="nic">🏆</span>도전</button>
+    <div class="bottomNav" data-tab="battle"></div>
+  </div>
+
+  <!-- ============ 장비 (PLAN §11 · 참고: 캐릭터 장비.jpg) ============ -->
+  <div id="gear" class="screen">
+    <div class="top-bar">
+      <div class="pill">⚔️ <span class="tPower">0</span></div>
+      <div class="pill">🪙 <span class="tGold">0</span></div>
+      <div class="pill">💎 <span class="tGem">0</span></div>
     </div>
+    <div id="gearHero">
+      <div class="hero-col" id="gearColL"></div>
+      <canvas id="gearAvatar"></canvas>
+      <div class="hero-col" id="gearColR"></div>
+    </div>
+    <div id="gearStats"></div>
+    <div class="gear-actionbar">
+      <div class="even-note" id="evenNote"></div>
+      <button id="fuseBtn">🔨 합성</button>
+    </div>
+    <div id="invGrid"></div>
+    <div class="bottomNav" data-tab="gear"></div>
+  </div>
+
+  <!-- ============ 상점 (PLAN §11.2·§11.5 · 참고: 상점 (1).jpg, 상점 (2).jpg) ============ -->
+  <div id="shop" class="screen">
+    <div class="top-bar">
+      <div class="pill">⚔️ <span class="tPower">0</span></div>
+      <div class="pill">🪙 <span class="tGold">0</span></div>
+      <div class="pill">💎 <span class="tGem">0</span></div>
+    </div>
+    <div id="shopBody"></div>
+    <div class="bottomNav" data-tab="shop"></div>
   </div>
 
   <!-- ============ GAME ============ -->
@@ -243,17 +328,365 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
   };
 }
 
-/* ================= SAVE ================= */
-const SAVE_KEY='kkoma-knight-v1';
-let save={gold:0, maxChapter:1, selChapter:1, muted:false, up:{dmg:0,hp:0,aspd:0,crit:0}};
+/* ================= 장비 시스템 (PLAN §11) — sim.js 와 1:1 이식 (T2 3단계) =================
+   GT 상수·GOPT 18계열 옵션표·뽑기·합성·빌드 전투력은 sim.js 에서 문자열 그대로 옮겼다.
+   ⚠ 수치는 «현시점 sim.js 값» 이다 (ROUTINE 14:0X «구조 우선·수치 임시»).
+      주인 확정 스탯 체계(PLAN §11.5-a: 등급별 절대 기여표·실드 독립·plusStep 0.13·슬롯 +1%/상한150)는
+      T35 가 sim.js 에 넣고, 같은 커밋에서 이 블록도 같이 갈아끼워야 한다 —
+      어긋나면 게이트 ⑨(GT 상수 대조)·⑩(GOPT 126칸)이 즉시 불합격을 낸다. */
+const grand=Math.random;              /* sim.js 의 뽑기 전용 시드 스트림 자리 — 게임에서는 순수 난수 */
+/* ================= 장비 시스템 (PLAN §11) ================= */
+/* 등급 5 · 부위 6 · 부위당 종류 3 (=18계열). 장착 시 공/체 상승 + 계열 옵션.
+   옵션 개수: 일반0 · 희귀1 · 영웅2 · 전설3 · 신화4, 신화는 +3/+6/+9 강에서 1개씩 추가(최대 7). */
+const GT={
+  parts:['weapon','helm','armor','glove','boot','neck'],
+  partName:{weapon:'무기',helm:'투구',armor:'갑옷',glove:'장갑',boot:'신발',neck:'목걸이'},
+  types:{
+    weapon:['greatsword','axe','bow'], helm:['helmet','crown','hood'],
+    armor:['plate','chain','robe'],    glove:['gauntlet','leather','handwrap'],
+    boot:['sandal','boots','greave'],  neck:['pendant','amulet','beads'],
+  },
+  typeName:{greatsword:'대검',axe:'전투도끼',bow:'장궁',helmet:'투구',crown:'왕관',hood:'두건',
+    plate:'판금갑옷',chain:'사슬갑옷',robe:'로브',gauntlet:'건틀릿',leather:'가죽장갑',handwrap:'핸드랩',
+    sandal:'샌들',boots:'부츠',greave:'장화',pendant:'펜던트',amulet:'부적',beads:'구슬목걸이'},
+  rarName:['일반','희귀','영웅','전설','신화'],
+  /* 공/체 기여 — 신화(최고 등급) 1부위 기준값에서 등급 1단계 내려갈 때마다 rarStep 으로 나눈다.
+     rarStep·slotG 는 PLAN §11.7 앵커 3점(C=30·A=90·B=300)에서 역산한 값이다 — 아래 «앵커 역산» 주석 참조.
+     신화0강 > 전설9강 제약: 전설 = 신화/155 이므로 +9강(×2.08) 을 곱해도 신화 0강의 1/100 — 여유롭게 성립. */
+  atkUnit:0.5904, hpUnit:5.904, rarStep:155,
+  plusStep:0.12,                 // 강화 1레벨당 해당 장비 공/체 +12% (위임)
+  slotG:2.68,                    // 슬롯 레벨당 그 슬롯 장비 공/체 배수 (앵커 A→B 역산)
+  slotCostBase:600, slotCostG:3.5,   // 슬롯 강화 비용 = base*costG^L
+  /* R07: 150/5.5 → 600/4.2. T6 의 «costG < goldGrowth^6» 규칙은 틀렸다 — 5.5 는 그 규칙을 지키고도 실험4 가
+     챕터 118 에서 40일 정체했다. 올바른 조건은 «슬롯 1렙이 벌어주는 챕터 수(ln slotG/ln eHpG = 5.808챕터) 동안의
+     골드 증가분 goldGrowth^5.808 ≥ costG», 즉 costG ≤ 1.22^5.808 = 3.174 다.
+     R09: 4.2 → 3.5 (T13·T15). R07 이 «4.2 는 이를 만족» 이라 적은 것은 계산 착오였다 — 4.2 > 3.174 라 위반이고,
+     매 챕터 3.4% 씩 적에게 뒤처져 실험3 이 챕터 120 부터 무너지고 실험4 가 챕터 212 에서 영구 정체했다.
+     3.5 는 적대비 0.990 으로 적자가 1/3.5 로 줄어 챕터 300 완주가 된다(워커 A T13 3런 + R09 6런 = 9런 재현).
+     3.3 이하는 폭주(91~300 전부 시도 1회), 3.8 이상은 열화 시점이 밀릴 뿐 곡선이 같다 — 유효 구간 3.4~3.6.
+     ⚠ 대가: 챕터 90 도달 시 슬롯이 14~15렙(=앵커 A 스펙)에서 16렙으로 올라가 90 대형 벽이 무너진다(R09 6런 0/6).
+        slotCostBase 로 되돌리려면 3000 이 필요한데 그 지점에서 챕터 10~18 이 400회 상한에 막힌다 — 승인 대기 14번. */
+  evenStep:0.05, evenPer:5,      // 6슬롯 전부 5N렙 → 공/체 +5%*N (PLAN §11.4)
+  pullCost:400, dailyGem:2500, iapGem:12000,   // 주인 확정 상수
+  legendToMythPlus:10,           // 전설 +10강 도달 시 신화 0강으로 변환
+  runsPerDay:30,                 // (위임) 하루 플레이 판수 — 실험3/4 의 다이아 적립 환산 기준
+};
+
+GT.atk=[0,1,2,3,4].map(i=>GT.atkUnit/Math.pow(GT.rarStep,4-i));
+GT.hp =[0,1,2,3,4].map(i=>GT.hpUnit /Math.pow(GT.rarStep,4-i));
+GT.slotMul=L=>Math.pow(GT.slotG,L);
+GT.slotCost=L=>Math.floor(GT.slotCostBase*Math.pow(GT.slotCostG,L));
+GT.allTypes=[]; for(const pt of GT.parts) for(const ty of GT.types[pt]) GT.allTypes.push({part:pt,type:ty});
+/* 옵션 개수: 등급별 + 신화 강화 보너스 */
+GT.optCount=(rar,plus)=>{
+  let n=rar;                                   // 일반0 희귀1 영웅2 전설3 신화4
+  if(rar===4){ if(plus>=3)n++; if(plus>=6)n++; if(plus>=9)n++; }
+  return n;
+};
+
+/* ---- 18계열 옵션표 (PLAN §11.6 초안 — 기존 엔진 동사만 재사용) ----
+   각 계열 7단계, 상위 등급은 하위 옵션을 전부 포함하고 하나 더 얹는다. */
+const GOPT={
+  /* 무기 */
+  greatsword:[ /* 검기 계열 */
+    {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
+    {d:'공격 시 20% 확률 검기 발사', ap:p=>p.px.wave++},
+    {d:'공격 시 30% 확률 공격력 +14% 4초', ap:p=>p.px.atkBuffM++},
+    {d:'검기 관통 20·사거리 1400', ap:p=>p.px.waveKing=1},
+    {d:'공격 시 25% 확률 공격력 +35% 5초', ap:p=>p.px.atkBuffL++},
+    {d:'반격 시 검기 발사(확정)', ap:p=>p.px.counterWave++},
+    {d:'체력 50% 이하 적에게 피해 2.2배', ap:p=>p.px.execute=true},
+  ],
+  axe:[ /* 도끼 계열 */
+    {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
+    {d:'공격 시 15% 확률 도끼 발사', ap:p=>p.px.axe++},
+    {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
+    {d:'도끼 14개로 증가',       ap:p=>p.px.axeCount=1},
+    {d:'도끼 발사 확률 +15%p',   ap:p=>p.px.axe++},
+    {d:'처치 시 실드 충전',      ap:p=>p.px.killShield3++},
+    {d:'최대 체력 적 첫 타격 피해 +20%', ap:p=>p.px.firstHit++},
+  ],
+  bow:[ /* 화살 계열 */
+    {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
+    {d:'공격 시 15% 확률 화살 2발', ap:p=>p.px.arrow2++},
+    {d:'치명타 배율 +30',       ap:p=>p.critF+=30},
+    {d:'화살 24발로 증가',       ap:p=>p.px.arrowCount=1},
+    {d:'치명타 시 75% 확률 추가타', ap:p=>p.px.extraHit++},
+    {d:'화살 발사 확률 +15%p',   ap:p=>p.px.arrow2++},
+    {d:'최대 체력 적에게 치명타 확률 62', ap:p=>p.px.fullHpCrit=true},
+  ],
+  /* 투구 */
+  helmet:[ /* 방어 계열 */
+    {d:'방어 +6',               ap:p=>p.def+=6},
+    {d:'피격 시 방어 +3 3초(누적)', ap:p=>p.px.defHitBuff++},
+    {d:'방어 +8',               ap:p=>p.def+=8},
+    {d:'피격 시 30% 확률 방어 +14 4초', ap:p=>p.px.defBuff2++},
+    {d:'피격 시 방어 +10 4초(최대 2중첩)', ap:p=>p.px.wallBuff++},
+    {d:'피격 시 20% 확률 방어 +15 4초', ap:p=>p.px.defBuffL++},
+    {d:'실드가 있으면 받는 피해 38% 감소', ap:p=>p.px.guardCrystal=true},
+  ],
+  crown:[ /* 치명타 확률 계열 */
+    {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
+    {d:'치명타 시 치명 확률 +5 3초(누적)', ap:p=>p.px.critChain++},
+    {d:'치명타 확률 +8',        ap:p=>p.critR+=8},
+    {d:'처치 시 30% 확률 치명 확률 +14 4초', ap:p=>p.px.killCritBuff++},
+    {d:'치명타 시 45% 확률 공격 즉시 재장전', ap:p=>p.px.critReset++},
+    {d:'치명타 확률 +10',       ap:p=>p.critR+=10},
+    {d:'치명타 시 공격력 +15% 4초', ap:p=>p.px.critAtkBuff++},
+  ],
+  hood:[ /* 번개 계열 */
+    {d:'치명타 배율 +25',       ap:p=>p.critF+=25},
+    {d:'공격 시 10% 확률 번개 2발', ap:p=>p.px.bolt++},
+    {d:'치명타 시 치명 배율 +34 4초', ap:p=>p.px.critFBuff++},
+    {d:'번개 20회로 증가',       ap:p=>p.px.boltCount=1},
+    {d:'2.4초마다 번개 자동 발사', ap:p=>p.px.autoBolt++},
+    {d:'치명타 시 공격속도 +25% 3초', ap:p=>p.px.critAspdBuff++},
+    {d:'공격 시 16% 확률 소환 무작위 발사', ap:p=>p.px.arsenal++},
+  ],
+  /* 갑옷 */
+  plate:[ /* 체력·피격 계열 */
+    {d:'최대 체력 +8%',         ap:p=>{const a=p.maxHp*0.08;p.maxHp+=a;heal(p,a,true);}},
+    {d:'피격 시 15% 확률 체력 2% 회복', ap:p=>p.px.hitHeal++},
+    {d:'최대 체력 +10%',        ap:p=>{const a=p.maxHp*0.10;p.maxHp+=a;heal(p,a,true);}},
+    {d:'피격 시 22% 확률 회피 +14 3초', ap:p=>p.px.hitEvadeBuff++},
+    {d:'최대 체력 +12%',        ap:p=>{const a=p.maxHp*0.12;p.maxHp+=a;heal(p,a,true);}},
+    {d:'피격 시 10% 확률 실드 5% 충전', ap:p=>p.px.shieldOnHit++},
+    {d:'사망 시 1회 부활',       ap:p=>p.px.revive++},
+  ],
+  chain:[ /* 가시 계열 */
+    {d:'방어 +5',               ap:p=>p.def+=5},
+    {d:'피격 시 60% 확률 가시 반사', ap:p=>p.px.thorns++},
+    {d:'방어 +7',               ap:p=>p.def+=7},
+    {d:'피격 시 방어 +3 3초(누적)', ap:p=>p.px.defHitBuff++},
+    {d:'가시 반사 확률 +60%p',   ap:p=>p.px.thorns++},
+    {d:'최대 체력 +10%',        ap:p=>{const a=p.maxHp*0.10;p.maxHp+=a;heal(p,a,true);}},
+    {d:'피격 시 30% 확률 회피 +15 3초', ap:p=>p.px.evadeHitBuff++},
+  ],
+  robe:[ /* 실드 계열 */
+    {d:'최대 실드 +15%',        ap:p=>p.maxSh*=1.15},
+    {d:'처치 시 실드 소량 충전', ap:p=>p.px.killShield3++},
+    {d:'최대 실드 +20%',        ap:p=>p.maxSh*=1.20},
+    {d:'회복 시 30% 확률 실드 8% 충전', ap:p=>p.px.healShield5++},
+    {d:'처치 시 실드 충전 강화', ap:p=>p.px.killShield10++},
+    {d:'최대 실드 +25%',        ap:p=>p.maxSh*=1.25},
+    {d:'실드가 0일 때 공격력 1.5배', ap:p=>p.px.rage=true},
+  ],
+  /* 장갑 */
+  gauntlet:[ /* 치명타 배율 계열 */
+    {d:'치명타 배율 +30',       ap:p=>p.critF+=30},
+    {d:'치명타 시 치명 배율 +10 3초', ap:p=>p.px.critFsmall++},
+    {d:'치명타 배율 +40',       ap:p=>p.critF+=40},
+    {d:'치명타 시 30% 확률 체력 4% 회복', ap:p=>p.px.critHeal3++},
+    {d:'치명타 배율 +50',       ap:p=>p.critF+=50},
+    {d:'치명타 시 75% 확률 추가타', ap:p=>p.px.extraHit++},
+    {d:'뒤쪽 적에게 피해 3.2배',   ap:p=>p.px.backDmg=true},
+  ],
+  leather:[ /* 공격속도 계열 */
+    {d:'공격속도 +8%',          ap:p=>p.aspd*=1.08},
+    {d:'공격 시 30% 확률 공속 +5% 3초', ap:p=>p.px.c_aspdBuff++},
+    {d:'공격속도 +10%',         ap:p=>p.aspd*=1.10},
+    {d:'처치 시 공속 +20% 4초',  ap:p=>p.px.aspdKill++},
+    {d:'공격속도 +12%',         ap:p=>p.aspd*=1.12},
+    {d:'처치마다 공속 영구 +1%', ap:p=>p.px.killAspd=true},
+    {d:'공속 +35%·이동속도 +35%', ap:p=>{p.aspd*=1.35;p.walkMul+=0.35;}},
+  ],
+  handwrap:[ /* 연타·분신 계열 */
+    {d:'공격력 +5%',            ap:p=>p.dmg*=1.05},
+    {d:'공격 시 30% 확률 공격력 +5% 3초', ap:p=>p.px.c_atkBuff++},
+    {d:'공격력 +7%',            ap:p=>p.dmg*=1.07},
+    {d:'공격 시 10% 확률 공격력 영구 +1%', ap:p=>p.px.atkPerm++},
+    {d:'공격력 +9%',            ap:p=>p.dmg*=1.09},
+    {d:'기본공격마다 분신 추가타', ap:p=>p.px.clone=true},
+    {d:'체력 25% 이하 적 즉사(보스 제외)', ap:p=>p.px.execKill=true},
+  ],
+  /* 신발 (주인 예시 계열 그대로) */
+  sandal:[ /* 회피 계열 */
+    {d:'회피 +7',               ap:p=>p.evade+=7},
+    {d:'회피 시 10% 확률 도끼 1개 발사', ap:p=>p.px.evadeAxe++},
+    {d:'회피 +8',               ap:p=>p.evade+=8},
+    {d:'회피 시 공격력 +28% 5초', ap:p=>p.px.evadeAtkBuff++},
+    {d:'회피 시 15% 확률 체력 7% 회복', ap:p=>p.px.evadeHeal++},
+    {d:'회피 시 회피 +8 3초(누적)', ap:p=>p.px.evadeEvBuff++},
+    {d:'회피 시 다음 공격 치명타 확정', ap:p=>p.px.evadeCrit=true},
+  ],
+  boots:[ /* 반격 계열 */
+    {d:'반격 확률 +7',          ap:p=>p.counter+=7},
+    {d:'반격 시 공격력 +5% 3초', ap:p=>p.px.counterAtkS++},
+    {d:'반격 확률 +8',          ap:p=>p.counter+=8},
+    {d:'반격 시 공격력 +14% 4초', ap:p=>p.px.counterAtkM++},
+    {d:'반격 피해 +100%',        ap:p=>p.px.counterX++},
+    {d:'반격 시 체력 4% 회복',   ap:p=>p.px.counterHeal++},
+    {d:'반격 시 연쇄 반격(확정)', ap:p=>p.px.counterChain=true},
+  ],
+  greave:[ /* 체력 계열 */
+    {d:'최대 체력 +8%',         ap:p=>{const a=p.maxHp*0.08;p.maxHp+=a;heal(p,a,true);}},
+    {d:'처치 시 체력 0.5% 회복', ap:p=>p.killHeal+=0.005},
+    {d:'최대 체력 +10%',        ap:p=>{const a=p.maxHp*0.10;p.maxHp+=a;heal(p,a,true);}},
+    {d:'회복량 +20%',           ap:p=>p.healAmp+=0.2},
+    {d:'최대 체력 +12%',        ap:p=>{const a=p.maxHp*0.12;p.maxHp+=a;heal(p,a,true);}},
+    {d:'처치 시 체력 +0.8% 추가 회복', ap:p=>p.killHeal+=0.008},
+    {d:'체력 10% 이하 시 회피 +40', ap:p=>p.px.lastStand=true},
+  ],
+  /* 목걸이 */
+  pendant:[ /* 회복 계열 */
+    {d:'회복량 +15%',           ap:p=>p.healAmp+=0.15},
+    {d:'회복 시 30% 확률 방어 +5 3초', ap:p=>p.px.healDefBuff++},
+    {d:'회복량 +20%',           ap:p=>p.healAmp+=0.20},
+    {d:'회복 시 20% 확률 실드 3% 충전', ap:p=>p.px.healShield3++},
+    {d:'회복 시 공격력 +8% 3초', ap:p=>p.px.healAtkBuff++},
+    {d:'회복 시 20% 확률 추가 회복', ap:p=>p.px.healBoost2++},
+    {d:'과회복분의 7배가 실드로 전환', ap:p=>p.px.overheal=true},
+  ],
+  amulet:[ /* 처치 계열 */
+    {d:'골드 획득 +30%',        ap:p=>p.goldMul+=0.3},
+    {d:'처치 시 방어 +10 3초',   ap:p=>p.px.killDefBuff++},
+    {d:'골드 획득 +40%',        ap:p=>p.goldMul+=0.4},
+    {d:'처치 시 30% 확률 치명 확률 +14 4초', ap:p=>p.px.killCritBuff++},
+    {d:'획득 경험치 +1',        ap:p=>p.px.sage=true},
+    {d:'처치 시 실드 충전 강화', ap:p=>p.px.killShield10++},
+    {d:'골드 획득 2배',          ap:p=>p.goldMul*=2},
+  ],
+  beads:[ /* 창 계열 */
+    {d:'공격력 +5%',            ap:p=>p.dmg*=1.05},
+    {d:'공격 시 7.5% 확률 창 발사', ap:p=>p.px.spear++},
+    {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
+    {d:'창 피해 13.5배·관통',    ap:p=>p.px.spearMaster=1},
+    {d:'창 발사 확률 +7.5%p',    ap:p=>p.px.spear++},
+    {d:'적 화살 30% 확률 오발',  ap:p=>p.misfire+=0.30},
+    {d:'모든 발동 확률 1.22배',  ap:p=>p.px.procX2=true},
+  ],
+};
+
+/* ---- 뽑기 (PLAN §11.2) ---- */
+function newGacha(){ return {p50:0,p10:0,pulls:0}; }
+function gachaPull(st){
+  st.pulls++; st.p50++; st.p10++;
+  const pityM=st.p50>=50, pityL=st.p10>=10;
+  let rar;
+  if(pityM) rar=4;
+  else{
+    const r=grand()*100;
+    rar = r<0.1?4 : r<2.1?3 : r<12.1?2 : r<42.1?1 : 0;
+    if(pityL&&rar<3) rar=3;
+  }
+  if(rar===4){
+    st.p50=0;
+    /* 50천장과 10피티가 겹치면 신화 우선 · 전설 확정은 다음 뽑기로 이월(p10 유지) */
+    if(!(pityM&&pityL)) st.p10=0;
+  }else if(rar===3) st.p10=0;
+  const t=GT.allTypes[Math.floor(grand()*GT.allTypes.length)];   /* 뽑기 스트림 (R11) */
+  return {part:t.part,type:t.type,rar,plus:0};
+}
+
+/* ---- 합성 (PLAN §11.3) ---- */
+const gearKey=g=>`${g.part}|${g.type}|${g.rar}|${g.plus}`;
+/* inv: 배열. equipped: Set(장착 중인 객체) — 재료에서 제외 */
+function fuseAll(inv,equipped){
+  let did=true,count=0;
+  while(did){
+    did=false;
+    const groups=new Map();
+    for(const g of inv){
+      if(equipped.has(g))continue;
+      const k=`${g.part}|${g.type}|${g.rar}`;
+      if(!groups.has(k))groups.set(k,[]);
+      groups.get(k).push(g);
+    }
+    for(const [k,arr] of groups){
+      if(arr.length<3)continue;
+      arr.sort((a,b)=>b.plus-a.plus);          /* 재료 중 최고 강화 기준 */
+      const mats=arr.slice(0,3), base=mats[0];
+      let made;
+      if(base.rar<3) made={part:base.part,type:base.type,rar:base.rar+1,plus:0};
+      else if(base.rar===3){
+        const np=base.plus+1;
+        made = np>=GT.legendToMythPlus
+          ? {part:base.part,type:base.type,rar:4,plus:0}          /* +10강 도달 → 신화 0강 변환 */
+          : {part:base.part,type:base.type,rar:3,plus:np};
+      }else made={part:base.part,type:base.type,rar:4,plus:base.plus+1};   /* 신화 무한 강화 */
+      for(const m of mats){const i=inv.indexOf(m);inv.splice(i,1);}
+      inv.push(made);count++;did=true;
+      break;                                    /* 인벤이 바뀌었으니 재그룹화 */
+    }
+  }
+  return count;
+}
+const gearScore=g=>g.rar*1000+g.plus;           /* 등급 우선, 같은 등급이면 강화 (신화0>전설9 제약과 일관) */
+function autoEquip(inv){
+  const eq={};
+  for(const g of inv){ const b=eq[g.part]; if(!b||gearScore(g)>gearScore(b))eq[g.part]=g; }
+  return eq;                                    /* {part: gear|undefined} */
+}
+
+const evenBonus=b=>1+GT.evenStep*Math.floor(Math.min(...GT.parts.map(pt=>b.slots[pt]||0))/GT.evenPer);
+function buildPower(b){
+  if(b.flat)return b.flat;
+  let atk=0,hp=0;
+  for(const pt of GT.parts){
+    const g=b.eq[pt]; if(!g)continue;
+    const m=GT.slotMul(b.slots[pt]||0)*(1+GT.plusStep*g.plus);
+    atk+=GT.atk[g.rar]*m; hp+=GT.hp[g.rar]*m;
+  }
+  const ev=evenBonus(b);
+  return {atk:(TUNE.pAtk0+atk)*ev, hp:(TUNE.pHp0+hp)*ev};
+}
+
+/* ---- 표시용 메타 (게임 전용 — sim.js 에는 없다) ---- */
+GT.rarColor=['#9AA3AF','#4FA3E3','#B96CE8','#F2C14E','#FF5FA2'];   /* 일반·희귀·영웅(보라 위임)·전설·신화 */
+GT.rarGlow =['rgba(154,163,175,.35)','rgba(79,163,227,.40)','rgba(185,108,232,.45)','rgba(242,193,78,.45)','rgba(255,95,162,.50)'];
+GT.typeIcon={greatsword:'🗡️',axe:'🪓',bow:'🏹',helmet:'⛑️',crown:'👑',hood:'🧥',
+  plate:'🛡️',chain:'⛓️',robe:'🥋',gauntlet:'🥊',leather:'🧤',handwrap:'✋',
+  sandal:'👡',boots:'🥾',greave:'👢',pendant:'📿',amulet:'🔮',beads:'🧿'};
+GT.lineName={greatsword:'검기',axe:'도끼 소환',bow:'화살 소환',helmet:'방어',crown:'치명타 확률',hood:'번개 소환',
+  plate:'체력·피격',chain:'가시 반사',robe:'실드',gauntlet:'치명타 배율',leather:'공격속도',handwrap:'연타·분신',
+  sandal:'회피',boots:'반격',greave:'체력',pendant:'회복',amulet:'처치',beads:'창 소환'};
+const gearName=g=>`${GT.rarName[g.rar]} ${GT.typeName[g.type]}`;
+
+/* ================= SAVE (v2 — 장비 포맷. 영구강화 up{} 폐지) ================= */
+const SAVE_KEY='kkoma-knight-v2';
+const SAVE_KEY_V1='kkoma-knight-v1';
+function newSave(){
+  const slots={}; for(const pt of GT.parts) slots[pt]=0;
+  return {gold:0, gem:0, maxChapter:1, selChapter:1, muted:false,
+    inv:[], eq:{}, slots, gacha:newGacha(), pulls:0, fuses:0, uid:1, freeDay:''};
+}
+let save=newSave();
 try{
   const raw=localStorage.getItem(SAVE_KEY);
-  if(raw){ const s=JSON.parse(raw); if(s&&s.up) save=Object.assign(save,s); }
+  if(raw){
+    const s=JSON.parse(raw);
+    if(s&&typeof s==='object') save=Object.assign(save,s);
+  }else{
+    /* v1(영구강화) 세이브 이월 — 강화 레벨은 폐지된 시스템이라 버리고 골드·진행도만 가져온다 */
+    const old=localStorage.getItem(SAVE_KEY_V1);
+    if(old){ const s=JSON.parse(old);
+      if(s&&typeof s==='object'){ save.gold=s.gold|0; save.maxChapter=s.maxChapter|0; save.selChapter=s.selChapter|0; save.muted=!!s.muted; } }
+  }
 }catch(e){}
-/* 챕터 상한 300 (PLAN §2.4) — 구버전 세이브가 넘겨 놓았을 수 있어 로드 시 클램프 */
-save.maxChapter=Math.max(1,Math.min(save.maxChapter|0||1,300));
+/* 정규화 — 손상·구버전 세이브를 여기서 한 번에 바로잡는다 */
+save.maxChapter=Math.max(1,Math.min(save.maxChapter|0||1,300));   /* 챕터 상한 300 (PLAN §2.4) */
 save.selChapter=Math.max(1,Math.min(save.selChapter|0||1,save.maxChapter));
+save.gold=Math.max(0,+save.gold||0); save.gem=Math.max(0,+save.gem||0);
+if(!Array.isArray(save.inv)) save.inv=[];
+save.inv=save.inv.filter(g=>g&&GT.parts.includes(g.part)&&GOPT[g.type]&&g.rar>=0&&g.rar<=4)
+  .map(g=>({u:g.u|0||0, part:g.part, type:g.type, rar:g.rar|0, plus:Math.max(0,g.plus|0)}));
+save.uid=Math.max(1,save.uid|0);
+for(const g of save.inv) if(!g.u) g.u=save.uid++;          /* uid 없는 항목(구버전·손상) 보정 */
+if(!save.slots||typeof save.slots!=='object') save.slots={};
+for(const pt of GT.parts) save.slots[pt]=Math.max(0,save.slots[pt]|0);
+if(!save.eq||typeof save.eq!=='object') save.eq={};
+for(const pt of GT.parts){ const u=save.eq[pt]; const g=save.inv.find(x=>x.u===u); if(!g||g.part!==pt) delete save.eq[pt]; }
+if(!save.gacha||typeof save.gacha!=='object') save.gacha=newGacha();
+save.gacha.p50=Math.max(0,save.gacha.p50|0); save.gacha.p10=Math.max(0,save.gacha.p10|0); save.gacha.pulls=Math.max(0,save.gacha.pulls|0);
 function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} }
+
+/* ---- 인벤토리·장착 헬퍼 ---- */
+const invById=u=>save.inv.find(g=>g.u===u)||null;
+const equippedGear=pt=>invById(save.eq[pt]);
+const isEquipped=g=>save.eq[g.part]===g.u;
+/* 전투 스탯 계산용 빌드 (sim.js 의 build = {eq,slots} 와 같은 모양) */
+function curBuild(){ const eq={}; for(const pt of GT.parts) eq[pt]=equippedGear(pt); return {eq,slots:save.slots}; }
+function newGear(part,type,rar,plus){ return {u:save.uid++, part, type, rar, plus:plus||0}; }
 
 /* ================= AUDIO (효과음만 — Web Audio 합성) ================= */
 const AU={
@@ -333,16 +766,11 @@ function toast(msg){
   clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.remove('on'),1400);
 }
 
-/* ================= META UPGRADES ================= */
-const UP_DEFS=[
-  {key:'dmg',  ic:'⚔️', nm:'공격력',   val:l=>30+8*l,   show:l=>`공격력 ${30+8*l}`,               cost:l=>Math.floor(40*Math.pow(1.32,l))},
-  {key:'hp',   ic:'❤️', nm:'체력',     val:l=>300+60*l, show:l=>`최대 체력 ${fmt(300+60*l)}`,     cost:l=>Math.floor(40*Math.pow(1.30,l))},
-  {key:'aspd', ic:'⚡', nm:'공격속도', val:l=>1+0.03*l, show:l=>`초당 ${(1+0.03*l).toFixed(2)}회`, cost:l=>Math.floor(60*Math.pow(1.38,l))},
-  {key:'crit', ic:'💥', nm:'치명타',   val:l=>5+l,      show:l=>`치명타 확률 ${5+l}%`,            cost:l=>Math.floor(55*Math.pow(1.36,l))},
-];
+/* ================= 전투력 표시 (영구강화 4종은 PLAN §11.4 로 폐지 — 성장은 장비·슬롯 전담) ================= */
+/* 표시 전용 지표(위임) — 밸런스에 쓰이지 않는다. 장비/슬롯을 올리면 오르는 단조 함수면 충분. */
 function power(){
-  const u=save.up;
-  return Math.round(UP_DEFS[0].val(u.dmg)*8 + UP_DEFS[1].val(u.hp)/2 + UP_DEFS[2].val(u.aspd)*100 + UP_DEFS[3].val(u.crit)*10);
+  const pw=buildPower(curBuild());
+  return Math.round(pw.atk*8 + pw.hp/2);
 }
 
 /* ================= LOBBY ================= */
@@ -352,35 +780,255 @@ function renderLobby(){
   $('chPrev').disabled = save.selChapter<=1;
   $('chNext').disabled = save.selChapter>=save.maxChapter;
   $('lbGold').textContent=fmt(save.gold);
+  $('lbGem').textContent=fmt(save.gem);
   $('lbPower').textContent=fmt(power());
   drawDiorama(); drawAvatar();
 }
 $('chPrev').onclick=()=>{ AU.play('click'); save.selChapter--; renderLobby(); persist(); };
 $('chNext').onclick=()=>{ AU.play('click'); save.selChapter++; renderLobby(); persist(); };
 $('startBtn').onclick=()=>{ AU.play('click'); startChapter(save.selChapter); };
-document.querySelectorAll('.nav-tab.locked').forEach(b=>b.onclick=()=>{ AU.play('click'); toast('🔒 준비 중인 기능입니다'); });
-document.querySelector('.nav-tab.mid').onclick=()=>AU.play('click');
-$('navUp').onclick=()=>{ AU.play('click'); openShop(); };
-
-function openShop(){
-  const rows=UP_DEFS.map((d,i)=>{
-    const lv=save.up[d.key], cost=d.cost(lv);
-    return `<div class="up-row"><div class="ic">${d.ic}</div>
-      <div class="info"><div class="nm">${d.nm} <span style="color:var(--gold)">Lv.${lv}</span></div>
-      <div class="ef">${d.show(lv)} → ${d.show(lv+1)}</div></div>
-      <button class="buy" data-k="${i}" ${save.gold<cost?'disabled':''}>🪙 ${fmt(cost)}</button></div>`;
-  }).join('');
-  openOverlay(`<div class="ov-banner">⚒️ 영구 강화</div>
-    <div class="ov-sub">🪙 ${fmt(save.gold)} 보유 — 죽어도 유지됩니다</div>
-    <div style="width:100%">${rows}</div>
-    <button class="ghost-btn" id="shopClose">닫기</button>`);
-  ov.querySelectorAll('.buy').forEach(btn=>{
-    btn.onclick=()=>{
-      const d=UP_DEFS[+btn.dataset.k], lv=save.up[d.key], cost=d.cost(lv);
-      if(save.gold>=cost){ AU.play('coin'); save.gold-=cost; save.up[d.key]++; persist(); openShop(); renderLobby(); }
-    };
+/* ---- 하단 탭바 (로비·장비·상점 공용) ---- */
+const NAV_TABS=[
+  {k:'shop', ic:'🏪', nm:'상점'},
+  {k:'gear', ic:'🛡️', nm:'장비'},
+  {k:'battle', ic:'⚔️', nm:'전투', mid:true},
+  {k:'card', ic:'🃏', nm:'카드', lock:true},
+  {k:'trial',ic:'🏆', nm:'도전', lock:true},
+];
+function buildNav(){
+  document.querySelectorAll('.bottomNav').forEach(nav=>{
+    const cur=nav.dataset.tab;
+    nav.innerHTML=NAV_TABS.map(t=>
+      `<button class="nav-tab${t.mid?' mid':''}${t.lock?' locked':''}${t.k===cur&&!t.mid?' sel':''}" data-k="${t.k}">`+
+      `<span class="nic">${t.ic}</span>${t.nm}</button>`).join('');
+    nav.querySelectorAll('.nav-tab').forEach(b=>{
+      const t=NAV_TABS.find(x=>x.k===b.dataset.k);
+      b.onclick=()=>{
+        AU.play('click');
+        if(t.lock){ toast('🔒 준비 중인 기능입니다'); return; }
+        if(t.k==='battle') showScreen('lobby');
+        else if(t.k===cur) return;
+        else showScreen(t.k);
+      };
+    });
   });
-  $('shopClose').onclick=()=>{ AU.play('click'); closeOverlay(); };
+}
+buildNav();
+function renderTopBars(){
+  const p=fmt(power()), g=fmt(save.gold), m=fmt(save.gem);
+  document.querySelectorAll('.tPower').forEach(e=>e.textContent=p);
+  document.querySelectorAll('.tGold').forEach(e=>e.textContent=g);
+  document.querySelectorAll('.tGem').forEach(e=>e.textContent=m);
+}
+
+/* ================= 장비 화면 (PLAN §11.1·§11.3·§11.4) ================= */
+const GEAR_COL={left:['weapon','neck','armor'], right:['helm','glove','boot']};
+/* 같은 부위·종류·등급이 3개 이상 모인 그룹(장착분 제외) = 합성 가능 */
+function fusableKeys(){
+  const cnt=new Map();
+  for(const g of save.inv){ const k=`${g.part}|${g.type}|${g.rar}`; cnt.set(k,(cnt.get(k)||0)+1); }
+  return new Set([...cnt].filter(([,n])=>n>=3).map(([k])=>k));
+}
+function slotCardHTML(pt){
+  const g=equippedGear(pt), lv=save.slots[pt]|0;
+  if(!g) return `<button class="slot-card empty" data-pt="${pt}"><span class="pt">${GT.partName[pt]}</span>➕<span class="lv">Lv.${lv}</span></button>`;
+  return `<button class="slot-card" data-pt="${pt}" style="border-color:${GT.rarColor[g.rar]};box-shadow:0 0 10px ${GT.rarGlow[g.rar]}">`+
+    `<span class="pt">${GT.partName[pt]}</span>${GT.typeIcon[g.type]}<span class="lv">Lv.${lv}</span>`+
+    `${g.plus?`<span class="plus">+${g.plus}</span>`:''}</button>`;
+}
+function renderGear(){
+  renderTopBars();
+  $('gearColL').innerHTML=GEAR_COL.left.map(slotCardHTML).join('');
+  $('gearColR').innerHTML=GEAR_COL.right.map(slotCardHTML).join('');
+  document.querySelectorAll('#gearHero .slot-card').forEach(b=>b.onclick=()=>{
+    AU.play('click');
+    const g=equippedGear(b.dataset.pt);
+    if(g) openGearDetail(g.u); else openSlotDetail(b.dataset.pt);
+  });
+  const pw=buildPower(curBuild());
+  $('gearStats').innerHTML=
+    `<div class="gs">⚔️ ${fmt(Math.round(pw.atk))}<small>공격력</small></div>`+
+    `<div class="gs">❤️ ${fmt(Math.round(pw.hp))}<small>체력</small></div>`+
+    `<div class="gs">🛡️ ${fmt(Math.round(pw.hp*0.8))}<small>실드</small></div>`;
+  const mn=Math.min(...GT.parts.map(pt=>save.slots[pt]|0));
+  const bon=Math.round((evenBonus({slots:save.slots})-1)*100);
+  $('evenNote').innerHTML=`균등 보너스 <b style="color:var(--gold)">+${bon}%</b> — 최저 슬롯 Lv.${mn} `+
+    `(6슬롯 전부 Lv.${(Math.floor(mn/GT.evenPer)+1)*GT.evenPer} 이면 +${bon+GT.evenStep*100}%)`;
+  const fk=fusableKeys();
+  const fb=$('fuseBtn'); fb.disabled=fk.size===0;
+  fb.textContent=fk.size?`🔨 합성 (${fk.size})`:'🔨 합성';
+  /* 인벤토리 — 장착분 먼저, 그다음 등급·강화 내림차순 */
+  const sorted=save.inv.slice().sort((a,b)=>(isEquipped(b)-isEquipped(a))||(gearScore(b)-gearScore(a))||a.part.localeCompare(b.part));
+  $('invGrid').innerHTML = sorted.length ? sorted.map(g=>{
+    const f=fk.has(`${g.part}|${g.type}|${g.rar}`);
+    return `<button class="inv-cell" data-u="${g.u}" style="border-color:${GT.rarColor[g.rar]}">`+
+      `${GT.typeIcon[g.type]}${g.plus?`<span class="plus">+${g.plus}</span>`:''}`+
+      `${isEquipped(g)?'<span class="eqm">장착</span>':''}${f?'<span class="fus">3</span>':''}</button>`;
+  }).join('') : `<div class="inv-empty">장비가 없습니다.<br>🏪 상점에서 뽑기로 장비를 얻으세요.</div>`;
+  $('invGrid').querySelectorAll('.inv-cell').forEach(b=>b.onclick=()=>{ AU.play('click'); openGearDetail(+b.dataset.u); });
+  drawGearAvatar();
+}
+$('fuseBtn').onclick=()=>{
+  AU.play('click');
+  /* ⚠ sim.js accRefresh() 와 같이 «장착분도 재료» 다 — 합성 직후 autoEquipBest 로 상위품이 바로 장착되므로
+     플레이어는 손해를 보지 않는다. PLAN §11.3 의 «장착 중인 장비는 재료에서 제외(위임)» 와 어긋나는데,
+     엔진(sim.js)이 기준이라 엔진을 따랐다 — 주인 판단 대기 항목으로 PROGRESS 에 등재(T38). */
+  const before=save.inv.length;
+  const n=fuseAll(save.inv,new Set());
+  for(const g of save.inv) if(!g.u) g.u=save.uid++;      /* fuseAll 이 만든 신품에 uid 부여 */
+  save.fuses+=n;
+  if(n){ AU.play('levelup'); autoEquipBest(); persist(); renderGear();
+    toast(`🔨 ${n}회 합성 (장비 ${before} → ${save.inv.length})`); }
+  else toast('합성할 조합이 없습니다 (같은 부위·종류·등급 3개)');
+};
+/* sim.js accRefresh() 와 같은 정책 — 부위별 최고 등급/강화를 항상 장착한다(gearScore 기준).
+   더 나쁜 장비를 일부러 끼워 둘 수는 없다(sim 과 계정 성장이 갈라지지 않게). */
+function autoEquipBest(){
+  const best=autoEquip(save.inv);
+  for(const pt of GT.parts){
+    const cur=equippedGear(pt);
+    if(best[pt]&&(!cur||gearScore(best[pt])>gearScore(cur))) save.eq[pt]=best[pt].u;
+  }
+}
+function drawGearAvatar(){
+  const cv=$('gearAvatar'), d=window.devicePixelRatio||1;
+  const w=cv.clientWidth, h=cv.clientHeight;
+  if(!w||!h) return;
+  cv.width=w*d; cv.height=h*d;
+  const c=cv.getContext('2d'); c.setTransform(d,0,0,d,0,0);
+  c.clearRect(0,0,w,h);
+  drawCharOn(c,w/2,h*0.86,{s:Math.min(w,h)/52,f:1,body:'#5E6A75',hat:'helmet'});
+}
+
+/* ---- 장비 세부 팝업 (참고: 장비 세부팝업.jpg) ---- */
+function optRowsHTML(g){
+  const tbl=GOPT[g.type], n=GT.optCount(g.rar,g.plus);
+  return tbl.map((o,i)=>{
+    const on=i<n;
+    const need = i<4 ? `${GT.rarName[i+1]} 이상` : `신화 +${(i-3)*3}강`;
+    return `<div class="gd-opt${on?'':' lock'}"><span>${on?'◆':'🔒'}</span><span>${o.d}${on?'':` <span style="opacity:.7">(${need})</span>`}</span></div>`;
+  }).join('');
+}
+function gearContribHTML(g){
+  const m=GT.slotMul(save.slots[g.part]|0)*(1+GT.plusStep*g.plus);
+  return `<div class="gd-stat"><span>⚔️ 공격력</span><b>+${fmt(Math.round(GT.atk[g.rar]*m))}</b></div>`+
+         `<div class="gd-stat"><span>❤️ 체력</span><b>+${fmt(Math.round(GT.hp[g.rar]*m))}</b></div>`;
+}
+function slotUpgradeHTML(pt){
+  const lv=save.slots[pt]|0, cost=GT.slotCost(lv);
+  return `<div class="gd-stat"><span>슬롯 강화 Lv.${lv} → Lv.${lv+1}</span><b style="color:var(--gold)">🪙 ${fmt(cost)}</b></div>
+    <div class="gd-opt"><span>◆</span><span>슬롯 1레벨당 이 부위 장비의 공격력·체력 배수 ×${GT.slotG} (PLAN §11.4)</span></div>`;
+}
+function openGearDetail(u){
+  const g=invById(u);
+  if(!g){ closeOverlay(); return; }
+  const lv=save.slots[g.part]|0, cost=GT.slotCost(lv), eqd=isEquipped(g);
+  openOverlay(`<div class="ov-banner" style="font-size:22px;color:${GT.rarColor[g.rar]}">${GT.typeIcon[g.type]} ${gearName(g)}${g.plus?` +${g.plus}`:''}</div>
+    <div class="ov-sub">${GT.partName[g.part]} · ${GT.lineName[g.type]} 계열 · 슬롯 Lv.${lv}</div>
+    <div style="width:100%;text-align:left">
+      ${gearContribHTML(g)}
+      ${eqd?slotUpgradeHTML(g.part):''}
+      <div style="font-size:13px;color:var(--ink-dim);margin:8px 0 5px">계열 옵션 (${GT.optCount(g.rar,g.plus)}/7 해금)</div>
+      ${optRowsHTML(g)}
+    </div>
+    <div class="gd-row">
+      ${eqd
+        ? `<button id="gdUneq">해제</button><button class="gold" id="gdUp" ${save.gold<cost?'disabled':''}>슬롯 강화 🪙${fmt(cost)}</button>`
+        : `<button class="gold" id="gdEq">장착</button>`}
+    </div>
+    <button class="ghost-btn" id="gdClose">닫기</button>`);
+  if(eqd){
+    $('gdUneq').onclick=()=>{ AU.play('click'); delete save.eq[g.part]; persist(); closeOverlay(); renderGear(); };
+    $('gdUp').onclick=()=>{
+      const c=GT.slotCost(save.slots[g.part]|0);
+      if(save.gold<c) return;
+      AU.play('coin'); save.gold-=c; save.slots[g.part]=(save.slots[g.part]|0)+1; persist(); openGearDetail(u); renderGear();
+    };
+  }else{
+    $('gdEq').onclick=()=>{ AU.play('click'); save.eq[g.part]=g.u; persist(); closeOverlay(); renderGear(); };
+  }
+  $('gdClose').onclick=()=>{ AU.play('click'); closeOverlay(); };
+}
+/* 빈 부위를 눌렀을 때 — 슬롯 강화만 가능 */
+function openSlotDetail(pt){
+  const lv=save.slots[pt]|0, cost=GT.slotCost(lv);
+  openOverlay(`<div class="ov-banner" style="font-size:22px">${GT.partName[pt]} 슬롯</div>
+    <div class="ov-sub">장착된 장비가 없습니다</div>
+    <div style="width:100%;text-align:left">${slotUpgradeHTML(pt)}</div>
+    <div class="gd-row"><button class="gold" id="gdUp" ${save.gold<cost?'disabled':''}>슬롯 강화 🪙${fmt(cost)}</button></div>
+    <button class="ghost-btn" id="gdClose">닫기</button>`);
+  $('gdUp').onclick=()=>{
+    const c=GT.slotCost(save.slots[pt]|0);
+    if(save.gold<c) return;
+    AU.play('coin'); save.gold-=c; save.slots[pt]=(save.slots[pt]|0)+1; persist(); openSlotDetail(pt); renderGear();
+  };
+  $('gdClose').onclick=()=>{ AU.play('click'); closeOverlay(); };
+}
+
+/* ================= 상점 화면 (PLAN §11.2·§11.5) ================= */
+/* 모의 결제 — 실결제 없음. 주인 확정 상수 1종만 둔다(PLAN §11.5).
+   추가 가격대는 주인이 정하지 않았으므로 임의로 만들지 않는다(ROUTINE §1 «새 콘텐츠 임의 추가 금지»). */
+const GEM_PACKS=[
+  {gem:GT.iapGem, won:110000, nm:'다이아 금고'},
+];
+const today=()=>new Date().toISOString().slice(0,10);
+function renderShop(){
+  renderTopBars();
+  const st=save.gacha, canFree=save.freeDay!==today();
+  const one=GT.pullCost, ten=GT.pullCost*10;
+  $('shopBody').innerHTML=`
+    <div class="shop-sec">🎁 무료 보급</div>
+    <div class="gem-card" style="grid-column:1/-1">
+      <div class="amt">💎 ${fmt(GT.dailyGem)}</div>일일 무료 다이아
+      <button id="freeBtn" ${canFree?'':'disabled'}>${canFree?'수령':'오늘 수령 완료'}</button>
+    </div>
+    <div class="shop-sec">⚔️ 장비 뽑기</div>
+    <div class="gacha-card">
+      <div class="ttl">전설의 상자</div>
+      <div class="pity">신화 0.1% · 전설 2% · 영웅 10% · 희귀 30% · 일반 57.9%<br>
+        50회 천장까지 <b>${50-st.p50}</b>회 · 전설 확정까지 <b>${10-st.p10}</b>회 (누적 ${fmt(st.pulls)}회)</div>
+      <div class="gacha-btns">
+        <button id="pull1" ${save.gem<one?'disabled':''}>1회 💎${fmt(one)}</button>
+        <button id="pull10" ${save.gem<ten?'disabled':''}>10회 💎${fmt(ten)}</button>
+      </div>
+    </div>
+    <div class="shop-sec">💎 다이아 (모의 결제 — 실결제 없음)</div>
+    <div class="gem-grid">${GEM_PACKS.map((p,i)=>
+      `<div class="gem-card"><div class="amt">💎 ${fmt(p.gem)}</div>${p.nm}
+        <button data-p="${i}">₩${fmt(p.won)}</button></div>`).join('')}</div>`;
+  $('freeBtn').onclick=()=>{
+    if(save.freeDay===today()) return;
+    AU.play('coin'); save.gem+=GT.dailyGem; save.freeDay=today(); persist(); renderShop();
+    toast(`💎 ${fmt(GT.dailyGem)} 수령!`);
+  };
+  $('pull1').onclick=()=>doPull(1);
+  $('pull10').onclick=()=>doPull(10);
+  $('shopBody').querySelectorAll('.gem-card button[data-p]').forEach(b=>b.onclick=()=>{
+    const p=GEM_PACKS[+b.dataset.p];
+    AU.play('coin'); save.gem+=p.gem; persist(); renderShop();
+    toast(`💎 ${fmt(p.gem)} 지급 (모의 결제)`);
+  });
+}
+function doPull(n){
+  const cost=GT.pullCost*n;
+  if(save.gem<cost){ toast('💎 다이아가 부족합니다'); return; }
+  AU.play('coin'); save.gem-=cost;
+  const got=[];
+  for(let i=0;i<n;i++){
+    const raw=gachaPull(save.gacha);
+    const g=newGear(raw.part,raw.type,raw.rar,raw.plus);
+    save.inv.push(g); got.push(g); save.pulls++;
+  }
+  autoEquipBest(); persist(); renderShop();
+  const best=got.reduce((a,b)=>gearScore(b)>gearScore(a)?b:a);
+  AU.play(best.rar>=3?'levelup':'perk');
+  openOverlay(`<div class="ov-banner" style="font-size:24px">🎁 ${n}회 뽑기</div>
+    <div class="ov-sub">최고 등급 <b style="color:${GT.rarColor[best.rar]}">${GT.rarName[best.rar]}</b> · 빈 부위는 자동 장착됩니다</div>
+    <div class="pull-list">${got.map(g=>
+      `<div class="inv-cell" style="border-color:${GT.rarColor[g.rar]};box-shadow:0 0 9px ${GT.rarGlow[g.rar]}">${GT.typeIcon[g.type]}</div>`).join('')}</div>
+    <div style="font-size:12.5px;color:var(--ink-dim);line-height:1.5">${got.map(g=>`${GT.rarName[g.rar]} ${GT.typeName[g.type]}`).join(' · ')}</div>
+    <button class="ghost-btn" id="pullClose">닫기</button>`,{rays:best.rar>=3});
+  $('pullClose').onclick=()=>{ AU.play('click'); closeOverlay(); renderShop(); };
 }
 
 /* 로비 디오라마 & 아바타 */
@@ -611,13 +1259,14 @@ function takePerk(perk){
 let G=null, screenName='lobby', speedIdx=0;
 const SPEEDS=[1,1.5,2];
 
+/* sim.js mkPlayer() 와 1:1 — 기본치 + 장비 6부위 기여(슬롯·강화·균등 보너스 포함) 후 계열 옵션 적용 */
 function playerBase(){
-  const u=save.up;
-  const maxHp=UP_DEFS[1].val(u.hp);
-  return {
+  const build=curBuild(), pw=buildPower(build);
+  const maxHp=pw.hp;
+  const p={
     worldX:0, walking:false, atkTimer:0, strikeT:0, hitT:0, nextAtk:0,
-    dmg:UP_DEFS[0].val(u.dmg), aspd:UP_DEFS[2].val(u.aspd),
-    critR:UP_DEFS[3].val(u.crit), critF:200,
+    dmg:pw.atk, aspd:TUNE.pAspd0,
+    critR:TUNE.pCrit0, critF:200,
     def:5, counter:10, evade:8, steal:0, killHeal:0, misfire:0,
     goldMul:1, walkMul:1, healAmp:0, nextCrit:false,
     maxHp:maxHp, hp:maxHp, maxSh:Math.round(maxHp*0.8), sh:Math.round(maxHp*0.8),
@@ -639,6 +1288,15 @@ function playerBase(){
       evadeAxe:0,
     },
   };
+  /* 장비 계열 옵션 적용 (PLAN §11.1 — 상위 등급은 하위 옵션을 전부 포함) */
+  for(const pt of GT.parts){
+    const g=build.eq[pt]; if(!g)continue;
+    const tbl=GOPT[g.type]; if(!tbl)continue;
+    const n=GT.optCount(g.rar,g.plus);
+    for(let i=0;i<n&&i<tbl.length;i++) tbl[i].ap(p);
+  }
+  p.hp=p.maxHp; p.sh=p.maxSh=Math.round(p.maxSh);
+  return p;
 }
 const expNeed=lv=>4+2*lv;
 
@@ -653,6 +1311,8 @@ const TUNE={
   wall4Hp:3.6, wall4Dmg:1.30,   // 300챕터 최종 벽 (PLAN §11.7 앵커 B)
   bossHp:8, bossDmg:1.8,        // 주인 확정 상수 (튜닝 노브 아님) — 5배수 챕터 추가 배수 폐기
   maxChapter:300,               // PLAN §2.4
+  /* 플레이어 기본치 (영구강화 4종 폐지 — 성장은 §11 장비 + 슬롯 강화가 전담) */
+  pAtk0:30, pHp0:300, pAspd0:1.0, pCrit0:5,
   goldKillBase:0.6, goldKillPer:0.10, goldClearPer:3,
   goldGrowth:1.22,              // 챕터당 골드 성장 배수
   expKill:3, expBoss:9,
@@ -748,9 +1408,10 @@ function startChapter(c){
 
 function showScreen(n){
   screenName=n;
-  $('lobby').classList.toggle('on',n==='lobby');
-  $('game').classList.toggle('on',n==='game');
+  for(const id of ['lobby','game','gear','shop']) $(id).classList.toggle('on',n===id);
   if(n==='lobby') renderLobby();
+  if(n==='gear') renderGear();
+  if(n==='shop') renderShop();
 }
 function bankAndLobby(){
   if(G){ save.gold+=G.gold; persist(); }
@@ -1321,15 +1982,26 @@ function update(dt){
 
 /* ================= HUD ================= */
 const STAT_DEFS=[
-  {ic:'⚔️',lb:'공격력',    v:p=>fmt(effDmg(p)),           cur:p=>effDmg(p),    base:()=>UP_DEFS[0].val(save.up.dmg)},
-  {ic:'🛡️',lb:'방어력',    v:p=>effDef(p).toFixed(1)+'%', cur:p=>effDef(p),    base:()=>5},
-  {ic:'⚡',lb:'공격속도',  v:p=>effAspd(p).toFixed(2)+'/s',cur:p=>effAspd(p),  base:()=>UP_DEFS[2].val(save.up.aspd)},
-  {ic:'🔁',lb:'반격 확률',  v:p=>p.counter.toFixed(1)+'%', cur:p=>p.counter,    base:()=>10},
-  {ic:'💥',lb:'치명타 확률',v:p=>effCritR(p).toFixed(0)+'%',cur:p=>effCritR(p), base:()=>UP_DEFS[3].val(save.up.crit)},
-  {ic:'👥',lb:'회피',      v:p=>effEvade(p).toFixed(1)+'%',cur:p=>effEvade(p), base:()=>8},
-  {ic:'🔥',lb:'치명타 배율',v:p=>effCritF(p).toFixed(0)+'%',cur:p=>effCritF(p), base:()=>200},
+  /* base = 「전투 시작 시점 값」 — 장비 계열 옵션은 시작 시점에 이미 들어가 있으므로 buildPower/GOPT 결과가 기준이다.
+     특전·버프로 그 위로 올라간 항목만 초록으로 강조된다. */
+  {ic:'⚔️',lb:'공격력',    v:p=>fmt(effDmg(p)),           cur:p=>effDmg(p),    base:()=>statBase().dmg},
+  {ic:'🛡️',lb:'방어력',    v:p=>effDef(p).toFixed(1)+'%', cur:p=>effDef(p),    base:()=>statBase().def},
+  {ic:'⚡',lb:'공격속도',  v:p=>effAspd(p).toFixed(2)+'/s',cur:p=>effAspd(p),  base:()=>statBase().aspd},
+  {ic:'🔁',lb:'반격 확률',  v:p=>p.counter.toFixed(1)+'%', cur:p=>p.counter,    base:()=>statBase().counter},
+  {ic:'💥',lb:'치명타 확률',v:p=>effCritR(p).toFixed(0)+'%',cur:p=>effCritR(p), base:()=>statBase().critR},
+  {ic:'👥',lb:'회피',      v:p=>effEvade(p).toFixed(1)+'%',cur:p=>effEvade(p), base:()=>statBase().evade},
+  {ic:'🔥',lb:'치명타 배율',v:p=>effCritF(p).toFixed(0)+'%',cur:p=>effCritF(p), base:()=>statBase().critF},
   /* 🩸 흡혈 행 제거 — 주인 지시(2026-09-02 07:1X): 흡혈 특전 전면 배제로 항상 0 이라 7종으로 (엔진 steal 지원은 유지) */
 ];
+/* 현재 장비 구성의 전투 시작 스탯 (특전 획득 전) — 전투마다 한 번만 계산해 캐시 */
+let _statBase=null, _statBaseKey='';
+function statBase(){
+  const key=GT.parts.map(pt=>{const g=equippedGear(pt);return (g?g.type+g.rar+'+'+g.plus:'-')+':'+(save.slots[pt]|0);}).join(',');
+  if(_statBase&&_statBaseKey===key) return _statBase;
+  const p=playerBase();
+  _statBaseKey=key;
+  return _statBase={dmg:p.dmg, def:p.def, aspd:p.aspd, counter:p.counter, critR:p.critR, evade:p.evade, critF:p.critF};
+}
 function renderStatsGrid(){
   if(!G) return;
   const p=G.player, box=$('stats');

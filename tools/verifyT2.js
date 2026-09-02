@@ -297,6 +297,159 @@ else {
   (legacy.test(SIM) || legacy.test(HTML)) ? bad('폐기된 가중치(45/30/25) 배치 코드가 남아 있다') : ok('가중치(45/30/25) 배치 잔재 0');
 }
 
+/* ---------- ⑨ GT 장비 상수 대조 (PLAN §11.5-a) ---------- */
+console.log('\n[⑨ GT 장비 상수 — sim.js ↔ index.html 값 대조]');
+function gtConsts(src) {
+  const i = src.indexOf('const GT={');
+  if (i < 0) return null;
+  /* 리터럴의 끝 = 들여쓰기 없는 `};` */
+  const end = src.indexOf('\n};', i);
+  if (end < 0) return null;
+  const body = src.slice(i, end).replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const out = {};
+  /* GT 리터럴의 숫자 값은 전부 최상위 키다 (types/typeName/rarName 은 객체·문자열) — 한 줄에 여러 개 올 수 있다 */
+  for (const mm of body.matchAll(/([A-Za-z_]\w*)\s*:\s*(-?\d+(?:\.\d+)?)\s*(?=[,\n])/g)) out[mm[1]] = Number(mm[2]);
+  return out;
+}
+{
+  const GS = gtConsts(SIM), GH = gtConsts(HTML);
+  if (!GS || !GH) bad(`GT 리터럴 파싱 실패 (${!GS ? 'sim.js' : ''}${!GS && !GH ? ' / ' : ''}${!GH ? 'index.html' : ''}) — 게이트를 갱신할 것`);
+  else {
+    /* 주인 확정 상수(§11.2·§11.5)는 값까지 못박는다 */
+    const MUST = ['atkUnit','hpUnit','rarStep','plusStep','slotG','slotCostBase','slotCostG',
+                  'evenStep','evenPer','pullCost','dailyGem','iapGem','legendToMythPlus'];
+    const missing = MUST.filter(k => !(k in GH));
+    const diff = MUST.filter(k => k in GH && GS[k] !== GH[k]).map(k => `${k} sim=${GS[k]} html=${GH[k]}`);
+    missing.length ? bad(`index.html GT 누락 ${missing.length}개: ${missing.join(' ')}`) : ok(`GT 상수 ${MUST.length}개 전부 존재`);
+    diff.length ? bad(`GT 값 불일치 ${diff.length}건: ${diff.join(' / ')}`) : ok(`GT 값 ${MUST.length}개 전수 일치 (plusStep ${GS.plusStep} · slotG ${GS.slotG} · 슬롯비용 ${GS.slotCostBase}×${GS.slotCostG}^L)`);
+    if (GH.pullCost === 400 && GH.dailyGem === 2500 && GH.iapGem === 12000) ok('주인 확정 경제 상수 — 뽑기 400 · 일일 2500 · IAP 12000 (PLAN §11.2·§11.5)');
+    else bad(`주인 확정 경제 상수 위반 — 뽑기 ${GH.pullCost}(400) · 일일 ${GH.dailyGem}(2500) · IAP ${GH.iapGem}(12000)`);
+    if (GH.legendToMythPlus === 10) ok('전설 +10강 → 신화 0강 변환 임계 10 (PLAN §11.3)');
+    else bad(`전설→신화 변환 임계가 ${GH.legendToMythPlus} (확정: 10)`);
+  }
+  /* 파생식 4개는 문자열로 대조 (등비 생성·슬롯 배수·비용·옵션 개수) */
+  const DERIV = [
+    ['GT.atk 등급 생성식', /GT\.atk=\[0,1,2,3,4\]\.map\(i=>GT\.atkUnit\/Math\.pow\(GT\.rarStep,4-i\)\)/],
+    ['GT.hp 등급 생성식', /GT\.hp\s*=\[0,1,2,3,4\]\.map\(i=>GT\.hpUnit\s*\/Math\.pow\(GT\.rarStep,4-i\)\)/],
+    ['GT.slotMul', /GT\.slotMul=L=>Math\.pow\(GT\.slotG,L\)/],
+    ['GT.slotCost', /GT\.slotCost=L=>Math\.floor\(GT\.slotCostBase\*Math\.pow\(GT\.slotCostG,L\)\)/],
+  ];
+  for (const [nm, re] of DERIV) {
+    const a = re.test(SIM), b = re.test(HTML);
+    if (a && b) ok(nm);
+    else if (!a && !b) bad(`${nm} — 양쪽 다 파싱 실패 (게이트를 갱신할 것)`);
+    else bad(`${nm} — ${a ? 'index.html' : 'sim.js'} 쪽에서 찾지 못했다`);
+  }
+  /* 옵션 개수 규칙: 일반0·희귀1·영웅2·전설3·신화4 + 신화 +3/+6/+9 에서 1개씩 (최대 7) */
+  const optRe = /GT\.optCount=\(rar,plus\)=>\{[\s\S]*?\n\};/;
+  const sa = SIM.match(optRe), ha = HTML.match(optRe);
+  if (sa && ha && norm(sa[0]) === norm(ha[0])) ok('GT.optCount 본문 1:1 (신화 +3/+6/+9 옵션 추가)');
+  else bad('GT.optCount 본문이 두 파일에서 다르다');
+}
+
+/* ---------- ⑩ GOPT 18계열 × 7옵션 = 126칸 전수 대조 ---------- */
+console.log('\n[⑩ GOPT 18계열 옵션표 — 설명문 126칸 + ap 본문 전수 대조 (PLAN §11.6)]');
+function goptTable(src) {
+  const i = src.indexOf('const GOPT={');
+  if (i < 0) return null;
+  const end = src.indexOf('\n};', i);
+  if (end < 0) return null;
+  const body = src.slice(i + 'const GOPT={'.length, end);
+  const out = {};
+  /* `type:[ ... ],` 블록을 괄호 깊이로 쪼갠다 */
+  const re = /^\s{2}([a-z]+):\[/gm;
+  let m;
+  while ((m = re.exec(body))) {
+    const start = m.index + m[0].length;
+    let d = 1, j = start, q = null;
+    while (j < body.length && d > 0) {
+      const ch = body[j];
+      if (q) { if (ch === q && body[j - 1] !== '\\') q = null; }
+      else if (ch === "'" || ch === '"') q = ch;
+      else if (ch === '[') d++;
+      else if (ch === ']') d--;
+      j++;
+    }
+    const inner = body.slice(start, j - 1);
+    const opts = [];
+    for (const part of splitTop(inner)) {
+      const t = part.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '').trim();   /* 계열 주석 제거 */
+      if (!t.startsWith('{')) continue;
+      const dm = t.match(/^\{\s*d:\s*'((?:[^'\\]|\\.)*)'\s*,\s*ap:\s*([\s\S]*)\}$/);
+      if (!dm) { opts.push({ d: null, ap: t }); continue; }
+      opts.push({ d: dm[1], ap: dm[2].trim() });
+    }
+    out[m[1]] = opts;
+  }
+  return out;
+}
+{
+  const OS = goptTable(SIM), OH = goptTable(HTML);
+  if (!OS || !OH) bad(`GOPT 파싱 실패 (${!OS ? 'sim.js' : ''}${!OS && !OH ? ' / ' : ''}${!OH ? 'index.html' : ''}) — 게이트를 갱신할 것`);
+  else {
+    const ts = Object.keys(OS), th = Object.keys(OH);
+    ts.length === 18 ? ok('sim.js GOPT 18계열') : bad(`sim.js GOPT 가 ${ts.length}계열 (18 이어야 함)`);
+    const missT = ts.filter(t => !th.includes(t));
+    const extraT = th.filter(t => !ts.includes(t));
+    missT.length ? bad(`index.html 에 없는 계열 ${missT.length}개: ${missT.join(' ')}`) : ok('18계열 전부 index.html 에 존재');
+    extraT.length ? bad(`sim.js 에 없는 계열 ${extraT.length}개: ${extraT.join(' ')}`) : ok('잉여 계열 0');
+    let cells = 0, dDiff = [], apDiff = [], nCnt = [];
+    for (const t of ts) {
+      const a = OS[t], b = OH[t] || [];
+      if (a.length !== 7) nCnt.push(`${t}=${a.length}`);
+      if (b.length !== a.length) { dDiff.push(`${t}: 옵션 수 sim ${a.length} vs index ${b.length}`); continue; }
+      for (let i = 0; i < a.length; i++) {
+        cells++;
+        if (a[i].d !== b[i].d) dDiff.push(`${t}[${i + 1}] 설명 sim«${a[i].d}» vs index«${b[i].d}»`);
+        if (norm(a[i].ap) !== norm(b[i].ap)) apDiff.push(`${t}[${i + 1}] ap sim«${a[i].ap}» vs index«${b[i].ap}»`);
+      }
+    }
+    nCnt.length ? bad(`7옵션이 아닌 계열: ${nCnt.join(' ')}`) : ok('18계열 전부 7옵션 (신화 +9강이 옵션의 끝 — PLAN §11.1)');
+    dDiff.length ? bad(`설명문 불일치 ${dDiff.length}칸:\n    ` + dDiff.slice(0, 8).join('\n    ')) : ok(`설명문 ${cells}칸 전수 일치`);
+    apDiff.length ? bad(`ap 본문 불일치 ${apDiff.length}칸:\n    ` + apDiff.slice(0, 8).join('\n    ')) : ok(`ap 본문 ${cells}칸 전수 일치`);
+
+    /* PLAN §11.6 표의 설명문과도 대조 — T8·T9·T11·T12 계열(표↔엔진 불일치) 재발 방지 */
+    const PLAN = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
+    let planMiss = [];
+    for (const t of ts) for (const o of OS[t]) if (o.d && !PLAN.includes(o.d)) planMiss.push(`${t}: ${o.d}`);
+    planMiss.length ? bad(`PLAN §11.6 표에 없는 설명문 ${planMiss.length}칸:\n    ` + planMiss.slice(0, 8).join('\n    '))
+      : ok('126칸 설명문 전부 PLAN §11.6 표에 존재');
+  }
+}
+
+/* ---------- ⑪ 장비 엔진 함수 본문 + 영구강화 폐지 ---------- */
+console.log('\n[⑪ 장비 엔진 함수 1:1 + 영구강화 4종 폐지 (PLAN §11.4)]');
+{
+  const FNS = [
+    ['gachaPull (확률·50천장·10피티)', /function gachaPull\(st\)\{[\s\S]*?\n\}/],
+    ['fuseAll (3→1 · 전설 +강 · +10강 신화 변환)', /function fuseAll\(inv,equipped\)\{[\s\S]*?\n\}/],
+    ['autoEquip', /function autoEquip\(inv\)\{[\s\S]*?\n\}/],
+    ['buildPower (기본치 + 6부위 × 슬롯 × 강화 × 균등보너스)', /function buildPower\(b\)\{[\s\S]*?\n\}/],
+    ['evenBonus (균등 보너스)', /const evenBonus=b=>[^\n]*/],
+    ['gearScore (신화0 > 전설9 일관)', /const gearScore=g=>[^;]*/],
+  ];
+  for (const [nm, re] of FNS) {
+    const a = SIM.match(re), b = HTML.match(re);
+    if (!a || !b) { bad(`${nm} — ${!a ? 'sim.js' : 'index.html'} 에서 찾지 못했다`); continue; }
+    /* 주석은 제거하고 코드만 비교 */
+    const strip = s => norm(s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, ''));
+    strip(a[0]) === strip(b[0]) ? ok(nm) : bad(`${nm} — 본문이 두 파일에서 다르다\n      sim  : ${strip(a[0]).slice(0, 160)}\n      index: ${strip(b[0]).slice(0, 160)}`);
+  }
+  /* 뽑기 확률 리터럴은 주인 확정값이라 따로 못박는다 (PLAN §11.2) */
+  const RAR = /r<0\.1\?4\s*:\s*r<2\.1\?3\s*:\s*r<12\.1\?2\s*:\s*r<42\.1\?1\s*:\s*0/;
+  (RAR.test(SIM) && RAR.test(HTML)) ? ok('뽑기 확률 신화 0.1 / 전설 2 / 영웅 10 / 희귀 30 / 일반 57.9%')
+    : bad('뽑기 확률 리터럴이 주인 확정값과 다르다 (PLAN §11.2)');
+  /* 영구강화 폐지 — UP_DEFS·save.up 잔재가 남아 있으면 안 된다 */
+  !/UP_DEFS/.test(HTML) ? ok('영구강화 UP_DEFS 잔재 0 (PLAN §11.4 폐지)') : bad('index.html 에 UP_DEFS 가 남아 있다');
+  !/save\.up\b/.test(HTML) ? ok('save.up{} 잔재 0 (저장 포맷 v2 교체)') : bad('index.html 에 save.up 이 남아 있다');
+  /* 장비가 실제로 전투 스탯에 연결됐는가 */
+  /function playerBase\(\)\{[\s\S]{0,220}buildPower\(/.test(HTML) ? ok('playerBase() 가 buildPower(장비) 로 전투 스탯을 만든다')
+    : bad('playerBase() 가 장비와 연결돼 있지 않다');
+  /for\(const pt of GT\.parts\)\{[\s\S]{0,200}GT\.optCount\(g\.rar,g\.plus\)[\s\S]{0,120}tbl\[i\]\.ap\(p\)/.test(HTML)
+    ? ok('계열 옵션이 전투 시작 시 적용된다 (상위 등급 = 하위 옵션 포함)')
+    : bad('계열 옵션 적용 루프가 index.html 에 없다');
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');

@@ -153,11 +153,19 @@ const SIM = fs.readFileSync(path.join(root, 'sim.js'), 'utf8');
 
 if (!HTML.trim()) { console.log('파싱 실패 — index.html 에서 <script> 를 못 뽑았다'); process.exit(1); }
 
+/* 캐릭터 생성 함수의 마무리 줄(`p.hp=p.maxHp; p.sh=p.maxSh=…`)은 «전투 시작 시 만렙 상태로 태어난다» 는
+   빌드 셋업이지 폐지된 무료 회복이 아니다 — 두 파일에서 같은 함수(sim mkPlayer / index playerBase)라
+   같은 잣대로 대상에서 뺀다. (T2 3단계 전까지 index.html 에는 이 줄이 없어서 sim 쪽만 예외였다) */
+function stripFn(src, name) {
+  const i = src.search(new RegExp('function\\s+' + name + '\\s*\\('));
+  if (i < 0) return src;
+  const b = blockAt(src, src.indexOf(')', i));
+  return b ? src.replace(b, '{}') : src;
+}
 const targets = [
-  { label: 'index.html', src: HTML, opt: { levelFns: ['gainExp', 'openPerkChoice', 'takePerk', 'afterPerk'], perkTable: true, requireWaveBlock: true } },
-  /* sim.js 는 특전이 add('id',등급,ap) 형태라 PERKS 배열이 없다 → 풀충전은 전부 위반으로 본다.
-     현재 sim.js 에는 풀충전이 «빌드 셋업(mkPlayer 마무리)» 한 곳뿐이라 그 함수만 대상에서 뺀다. */
-  { label: 'sim.js', src: SIM.replace(/function\s+mkPlayer[\s\S]*?\n}\n/, '\n'), opt: { levelFns: ['gainExp'], perkTable: false, requireWaveBlock: false } },
+  { label: 'index.html', src: stripFn(HTML, 'playerBase'), opt: { levelFns: ['gainExp', 'openPerkChoice', 'takePerk', 'afterPerk'], perkTable: true, requireWaveBlock: true } },
+  /* sim.js 는 특전이 add('id',등급,ap) 형태라 PERKS 배열이 없다 → 풀충전은 전부 위반으로 본다. */
+  { label: 'sim.js', src: stripFn(SIM, 'mkPlayer'), opt: { levelFns: ['gainExp'], perkTable: false, requireWaveBlock: false } },
 ];
 
 console.log('[T33] 배포 빌드 «폐지 동작 재도입» 게이트');
@@ -175,15 +183,16 @@ if (SELFTEST) {
   console.log('');
   console.log('[--selftest] 폐지 동작을 되살린 사본으로 게이트가 빨개지는지 확인');
   const opt = targets[0].opt;
+  const BASE = targets[0].src;   /* 실제 검사와 같은 소스(캐릭터 생성 함수 제외분)에 변이를 주입한다 */
   const cases = [
-    ['웨이브 전멸 실드 충전 부활', HTML.replace(/(enemies\s*\.\s*every\s*\([\s\S]{0,80}?\{)/, '$1 p.sh=p.maxSh;')],
-    ['레벨업 풀충전 부활', HTML.replace(/(function\s+afterPerk\s*\(\s*\)\s*\{)/, '$1 G.player.hp=G.player.maxHp;')],
-    ['레벨업 최대체력 증가 부활', HTML.replace(/(function\s+gainExp\s*\([^)]*\)\s*\{)/, '$1 p.maxHp*=1.05;')],
-    ['특전 밖 풀충전 추가', HTML.replace(/(function\s+onKill\s*\([^)]*\)\s*\{)/, '$1 G.player.sh=G.player.maxSh;')],
+    ['웨이브 전멸 실드 충전 부활', BASE.replace(/(enemies\s*\.\s*every\s*\([\s\S]{0,80}?\{)/, '$1 p.sh=p.maxSh;')],
+    ['레벨업 풀충전 부활', BASE.replace(/(function\s+afterPerk\s*\(\s*\)\s*\{)/, '$1 G.player.hp=G.player.maxHp;')],
+    ['레벨업 최대체력 증가 부활', BASE.replace(/(function\s+gainExp\s*\([^)]*\)\s*\{)/, '$1 p.maxHp*=1.05;')],
+    ['특전 밖 풀충전 추가', BASE.replace(/(function\s+onKill\s*\([^)]*\)\s*\{)/, '$1 G.player.sh=G.player.maxSh;')],
   ];
   let bad = 0;
   for (const [nm, mutated] of cases) {
-    if (mutated === HTML) { console.log(`  ✗ ${nm}: 변이 주입 실패(패턴 불일치)`); bad++; continue; }
+    if (mutated === BASE) { console.log(`  ✗ ${nm}: 변이 주입 실패(패턴 불일치)`); bad++; continue; }
     const r = checkSource('mut', mutated, opt);
     if (r.fails.length === 0) { console.log(`  ✗ ${nm}: 게이트가 못 잡았다`); bad++; }
     else console.log(`  ✓ ${nm}: 잡음 — ${r.fails[0].slice(0, 90)}`);
