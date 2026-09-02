@@ -34,6 +34,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const core = require('./perkFireCore.js');
 
 const SIM = path.join(__dirname, '..', 'sim.js');
 const SRC = fs.readFileSync(SIM, 'utf8');
@@ -50,33 +51,8 @@ const RAR = ['일반', '희귀', '전설'];
 
 /* ══════════ 2. 소스 계측 ══════════ */
 
-/* 문자열·주석 밖의 «코드» 위치만 참인 마스크. sim.js 에 정규식 리터럴은 없다(게이트가 확인한다). */
-function codeMask(s) {
-  const m = new Uint8Array(s.length);
-  let i = 0;
-  while (i < s.length) {
-    const c = s[i], d = s[i + 1];
-    if (c === '/' && d === '/') { while (i < s.length && s[i] !== '\n') i++; continue; }
-    if (c === '/' && d === '*') { i += 2; while (i < s.length && !(s[i] === '*' && s[i + 1] === '/')) i++; i += 2; continue; }
-    if (c === '"' || c === "'" || c === '`') {
-      const q = c; i++;
-      while (i < s.length) { if (s[i] === '\\') { i += 2; continue; } if (s[i] === q) { i++; break; } i++; }
-      continue;
-    }
-    m[i] = 1; i++;
-  }
-  return m;
-}
-const MASK = codeMask(SRC);
+const MASK = core.codeMask(SRC);
 if (/\/[^\/*\s][^\n]*\/[gimsuy]*\.(test|exec)\(/.test(SRC)) bad('sim.js 에 정규식 리터럴이 생겼다 — 계측 스캐너의 전제가 깨진다');
-
-const lineOf = (() => {
-  const starts = [0];
-  for (let i = 0; i < SRC.length; i++) if (SRC[i] === '\n') starts.push(i + 1);
-  return pos => { let lo = 0, hi = starts.length - 1; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (starts[mid] <= pos) lo = mid; else hi = mid - 1; } return lo + 1; };
-})();
-
-const ID_RE = /(?:p\.)?px\.([a-z]_[A-Za-z0-9]+)/g;
 const IDSET = new Set(PERK.map(p => p.id));
 
 /* 일반 if 변환에서 **제외**할 자리 — 조건이 참이어도 그 특전의 효과가 실행됐다는 뜻이 아닌 관문들.
@@ -87,65 +63,7 @@ const IF_SKIP = [
   '!(stunned&&px.c_stunNoEvade)&&Math.random()<ENEMY_EVADE',   /* 뒤집힘 — 참이면 «회피했다» = 특전이 안 막았다 */
 ];
 
-/* 문(statement) 하나의 끝(세미콜론 또는 블록 끝)을 찾는다. */
-function stmtEnd(s, i) {
-  let dp = 0, db = 0, dk = 0;
-  while (i < s.length) {
-    if (!MASK[i]) { i++; continue; }
-    const c = s[i];
-    if (c === '(') dp++; else if (c === ')') dp--;
-    else if (c === '[') dk++; else if (c === ']') dk--;
-    else if (c === '{') db++; else if (c === '}') { db--; if (db === 0) return i + 1; if (db < 0) return i; }
-    else if (c === ';' && dp === 0 && db === 0 && dk === 0) return i + 1;
-    i++;
-  }
-  return i;
-}
-
-function instrument(src) {
-  const edits = [];   /* {pos, text} */
-  const sites = [];   /* 진단용 */
-
-  /* ── ① if 문 일반 변환 ── */
-  for (let i = 0; i < src.length - 2; i++) {
-    if (!MASK[i]) continue;
-    if (!(src[i] === 'i' && src[i + 1] === 'f')) continue;
-    const prev = i > 0 ? src[i - 1] : ' ';
-    if (/[A-Za-z0-9_$.]/.test(prev)) continue;             /* elif/notif 같은 식별자 꼬리 배제 */
-    let j = i + 2; while (j < src.length && /\s/.test(src[j])) j++;
-    if (src[j] !== '(') continue;
-    /* 조건 괄호 짝 맞추기 */
-    let dp = 0, k = j;
-    for (; k < src.length; k++) { if (!MASK[k]) continue; if (src[k] === '(') dp++; else if (src[k] === ')') { dp--; if (dp === 0) break; } }
-    const cond = src.slice(j + 1, k);
-    ID_RE.lastIndex = 0;
-    const found = [];
-    let m; while ((m = ID_RE.exec(cond))) if (IDSET.has(m[1]) && !found.some(f => f.id === m[1])) found.push({ id: m[1], expr: m[0] });
-    if (!found.length) continue;
-    if (IF_SKIP.some(sk => cond.includes(sk))) continue;
-    /* 효과(consequent) 시작점 */
-    let c = k + 1; while (c < src.length && /\s/.test(src[c])) c++;
-    const ln = lineOf(i);
-    const call = `__F(${JSON.stringify('L' + ln)},{${found.map(f => `${f.id}:${f.expr}`).join(',')}});`;
-    if (src[c] === '{') {
-      edits.push({ pos: c + 1, text: call });
-    } else {
-      const e = stmtEnd(src, c);
-      edits.push({ pos: c, text: '{' + call });
-      edits.push({ pos: e, text: '}' });
-    }
-    for (const f of found) sites.push({ id: f.id, site: 'L' + ln });
-    i = k;
-  }
-
-  edits.sort((a, b) => a.pos - b.pos || 0);
-  let out = '', last = 0;
-  for (const e of edits) { out += src.slice(last, e.pos) + e.text; last = e.pos; }
-  out += src.slice(last);
-  return { out, sites };
-}
-
-let { out: INS, sites: SITES } = instrument(SRC);
+let { out: INS, sites: SITES } = core.instrumentIfs(SRC, IDSET, IF_SKIP, 0);
 
 /* ── ② 손으로 짚은 패치표 (if 문이 아닌 자리 + px 키를 안 읽는 5종) ── */
 const PATCH = [
@@ -195,19 +113,13 @@ const STATPERK = [
 ];
 for (const [id, fld, ap] of STATPERK) PATCH.push([id + ':ap', ap,
   `p=>{const __b=p.${fld};(${ap})(p);(p.__amp||(p.__amp={})).${id}=(p.${fld}!==__b);}`]);
-for (const [tag, from, to] of PATCH) {
-  const n = INS.split(from).length - 1;
-  if (n !== 1) { bad(`패치표 «${tag}» 원문이 소스에 ${n}번 나온다 (1번이어야 한다) — 엔진이 바뀌었다면 패치표를 고칠 것`); continue; }
-  INS = INS.replace(from, to);
-  for (const id of tag.split('|')) if (IDSET.has(id)) SITES.push({ id, site: 'M' });
+{
+  const r = core.applyPatches(INS, PATCH, IDSET);
+  INS = r.out; r.errs.forEach(bad); SITES.push(...r.sites);
 }
 
 /* ── ③ 런타임 계측·시험용 훅 ── */
-const PRELUDE = `
-const __FIRED=Object.create(null), __FSITE=Object.create(null);
-function __F(site,obj){ for(const k in obj){ if(!obj[k])continue; __FIRED[k]=(__FIRED[k]||0)+1; (__FSITE[k]||(__FSITE[k]=new Set())).add(site); } }
-`;
-INS = PRELUDE + INS;
+INS = core.PRELUDE + INS;
 
 /* 확률 굴림 강제 (2차용) */
 {
