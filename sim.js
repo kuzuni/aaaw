@@ -109,12 +109,12 @@ function enemyStats(c,w){
   return {hp:Math.round(hp), dmg:Math.round(dmg)};
 }
 
-/* ---------- 특전 정의 (117종 — T48 1단계에서 102 → 117) ---------- */
+/* ---------- 특전 정의 (125종 — T48 이 102 → 117 → 125 로 늘리는 중. 최종 목표 등급당 33 = 132) ---------- */
 /* ap(p): 적용. u: 고유. 이름은 게임과 동일 키 */
 function mkPerks(){
   const P=[];
   const add=(id,r,ap,u)=>P.push({id,r,ap,u:!!u});
-  /* 일반 29 */
+  /* 일반 31 */
   add('c_aspdBuff',0,p=>p.px.c_aspdBuff++);
   add('c_atkBuff',0,p=>p.px.c_atkBuff++);
   add('c_atkPerm',0,p=>p.px.atkPerm++);
@@ -144,7 +144,9 @@ function mkPerks(){
   add('c_stunHit',0,p=>p.px.stunHitS++);
   add('c_missAtk',0,p=>p.px.missAtk++);
   add('c_missDef',0,p=>p.px.missDef++);
-  /* 희귀 29 */
+  add('c_rangeShield',0,p=>p.px.rangeShield++);
+  add('c_thornsS',0,p=>p.px.thornsS++);
+  /* 희귀 31 */
   add('r_axe',1,p=>p.px.axe++);
   add('r_arrow',1,p=>p.px.arrow2++);
   add('r_wave',1,p=>p.px.wave++);
@@ -174,7 +176,9 @@ function mkPerks(){
   add('r_stunCrit',1,p=>p.px.stunCritM++);
   add('r_missAspd',1,p=>p.px.missAspd++);
   add('r_missReset',1,p=>p.px.missReset++);
-  /* 전설 32 */
+  add('r_rangeThorns',1,p=>p.px.rangeThorns++);
+  add('r_aspdStack10',1,p=>p.px.aspdStack10++);
+  /* 전설 33 */
   add('l_spear',2,p=>p.px.spear++);
   add('l_bolt',2,p=>p.px.bolt++);
   add('l_atkBuffL',2,p=>p.px.atkBuffL++);
@@ -207,7 +211,8 @@ function mkPerks(){
   add('l_stunCrit3',2,p=>p.px.stunCritL++);
   add('l_missCrit',2,p=>p.px.missCrit=true,1);
   add('l_missStack',2,p=>p.px.missStack++);
-  /* 신화 27 */
+  add('l_rangeBolt',2,p=>p.px.rangeBolt++);
+  /* 신화 30 */
   add('m_revive',3,p=>p.px.revive++,1);
   add('m_clone',3,p=>p.px.clone=true,1);
   add('m_execKill',3,p=>p.px.execKill=true,1);
@@ -235,6 +240,9 @@ function mkPerks(){
   add('m_stunAura',3,p=>p.px.stunAura++);
   add('m_missRush',3,p=>p.px.missRush=true,1);
   add('m_missSpear',3,p=>p.px.missSpear++);
+  add('m_rangeSpear',3,p=>p.px.rangeSpear++);
+  add('m_thornsKing',3,p=>p.px.thornsKing=true,1);
+  add('m_stackMaster',3,p=>p.px.stackMaster=true,1);
   return P;
 }
 const PERKS=mkPerks();
@@ -580,6 +588,8 @@ function basePx(){
     /* ⚑ T48 1단계 — 신규 축 2개 (주인 15:5X): 스턴 · 빗맞음(onMiss) */
     stunHitS:0,stunHitL:0,stunCritM:0,stunCritL:0,stunLord:false,stunKill:false,stunAura:0,
     missAtk:0,missDef:0,missAspd:0,missReset:0,missCrit:false,missStack:0,missRush:false,missSpear:0,
+    /* ⚑ T48 2단계 — 원거리 피격 축 · 반사 확장 · 고중첩 변형 (주인 16:0X·16:1X·16:2X) */
+    rangeShield:0,rangeThorns:0,rangeBolt:0,rangeSpear:0,thornsS:0,thornsKing:false,aspdStack10:0,stackMaster:false,
   };
 }
 function mkPlayer(build,G){
@@ -601,7 +611,11 @@ function mkPlayer(build,G){
   return p;
 }
 const bsum=(p,k)=>{let s=0;for(const b of p.buffs[k])s+=b.amt;return s;};
+/* 신화 m_stackMaster «축적의 대가» — 모든 중첩 버프의 최대 중첩을 STACK_BONUS 만큼 늘린다.
+   상한 자체를 건드리는 특전이라 개별 호출부 수십 곳을 고치는 대신 여기 한 곳에서만 처리한다. */
+const STACK_BONUS=5;
 function addBuff(p,k,amt,dur,max){
+  if(p.px&&p.px.stackMaster)max+=STACK_BONUS;
   const arr=p.buffs[k];
   if(arr.length>=max){let mi=0;for(let i=1;i<arr.length;i++)if(arr[i].t<arr[mi].t)mi=i;arr[mi]={t:dur,amt};}
   else arr.push({t:dur,amt});
@@ -695,6 +709,16 @@ function procOnMiss(G,e){
   if(px.missRush){p.atkTimer=0;p.nextAtk=Math.min(1.5,Math.max(p.nextAtk,1.0));}
   if(px.missSpear&&pkk(p,0.30*px.missSpear))fireSpear(p);
 }
+/* ⚑ T48 2단계 — 원거리 피격 트리거 (주인 16:1X · PLAN §3.0).
+   «적의 원거리 공격(화살)에 맞았을 때» 발동하는 별개 축이다 — 일반 «피격 시» 트리거와 배타가 아니라
+   원거리 피격은 둘 다 굴린다(주인 위임 기본값). 회피에 성공하면 «맞은» 것이 아니라 굴리지 않는다. */
+function procOnRanged(G,src){
+  const p=G.player,px=p.px;
+  if(px.rangeShield&&pkk(p,0.20*px.rangeShield))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.04);
+  if(px.rangeThorns&&src&&src.hp>0&&pkk(p,0.30*px.rangeThorns)){src.hp-=effDmg(p)*0.8;if(src.hp<=0)onKill(G,src);}
+  if(px.rangeBolt&&pkk(p,0.30*px.rangeBolt)){const t=randTarget(G);if(t)summonHit(G,t,0.75);}
+  if(px.rangeSpear&&pkk(p,0.30*px.rangeSpear))fireSpear(p);
+}
 function dealDmg(G,e,ratio,fromBasic){
   if(e.hp<=0)return false;
   const p=G.player,px=p.px;
@@ -774,6 +798,7 @@ function procOnAttack(G){
   if(px.atkPerm&&pkk(p,0.10*px.atkPerm))p.dmg*=1.01;
   if(px.c_atkBuff&&pkk(p,0.30*px.c_atkBuff))addBuff(p,'atk',0.05,3,5);
   if(px.c_aspdBuff&&pkk(p,0.30*px.c_aspdBuff))addBuff(p,'aspd',0.05,3,5);
+  if(px.aspdStack10&&pkk(p,0.25*px.aspdStack10))addBuff(p,'aspd',0.05,4,10);   /* 주인 예시 — 고중첩 상위 변형 */
   if(px.atkBuffM&&pkk(p,0.30*px.atkBuffM))addBuff(p,'atk',0.14,4,5);
   if(px.atkBuffL&&pkk(p,0.25*px.atkBuffL))addBuff(p,'atk',0.35,5,3);
   if(px.axe&&pkk(p,0.15*px.axe))fireAxe(p);
@@ -834,10 +859,14 @@ function hitPlayer(G,dmg,isMelee,src){
   if(px.evadeHitBuff&&pkk(p,0.30*px.evadeHitBuff))addBuff(p,'evade',15,3,2);
   if(px.shieldOnHit&&pkk(p,0.10*px.shieldOnHit))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05);
   if(px.hitHeal&&pkk(p,0.15*px.hitHeal))heal(p,p.maxHp*0.02);
+  if(px.thornsS&&src&&src.hp>0&&pkk(p,0.30*px.thornsS)){src.hp-=dmg*0.5;if(src.hp<=0)onKill(G,src);}
   if(px.thorns&&src&&src.hp>0&&pkk(p,0.60*px.thorns)){src.hp-=dmg*1.5;if(src.hp<=0)onKill(G,src);}
+  if(px.thornsKing&&src&&src.hp>0){src.hp-=dmg*3;if(src.hp<=0)onKill(G,src);}
   /* 피격 시 스턴 — 주인 필수 예시 «피격 시 (n% 확률로) 공격한 적 3초 스턴» (전설 l_stunHit3) */
   if(px.stunHitS&&src&&pkk(p,0.12*px.stunHitS))applyStun(G,src,1.5);
   if(px.stunHitL&&src&&pkk(p,0.55*px.stunHitL))applyStun(G,src,3.0);
+  /* 원거리 피격 축 — 위 «피격 시» 트리거를 전부 굴린 «뒤» 에 추가로 굴린다 (별개 축, 주인 16:1X) */
+  if(!isMelee)procOnRanged(G,src);
   if(isMelee&&src&&src.hp>0){
     const cc=Math.random()*100<p.counter;
     const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.10*px.hitCounterS));

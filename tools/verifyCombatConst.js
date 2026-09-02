@@ -300,6 +300,87 @@ console.log('\n=== ④ 스턴 · 빗맞음 축 (PLAN §3.0·§4 주인 지시 15
   }
 }
 
+/* ---------- ⑤ 원거리 피격 축 · 중첩 상한 보너스 — 실행 단언 (주인 16:1X·16:2X · T48 2단계) ---------- */
+console.log('\n=== ⑤ 원거리 피격 축 · 고중첩 (PLAN §3.0 주인 16:1X·16:2X · T48) ===');
+{
+  const vm=require('vm');
+  const CUT="const mode=process.argv[2]||'all';";
+  const at=SIM.indexOf(CUT);
+  if(at<0) fail('sim.js 에서 CLI 디스패처를 못 찾았다 — 잘림 기준이 바뀌었다');
+  else{
+    const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
+    vm.createContext(ctx);
+    vm.runInContext(SIM.slice(0,at)+
+      '\n;globalThis.__Z={hitPlayer,addBuff,STACK_BONUS};',ctx);
+    const Z=ctx.__Z||ctx.globalThis.__Z;
+    const mkG=(px)=>{
+      const e={worldX:100,hp:1e6,maxHp:1e6,dead:false,isBoss:false,stun:0};
+      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,
+               buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
+               sh:0,maxSh:1000,hp:1e6,maxHp:1e6,steal:0,goldMul:1,level:1,exp:0,
+               critR:0,critF:150,def:0,evade:0,counter:0,atkTimer:1,aspd:1,walkMul:1,killHeal:0};
+      const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
+               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,stunAuraT:2.5,overBoltCd:0,
+               atkTries:0,miss:0};
+      p.G=G; return {G,p,e};
+    };
+    const rnd=Math.random;
+    /* (1) 원거리 피격이 원거리 축을 굴린다 — 확률 100% 로 키워 결정적으로 만든다 */
+    {
+      const {G,p,e}=mkG({rangeShield:5});   /* 0.20*5 = 1.0 = 확정 */
+      Math.random=()=>0.5;                  /* 회피(evade 0) 는 어차피 안 뜬다 */
+      Z.hitPlayer(G,10,false,e);
+      Math.random=rnd;
+      p.sh>0 ? pass('화살 피격 → 원거리 피격 축이 굴었다')
+             : fail('원거리 피격 축이 안 굴었다 — 주인 16:1X 위반');
+    }
+    /* (2) 근접 피격은 원거리 축을 굴리지 않는다 (별개 축) */
+    {
+      const {G,p,e}=mkG({rangeShield:5});
+      Math.random=()=>0.5;
+      Z.hitPlayer(G,10,true,e);
+      Math.random=rnd;
+      p.sh===0 ? pass('근접 피격은 원거리 축을 굴리지 않는다')
+               : fail('근접 피격에도 원거리 축이 굴었다 — 별개 축이 아니게 된다');
+    }
+    /* (3) 원거리 피격은 «일반 피격 시» 트리거도 함께 굴린다 (주인 위임: 둘 다 굴림) */
+    {
+      const {G,p,e}=mkG({rangeShield:5,defHitBuff:1});
+      Math.random=()=>0.5;
+      Z.hitPlayer(G,10,false,e);
+      Math.random=rnd;
+      (p.sh>0&&p.buffs.def.length>0)
+        ? pass('원거리 피격이 일반 «피격 시» 트리거와 원거리 축을 둘 다 굴린다')
+        : fail(`원거리 피격에서 한쪽 축이 빠졌다 — 실드 ${p.sh} · 방어버프 ${p.buffs.def.length}`);
+    }
+    /* (4) 회피에 성공하면 «맞은» 것이 아니라 원거리 축을 굴리지 않는다 */
+    {
+      const {G,p,e}=mkG({rangeShield:5});
+      p.evade=100;
+      Math.random=()=>0.0;                  /* 회피 굴림 0 < 100 → 회피 성공 */
+      Z.hitPlayer(G,10,false,e);
+      Math.random=rnd;
+      p.sh===0 ? pass('화살을 회피하면 원거리 축이 굴지 않는다')
+               : fail('회피에 성공했는데 원거리 피격 축이 굴었다');
+    }
+    /* (5) 중첩 상한 보너스 — m_stackMaster 가 있으면 상한 5 짜리 버프가 5+STACK_BONUS 개까지 쌓인다 */
+    {
+      const {p}=mkG({});
+      for(let i=0;i<20;i++) Z.addBuff(p,'atk',0.05,3,5);
+      const base=p.buffs.atk.length;
+      const {p:p2}=mkG({stackMaster:true});
+      for(let i=0;i<20;i++) Z.addBuff(p2,'atk',0.05,3,5);
+      (base===5&&p2.buffs.atk.length===5+Z.STACK_BONUS)
+        ? pass(`중첩 상한 보너스가 addBuff 에서 걸린다 (5 → ${p2.buffs.atk.length})`)
+        : fail(`중첩 상한 보너스가 스펙과 다르다 — 기본 ${base} · 보유 시 ${p2.buffs.atk.length}`);
+    }
+    /* (6) PLAN 에 주인 지시 문구가 살아 있는가 */
+    planHas(/원거리 피격 트리거 신설/)
+      ? pass('PLAN §3.0 에 주인 지시 «원거리 피격 트리거 신설» 문구가 있다')
+      : fail('PLAN §3.0 에서 «원거리 피격 트리거 신설» 문구가 사라졌다');
+  }
+}
+
 console.log(`\n대조 ${CHECKS.length}항목 · 일치 ${okN}개 · 불일치 ${bad}건 · 미문서화 신규 ${undocNew}건 · 등재된 기존 ${undocKnown}건`);
 console.log(bad?'→ 불합격':'→ 통과');
 process.exit(bad?1:0);

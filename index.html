@@ -1477,7 +1477,10 @@ function pkk(p,ch){ return Math.random() < ch*(p.px.procX2?1.22:1); }
 /* src = 이 버프를 준 px 키(주인 지시 07:0X «발동 중 버프 아이콘» 전용 표시 정보).
    sim.js 는 표시가 없어 5인자 그대로다 — 6번째 인자는 수치·판정에 일절 관여하지 않는다. */
 let buffSeq=0;   /* q = 발동 순번 — 버프 아이콘을 «오래된 것이 위» 로 쌓는 기준 */
+/* 신화 m_stackMaster «축적의 대가» — 모든 중첩 버프의 최대 중첩을 STACK_BONUS 만큼 늘린다 (sim.js 와 동일). */
+const STACK_BONUS=5;
 function addBuff(p,k,amt,dur,max,src){
+  if(p.px&&p.px.stackMaster) max+=STACK_BONUS;
   const arr=p.buffs[k];
   if(arr.length>=max){
     let mi=0; for(let i=1;i<arr.length;i++) if(arr[i].t<arr[mi].t) mi=i;
@@ -1555,6 +1558,8 @@ const PERKS=[
   {id:'c_stunHit', r:0, ic:'💫', tx:'피격 시 <b>12%</b> 확률로 공격한 적 <b>1.5초</b> 기절', ap:p=>p.px.stunHitS++},
   {id:'c_missAtk', r:0, ic:'💨', tx:'빗나갈 시 <b>3초간</b> 공격력 <b>+6%</b> (최대 <b>5중첩</b>)', ap:p=>p.px.missAtk++},
   {id:'c_missDef', r:0, ic:'🧱💨', tx:'빗나갈 시 <b>3초간</b> 방어력 <b>+6%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.missDef++},
+  {id:'c_rangeShield', r:0, ic:'🏹🔋', tx:'원거리 피격 시 <b>20%</b> 확률로 실드 <b>4%</b> 충전', ap:p=>p.px.rangeShield++},
+  {id:'c_thornsS', r:0, ic:'🌿', tx:'피격 시 <b>30%</b> 확률로 받은 피해의 <b>50%</b> 반사', ap:p=>p.px.thornsS++},
   /* ---------- 희귀 (26종) ---------- */
   {id:'r_axe', r:1, ic:'🪓', tx:'공격 시 <b>15%</b> 확률로 도끼 투척 (공격력의 <b>50%</b>, 랜덤 적 <b>1명</b>)', ap:p=>p.px.axe++},
   {id:'r_arrow', r:1, ic:'🏹', tx:'공격 시 <b>15%</b> 확률로 화살 2발 (각 공격력의 <b>65%</b>, 랜덤 적)', ap:p=>p.px.arrow2++},
@@ -1585,6 +1590,8 @@ const PERKS=[
   {id:'r_stunCrit', r:1, ic:'💫', tx:'치명타 시 <b>15%</b> 확률로 대상 <b>2초</b> 기절', ap:p=>p.px.stunCritM++},
   {id:'r_missAspd', r:1, ic:'💨⚡', tx:'빗나갈 시 <b>2초간</b> 공격속도 <b>+12%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.missAspd++},
   {id:'r_missReset', r:1, ic:'⏫💨', tx:'빗나갈 시 <b>30%</b> 확률로 다음 공격 즉시 발동', ap:p=>p.px.missReset++},
+  {id:'r_rangeThorns', r:1, ic:'🏹🌵', tx:'원거리 피격 시 <b>30%</b> 확률로 해당 적에게 공격력의 <b>80%</b> 반사', ap:p=>p.px.rangeThorns++},
+  {id:'r_aspdStack10', r:1, ic:'⚡🔟', tx:'공격 시 <b>25%</b> 확률로 <b>4초간</b> 공격속도 <b>+5%</b> (최대 <b>10중첩</b>)', ap:p=>p.px.aspdStack10++},
   /* ---------- 전설 (28종) ---------- */
   {id:'l_spear', r:2, ic:'🔱', tx:'공격 시 <b>7.5%</b> 확률로 관통 창 (공격력의 <b>100%</b>, 일직선 <b>8명</b> 거리(88px×8) 관통)', ap:p=>p.px.spear++},
   {id:'l_bolt', r:2, ic:'⚡', tx:'공격 시 <b>10%</b> 확률로 번개 <b>2회</b> (각 공격력의 <b>75%</b>, 랜덤 적)', ap:p=>p.px.bolt++},
@@ -1618,6 +1625,7 @@ const PERKS=[
   {id:'l_stunCrit3', r:2, ic:'💫🔥', tx:'치명타 시 <b>35%</b> 확률로 대상 <b>3초</b> 기절', ap:p=>p.px.stunCritL++},
   {id:'l_missCrit', r:2, ic:'🎯💨', tx:'빗나갈 시 다음 공격 <b>치명타 확정</b> (고유)', ap:p=>p.px.missCrit=true, u:1},
   {id:'l_missStack', r:2, ic:'💢', tx:'빗나갈 시 데미지 <b>+100%</b> 스택 획득 (최대 <b>5개</b>) — 적중 <b>1타당 1개</b> 소모, 한 타에 <b>+100%</b> 한 번만', ap:p=>p.px.missStack++},
+  {id:'l_rangeBolt', r:2, ic:'🏹⚡', tx:'원거리 피격 시 <b>30%</b> 확률로 번개 <b>1회</b> (공격력의 <b>75%</b>, 랜덤 적)', ap:p=>p.px.rangeBolt++},
   /* ---------- 신화 (22종) ---------- */
   {id:'m_revive', r:3, ic:'♻️', tx:'불사조의 심장 — 사망 시 <b>1회</b> 부활 (체력·실드 <b>7%</b> 회복)', ap:p=>p.px.revive++, u:1},
   {id:'m_clone', r:3, ic:'👻', tx:'그림자 분신 — 공격할 때마다 분신이 추가타 (공격력의 <b>37%</b>)', ap:p=>p.px.clone=true, u:1},
@@ -1646,6 +1654,9 @@ const PERKS=[
   {id:'m_stunAura', r:3, ic:'💫🌀', tx:'위압 — <b>2.5초</b>마다 랜덤 적 1명 <b>2.5초</b> 기절 (중첩 시 횟수+1)', ap:p=>p.px.stunAura++},
   {id:'m_missRush', r:3, ic:'💨👑', tx:'무념무상 — 빗나갈 시 <b>즉시 재공격</b> & 그 공격 데미지 <b>+100%</b> (고유)', ap:p=>p.px.missRush=true, u:1},
   {id:'m_missSpear', r:3, ic:'🔱💨', tx:'허공베기 — 빗나갈 시 <b>30%</b> 확률로 관통 창 발사', ap:p=>p.px.missSpear++},
+  {id:'m_rangeSpear', r:3, ic:'🏹🔱', tx:'응사 — 원거리 피격 시 <b>30%</b> 확률로 관통 창 발사', ap:p=>p.px.rangeSpear++},
+  {id:'m_thornsKing', r:3, ic:'🌵👑', tx:'가시의 왕 — 피격 시 <b>반드시</b> 받은 피해의 <b>300%</b> 반사 (고유)', ap:p=>p.px.thornsKing=true, u:1},
+  {id:'m_stackMaster', r:3, ic:'📚👑', tx:'축적의 대가 — 모든 중첩 버프의 최대 중첩 <b>+5</b> (고유)', ap:p=>p.px.stackMaster=true, u:1},
 ];
 const RARITY=[{nm:'일반',cc:'#9EA3AC'},{nm:'희귀',cc:'#4FA3E8'},{nm:'전설',cc:'#FFB92E'},{nm:'신화',cc:'#FF5E6C'}];
 /* 등급 확률: 일반 30 / 희귀 30 / 전설 25 / 신화 15 (sim.js rollRarity 와 1:1) */
@@ -1711,6 +1722,8 @@ function playerBase(){
       /* ⚑ T48 1단계 — 신규 축 2개 (주인 15:5X): 스턴 · 빗맞음(onMiss) */
       stunHitS:0,stunHitL:0,stunCritM:0,stunCritL:0,stunLord:false,stunKill:false,stunAura:0,
       missAtk:0,missDef:0,missAspd:0,missReset:0,missCrit:false,missStack:0,missRush:false,missSpear:0,
+      /* ⚑ T48 2단계 — 원거리 피격 축 · 반사 확장 · 고중첩 변형 (주인 16:0X·16:1X·16:2X) */
+      rangeShield:0,rangeThorns:0,rangeBolt:0,rangeSpear:0,thornsS:0,thornsKing:false,aspdStack10:0,stackMaster:false,
     },
   };
   /* 장비 계열 옵션 적용 (PLAN §11.1 — 상위 등급은 하위 옵션을 전부 포함) */
@@ -2219,6 +2232,19 @@ function procOnMiss(e){
   if(px.missRush){ p.atkTimer=0; p.nextAtk=Math.min(1.5,Math.max(p.nextAtk,1.0)); addText('💨 즉시 재공격!','#9CD2FF'); }
   if(px.missSpear&&pkk(p,0.30*px.missSpear)) fireSpear(p);
 }
+/* ⚑ T48 2단계 — 원거리 피격 트리거 (주인 16:1X). sim.js procOnRanged 와 1:1.
+   일반 «피격 시» 트리거와 별개 축이라 원거리 피격은 둘 다 굴린다. 회피에 성공하면 굴리지 않는다. */
+function procOnRanged(src){
+  const p=G.player, px=p.px;
+  if(px.rangeShield&&pkk(p,0.20*px.rangeShield)){ p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.04); addText('🏹🔋','#6CC0F0'); }
+  if(px.rangeThorns&&src&&src.hp>0&&pkk(p,0.30*px.rangeThorns)){
+    const rd=effDmg(p)*0.8; src.hp-=rd; src.hitT=0.15;
+    addText('🏹🌵 '+fmt(rd),'#9CE87E',src.worldX,-92);
+    if(src.hp<=0) onKill(src);
+  }
+  if(px.rangeBolt&&pkk(p,0.30*px.rangeBolt)){ const t=randTarget(); if(t) castBolt(t); }
+  if(px.rangeSpear&&pkk(p,0.30*px.rangeSpear)) fireSpear(p);
+}
 function dealPlayerDamage(e,ratio,icon){
   if(e.hp<=0) return false;
   const p=G.player, px=p.px;
@@ -2281,6 +2307,7 @@ function procOnAttack(){
   if(px.atkPerm&&pkk(p,0.10*px.atkPerm)){ p.dmg*=1.01; addText('🌱 공격력 UP','#7ED957',p.worldX,-104); renderStatsGrid(); }
   if(px.c_atkBuff&&pkk(p,0.30*px.c_atkBuff)) addBuff(p,'atk',0.05,3,5,'c_atkBuff');
   if(px.c_aspdBuff&&pkk(p,0.30*px.c_aspdBuff)) addBuff(p,'aspd',0.05,3,5,'c_aspdBuff');
+  if(px.aspdStack10&&pkk(p,0.25*px.aspdStack10)) addBuff(p,'aspd',0.05,4,10,'aspdStack10');   /* 주인 예시 — 고중첩 상위 변형 */
   if(px.atkBuffM&&pkk(p,0.30*px.atkBuffM)) addBuff(p,'atk',0.14,4,5,'atkBuffM');
   if(px.atkBuffL&&pkk(p,0.25*px.atkBuffL)) addBuff(p,'atk',0.35,5,3,'atkBuffL');
   if(px.axe&&pkk(p,0.15*px.axe)) fireAxe(p);
@@ -2376,11 +2403,24 @@ function hitPlayer(dmg,isMelee,src){
   /* 피격 시 스턴 — 주인 필수 예시 «피격 시 (n% 확률로) 공격한 적 3초 스턴» (전설 l_stunHit3) */
   if(px.stunHitS&&src&&pkk(p,0.12*px.stunHitS)) applyStun(src,1.5);
   if(px.stunHitL&&src&&pkk(p,0.55*px.stunHitL)) applyStun(src,3.0);
+  if(px.thornsS&&src&&src.hp>0&&pkk(p,0.30*px.thornsS)){
+    src.hp-=dmg*0.5; src.hitT=0.15;
+    addText('🌿 '+fmt(dmg*0.5),'#A5D6A7',src.worldX,-92);
+    if(src.hp<=0) onKill(src);
+  }
   if(px.thorns&&src&&src.hp>0&&pkk(p,0.60*px.thorns)){
     src.hp-=dmg*1.5; src.hitT=0.15;
     addText('🌵 '+fmt(dmg*1.5),'#A5D6A7',src.worldX,-92);
     if(src.hp<=0) onKill(src);
   }
+  if(px.thornsKing&&src&&src.hp>0){
+    src.hp-=dmg*3; src.hitT=0.15;
+    addText('🌵👑 '+fmt(dmg*3),'#7ED957',src.worldX,-104,true);
+    sparks(src.worldX,-50,'#7ED957',9,170);
+    if(src.hp<=0) onKill(src);
+  }
+  /* 원거리 피격 축 — 위 «피격 시» 트리거를 전부 굴린 «뒤» 에 추가로 굴린다 (별개 축, 주인 16:1X) */
+  if(!isMelee) procOnRanged(src);
   if(isMelee&&src&&src.hp>0){
     const cc=Math.random()*100<p.counter;
     const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.10*px.hitCounterS));

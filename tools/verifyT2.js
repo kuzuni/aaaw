@@ -96,7 +96,7 @@ else {
 /* ⚑ 개수는 더 이상 고정이 아니다 — 주인 확정(16:0X): «등급당 30~40 까지 허용, 단 등급 간 개수는 골고루».
    그래서 «102 인가» 가 아니라 «두 파일이 같은가 + 등급별 편차 ≤ PERK_RAR_GAP» 을 본다.
    T48 최종 목표는 각 등급 33종(총 132)이고 지금은 1단계(스턴·빗맞음 축)까지 반영된 상태다. */
-const PERK_TOTAL = 117, PERK_RAR_GAP = 6;
+const PERK_TOTAL = 125, PERK_RAR_GAP = 6;
 console.log(`\n[② 특전 ${PERK_TOTAL}종 — id·등급·고유·ap 본문 전수 대조]`);
 const S = simPerks(), H = htmlPerks();
 if (!H) { bad('index.html 에서 const PERKS=[...] 를 찾지 못했다'); }
@@ -1268,6 +1268,63 @@ console.log('\n[㉓ 레벨업 필요 경험치 = 4+4*Lv (PLAN §2.4, T47)]');
   stale.length === 0
     ? ok('PLAN 에 남은 구식 «4+2*Lv» 없음 (취소선 표기 제외)')
     : bad(`PLAN 에 구식 경험치식 잔재 ${stale.length}곳: ` + stale.map(([n]) => `L${n}`).join(' '));
+}
+
+/* ---------- ㉔ 원거리 피격 축 · 반사 확장 · 고중첩 변형 (주인 16:0X·16:1X·16:2X · T48 2단계) ---------- */
+/* 주인 원문: «적 원거리 공격(화살)에 맞았을 때 발동하는 축. 일반 피격 트리거와 별개 축(둘 다 굴림)».
+   «반사 계열 확장 — 피격 시 30% 확률로 해당 적에게 데미지 반사 필수».
+   «공격 시 n% 확률 4초 공속 +5%, 최대 10중첩 — 고중첩 상위 변형». */
+console.log('\n[㉔ 원거리 피격 · 반사 확장 · 고중첩 (PLAN §3.0, T48 2단계)]');
+{
+  for (const [src, who, meleeGuard] of [
+    [SIM, 'sim.js', 'if(!isMelee)procOnRanged(G,src);'],
+    [HTML, 'index.html', 'if(!isMelee) procOnRanged(src);']]) {
+    const body = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    /function procOnRanged\(/.test(body) ? ok(`${who}: procOnRanged 존재`) : bad(`${who}: procOnRanged 가 없다`);
+    const calls = (body.match(/procOnRanged\(/g) || []).length - 1;   /* 정의부 1건 제외 */
+    calls === 1 ? ok(`${who}: procOnRanged 호출 1곳 (화살 피격)`)
+                : bad(`${who}: procOnRanged 호출이 ${calls}곳 — 원거리 피격 한 자리에서만 굴려야 한다`);
+    body.includes(meleeGuard)
+      ? ok(`${who}: 원거리(!isMelee) 에서만 굴린다`)
+      : bad(`${who}: 원거리 피격 판별(!isMelee) 가드가 사라졌다 — 근접 피격에도 굴면 별개 축이 무너진다`);
+    /* 별개 축 = 일반 «피격 시» 트리거를 «전부 굴린 뒤» 추가로 굴린다. thorns 보다 뒤에 있어야 한다. */
+    const iT = body.indexOf('px.thorns&&'), iR = body.indexOf('procOnRanged(' , body.indexOf('function procOnRanged') + 20);
+    (iT > 0 && iR > iT) ? ok(`${who}: 일반 «피격 시» 트리거를 전부 굴린 뒤에 원거리 축을 굴린다 (둘 다 발동)`)
+                        : bad(`${who}: 원거리 축이 일반 피격 트리거보다 앞이다 — 주인 «둘 다 굴림» 과 순서가 어긋난다`);
+    /* 회피에 성공하면 «맞은» 것이 아니므로 굴리면 안 된다 — 회피 분기가 procOnRanged 앞에서 return 한다 */
+    const evIdx = body.search(/Math\.random\(\)\*100<effEvade\(p\)/);
+    (evIdx > 0 && evIdx < iR) ? ok(`${who}: 회피 분기가 원거리 축보다 앞이라 «빗맞은» 화살은 굴리지 않는다`)
+                              : bad(`${who}: 회피에 성공해도 원거리 피격 축이 굴러간다`);
+    /* 반사 3단(일반 30%/전설 60%/신화 확정)이 전부 hitPlayer 안에 있는가 */
+    for (const [key, label] of [['px.thornsS&&', '일반 🌿 30% 반사(주인 필수 예시)'], ['px.thorns&&', '전설 🌵 60% 반사'], ['px.thornsKing&&', '신화 🌵👑 확정 반사']])
+      body.includes(key) ? ok(`${who}: ${label} 존재`) : bad(`${who}: ${label} 가 없다`);
+    /* 고중첩 변형 — 최대 중첩 인자가 10 이어야 한다 (기존 5중첩 계열의 상위 변형) */
+    /px\.aspdStack10&&pkk\(p,0\.25\*px\.aspdStack10\)\)\s*addBuff\(p,'aspd',0\.05,4,10/.test(body)
+      ? ok(`${who}: 공속 고중첩 변형이 4초·+5%·10중첩이다 (주인 예시 원문)`)
+      : bad(`${who}: 공속 10중첩 변형이 없거나 인자가 다르다`);
+  }
+  /* 중첩 상한 보너스는 addBuff 한 곳에서만 처리해야 한다 (호출부 수십 곳에 흩어지면 조용히 어긋난다) */
+  for (const [src, who] of [[SIM, 'sim.js'], [HTML, 'index.html']]) {
+    const body = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    /* 정의부(특전 ap) 를 뺀 «소비처» 가 정확히 addBuff 한 곳이어야 한다 */
+    const consumers = body.split('\n')
+      .filter(L => /px\.stackMaster/.test(L) && !/^\s*add\('/.test(L) && !/\{id:'/.test(L));
+    (consumers.length === 1 && /function addBuff\(/.test(
+        body.slice(Math.max(0, body.indexOf(consumers[0]) - 400), body.indexOf(consumers[0]) + 40)))
+      ? ok(`${who}: 중첩 상한 보너스 소비처가 addBuff 한 곳뿐이다`)
+      : bad(`${who}: px.stackMaster 소비처가 ${consumers.length}곳 — addBuff 한 곳에서만 처리해야 한다 (호출부에 흩어지면 조용히 어긋난다)`);
+  }
+  {
+    const cv = s => (s.match(/STACK_BONUS\s*=\s*(\d+)/) || [])[1];
+    const a = cv(SIM), b = cv(HTML);
+    (a && a === b) ? ok(`STACK_BONUS = ${a} — 두 파일 일치`)
+                   : bad(`STACK_BONUS 가 두 파일에서 다르다 — sim.js ${a} · index.html ${b}`);
+  }
+  /* 주인이 원문으로 지목한 필수 4종 (원거리 3 + 반사 1) */
+  for (const id of ['r_rangeThorns', 'l_rangeBolt', 'm_rangeSpear', 'c_thornsS'])
+    (SIM.includes(`'${id}'`) && HTML.includes(`'${id}'`))
+      ? ok(`주인 필수 예시 ${id} — 두 파일에 존재`)
+      : bad(`주인이 원문으로 지목한 필수 특전 ${id} 가 없다`);
 }
 
 /* ---------- 결과 ---------- */

@@ -43,7 +43,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       chapTxt: document.getElementById('lobbyChapName')?.textContent.trim(),
       saveKey: (() => { try { save.gold = save.gold; persist(); } catch (e) {} return Object.keys(localStorage).join(','); })(),
     }));
-    chk('특전 117종 로드', boot.perks === 117, `PERKS=${boot.perks}`);   /* T48 로 102 → 117 (늘리면 여기도 갱신) */
+    chk('특전 125종 로드', boot.perks === 125, `PERKS=${boot.perks}`);   /* T48 로 102 → 117 (늘리면 여기도 갱신) */
     chk('챕터 상한 300', boot.maxChapter === 300, `maxChapter=${boot.maxChapter}`);
     chk('로비 화면이 켜져 있다', boot.screen === 'lobby', boot.screen);
     chk('START 버튼 렌더', boot.startTxt === 'START', boot.startTxt);
