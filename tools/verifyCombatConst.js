@@ -381,6 +381,111 @@ console.log('\n=== ⑤ 원거리 피격 축 · 고중첩 (PLAN §3.0 주인 16:1
   }
 }
 
+/* ---------- ⑥ 횟수형 방어막 · 회피 즉사 — 실행 단언 (주인 16:5X·17:2X · T48 3단계) ---------- */
+console.log('\n=== ⑥ 횟수형 방어막 · 회피 즉사 (PLAN §3.0 주인 16:5X·17:2X · T48) ===');
+{
+  const vm=require('vm');
+  const CUT="const mode=process.argv[2]||'all';";
+  const at=SIM.indexOf(CUT);
+  if(at<0) fail('sim.js 에서 CLI 디스패처를 못 찾았다 — 잘림 기준이 바뀌었다');
+  else{
+    const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
+    vm.createContext(ctx);
+    vm.runInContext(SIM.slice(0,at)+
+      '\n;globalThis.__W={hitPlayer,gainWard,wardCap,WARD_CAP,WARD_CAP_KING,REAPER_CH};',ctx);
+    const W=ctx.__W||ctx.globalThis.__W;
+    const mkG=(px,boss)=>{
+      const e={worldX:100,hp:1e6,maxHp:1e6,dead:false,isBoss:!!boss,stun:0};
+      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,ward:0,
+               buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
+               sh:500,maxSh:500,hp:1000,maxHp:1000,steal:0,goldMul:1,level:1,exp:0,
+               critR:0,critF:150,def:0,evade:0,counter:0,atkTimer:1,aspd:1,walkMul:1,killHeal:0};
+      const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
+               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,stunAuraT:2.5,overBoltCd:0,
+               atkTries:0,miss:0};
+      p.G=G; return {G,p,e};
+    };
+    const rnd=Math.random;
+    /* (1) 방어막이 그 타격을 «완전히» 막는다 — 체력도 실드도 안 깎인다 */
+    {
+      const {G,p,e}=mkG({});
+      p.ward=2;
+      Math.random=()=>0.99;                 /* 회피 실패 */
+      W.hitPlayer(G,300,true,e);
+      Math.random=rnd;
+      (p.hp===1000&&p.sh===500&&p.ward===1)
+        ? pass('방어막 1장이 타격 1회를 완전히 막는다 (체력·실드 무손실, 장수 2 → 1)')
+        : fail(`방어막이 타격을 완전히 막지 못했다 — 체력 ${p.hp} · 실드 ${p.sh} · 남은 장수 ${p.ward}`);
+    }
+    /* (2) 장수가 떨어지면 그 다음 타격은 그대로 들어온다 (5장이면 딱 5번) */
+    {
+      const {G,p,e}=mkG({});
+      p.ward=1;
+      Math.random=()=>0.99;
+      W.hitPlayer(G,300,true,e);            /* 1장으로 막고 */
+      const shAfterBlock=p.sh;
+      W.hitPlayer(G,300,true,e);            /* 두 번째는 맞는다 */
+      Math.random=rnd;
+      (shAfterBlock===500&&p.sh<500&&p.ward===0)
+        ? pass('장수가 떨어지면 다음 타격은 그대로 들어온다 («5장이면 5번» 이 성립)')
+        : fail(`방어막 소진 후 동작이 스펙과 다르다 — 막은 뒤 실드 ${shAfterBlock} · 그 다음 ${p.sh}`);
+    }
+    /* (3) 상한 — 기본 WARD_CAP, 신화 변형은 WARD_CAP_KING */
+    {
+      const {p}=mkG({wardAtk:1});
+      for(let i=0;i<50;i++) W.gainWard(p,1.0);
+      const {p:p2}=mkG({wardAtk:1,wardKing:true});
+      for(let i=0;i<50;i++) W.gainWard(p2,1.0);
+      (p.ward===W.WARD_CAP&&p2.ward===W.WARD_CAP_KING)
+        ? pass(`방어막 상한 ${W.WARD_CAP}장 · 신화 변형 ${W.WARD_CAP_KING}장`)
+        : fail(`방어막 상한이 스펙과 다르다 — 기본 ${p.ward} · 신화 ${p2.ward}`);
+    }
+    /* (4) 방어막으로 막아도 «맞은 사건» 은 일어난 것이라 피격 트리거는 굴러간다 (위임 판단, 주인 원문 «데미지 무효») */
+    {
+      const {G,p,e}=mkG({defHitBuff:1});
+      p.ward=1;
+      Math.random=()=>0.99;
+      W.hitPlayer(G,300,true,e);
+      Math.random=rnd;
+      p.buffs.def.length>0
+        ? pass('막은 타격도 «피격 시» 트리거를 굴린다 (데미지만 무효)')
+        : fail('막은 타격이 «피격 시» 트리거를 굴리지 않는다');
+    }
+    /* (5) 회피 즉사 — 회피에 성공했을 때만, 보스는 제외 */
+    {
+      const {G,e}=mkG({reaper:true});
+      G.player.evade=100;
+      Math.random=()=>0.0;                  /* 회피 성공 + 즉사 굴림 성공 */
+      W.hitPlayer(G,10,true,e);
+      Math.random=rnd;
+      e.hp<=0 ? pass('회피 시 사신의 낫이 그 적을 즉사시킨다')
+              : fail('회피 즉사가 안 터진다');
+    }
+    {
+      const {G,e}=mkG({reaper:true},true);  /* 보스 */
+      G.player.evade=100;
+      Math.random=()=>0.0;
+      W.hitPlayer(G,10,true,e);
+      Math.random=rnd;
+      e.hp>0 ? pass('보스는 사신의 낫에 즉사하지 않는다 (🧨 처형자 선례)')
+             : fail('보스가 회피 즉사로 죽었다 — 주인 위임 «보스 제외» 위반');
+    }
+    {
+      const {G,e}=mkG({reaper:true});       /* 회피 실패 → 즉사도 없음 */
+      Math.random=()=>0.0001;               /* evade 0 이라 회피 실패, 즉사 굴림은 성공할 값 */
+      W.hitPlayer(G,10,true,e);
+      Math.random=rnd;
+      e.hp>0 ? pass('회피에 실패하면 사신의 낫은 굴지 않는다')
+             : fail('맞았는데도 회피 즉사가 터졌다');
+    }
+    /* (6) PLAN 에 주인 지시 문구가 살아 있는가 */
+    planHas(/횟수형 방어막 특전/) ? pass('PLAN §3.0 에 «횟수형 방어막 특전» 문구가 있다')
+                                : fail('PLAN §3.0 에서 «횟수형 방어막 특전» 문구가 사라졌다');
+    planHas(/회피 즉사 특전/) ? pass('PLAN §3.0 에 «회피 즉사 특전» 문구가 있다')
+                            : fail('PLAN §3.0 에서 «회피 즉사 특전» 문구가 사라졌다');
+  }
+}
+
 console.log(`\n대조 ${CHECKS.length}항목 · 일치 ${okN}개 · 불일치 ${bad}건 · 미문서화 신규 ${undocNew}건 · 등재된 기존 ${undocKnown}건`);
 console.log(bad?'→ 불합격':'→ 통과');
 process.exit(bad?1:0);

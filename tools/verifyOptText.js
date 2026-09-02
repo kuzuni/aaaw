@@ -130,6 +130,8 @@ function numsOfFn(name, depth) {
   if (!body) return set;
   for (const L of body) {
     for (const n of numsIn(L)) set.add(n);
+    /* 이름 붙은 상수도 값으로 푼다 — blockNums 와 같은 이유(T48) */
+    for (const g of L.matchAll(/\b([A-Z][A-Z0-9_]{2,})\b/g)) if (NAMED_CONST.has(g[1])) set.add(NAMED_CONST.get(g[1]));
     if (depth > 0) for (const c of callsIn(L)) for (const n of numsOfFn(c, depth - 1)) set.add(n);
   }
   return set;

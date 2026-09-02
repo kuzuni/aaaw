@@ -96,7 +96,7 @@ else {
 /* ⚑ 개수는 더 이상 고정이 아니다 — 주인 확정(16:0X): «등급당 30~40 까지 허용, 단 등급 간 개수는 골고루».
    그래서 «102 인가» 가 아니라 «두 파일이 같은가 + 등급별 편차 ≤ PERK_RAR_GAP» 을 본다.
    T48 최종 목표는 각 등급 33종(총 132)이고 지금은 1단계(스턴·빗맞음 축)까지 반영된 상태다. */
-const PERK_TOTAL = 125, PERK_RAR_GAP = 6;
+const PERK_TOTAL = 132, PERK_RAR_GAP = 6;
 console.log(`\n[② 특전 ${PERK_TOTAL}종 — id·등급·고유·ap 본문 전수 대조]`);
 const S = simPerks(), H = htmlPerks();
 if (!H) { bad('index.html 에서 const PERKS=[...] 를 찾지 못했다'); }
@@ -1322,6 +1322,86 @@ console.log('\n[㉔ 원거리 피격 · 반사 확장 · 고중첩 (PLAN §3.0, 
   }
   /* 주인이 원문으로 지목한 필수 4종 (원거리 3 + 반사 1) */
   for (const id of ['r_rangeThorns', 'l_rangeBolt', 'm_rangeSpear', 'c_thornsS'])
+    (SIM.includes(`'${id}'`) && HTML.includes(`'${id}'`))
+      ? ok(`주인 필수 예시 ${id} — 두 파일에 존재`)
+      : bad(`주인이 원문으로 지목한 필수 특전 ${id} 가 없다`);
+}
+
+/* ---------- ㉕ 횟수형 방어막 · 회피 즉사(사신의 낫) (주인 16:5X·17:2X · T48 3단계) ---------- */
+/* 주인 원문: «공격 시 10% 확률로 적 공격 1회를 완전히 막아주는 방어막 1장. 5장 쌓였으면 5번 막음
+   (피격 1회당 1장 소모, 그 타격 데미지 완전 무효 — 수치형 실드와 별개 축). 버프 아이콘에 남은 장수 뱃지
+   + 막을 때 전용 이펙트» · «회피 시 10% 확률로 공격한 그 적 즉사. 사신의 낫 전용 연출 필수 —
+   낫이 베어 죽이는 이펙트, 일반 처치 연기와 구별». */
+console.log('\n[㉕ 횟수형 방어막 · 회피 즉사 (PLAN §3.0, T48 3단계)]');
+{
+  /* (1) 상수 3종이 두 파일에서 같아야 한다 */
+  const cv = (src, name) => (src.match(new RegExp(name + '\\s*=\\s*([\\d.]+)')) || [])[1];
+  for (const nm of ['WARD_CAP', 'WARD_CAP_KING', 'REAPER_CH']) {
+    const a = cv(SIM, nm), b = cv(HTML, nm);
+    (a && a === b) ? ok(`${nm} = ${a} — 두 파일 일치`)
+                   : bad(`${nm} 이 두 파일에서 다르다 — sim.js ${a} · index.html ${b}`);
+  }
+  for (const [src, who] of [[SIM, 'sim.js'], [HTML, 'index.html']]) {
+    const body = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    /* (2) 방어막 획득은 gainWard 한 곳으로만 — 직접 증가시키면 상한·신화 배수 규칙을 우회한다 */
+    /function gainWard\(/.test(body) ? ok(`${who}: gainWard 존재`) : bad(`${who}: gainWard 가 없다`);
+    const gains = (body.match(/gainWard\(p,/g) || []).length - 1;   /* 정의부 1건 제외 */
+    gains === 4 ? ok(`${who}: 방어막 획득 트리거 4곳 (공격·치명타·피격·회피)`)
+                : bad(`${who}: gainWard 호출이 ${gains}곳 — 공격·치명타·피격·회피 넷이어야 한다`);
+    /* 장수를 올리는 자리는 gainWard 본문 하나뿐이어야 한다 (직접 올리면 상한·신화 배수를 우회한다) */
+    const ups = body.split('\n').filter(L => /p\.ward\s*(\+\+|=\s*Math\.min)/.test(L));
+    (ups.length === 1 && /Math\.min/.test(ups[0]))
+      ? ok(`${who}: ward 를 올리는 자리가 gainWard 본문 한 곳뿐이다`)
+      : bad(`${who}: ward 를 올리는 자리가 ${ups.length}곳 — gainWard 밖에서 올리면 상한·신화 배수를 우회한다`);
+    /* (3) 상한이 신화 변형에서 두 배가 된다 */
+    /wardCap\(p\)\{\s*return p\.px\.wardKing\?WARD_CAP_KING:WARD_CAP;\s*\}/.test(body.replace(/\s+/g, ' ').replace(/function /g, ''))
+      ? ok(`${who}: 방어막 상한이 신화 변형에서 WARD_CAP_KING 으로 바뀐다`)
+      : bad(`${who}: wardCap 이 신화 변형(m_wardKing)의 상한을 반영하지 않는다`);
+    /* (4) 소모는 «피격 1회당 1장 · 데미지 완전 무효» — 실드·방어력·체력을 아예 안 거쳐야 한다 */
+    /const warded=p\.ward>0;/.test(body.replace(/\s*=\s*/g, '=').replace(/;\s*/g, ';'))
+      ? ok(`${who}: 방어막 소모 판정이 존재한다`)
+      : bad(`${who}: 방어막 소모 판정(warded)이 없다`);
+    /letd=warded\?0:/.test(body.replace(/\s+/g, ''))
+      ? ok(`${who}: 막은 타격은 데미지가 0 이다 (완전 무효)`)
+      : bad(`${who}: 막은 타격의 데미지가 완전 무효가 아니다 — 주인 «1회를 완전히 막는다» 위반`);
+    /!warded&&p\.sh>0/.test(body.replace(/\s+/g, ''))
+      ? ok(`${who}: 막은 타격은 수치형 실드를 건드리지 않는다 (별개 축)`)
+      : bad(`${who}: 방어막으로 막았는데 수치형 실드가 깎인다 — 주인 «별개 축» 위반`);
+    /* (5) 회피 즉사 — 회피 분기 안 · 보스 제외 · 확률 상수 사용 */
+    /px\.reaper&&src&&src\.hp>0&&!src\.isBoss&&pkk\(p,REAPER_CH\)/.test(body.replace(/\s+/g, ''))
+      ? ok(`${who}: 회피 즉사가 «보스 제외 · REAPER_CH» 조건이다`)
+      : bad(`${who}: 회피 즉사 조건이 스펙과 다르다 (보스 제외·확률 상수)`);
+    /* 회피 즉사·회피 방어막이 «회피 분기 안» 인지는 hitPlayer 본문 안에서만 따진다
+       (특전 정의부에도 px.reaper 가 나오므로 파일 전체 인덱스로 재면 오판한다). */
+    {
+      const hp = body.slice(body.search(/function hitPlayer\(/));
+      const iEv = hp.search(/effEvade\(p\)/), iRe = hp.indexOf('px.reaper'), iDmg = hp.search(/const warded=/);
+      (iEv >= 0 && iRe > iEv && iDmg > iRe)
+        ? ok(`${who}: 회피 즉사가 회피 분기 «안» 이다 (맞았을 때가 아니라 피했을 때)`)
+        : bad(`${who}: 회피 즉사가 회피 분기 밖이다 — 회피가 아닌 상황에서도 즉사가 터진다`);
+    }
+  }
+  /* (6) 게임 전용 연출 — 사신의 낫은 일반 처치 연기(poof)와 구별돼야 한다 (주인 필수 지시) */
+  {
+    const H = HTML.replace(/\/\*[\s\S]*?\*\//g, '');
+    /function reapFx\(/.test(H) ? ok('index.html: 사신의 낫 전용 연출 reapFx 존재')
+                                : bad('index.html: 사신의 낫 전용 연출이 없다 (주인 필수 지시)');
+    const m = H.match(/function reapFx\(wx\)\{[\s\S]*?\n\}/);
+    (m && !/poof\(/.test(m[0]))
+      ? ok('index.html: reapFx 가 일반 처치 연기(poof)를 쓰지 않는다 — 구별된다')
+      : bad('index.html: reapFx 가 일반 처치 연기와 같은 연출을 쓴다 (주인 «구별되게» 위반)');
+    /G\.reaps/.test(H) ? ok('index.html: 낫 연출이 실제로 그려진다 (G.reaps)')
+                       : bad('index.html: 낫 연출 상태(G.reaps)가 없다 — 텍스트만 뜨고 낫이 안 보인다');
+    /function wardFx\(/.test(H) ? ok('index.html: 방어막 전용 이펙트 wardFx 존재 (주인 17:2X)')
+                                : bad('index.html: 방어막을 막을 때의 전용 이펙트가 없다');
+    /* 뱃지는 버프 줄 «맨 앞» 에 붙되(주인 17:2X) 시간제 버프와 구별되게 ward-ic 를 함께 단다 —
+       만료로 사라지지 않는 «장수» 라, 검사(T3)·로직이 시간제 버프와 섞으면 안 된다. */
+    /if\(p\.ward>0\)\{[\s\S]{0,300}?class="buff-ic ward-ic"[\s\S]{0,120}?\$\{p\.ward\}/.test(H)
+      ? ok('index.html: 버프 아이콘 줄에 남은 장수 뱃지가 붙는다 (.ward-ic 로 시간제 버프와 구별)')
+      : bad('index.html: 방어막 남은 장수 뱃지가 버프 아이콘 줄에 없다 (또는 .ward-ic 클래스가 빠졌다)');
+  }
+  /* (7) 주인이 원문으로 지목한 필수 2종 */
+  for (const id of ['r_ward', 'm_reaper'])
     (SIM.includes(`'${id}'`) && HTML.includes(`'${id}'`))
       ? ok(`주인 필수 예시 ${id} — 두 파일에 존재`)
       : bad(`주인이 원문으로 지목한 필수 특전 ${id} 가 없다`);

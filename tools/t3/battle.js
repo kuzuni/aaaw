@@ -80,7 +80,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     addBuff(G.player, 'atk', 0.2, 4, 5, key);
     addBuff(G.player, 'atk', 0.2, 4, 5, key);   /* 같은 출처 2중첩 → 개수 뱃지 */
     addBuff(G.player, 'aspd', 0.15, 4, 5, null); /* 출처 불명 → 스탯 폴백 아이콘 */
-    const ics = [...document.querySelectorAll('#buffBar .buff-ic')];
+    const ics = [...document.querySelectorAll('#buffBar .buff-ic:not(.ward-ic)')];   /* 방어막 뱃지는 시간제 버프가 아니라 제외 (T48) */
     const hud = document.getElementById('chapHud').getBoundingClientRect();
     const bar = document.getElementById('buffBar').getBoundingClientRect();
     return {
@@ -106,18 +106,26 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   await p.screenshot({ path: `${OUT}/t3-buffbar.png` });
 
   /* 만료 대기 — 버프는 «게임이 흐를 때만» 준다(오버레이가 열리면 G.paused 로 정지하는 것이 정상이다).
-     그래서 기다리는 동안 뜨는 레벨업 팝업을 계속 비워 가며 본다. */
+     그래서 기다리는 동안 뜨는 레벨업 팝업을 계속 비워 가며 본다.
+     ⚑ T48 정정: 종전엔 «버프바가 통째로 빈다» 로 봤는데, T48 이 상시 발동형 버프원을 여럿 늘리면서
+     (빗나갈 시 공격력/방어력/공속 버프 — 적 회피 10% 라 전투 중엔 거의 항상 하나는 살아 있다)
+     그 기대 자체가 성립하지 않게 됐다. 검사의 «의도» 는 «지속시간이 끝난 버프가 사라지는가» 이므로
+     이 테스트가 직접 넣은 버프(src = key 인 atk 버프 2개)만 추적한다 — 의도는 그대로, 조건만 정확해졌다.
+     횟수형 방어막 뱃지(.ward-ic)는 시간제 버프가 아니라 애초에 대상이 아니다. */
   let gone = false, waited = 0;
   for (let i = 0; i < 40; i++) {
-    const st = await p.evaluate(() => ({ n: document.querySelectorAll('#buffBar .buff-ic').length, cards: document.querySelectorAll('.perk-card').length,
-      choice: document.querySelectorAll('#overlay .choice-btn').length, paused: !!(G && G.paused) }));
+    const st = await p.evaluate((k) => ({
+      n: G.player.buffs.atk.filter(b => b.src === k).length,
+      icons: document.querySelectorAll('#buffBar .buff-ic:not(.ward-ic)').length,
+      cards: document.querySelectorAll('.perk-card').length,
+      choice: document.querySelectorAll('#overlay .choice-btn').length, paused: !!(G && G.paused) }), buffOn.key);
     if (st.n === 0) { gone = true; break; }
     if (st.cards) { await p.click('.perk-card'); await p.waitForTimeout(300); }
     /* 쉼터·악마·천사 이벤트 팝업이 뜨면 그것도 게임을 멈춘다 — 아무 선택지나 눌러 진행시킨다 */
     else if (st.choice) { await p.click('#overlay .choice-btn'); await p.waitForTimeout(300); }
     await p.waitForTimeout(300); waited += 300;
   }
-  chk('지속시간이 끝나면 아이콘이 사라진다', gone, `${(waited / 1000).toFixed(1)}초 안에 소멸 (버프 4초 + 팝업 정지 시간)`);
+  chk('지속시간이 끝나면 아이콘이 사라진다', gone, `${(waited / 1000).toFixed(1)}초 안에 그 버프(4초짜리) 소멸`);
 
   /* ---------- ⚑ 특전 미리보기 줄 — 누적·중복·«+N» ---------- */
   console.log('\n=== ⚑ 얻은 특전 미리보기 줄 (#perkStrip) ===');

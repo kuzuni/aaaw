@@ -1560,6 +1560,8 @@ const PERKS=[
   {id:'c_missDef', r:0, ic:'🧱💨', tx:'빗나갈 시 <b>3초간</b> 방어력 <b>+6%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.missDef++},
   {id:'c_rangeShield', r:0, ic:'🏹🔋', tx:'원거리 피격 시 <b>20%</b> 확률로 실드 <b>4%</b> 충전', ap:p=>p.px.rangeShield++},
   {id:'c_thornsS', r:0, ic:'🌿', tx:'피격 시 <b>30%</b> 확률로 받은 피해의 <b>50%</b> 반사', ap:p=>p.px.thornsS++},
+  {id:'c_wardHit', r:0, ic:'🔰✨', tx:'피격 시 <b>8%</b> 확률로 <b>방어막 1장</b> (적 공격 1회 완전 방어)', ap:p=>p.px.wardHit++},
+  {id:'c_wardEvade', r:0, ic:'👥✨', tx:'회피 시 <b>10%</b> 확률로 <b>방어막 1장</b> (적 공격 1회 완전 방어)', ap:p=>p.px.wardEvade++},
   /* ---------- 희귀 (26종) ---------- */
   {id:'r_axe', r:1, ic:'🪓', tx:'공격 시 <b>15%</b> 확률로 도끼 투척 (공격력의 <b>50%</b>, 랜덤 적 <b>1명</b>)', ap:p=>p.px.axe++},
   {id:'r_arrow', r:1, ic:'🏹', tx:'공격 시 <b>15%</b> 확률로 화살 2발 (각 공격력의 <b>65%</b>, 랜덤 적)', ap:p=>p.px.arrow2++},
@@ -1592,6 +1594,8 @@ const PERKS=[
   {id:'r_missReset', r:1, ic:'⏫💨', tx:'빗나갈 시 <b>30%</b> 확률로 다음 공격 즉시 발동', ap:p=>p.px.missReset++},
   {id:'r_rangeThorns', r:1, ic:'🏹🌵', tx:'원거리 피격 시 <b>30%</b> 확률로 해당 적에게 공격력의 <b>80%</b> 반사', ap:p=>p.px.rangeThorns++},
   {id:'r_aspdStack10', r:1, ic:'⚡🔟', tx:'공격 시 <b>25%</b> 확률로 <b>4초간</b> 공격속도 <b>+5%</b> (최대 <b>10중첩</b>)', ap:p=>p.px.aspdStack10++},
+  {id:'r_ward', r:1, ic:'🛡️✨', tx:'공격 시 <b>10%</b> 확률로 <b>방어막 1장</b> — 적 공격 <b>1회</b>를 완전히 막는다 (최대 <b>5장</b>)', ap:p=>p.px.wardAtk++},
+  {id:'r_wardCrit', r:1, ic:'💥✨', tx:'치명타 시 <b>12%</b> 확률로 <b>방어막 1장</b> (최대 <b>5장</b>)', ap:p=>p.px.wardCrit++},
   /* ---------- 전설 (28종) ---------- */
   {id:'l_spear', r:2, ic:'🔱', tx:'공격 시 <b>7.5%</b> 확률로 관통 창 (공격력의 <b>100%</b>, 일직선 <b>8명</b> 거리(88px×8) 관통)', ap:p=>p.px.spear++},
   {id:'l_bolt', r:2, ic:'⚡', tx:'공격 시 <b>10%</b> 확률로 번개 <b>2회</b> (각 공격력의 <b>75%</b>, 랜덤 적)', ap:p=>p.px.bolt++},
@@ -1657,6 +1661,9 @@ const PERKS=[
   {id:'m_rangeSpear', r:3, ic:'🏹🔱', tx:'응사 — 원거리 피격 시 <b>30%</b> 확률로 관통 창 발사', ap:p=>p.px.rangeSpear++},
   {id:'m_thornsKing', r:3, ic:'🌵👑', tx:'가시의 왕 — 피격 시 <b>반드시</b> 받은 피해의 <b>300%</b> 반사 (고유)', ap:p=>p.px.thornsKing=true, u:1},
   {id:'m_stackMaster', r:3, ic:'📚👑', tx:'축적의 대가 — 모든 중첩 버프의 최대 중첩 <b>+5</b> (고유)', ap:p=>p.px.stackMaster=true, u:1},
+  {id:'m_reaper', r:3, ic:'☠️🌾', tx:'사신의 낫 — 회피 시 <b>10%</b> 확률로 공격한 그 적 <b>즉사</b> (보스 제외) (고유)', ap:p=>p.px.reaper=true, u:1},
+  {id:'m_wardKing', r:3, ic:'🛡️👑', tx:'불멸의 방벽 — 방어막 최대 <b>10장</b> & 방어막 획득 확률 <b>2배</b> (고유)', ap:p=>p.px.wardKing=true, u:1},
+  {id:'m_wardBurst', r:3, ic:'🛡️💥', tx:'반사 방벽 — 방어막으로 막을 때마다 그 적에게 공격력의 <b>300%</b> 반사 (고유)', ap:p=>p.px.wardBurst=true, u:1},
 ];
 const RARITY=[{nm:'일반',cc:'#9EA3AC'},{nm:'희귀',cc:'#4FA3E8'},{nm:'전설',cc:'#FFB92E'},{nm:'신화',cc:'#FF5E6C'}];
 /* 등급 확률: 일반 30 / 희귀 30 / 전설 25 / 신화 15 (sim.js rollRarity 와 1:1) */
@@ -1697,7 +1704,7 @@ function playerBase(){
   const build=curBuild(), pw=buildPower(build);
   const maxHp=pw.hp;
   const p={
-    worldX:0, walking:false, atkTimer:0, strikeT:0, hitT:0, nextAtk:0, missStk:0,
+    worldX:0, walking:false, atkTimer:0, strikeT:0, hitT:0, nextAtk:0, missStk:0, ward:0,
     dmg:pw.atk, aspd:TUNE.pAspd0,
     critR:TUNE.pCrit0, critF:200,
     def:5, counter:10, evade:8, steal:0, killHeal:0, misfire:0,
@@ -1724,6 +1731,8 @@ function playerBase(){
       missAtk:0,missDef:0,missAspd:0,missReset:0,missCrit:false,missStack:0,missRush:false,missSpear:0,
       /* ⚑ T48 2단계 — 원거리 피격 축 · 반사 확장 · 고중첩 변형 (주인 16:0X·16:1X·16:2X) */
       rangeShield:0,rangeThorns:0,rangeBolt:0,rangeSpear:0,thornsS:0,thornsKing:false,aspdStack10:0,stackMaster:false,
+      /* ⚑ T48 3단계 — 횟수형 방어막 · 회피 즉사 (주인 16:5X·17:2X) */
+      wardAtk:0,wardHit:0,wardEvade:0,wardCrit:0,wardKing:false,wardBurst:false,reaper:false,
     },
   };
   /* 장비 계열 옵션 적용 (PLAN §11.1 — 상위 등급은 하위 옵션을 전부 포함) */
@@ -1800,6 +1809,8 @@ const REST_HEAL=260, REST_EXP=26;
 const ENEMY_EVADE=0.10;
 /* ⚑ T48 1단계 — 스턴·빗맞음 메커니즘 상수. sim.js 와 같은 값이어야 한다(게이트가 두 파일을 대조). */
 const STUN_BOSS_MUL=1/3, STUN_LORD_MUL=2, STUN_LORD_DMG=1.6, MISS_STACK_CAP=5;
+/* ⚑ T48 3단계 — 횟수형 방어막(주인 17:2X) · 회피 즉사(주인 16:5X). sim.js 와 같은 값(게이트가 대조). */
+const WARD_CAP=5, WARD_CAP_KING=10, REAPER_CH=0.10;
 function chapterLayout(c){
   const rnd=mulberry(c*1013904223+77);
   let waveCount=4+(rnd()<0.4?1:0);
@@ -1858,7 +1869,7 @@ function startChapter(c){
   });
   G={
     chapter:c, t:0, kills:0, gold:0, killed:0, totalEnemies,
-    player:playerBase(), nodes, arrows:[], texts:[], parts:[],
+    player:playerBase(), nodes, arrows:[], texts:[], parts:[], reaps:[],
     pprojs:[], bolts:[], procN:0,
     paused:false, over:false, cleared:false, pendingLevels:0, perksTaken:[], shake:0, bossWarned:false,
     perkChances:0, refreshBonus:0, legendOnly:false, overBoltCd:0, autoBoltT:2, stunAuraT:2.5,
@@ -2085,6 +2096,29 @@ function poof(wx,wy){
   }
 }
 function shake(m){ if(G) G.shake=Math.max(G.shake,m); }
+/* ⚑ T48 3단계 — 사신의 낫 전용 연출 (주인 16:5X 필수 지시).
+   «낫이 베어 죽이는» 것이 보여야 하고 일반 처치 연기(poof)와 구별돼야 한다:
+   ① 큰 낫이 호를 그리며 한 번 훑고(reaps 가 그린다) ② 베인 자리에 붉은 참격선 ③ 검은 재가 흩어진다.
+   poof 는 부르지 않는다 — 여기서 죽은 적은 «연기» 가 아니라 «재» 로 사라진다. */
+function reapFx(wx){
+  if(!G) return;
+  G.reaps.push({x:wx,t:0});
+  AU.play('crit'); shake(7);
+  addText('☠️ 사신의 낫','#C8A2FF',wx,-124,true);
+  for(let i=0;i<12;i++){
+    const a=rand(0,Math.PI*2), v=rand(30,120);
+    G.parts.push({x:wx,y:-40,vx:Math.cos(a)*v,vy:Math.sin(a)*v-40,life:rand(0.4,0.8),t:0,color:'rgba(40,36,50,',size:rand(4,9),puff:true});
+  }
+  sparks(wx,-46,'#B388FF',8,180);
+}
+/* 방어막이 «막을 때» 의 전용 이펙트 (주인 17:2X) — 육각 방벽이 번쩍하고 튕겨낸다. */
+function wardFx(){
+  if(!G) return;
+  const p=G.player;
+  AU.play('shield');
+  addText('🛡️ 방어!','#9CD2FF',p.worldX,-108,true);
+  sparks(p.worldX,-46,'#9CD2FF',10,190);
+}
 
 /* ================= COMBAT ================= */
 function aliveEnemies(){
@@ -2232,6 +2266,17 @@ function procOnMiss(e){
   if(px.missRush){ p.atkTimer=0; p.nextAtk=Math.min(1.5,Math.max(p.nextAtk,1.0)); addText('💨 즉시 재공격!','#9CD2FF'); }
   if(px.missSpear&&pkk(p,0.30*px.missSpear)) fireSpear(p);
 }
+/* ⚑ T48 3단계 — 횟수형 방어막 (주인 17:2X). sim.js wardCap/gainWard 와 1:1.
+   막을 때의 전용 이펙트와 남은 장수 뱃지는 아래 hitPlayer·renderBuffBar 가 맡는다. */
+function wardCap(p){ return p.px.wardKing?WARD_CAP_KING:WARD_CAP; }
+function gainWard(p,ch){
+  if(!ch) return;
+  if(!pkk(p,ch*(p.px.wardKing?2:1))) return;
+  if(p.ward>=wardCap(p)) return;
+  p.ward=Math.min(wardCap(p),p.ward+1);
+  addText('🛡️✨ x'+p.ward,'#9CD2FF');
+  renderBuffBar();
+}
 /* ⚑ T48 2단계 — 원거리 피격 트리거 (주인 16:1X). sim.js procOnRanged 와 1:1.
    일반 «피격 시» 트리거와 별개 축이라 원거리 피격은 둘 다 굴린다. 회피에 성공하면 굴리지 않는다. */
 function procOnRanged(src){
@@ -2294,6 +2339,7 @@ function dealPlayerDamage(e,ratio,icon){
     if(px.critReset&&pkk(p,0.45*px.critReset)) p.atkTimer=0;
     if(px.stunCritM&&pkk(p,0.15*px.stunCritM)) applyStun(e,2.0);
     if(px.stunCritL&&pkk(p,0.35*px.stunCritL)) applyStun(e,3.0);   /* 주인 필수 예시 «치명타 시 3초 스턴» */
+    gainWard(p,0.12*px.wardCrit);
   }
   if(px.execKill&&!e.isBoss&&e.hp>0&&e.hp<=e.maxHp*0.25){
     e.hp=0;
@@ -2316,6 +2362,7 @@ function procOnAttack(){
   if(px.spear&&pkk(p,0.075*px.spear)) fireSpear(p);
   if(px.bolt&&pkk(p,0.10*px.bolt)) fireBolts(p);
   if(px.arsenal&&pkk(p,0.16*px.arsenal)) pick([fireAxe,fireArrows,fireBolts,fireWave,fireSpear])(p);
+  gainWard(p,0.10*px.wardAtk);   /* 주인 필수 예시 — «공격 시 10% 확률로 방어막 1장» */
 }
 function doCounter(src,depth){
   const p=G.player, px=p.px;
@@ -2365,12 +2412,33 @@ function hitPlayer(dmg,isMelee,src){
     if(px.evadeShield&&pkk(p,0.15*px.evadeShield)){ p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.14); addText('🔶 실드 수리','#6CC0F0'); }
     if(px.evadeCounter&&pkk(p,1.0*px.evadeCounter)) doCounter(src);
     if(px.evadeAxe&&pkk(p,0.10*px.evadeAxe)) fireAxe(p);
+    gainWard(p,0.10*px.wardEvade);
+    /* 신화 m_reaper «사신의 낫» — 회피 시 확률로 공격한 그 적 즉사 (보스 제외, 주인 16:5X).
+       주인 지시대로 일반 처치 연기와 구별되는 전용 연출(낫이 베어 죽인다)을 붙인다. */
+    if(px.reaper&&src&&src.hp>0&&!src.isBoss&&pkk(p,REAPER_CH)){
+      reapFx(src.worldX);
+      src.hp=0; onKill(src);
+    }
     return;
   }
-  let d=dmg*(1-effDef(p)/100);
-  if(px.guardCrystal&&p.sh>0) d*=0.62;
+  /* 횟수형 방어막 — 이 타격 «1회» 를 통째로 무효화하고 1장 소모한다 (수치형 실드보다 먼저).
+     데미지만 완전 무효이고 «맞은 사건» 은 일어난 것이라 아래 피격 트리거들은 그대로 굴린다.
+     sim.js hitPlayer 와 같은 순서·같은 조건. */
+  const warded=p.ward>0;
+  if(warded){
+    p.ward--;
+    wardFx();
+    if(px.wardBurst&&src&&src.hp>0){
+      const bd=effDmg(p)*3; src.hp-=bd; src.hitT=0.15;
+      addText('🛡️💥 '+fmt(bd),'#9CD2FF',src.worldX,-100,true);
+      if(src.hp<=0) onKill(src);
+    }
+    renderBuffBar();
+  }
+  let d=warded?0:dmg*(1-effDef(p)/100);
+  if(!warded&&px.guardCrystal&&p.sh>0) d*=0.62;
   p.hitT=0.15;
-  if(p.sh>0){
+  if(!warded&&p.sh>0){
     const ab=Math.min(p.sh,d); p.sh-=ab; d-=ab;
     sparks(p.worldX,-40,'#6CC0F0',5,120);
     if(d<=0) AU.play('shield');
@@ -2401,6 +2469,7 @@ function hitPlayer(dmg,isMelee,src){
   if(px.shieldOnHit&&pkk(p,0.10*px.shieldOnHit)){ p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05); addText('🔋','#6CC0F0'); }
   if(px.hitHeal&&pkk(p,0.15*px.hitHeal)){ heal(p,p.maxHp*0.02); addText('🩹','#7ED957'); }
   /* 피격 시 스턴 — 주인 필수 예시 «피격 시 (n% 확률로) 공격한 적 3초 스턴» (전설 l_stunHit3) */
+  gainWard(p,0.08*px.wardHit);
   if(px.stunHitS&&src&&pkk(p,0.12*px.stunHitS)) applyStun(src,1.5);
   if(px.stunHitL&&src&&pkk(p,0.55*px.stunHitL)) applyStun(src,3.0);
   if(px.thornsS&&src&&src.hp>0&&pkk(p,0.30*px.thornsS)){
@@ -2455,6 +2524,7 @@ function update(dt){
     if(t.t>1.05) G.texts.splice(i,1);
   }
   for(let i=G.bolts.length-1;i>=0;i--){ G.bolts[i].t+=dt; if(G.bolts[i].t>0.3) G.bolts.splice(i,1); }
+  for(let i=G.reaps.length-1;i>=0;i--){ G.reaps[i].t+=dt; if(G.reaps[i].t>0.45) G.reaps.splice(i,1); }
 
   const alive=aliveEnemies();
   if(!alive.length) return;
@@ -2639,12 +2709,18 @@ function renderBuffBar(){
     if(g){ g.n++; if(b.q<g.q) g.q=b.q; }
     else groups.set(id,{n:1, q:b.q||0, k, perk:b.src?G.pxPerk[b.src]:null});
   }
-  const html=[...groups.values()].sort((a,b)=>a.q-b.q).map(g=>{
+  let html=[...groups.values()].sort((a,b)=>a.q-b.q).map(g=>{
     const cc = g.perk ? RARITY[g.perk.r].cc : '#9EA3AC';
     const ic = g.perk ? g.perk.ic : uiIcon(BUFF_STAT_IC[g.k]||'spark');
     return `<div class="buff-ic" style="--bc:${cc};--bg:${cc}55">${ic}`+
       (g.n>1?`<span class="cnt">${g.n}</span>`:'')+`</div>`;
   }).join('');
+  /* ⚑ 횟수형 방어막 (T48) — 시간제 버프가 아니라 «장수» 라 buffs 에 안 들어간다.
+     주인 지시(17:2X)대로 버프 아이콘 줄 맨 앞에 남은 장수 뱃지를 달아 따로 보여준다. */
+  if(p.ward>0){
+    const cc=RARITY[1].cc;   /* 기본 획득처가 희귀 🛡️✨(r_ward) 라 희귀색 */
+    html=`<div class="buff-ic ward-ic" style="--bc:${cc};--bg:${cc}55">🛡️<span class="cnt">${p.ward}</span></div>`+html;
+  }
   if(box.innerHTML!==html) box.innerHTML=html;
 }
 function renderPerkStrip(){
@@ -2846,6 +2922,27 @@ function drawScene(){
       ctx.fillStyle='#FFE9A0'; ctx.font='bold 10px system-ui'; ctx.textAlign='center';
       ctx.fillText(e.stun.toFixed(1)+'s',x,hy+15);
     }
+  }
+
+  /* ⚑ 사신의 낫 연출 (T48) — 적 위를 큰 낫이 호를 그리며 훑고 붉은 참격선이 남는다 */
+  for(const rp of G.reaps){
+    const x=rp.x-cam, k=Math.min(1,rp.t/0.45);
+    ctx.save();
+    ctx.globalAlpha=1-k;
+    /* 낫 자루 + 날 — 위에서 아래로 훑는 회전 */
+    ctx.translate(x,gy-58);
+    ctx.rotate(-1.15+k*2.3);
+    ctx.strokeStyle='#4A4458'; ctx.lineWidth=5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(0,-34); ctx.lineTo(0,30); ctx.stroke();
+    ctx.strokeStyle='#E7E2F5'; ctx.lineWidth=7;
+    ctx.beginPath(); ctx.arc(0,-34,30,Math.PI*0.05,Math.PI*0.85); ctx.stroke();
+    ctx.restore();
+    /* 참격선 */
+    ctx.save();
+    ctx.globalAlpha=(1-k)*0.9;
+    ctx.strokeStyle='#FF5E6C'; ctx.lineWidth=4; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(x-30,gy-74+k*24); ctx.lineTo(x+30,gy-38+k*24); ctx.stroke();
+    ctx.restore();
   }
 
   /* 적 화살 */

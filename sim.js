@@ -74,6 +74,11 @@ const ENEMY_EVADE=0.10;
      그래서 엔진에서도 배수(`d*=2`)가 아니라 firstHit 과 같은 «가산 보너스 풀» 에 +1.00 을 더한다
      (execute·backDmg 같은 순수 배수 계열과는 여전히 곱 — 기존 밸런스를 건드리지 않기 위한 위임 판단). */
 const STUN_BOSS_MUL=1/3, STUN_LORD_MUL=2, STUN_LORD_DMG=1.6, MISS_STACK_CAP=5;
+/* ⚑ T48 3단계 — 횟수형 방어막 (주인 17:2X) · 회피 즉사 (주인 16:5X). 둘 다 위임 기본값이다.
+   · WARD_CAP / WARD_CAP_KING — 방어막 «장수» 상한. 주인: «존나 쌓여서» → 기본 5장, 신화 변형 10장.
+     수치형 실드와 완전히 별개 축이다 — 실드는 데미지를 «흡수» 하고 방어막은 타격 «1회» 를 통째로 무효화한다.
+   · REAPER_CH — 사신의 낫 즉사 확률(주인 원문 10%). 보스 제외는 🧨 처형자 선례를 따른다. */
+const WARD_CAP=5, WARD_CAP_KING=10, REAPER_CH=0.10;
 function chapterLayout(c){
   const rnd=mulberry(c*1013904223+77);
   let waveCount=4+(rnd()<0.4?1:0);
@@ -109,12 +114,12 @@ function enemyStats(c,w){
   return {hp:Math.round(hp), dmg:Math.round(dmg)};
 }
 
-/* ---------- 특전 정의 (125종 — T48 이 102 → 117 → 125 로 늘리는 중. 최종 목표 등급당 33 = 132) ---------- */
+/* ---------- 특전 정의 (132종 — T48 로 102 → 132. 등급당 33종씩 균등, 편차 0) ---------- */
 /* ap(p): 적용. u: 고유. 이름은 게임과 동일 키 */
 function mkPerks(){
   const P=[];
   const add=(id,r,ap,u)=>P.push({id,r,ap,u:!!u});
-  /* 일반 31 */
+  /* 일반 33 */
   add('c_aspdBuff',0,p=>p.px.c_aspdBuff++);
   add('c_atkBuff',0,p=>p.px.c_atkBuff++);
   add('c_atkPerm',0,p=>p.px.atkPerm++);
@@ -146,7 +151,9 @@ function mkPerks(){
   add('c_missDef',0,p=>p.px.missDef++);
   add('c_rangeShield',0,p=>p.px.rangeShield++);
   add('c_thornsS',0,p=>p.px.thornsS++);
-  /* 희귀 31 */
+  add('c_wardHit',0,p=>p.px.wardHit++);
+  add('c_wardEvade',0,p=>p.px.wardEvade++);
+  /* 희귀 33 */
   add('r_axe',1,p=>p.px.axe++);
   add('r_arrow',1,p=>p.px.arrow2++);
   add('r_wave',1,p=>p.px.wave++);
@@ -178,6 +185,8 @@ function mkPerks(){
   add('r_missReset',1,p=>p.px.missReset++);
   add('r_rangeThorns',1,p=>p.px.rangeThorns++);
   add('r_aspdStack10',1,p=>p.px.aspdStack10++);
+  add('r_ward',1,p=>p.px.wardAtk++);
+  add('r_wardCrit',1,p=>p.px.wardCrit++);
   /* 전설 33 */
   add('l_spear',2,p=>p.px.spear++);
   add('l_bolt',2,p=>p.px.bolt++);
@@ -212,7 +221,7 @@ function mkPerks(){
   add('l_missCrit',2,p=>p.px.missCrit=true,1);
   add('l_missStack',2,p=>p.px.missStack++);
   add('l_rangeBolt',2,p=>p.px.rangeBolt++);
-  /* 신화 30 */
+  /* 신화 33 */
   add('m_revive',3,p=>p.px.revive++,1);
   add('m_clone',3,p=>p.px.clone=true,1);
   add('m_execKill',3,p=>p.px.execKill=true,1);
@@ -243,6 +252,9 @@ function mkPerks(){
   add('m_rangeSpear',3,p=>p.px.rangeSpear++);
   add('m_thornsKing',3,p=>p.px.thornsKing=true,1);
   add('m_stackMaster',3,p=>p.px.stackMaster=true,1);
+  add('m_reaper',3,p=>p.px.reaper=true,1);
+  add('m_wardKing',3,p=>p.px.wardKing=true,1);
+  add('m_wardBurst',3,p=>p.px.wardBurst=true,1);
   return P;
 }
 const PERKS=mkPerks();
@@ -590,6 +602,8 @@ function basePx(){
     missAtk:0,missDef:0,missAspd:0,missReset:0,missCrit:false,missStack:0,missRush:false,missSpear:0,
     /* ⚑ T48 2단계 — 원거리 피격 축 · 반사 확장 · 고중첩 변형 (주인 16:0X·16:1X·16:2X) */
     rangeShield:0,rangeThorns:0,rangeBolt:0,rangeSpear:0,thornsS:0,thornsKing:false,aspdStack10:0,stackMaster:false,
+    /* ⚑ T48 3단계 — 횟수형 방어막 · 회피 즉사 (주인 16:5X·17:2X) */
+    wardAtk:0,wardHit:0,wardEvade:0,wardCrit:0,wardKing:false,wardBurst:false,reaper:false,
   };
 }
 function mkPlayer(build,G){
@@ -599,7 +613,7 @@ function mkPlayer(build,G){
     dmg:pw.atk, aspd:TUNE.pAspd0, critR:TUNE.pCrit0, critF:200,
     def:5, counter:10, evade:8, steal:0, killHeal:0, misfire:0, goldMul:1, walkMul:1, healAmp:0,
     maxHp, hp:maxHp, maxSh:pw.sh, sh:pw.sh,   /* ⚑ T35: 실드 독립 스탯 (`maxHp*0.8` 파생 폐기) */
-    level:1, exp:0, missStk:0, buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]}, px:basePx()};
+    level:1, exp:0, missStk:0, ward:0, buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]}, px:basePx()};
   /* 장비 계열 옵션 적용 (PLAN §11.1 — 상위 등급은 하위 옵션 포함) */
   for(const pt of GT.parts){
     const g=build.eq[pt]; if(!g)continue;
@@ -709,6 +723,16 @@ function procOnMiss(G,e){
   if(px.missRush){p.atkTimer=0;p.nextAtk=Math.min(1.5,Math.max(p.nextAtk,1.0));}
   if(px.missSpear&&pkk(p,0.30*px.missSpear))fireSpear(p);
 }
+/* ⚑ T48 3단계 — 횟수형 방어막 (주인 17:2X · PLAN §3.0).
+   «공격 시 10% 확률로 적 공격 1회를 완전히 막아주는 방어막 1장» — 5장이면 5번 막는다.
+   상한은 신화 m_wardKing 이 두 배로 늘리고, 같은 특전이 획득 확률도 두 배로 만든다.
+   수치형 실드(p.sh)와 별개 축이라 서로 간섭하지 않는다. */
+function wardCap(p){return p.px.wardKing?WARD_CAP_KING:WARD_CAP;}
+function gainWard(p,ch){
+  if(!ch)return;
+  if(!pkk(p,ch*(p.px.wardKing?2:1)))return;
+  p.ward=Math.min(wardCap(p),p.ward+1);
+}
 /* ⚑ T48 2단계 — 원거리 피격 트리거 (주인 16:1X · PLAN §3.0).
    «적의 원거리 공격(화살)에 맞았을 때» 발동하는 별개 축이다 — 일반 «피격 시» 트리거와 배타가 아니라
    원거리 피격은 둘 다 굴린다(주인 위임 기본값). 회피에 성공하면 «맞은» 것이 아니라 굴리지 않는다. */
@@ -759,6 +783,7 @@ function dealDmg(G,e,ratio,fromBasic){
     if(px.critReset&&pkk(p,0.45*px.critReset))p.atkTimer=0;
     if(px.stunCritM&&pkk(p,0.15*px.stunCritM))applyStun(G,e,2.0);
     if(px.stunCritL&&pkk(p,0.35*px.stunCritL))applyStun(G,e,3.0);   /* 주인 필수 예시 «치명타 시 3초 스턴» */
+    gainWard(p,0.12*px.wardCrit);
   }
   if(px.execKill&&!e.isBoss&&e.hp>0&&e.hp<=e.maxHp*0.25)e.hp=0;
   if(e.hp<=0)onKill(G,e);
@@ -807,6 +832,7 @@ function procOnAttack(G){
   if(px.spear&&pkk(p,0.075*px.spear))fireSpear(p);
   if(px.bolt&&pkk(p,0.10*px.bolt))fireBolts(p);
   if(px.arsenal&&pkk(p,0.16*px.arsenal))pick([fireAxe,fireArrows,fireBolts,fireWave,fireSpear])(p);
+  gainWard(p,0.10*px.wardAtk);   /* 주인 필수 예시 — «공격 시 10% 확률로 방어막 1장» */
 }
 function doCounter(G,src,depth){
   const p=G.player,px=p.px;
@@ -839,11 +865,23 @@ function hitPlayer(G,dmg,isMelee,src){
     if(px.evadeShield&&pkk(p,0.15*px.evadeShield))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.14);
     if(px.evadeCounter&&pkk(p,1.0*px.evadeCounter))doCounter(G,src);
     if(px.evadeAxe&&pkk(p,0.10*px.evadeAxe))fireAxe(p);   /* 장비 계열 옵션(샌들) — 주인 예시 */
+    gainWard(p,0.10*px.wardEvade);
+    /* 신화 m_reaper «사신의 낫» — 회피 시 확률로 공격한 그 적 즉사 (보스 제외, 주인 16:5X).
+       게임에는 낫이 베는 전용 연출이 붙는다(일반 처치 연기와 구별). */
+    if(px.reaper&&src&&src.hp>0&&!src.isBoss&&pkk(p,REAPER_CH)){src.hp=0;onKill(G,src);}
     return;
   }
-  let d=dmg*(1-effDef(p)/100);
-  if(px.guardCrystal&&p.sh>0)d*=0.62;
-  if(p.sh>0){const ab=Math.min(p.sh,d);p.sh-=ab;d-=ab;}
+  /* 횟수형 방어막 — 이 타격 «1회» 를 통째로 무효화하고 1장 소모한다 (수치형 실드보다 먼저).
+     «데미지 완전 무효» 라 방어력·실드·체력을 아예 건드리지 않지만, «맞은 사건» 자체는 일어난 것이라
+     아래 피격 트리거들은 그대로 굴린다(주인 원문이 «그 타격 데미지 완전 무효» 이므로 — 위임 판단). */
+  const warded=p.ward>0;
+  if(warded){
+    p.ward--;
+    if(px.wardBurst&&src&&src.hp>0){src.hp-=effDmg(p)*3;if(src.hp<=0)onKill(G,src);}
+  }
+  let d=warded?0:dmg*(1-effDef(p)/100);
+  if(!warded&&px.guardCrystal&&p.sh>0)d*=0.62;
+  if(!warded&&p.sh>0){const ab=Math.min(p.sh,d);p.sh-=ab;d-=ab;}
   if(d>0){
     p.hp-=d;
     if(p.hp<=0){
@@ -863,6 +901,7 @@ function hitPlayer(G,dmg,isMelee,src){
   if(px.thorns&&src&&src.hp>0&&pkk(p,0.60*px.thorns)){src.hp-=dmg*1.5;if(src.hp<=0)onKill(G,src);}
   if(px.thornsKing&&src&&src.hp>0){src.hp-=dmg*3;if(src.hp<=0)onKill(G,src);}
   /* 피격 시 스턴 — 주인 필수 예시 «피격 시 (n% 확률로) 공격한 적 3초 스턴» (전설 l_stunHit3) */
+  gainWard(p,0.08*px.wardHit);
   if(px.stunHitS&&src&&pkk(p,0.12*px.stunHitS))applyStun(G,src,1.5);
   if(px.stunHitL&&src&&pkk(p,0.55*px.stunHitL))applyStun(G,src,3.0);
   /* 원거리 피격 축 — 위 «피격 시» 트리거를 전부 굴린 «뒤» 에 추가로 굴린다 (별개 축, 주인 16:1X) */

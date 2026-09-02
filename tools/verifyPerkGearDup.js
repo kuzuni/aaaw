@@ -84,7 +84,7 @@ for (let i = pStart; i < pEnd; i++) {
     keys[mm[1]] = mm[2].startsWith('=') ? 'bool' : 'inc';
   PERKS.push({ id: m[1], r: Number(m[2]), uniq: /,\s*1\s*\)\s*;/.test(lines[i]), line: i + 1, keys });
 }
-if (PERKS.length !== 125) { console.error(`✗ 특전이 125종이 아니다 (파싱 결과 ${PERKS.length}종). T48 로 늘어나는 중이라, 늘렸으면 이 숫자도 같이 올릴 것`); process.exit(1); }
+if (PERKS.length !== 132) { console.error(`✗ 특전이 132종이 아니다 (파싱 결과 ${PERKS.length}종). T48 로 늘어나는 중이라, 늘렸으면 이 숫자도 같이 올릴 것`); process.exit(1); }
 
 /* ── ③ GOPT 파싱 ──────────────────────────────────── */
 const gStart = lines.findIndex(l => /^const GOPT\s*=\s*\{/.test(l));
