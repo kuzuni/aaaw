@@ -23,7 +23,7 @@
 
    재는 것 3가지:
      ① 변별력(정본 ①②③) — 하니스가 바닥/천장 포화면 실험1·2 는 측정 자체가 무의미하다 (T7 재발 방지).
-        실험1: 등급 4단 전부 1~99% 비포화 + 인접 ≥2%p 분리 · 실험2: 전체 클리어율 15~85% 안, 목표 밴드 60~70%.
+        실험1: 등급 3단 전부 1~99% 비포화 + 인접 ≥2%p 분리 · 실험2: 전체 클리어율 15~85% 안, 목표 밴드 60~70%.
      ② 재보정 감시(정본 ④) — 하니스 값이 기준선 측정 당시와 다르거나, 경제·난이도 노브가 바뀌어
         하니스가 등재 밴드를 이탈했으면 위반. **T26(R09 가 slotCostG 4.2→3.5 를 바꾸고 재보정을 빠뜨림)이
         사람 눈으로만 잡혔던 그 사고는 이제 ①②가 함께 잡는다** — 노브를 바꾸면 하니스 클리어율이 밴드를 벗어나기 때문이다.
@@ -242,10 +242,10 @@ for (const e of EXPS) {
 }
 
 /* 실험1 사다리는 ①(변별력)과 --rebase 양쪽이 쓰므로 한 번만 잰다. */
-const LADDER_NAMES = ['일반', '희귀', '전설', '신화'];
+const LADDER_NAMES = ['일반', '희귀', '전설'];   /* ⚑ P1(T83) — 특전 신화 등급 폐지 */
 const ladder = (() => {
   const e = EXPS[0], hb = mkBuild(e.h.rar, e.h.plus, e.h.slot);
-  return [0, 1, 2, 3].map(lock => rateOf(e.ch, hb, { rarityLock: lock }));
+  return [0, 1, 2].map(lock => rateOf(e.ch, hb, { rarityLock: lock }));   /* ⚑ P1(T83) 등급 3단 (신화 폐지) */
 })();
 
 if (REBASE) {
@@ -263,7 +263,7 @@ if (REBASE) {
 console.log('\n[① 변별력 — 정본 «변별점 규칙» ①②③ (하니스가 포화면 실험1·2 는 측정 자체가 무의미하다)]');
 {
   const sat = LADDER_NAMES.filter((nm, i) => ladder[i] <= FLOOR || ladder[i] >= CEIL);
-  chk('실험1 등급 4단 전부 비포화',
+  chk('실험1 등급 3단 전부 비포화',
       sat.length === 0,
       ladder.map((r, i) => `${LADDER_NAMES[i]} ${r.toFixed(1)}%`).join(' · ') +
       `  (허용 ${FLOOR}~${CEIL}%` + (sat.length ? ` · 포화 [${sat.join(',')}]` : '') + ')');

@@ -146,7 +146,11 @@ console.log('\n[Ⓑ 추상 표현 금지 — 주인 지시 ««대폭 증가» �
 }
 
 /* ---------- Ⓒ~Ⓕ 래칫 축 ---------- */
-/* ⚑ 아래 네 목록은 **T81 1단계 시점의 기존 위반 동결분**이다. 정리는 T81 2단계 몫.
+/* ⚑⚑ P1(T83) — 특전 132종이 통째로 갈렸다. 동결분에 남아 있던 «구 특전» 항목은 대상이 사라졌으므로
+   그대로 둬도 무해하지만(있으면 «안 걸린 항목» 으로 보고될 뿐), 새 목록에서 규칙을 어기는 것은
+   **주인이 직접 확정한 일반 5종뿐**이라 아래 Ⓕ 에 «주인 확정 예외» 로 따로 묶어 등재했다.
+   일반 44종은 주인 동결 목록이라 워커가 수치를 못 고친다 — 5% 단위로 바꾸면 효과 설계가 통째로 달라진다.
+   ⚑ 아래 네 목록은 **T81 1단계 시점의 기존 위반 동결분**이다. 정리는 T81 2단계 몫.
    ⚑ T82 (주인 확정 «킬힐 5% 기준») — 킬 회복 4종(c_killHeal2 · c_killShield3 · l_killHeal5 · l_killShield10)이
    5·10% 로 정리돼 **동결분에서 빠졌다**. 이제 이 넷이 다시 소수점으로 깎이면 여기서 곧장 빨개진다.
    목록에 없는 id 가 위반하면 = 신규 위반 = 불합격. 새 특전·옵션을 넣을 땐 규칙대로 쓰면 그만이다. */
@@ -164,7 +168,12 @@ const KNOWN_PROB = ['특전 c_wardHit', '특전 r_hitEvade', '특전 r_wardCrit'
 const KNOWN_DUR = ['특전 l_overBolt', '특전 m_autoBolt', '특전 m_stunKill', '장비 hood옵5'];
 
 /* Ⓕ 수치 계수 5% 단위 */
-const KNOWN_COEF = ['특전 c_atkPerm', '특전 c_defHit',
+const KNOWN_COEF = [
+  /* ⚑⚑ 주인 확정 예외 (P1 · T83) — 새 132종 «일반» 5종. 주인이 동결한 목록이라 워커 수정 금지.
+     🍃 «처치 시 회피 +1%» 와 🃏 수집가 4종의 «보유 특전 1개당 +2%» 는 단위가 «1개당» 이라
+     5% 단위로 올리면 효과가 통째로 달라진다(4종 다 판당 수십 %가 된다). 주인 판단 대기 — PROGRESS 등재. */
+  '특전 c_evadePerm', '특전 c_collAtk', '특전 c_collEvade', '특전 c_collCounter', '특전 c_collDef',
+  '특전 c_atkPerm', '특전 c_defHit',
   '특전 c_hitHeal', '특전 c_evadeEv', '특전 c_healBoost', '특전 c_healShield', '특전 c_hp12',
   '특전 c_rangeShield', '특전 r_atkBuffM', '특전 r_critFBuff', '특전 r_critHeal3', '특전 r_killCrit',
   '특전 r_defBuff2', '특전 r_hitEvade', '특전 r_evadeHeal', '특전 r_counterAtkM', '특전 r_counterCrit',
