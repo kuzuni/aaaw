@@ -1473,14 +1473,15 @@ console.log('\n[㉖ 대형 수치 표기 — 1만 이상 축약 (docs/ref, T54)]
   /class="amt">💎 \$\{fmtQty\(p\.gem\)\}/.test(HTML) ? ok('다이아 상품 수량이 fmtQty 를 쓴다')
                                                     : bad('다이아 상품 수량이 fmtQty 를 쓰지 않는다 — «12.00K» 가 된다');
 
-  /* (7) 로비 상단 줄이 축약 표기를 담도록 좁혀져 있다 (실측 근거: 구 CSS 는 챕터 40 에서 417px) */
-  /\.lobby-top\{[^}]*gap:6px[^}]*padding:12px 10px 0/.test(HTML)
-    ? ok('로비 상단 줄 여백이 좁혀져 있다 (gap 6 · padding 10)')
+  /* (7) 로비 상단 줄이 축약 표기를 담도록 좁혀져 있다 (실측 근거: 구 CSS 는 챕터 40 에서 417px)
+         ⚑ T64 로 세 값에 `* var(--tf)` 배율이 얹혔다 — 기준값(gap 6 · padding 10 · clamp 식)은 그대로 지킨다. */
+  /\.lobby-top\{[^}]*gap:calc\(6px \* var\(--tf\)\)[^}]*padding:12px calc\(10px \* var\(--tf\)\) 0/.test(HTML)
+    ? ok('로비 상단 줄 여백이 좁혀져 있다 (gap 6 · padding 10 · T64 배율)')
     : bad('로비 상단 줄 여백이 구 값으로 돌아갔다 — 골드 «8.26M» 에서 줄이 417px 가 된다');
-  /\.lobby-top \.pill\{[\s\S]{0,200}?font-size:clamp\(11px, calc\(min\(100vw, 100vh \* 9 \/ 19\) \* \.036\), 14px\)[\s\S]{0,120}?min-width:0/.test(HTML)
+  /\.lobby-top \.pill\{[\s\S]{0,200}?font-size:calc\(clamp\(11px, calc\(min\(100vw, 100vh \* 9 \/ 19\) \* \.036\), 14px\) \* var\(--tf\)\)[\s\S]{0,160}?min-width:0/.test(HTML)
     ? ok('로비 pill 글자가 프레임 폭에 연동된다 (316px 프레임 대응) + min-width:0 안전망')
     : bad('로비 pill 의 프레임 연동 글자 크기 또는 min-width:0 안전망이 사라졌다 — SE(프레임 316px)에서 글자가 잘린다');
-  /#powerPill\{font-size:clamp\(12px,/.test(HTML)
+  /#powerPill\{font-size:calc\(clamp\(12px,[^}]*var\(--tf\)\)/.test(HTML)
     ? ok('전투력 글자도 프레임 폭에 연동된다')
     : bad('전투력 글자가 고정 크기로 돌아갔다 — 316px 프레임에서 줄이 밀린다');
   /#sndBtnL\{position:absolute/.test(HTML)
@@ -1583,10 +1584,17 @@ console.log('\n[㉗ 전투 플로팅 텍스트 표기 — addText 는 fmt 를 �
             ' (fmt 되돌림이거나, 골드 성장률이 올라 NUM_SUF 사다리를 넘었다 — 후자면 사다리를 늘릴 것)');
   } else bad('goldKill 식 또는 fmt 를 index.html 에서 읽지 못했다 — ㉗ 실측 단언 불가');
 
-  /* 인게임 HUD 누적 골드도 같은 규약 (팝업만 고치고 HUD 를 놓치는 되돌림 방지) */
-  /\$\('gGold'\)\.textContent=fmt\(G\.gold\)/.test(HTML)
-    ? ok('인게임 HUD 누적 골드가 fmt 를 쓴다')
-    : bad('인게임 HUD 누적 골드가 fmt 를 거치지 않는다');
+  /* 인게임 HUD 누적 골드도 같은 규약 (팝업만 고치고 HUD 를 놓치는 되돌림 방지)
+     ⚑ T64 로 표기 자리가 `syncGameTop()` 한 곳으로 모였다 — 그 안에서 fmt 를 거치는지로 본다. */
+  {
+    const sgt = (HTML.match(/function syncGameTop\([\s\S]*?\n\}/) || [''])[0];
+    (/const gs=fmt\(/.test(sgt) && /\$\('gGold'\)\.textContent=gs/.test(sgt))
+      ? ok('인게임 HUD 누적 골드가 fmt 를 쓴다 (syncGameTop 경유)')
+      : bad('인게임 HUD 누적 골드가 fmt 를 거치지 않는다');
+    !/\$\('gGold'\)\.textContent=(?!gs|g8)/.test(HTML)
+      ? ok('gGold 를 syncGameTop 밖에서 직접 쓰는 곳이 없다 (fmt 우회 경로 차단)')
+      : bad('gGold 에 직접 대입하는 곳이 남았다 — 그 경로는 fmt 도 상단 줄 맞춤도 건너뛴다');
+  }
 }
 
 /* ============================================================================
@@ -1788,6 +1796,110 @@ console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
   /overflow:\s*hidden/.test(rule('#frame'))
     ? ok('#frame 이 overflow:hidden 이다 — 열 밖으로 나간 칸은 잘린다(피해 근거)')
     : bad('#frame 의 overflow:hidden 이 사라졌다 — ㉚ 의 피해 전제가 바뀌었다. 항목을 재작성할 것');
+}
+
+/* ============================================================================
+   ㉛ 상단 줄 3개가 프레임 폭에 맞는다 — `--tf` 자동 맞춤 (T64)
+
+   프레임 폭은 `min(100vw, 100dvh*9/19)` 라 **세로가 폭을 정한다** — 주소창이 뜨면 폭이 준다.
+   T54 는 로비 줄 글자를 프레임에 연동했지만 `clamp(11px, …, 14px)` 의 **하한 11px 에서 축소가 멈추고**
+   아바타 52px·여백·pill padding 은 처음부터 고정이라, 프레임이 316px 아래로 내려가면 줄이 넘쳤다.
+   T64 실측(수정 전):
+     · 로비 — 278px(SE 375×667 + 주소창)에서 «59.68Oc»→«59.…» · 267px 에서 전투력 «338»→«…»/빈칸.
+       말줄임 안전망이 **수치** 에 걸려 숫자가 통째로 거짓이 됐다.
+     · 인게임 `#topbar` — T54 의 손이 안 닿아 고정 14px·min-width 무제한이라 칸이 못 줄고
+       ☰ 가 프레임(overflow:hidden) 밖으로 **+25.9px**(골드 «120.00Dc» 면 +32.9px) 밀려 **일시정지·포기가 안 눌렸다.**
+     · 장비/대장간/상점 `.top-bar` — `flex:1` + `justify-content:center` 라 좌우로 **±14.9px** 씩 삐져나갔다.
+
+   그래서 «값이 맞나» 가 아니라 **«세 줄이 같은 장치를 쓰나»** 를 못박는다:
+     ① 세 줄 모두 `--tf:1` 기준값을 갖고, 가로 치수(글자·여백·간격)가 `* var(--tf)` 로 걸려 있다
+     ② 수치 span 이 말줄임 안전망(min-width:0 + text-overflow)을 갖는다
+     ③ `fitTopRow` 가 «span 말줄임» 과 «줄 넘침» 두 가지를 다 보고, 배율 사다리를 1 부터 내려간다
+     ④ 세 줄의 갱신 함수가 각각 맞춤을 부른다 (renderLobby · syncGameTop · renderTopBars)
+     ⑤ 인게임은 처치마다 불리므로 «자릿수가 바뀔 때만» 재맞춤하되, 잴 때 숫자를 8 로 바꿔
+        그 자릿수의 최대 폭으로 맞춘다 (같은 자릿수라도 «888.88» 이 «111.11» 보다 3.1px 넓다)
+     ⑥ 프레임 폭이 바뀌는 사건(resize = 주소창 여닫힘)에 두 줄 다 다시 맞춘다
+   실제 렌더 좌표 단언은 T3 `tools/t3/boot.js` 가 본다(정적으론 못 푸는 축).
+   ============================================================================ */
+{
+  console.log('\n[㉛ 상단 줄 3개가 프레임 폭에 맞는다 — --tf 자동 맞춤 (T64)]');
+  const rule = sel => {
+    const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return (HTML.match(new RegExp(esc + '\\s*\\{[^}]*\\}')) || [''])[0];
+  };
+
+  /* ① 세 줄이 --tf 기준값을 갖고 가로 치수가 배율에 걸려 있다 */
+  for (const [sel, label] of [['.lobby-top', '로비'], ['#topbar', '인게임'], ['.top-bar', '장비·대장간·상점']]) {
+    const r = rule(sel);
+    /--tf:\s*1/.test(r) ? ok(`${label} 줄이 --tf 기준값 1 을 갖는다 (넓은 화면에서는 종전과 동일)`)
+                        : bad(`${label} 줄(${sel})에 --tf:1 이 없다 — 배율 장치가 사라졌다`);
+    /(gap|padding|left|right):[^;}]*var\(--tf\)/.test(r)
+      ? ok(`${label} 줄의 여백·간격이 --tf 에 걸려 있다`)
+      : bad(`${label} 줄의 여백·간격이 고정으로 돌아갔다 — 글자만 줄여서는 269px 프레임을 못 맞춘다`);
+  }
+  /#avatar\{[^}]*width:calc\(52px \* var\(--tf\)\)/.test(HTML)
+    ? ok('로비 아바타(52px)도 --tf 에 걸려 있다 — 269px 프레임에서 줄의 19% 를 먹던 고정 치수')
+    : bad('로비 아바타가 고정 52px 로 돌아갔다 — 좁은 프레임에서 수치 자리를 먹는다');
+  /#topbar \.pill\{[^}]*font-size:calc\(14px \* var\(--tf\)\)/.test(HTML)
+    ? ok('인게임 pill 글자가 --tf 에 걸려 있다')
+    : bad('인게임 pill 이 고정 14px 로 돌아갔다 — ☰ 가 프레임 밖으로 밀린다 (T64 재발)');
+  /#topbar #menuBtn,#topbar #sndBtnG\{width:calc\(42px \* var\(--tf\)\)/.test(HTML)
+    ? ok('인게임 ☰·🔊 버튼도 --tf 에 걸려 있다 (flex:none 이라 안 줄면 줄을 밀어낸다)')
+    : bad('인게임 ☰·🔊 가 고정 42px 로 돌아갔다 — 줄이 못 줄어 ☰ 가 프레임 밖으로 나간다');
+  /\.top-bar \.pill\{[^}]*font-size:calc\(14px \* var\(--tf\)\)[^}]*min-width:0/.test(HTML)
+    ? ok('장비·대장간·상점 pill 이 --tf + min-width:0 을 갖는다')
+    : bad('장비·대장간·상점 pill 이 구 값으로 돌아갔다 — 269px 에서 좌우로 ±14.9px 삐져나간다');
+
+  /* ② 수치 span 의 말줄임 안전망 (마지막 방어선 — 이게 없으면 넘침이 그대로 프레임을 넘는다) */
+  for (const [sel, label] of [['.lobby-top .pill span', '로비'], ['#topbar .pill span', '인게임'], ['.top-bar .pill span', '장비·상점']]) {
+    /text-overflow:ellipsis/.test(rule(sel))
+      ? ok(`${label} 수치 span 에 말줄임 안전망이 있다`)
+      : bad(`${label} 수치 span 의 말줄임 안전망이 없다 (${sel}) — 넘침이 프레임 밖으로 그대로 나간다`);
+  }
+
+  /* ③ fitTopRow 가 두 판정을 다 보고 1 부터 내려간다 */
+  const fit = (HTML.match(/function fitTopRow\(row,spans\)\{[\s\S]*?\n\}/) || [''])[0];
+  /scrollWidth>row\.clientWidth/.test(fit) && /e\.scrollWidth>e\.clientWidth/.test(fit)
+    ? ok('fitTopRow 이 «줄 넘침»(☰ 축)과 «span 말줄임»(수치 축)을 둘 다 본다')
+    : bad('fitTopRow 의 판정이 한 축만 남았다 — 로비(말줄임)와 인게임(넘침)은 증상이 다르다');
+  const steps = (HTML.match(/const TF_STEPS=\[([^\]]+)\]/) || [, ''])[1].split(',').map(Number);
+  (steps.length >= 4 && steps[0] === 1 && steps.every((v, i) => i === 0 || v < steps[i - 1]) && steps[steps.length - 1] <= 0.6)
+    ? ok(`배율 사다리가 1 에서 ${steps[steps.length - 1]} 까지 내려간다 (${steps.length}칸)`)
+    : bad(`TF_STEPS 가 «1 에서 시작해 단조감소, 하한 ≤0.6» 이 아니다: [${steps}]`);
+
+  /* ④ 세 줄의 갱신 함수가 각각 맞춤을 부른다 */
+  for (const [fn, call, label] of [
+    ['function renderLobby\\(\\)\\{[\\s\\S]*?\\n\\}', 'fitLobbyTop()', 'renderLobby'],
+    ['function syncGameTop\\([\\s\\S]*?\\n\\}', "fitTopRow($('topbar')", 'syncGameTop'],
+    ['function renderTopBars\\(\\)\\{[\\s\\S]*?\\n\\}', 'fitTopRow(r,', 'renderTopBars'],
+  ]) {
+    const body = (HTML.match(new RegExp(fn)) || [''])[0];
+    body.includes(call) ? ok(`${label} 이 맞춤을 부른다`)
+                        : bad(`${label} 에서 맞춤 호출(${call})이 사라졌다 — 값이 바뀌어도 배율이 안 따라간다`);
+  }
+  /\$\('gKills'\)\.textContent=|syncGameTop\(/.test(HTML) && !/\$\('gGold'\)\.textContent=fmt\(G\.gold\)/.test(HTML)
+    ? ok('인게임 골드·처치 표기가 syncGameTop 한 곳으로 모여 있다')
+    : bad('gGold 를 syncGameTop 밖에서 직접 쓰는 곳이 남았다 — 그 경로는 맞춤을 건너뛴다');
+
+  /* ⑤ 자릿수 재맞춤 + 8 치환(같은 자릿수 최대 폭) */
+  const sgt = (HTML.match(/function syncGameTop\([\s\S]*?\n\}/) || [''])[0];
+  /replace\(\/\\d\/g,'8'\)/.test(sgt)
+    ? ok('재맞춤 때 숫자를 8 로 바꿔 «그 자릿수의 최대 폭» 으로 맞춘다 (888.88 이 111.11 보다 3.1px 넓다)')
+    : bad('8 치환이 사라졌다 — 같은 자릿수의 더 넓은 값에서 다시 잘린다');
+  /if\(key!==gameTopKey\)/.test(sgt)
+    ? ok('인게임 재맞춤이 «자릿수가 바뀔 때만» 돈다 (처치마다 강제 레이아웃을 피한다)')
+    : bad('인게임 재맞춤 조건이 사라졌다 — 처치마다 강제 레이아웃이면 후반 웨이브에서 프레임을 갉아먹는다');
+
+  /* ⑥ resize(주소창 여닫힘)에 두 줄 다 다시 맞춘다 */
+  const rz = (HTML.match(/window\.addEventListener\('resize',\(\)=>\{[\s\S]*?\}\);/) || [''])[0];
+  (/screenName==='lobby'\) renderLobby\(\)/.test(rz) && /screenName==='game'/.test(rz) && /syncGameTop\(\)/.test(rz))
+    ? ok('resize 에서 로비·인게임 줄을 둘 다 다시 맞춘다 (주소창 여닫힘 = 프레임 폭 변화)')
+    : bad('resize 처리에서 인게임 줄 재맞춤이 빠졌다 — 주소창이 뜨면 폭이 줄어드는데 배율이 안 따라간다');
+
+  /* ⑦ 프레임이 잘라낸다 = 넘침이 실제 피해다 */
+  /overflow:\s*hidden/.test(rule('#frame'))
+    ? ok('#frame 이 overflow:hidden 이다 — 줄 밖으로 나간 ☰ 는 눌리지 않는다(피해 근거)')
+    : bad('#frame 의 overflow:hidden 이 사라졌다 — ㉛ 의 피해 전제가 바뀌었다. 항목을 재작성할 것');
 }
 
 /* ---------- 결과 ---------- */

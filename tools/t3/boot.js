@@ -113,6 +113,84 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     chk('콘솔 에러 0 (웹폰트 네트워크 실패 제외)', realWarn.length === 0, realWarn.slice(0, 2).join(' | ') || `(폰트 경고 ${warns.length}건은 샌드박스 무망 탓)`);
     await ctx.close();
   }
+
+  /* ============================================================================
+     ⚑ T64 — 좁은 프레임에서 상단 줄 3개가 잘리지 않는가 (실제 렌더)
+     프레임 폭은 min(100vw, 100dvh*9/19) 라 «세로가 폭을 정한다» — 주소창이 뜨면 폭이 준다.
+     위 3뷰포트는 전부 프레임 ≥316px 라 T54 때 이 축을 못 봤다. 여기서 그 아래를 직접 잰다:
+       375×587 = SE(375×667) + 주소창 → 278px · 360×563 → 267px · 320×568(iPhone5) → 269px
+     수정 전 실측: 로비 전투력 «338»→«…»/빈칸 · 골드 «59.68Oc»→«59.…» ·
+                   인게임 ☰ 가 프레임 밖 +25.9px(눌리지 않는다) · 장비/상점 줄이 좌우 ±14.9px.
+     ============================================================================ */
+  console.log('\n=== ⚑ T64 좁은 프레임 상단 줄 (프레임 278 · 267 · 269px) ===');
+  {
+    const STATES = [
+      ['초반', `save.gold=0;save.gem=0;save.inv=[];save.eq={};`],
+      ['중반', `save.gold=8.26e6;save.gem=2500;`],
+      ['후반', `save.gold=Math.round(TUNE.goldClear(300));save.gem=250000;`],
+      ['최대', `save.gold=1e9;save.gem=1234567;save.inv=[];save.eq={};save.uid=1;
+         for(const pt of GT.parts){const g=newGear(pt,GT.types[pt][0],4,9);save.inv.push(g);save.eq[pt]=g.u;}
+         for(const pt of GT.parts) save.slots[pt]=GT.slotLvMax;`],
+    ];
+    for (const vp of [{ width: 375, height: 587 }, { width: 360, height: 563 }, { width: 320, height: 568 }]) {
+      const ctx = await b.newContext({ viewport: vp });
+      const p = await ctx.newPage();
+      const errs = []; p.on('pageerror', e => errs.push(String(e)));
+      await p.goto(URL); await p.waitForTimeout(500);
+      const fw = await p.evaluate(() => +document.getElementById('frame').getBoundingClientRect().width.toFixed(1));
+
+      /* ① 로비 — 네 상태 전부에서 세 수치가 온전히 보인다(말줄임 0) */
+      for (const [nm, js] of STATES) {
+        const r = await p.evaluate(js => {
+          eval(js); renderLobby();
+          const fr = document.getElementById('frame').getBoundingClientRect();
+          const row = document.querySelector('.lobby-top').getBoundingClientRect();
+          const ids = ['lbPower', 'lbGold', 'lbGem'];
+          return {
+            cut: ids.filter(i => { const e = document.getElementById(i); return e.scrollWidth > e.clientWidth + 1; }),
+            txt: ids.map(i => document.getElementById(i).textContent).join(' '),
+            out: row.left < fr.left - 0.6 || row.right > fr.right + 0.6,
+            tf: document.querySelector('.lobby-top').style.getPropertyValue('--tf') || '1',
+          };
+        }, js);
+        chk(`[${vp.width}×${vp.height} 프레임 ${fw}] 로비 ${nm} — 수치가 안 잘린다`,
+          r.cut.length === 0 && !r.out, `«${r.txt}» tf=${r.tf}${r.cut.length ? ' 잘림:' + r.cut : ''}`);
+      }
+
+      /* ② 장비 화면 줄 — 좌우로 삐져나가지 않는다 */
+      const gear = await p.evaluate(() => {
+        showScreen('gear');
+        const fr = document.getElementById('frame').getBoundingClientRect();
+        const row = document.querySelector('#gear .top-bar');
+        const r = row.getBoundingClientRect();
+        const sp = [...row.querySelectorAll('span')];
+        return { left: +(r.left - fr.left).toFixed(1), right: +(r.right - fr.right).toFixed(1),
+                 cut: sp.filter(e => e.scrollWidth > e.clientWidth + 1).length, tf: row.style.getPropertyValue('--tf') || '1' };
+      });
+      chk(`[프레임 ${fw}] 장비 상단 줄이 프레임 안에 든다`,
+        gear.left >= -0.6 && gear.right <= 0.6 && gear.cut === 0,
+        `left ${gear.left} · right ${gear.right} · 글자잘림 ${gear.cut} · tf=${gear.tf}`);
+
+      /* ③ 인게임 줄 — ☰ 가 프레임 안에 있어야 «일시정지·포기» 를 누를 수 있다 */
+      await p.evaluate(() => { save.maxChapter = 300; save.selChapter = 300; startChapter(300); });
+      await p.waitForTimeout(400);
+      for (const gold of [1e4, 5.97e28, 1.2e35]) {
+        const r = await p.evaluate(g => {
+          G.gold = g; G.kills = 99999; syncGameTop();
+          const fr = document.getElementById('frame').getBoundingClientRect();
+          const mb = document.getElementById('menuBtn').getBoundingClientRect();
+          return { over: +(mb.right - fr.right).toFixed(1), gold: document.getElementById('gGold').textContent,
+                   cut: ['gGold', 'gKills'].filter(i => { const e = document.getElementById(i); return e.scrollWidth > e.clientWidth + 1; }),
+                   tf: document.getElementById('topbar').style.getPropertyValue('--tf') || '1' };
+        }, gold);
+        chk(`[프레임 ${fw}] 인게임 골드 «${r.gold}» — ☰ 가 프레임 안 + 수치 온전`,
+          r.over <= 0.6 && r.cut.length === 0, `☰ 프레임 대비 ${r.over}px · tf=${r.tf}${r.cut.length ? ' 잘림:' + r.cut : ''}`);
+      }
+      chk(`[프레임 ${fw}] pageerror 0`, errs.length === 0, errs.slice(0, 2).join(' | '));
+      await ctx.close();
+    }
+  }
+
   await b.close();
   const bad = R.filter(r => !r.c);
   console.log(`\n[①] 통과 ${R.length - bad.length} · 불합격 ${bad.length}`);

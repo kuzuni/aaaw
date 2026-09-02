@@ -44,15 +44,23 @@
      골드가 «8.26M» 만 돼도 줄이 417px 로 부풀어 390/360 프레임 밖으로 나갔다(🔊 가 화면 밖). 여백·서체만 줄인 것으로는
      360px 를 못 맞춰서, 🔊 는 참고 스크린샷(메인로비.jpg)이 ☰ 를 놓은 자리 그대로 pill 줄 아래 오른쪽으로 뺐다.
      min-width:0 + 말줄임은 마지막 안전망이다 — 실제 도달 최대(챕터 300 «1.96No» · 10년 무과금 «9.13M»)에서는 걸리지 않는다. */
-  .lobby-top{width:100%; display:flex; align-items:center; gap:6px; padding:12px 10px 0;}
+  /* ⚑ T64 — `--tf` 는 상단 줄 «전체» 배율이다(글자·여백·아바타·버튼을 한꺼번에 줄인다).
+     T54 의 프레임 연동 글자는 clamp 하한 11px 에서 축소가 멈추는데 아바타 52px·여백은 처음부터 고정이라,
+     프레임이 316px 아래로 내려가면(SE 375×667 + 주소창 = 278px · 320×568 = 269px) 줄이 넘쳐
+     말줄임 안전망이 «수치» 를 갉아먹었다 — 전투력 «338» 이 «…» 로 떴다. 숫자는 잘리면 거짓이 되므로
+     그 앞단에서 줄 전체를 비율로 줄인다. 값은 JS `fitTopRow()` 가 실측으로 정하고,
+     ≥390px 프레임·평범한 값에서는 1 이라 종전과 픽셀 단위로 같다. */
+  .lobby-top{--tf:1; width:100%; display:flex; align-items:center;
+    gap:calc(6px * var(--tf)); padding:12px calc(10px * var(--tf)) 0;}
   /* 프레임 폭은 min(100vw, 100vh*9/19) 라 기기마다 다르다(390 · 360 · SE 는 316px — T40 이 «9:19 를 16:9 에
      넣을 수 없어 정상» 으로 판정한 값). 고정 14px 는 316px 프레임에서 세 수치를 못 담아 글자가 잘렸다 —
      프레임과 같은 식으로 글자를 함께 줄인다(316 → 11.4px · 360 → 13.0px · 390 이상 → 14px 로 고정). */
-  .lobby-top .pill{font-size:clamp(11px, calc(min(100vw, 100vh * 9 / 19) * .036), 14px);
-    padding:5px 9px; gap:5px; min-width:0;}
+  .lobby-top .pill{font-size:calc(clamp(11px, calc(min(100vw, 100vh * 9 / 19) * .036), 14px) * var(--tf));
+    padding:calc(5px * var(--tf)) calc(9px * var(--tf)); gap:calc(5px * var(--tf)); min-width:0;}
   .lobby-top .pill span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  #avatar{width:52px; height:52px; border-radius:14px; background:#5B87C7; border:3px solid #F2D34B; flex:none;}
-  #powerPill{font-size:clamp(12px, calc(min(100vw, 100vh * 9 / 19) * .041), 16px); color:var(--gold);}
+  #avatar{width:calc(52px * var(--tf)); height:calc(52px * var(--tf));
+    border-radius:14px; background:#5B87C7; border:3px solid #F2D34B; flex:none;}
+  #powerPill{font-size:calc(clamp(12px, calc(min(100vw, 100vh * 9 / 19) * .041), 16px) * var(--tf)); color:var(--gold);}
   #sndBtnL,#sndBtnG{width:42px; height:42px; border-radius:12px; background:rgba(20,20,24,.72); font-size:17px; flex:none;}
   #sndBtnL{position:absolute; right:10px; top:72px; z-index:5;}   /* T54 — 상단 줄에서 빼 참고 스크린샷의 ☰ 자리로 */
   /* 챕터 300 대응(T36): 제목을 눌러 «챕터 이동» 팝업. 로비 구도(메인로비.jpg)는 그대로 — 크기·위치·서체 동일. */
@@ -91,8 +99,14 @@
 
   /* ---------- 장비 / 상점 (참고: docs/ref 캐릭터 장비.jpg · 장비 세부팝업.jpg · 상점 (1)(2).jpg) ---------- */
   #gear,#shop{background:radial-gradient(120% 70% at 50% 0%, #35353E, #1E1E24 60%, #17171B);}
-  .top-bar{display:flex; gap:6px; padding:10px 10px 6px; flex:none; justify-content:center;}
-  .top-bar .pill{font-size:14px; flex:1; justify-content:center;}
+  /* ⚑ T64 — 장비·대장간·상점 상단 줄도 로비·인게임과 같은 병이다. `flex:1` 인데 min-width 가 무제한이라
+     칸이 못 줄고, `justify-content:center` 라 넘친 만큼 «좌우로 반씩» 삐져나갔다(실측 269px 프레임에서 ±14.9px).
+     같은 --tf 배율로 줄 전체를 줄인다 — 값은 JS `renderTopBars()` 가 실측으로 정한다. */
+  .top-bar{--tf:1; display:flex; gap:calc(6px * var(--tf)); padding:10px calc(10px * var(--tf)) 6px;
+    flex:none; justify-content:center;}
+  .top-bar .pill{font-size:calc(14px * var(--tf)); flex:1; justify-content:center; min-width:0;
+    padding:calc(5px * var(--tf)) calc(13px * var(--tf)); gap:calc(7px * var(--tf));}
+  .top-bar .pill span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   #gearHero{flex:none; display:flex; align-items:center; gap:6px; padding:8px 8px 4px;
     background:linear-gradient(#4A8C3D,#3E7B33); border-bottom:3px solid #2A5520;}
   .hero-col{display:flex; flex-direction:column; gap:6px; width:29%;}
@@ -201,9 +215,19 @@
   #game{background:var(--grass);}
   #cvWrap{position:relative; flex:1 1 auto; min-height:0;}
   #cv{position:absolute; inset:0; width:100%; height:100%; display:block;}
-  #topbar{position:absolute; top:10px; left:12px; right:12px; display:flex; gap:8px; align-items:center;}
-  #topbar .pill{font-size:14px; padding:4px 12px;}
+  /* ⚑ T64 — 인게임 상단 줄도 같은 병을 앓았다. 이쪽은 T54 의 손이 안 닿아 고정 14px·min-width 무제한이라
+     칸이 줄지 못하고 «넘친 만큼 오른쪽으로 밀려» ☰ 가 프레임(overflow:hidden) 밖으로 나갔다 —
+     실측 269px 프레임에서 ☰ 오른쪽 끝이 프레임 밖 +25.9px(골드 «120.00Dc» 면 +32.9px)라
+     일시정지·포기가 아예 눌리지 않았다. 로비와 같은 `--tf` 배율 + min-width:0 안전망으로 맞춘다. */
+  #topbar{--tf:1; position:absolute; top:10px; left:calc(12px * var(--tf)); right:calc(12px * var(--tf));
+    display:flex; gap:calc(8px * var(--tf)); align-items:center;}
+  #topbar .pill{font-size:calc(14px * var(--tf)); padding:calc(4px * var(--tf)) calc(12px * var(--tf));
+    gap:calc(7px * var(--tf)); min-width:0;}
+  #topbar .pill span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   #menuBtn{width:42px; height:42px; border-radius:12px; background:rgba(20,20,24,.8); font-size:18px;}
+  #topbar #menuBtn,#topbar #sndBtnG{width:calc(42px * var(--tf)); height:calc(42px * var(--tf));}
+  #topbar #menuBtn{font-size:calc(18px * var(--tf));}    /* 배율만 얹는다 — tf=1 이면 종전 값 그대로 */
+  #topbar #sndBtnG{font-size:calc(17px * var(--tf));}
   #topbar #sndBtnG{margin-left:auto;}
   #chapHud{position:absolute; top:64px; left:0; right:0; text-align:center; pointer-events:none;}
   #chapHud .nm{font-size:24px; letter-spacing:2px; text-shadow:0 2px 3px rgba(0,0,0,.5);}
@@ -1090,6 +1114,40 @@ function power(){
   return Math.round(pw.atk*8 + pw.hp/2 + pw.sh/4);
 }
 
+/* ⚑ T64 — 상단 줄 자동 맞춤. 줄이 프레임 안에 못 들면 `--tf` 로 줄 «전체» 를 비율로 줄인다.
+   말줄임(min-width:0)은 마지막 안전망인데 그게 «수치» 에 걸리면 숫자가 통째로 거짓이 되므로
+   (전투력 «338» → «…» · 골드 «59.68Oc» → «59.…») 그 앞단에서 막는 것이 이 함수다.
+   판정 2종: ① 수치 span 이 말줄임에 걸렸나 ② 줄이 자기 상자보다 넓나(인게임 ☰ 가 프레임 밖으로 밀린 축).
+   1 부터 한 칸씩 내려가며 «안 걸리는 첫 배율» 을 쓴다 — 넉넉한 프레임에서는 첫 판에 1 로 끝난다. */
+const TF_STEPS=[1,.94,.88,.82,.76,.70,.64,.58];
+function fitTopRow(row,spans){
+  if(!row||!row.offsetParent) return 1;                       /* 안 보이는 줄은 잴 수 없다(폭 0) */
+  const el=[...spans].map(s=>typeof s==='string'?$(s):s).filter(Boolean);
+  const over=()=>row.scrollWidth>row.clientWidth+1 || el.some(e=>e.scrollWidth>e.clientWidth+1);
+  for(const t of TF_STEPS){ row.style.setProperty('--tf',t); if(!over()) return t; }
+  return TF_STEPS[TF_STEPS.length-1];                         /* 하한까지 가도 남으면 말줄임이 받는다 */
+}
+const lobbyTopRow=()=>document.querySelector('.lobby-top');
+const fitLobbyTop=()=>fitTopRow(lobbyTopRow(),['lbPower','lbGold','lbGem']);
+/* 인게임 상단 줄(처치·골드) 갱신 한 곳. 처치 1건마다 불리므로 «글자 수가 바뀐 순간만» 다시 맞춘다 —
+   fitTopRow 은 강제 레이아웃을 일으켜서, 매 처치마다 돌리면 후반 웨이브에서 프레임을 갉아먹는다. */
+let gameTopKey='';
+function syncGameTop(kills,gold){
+  const ks=String(kills!==undefined?kills:(G?G.kills:0));
+  const gs=fmt(gold!==undefined?gold:(G?G.gold:0));
+  $('gKills').textContent=ks; $('gGold').textContent=gs;
+  const key=ks.length+'/'+gs.length;
+  if(key!==gameTopKey){
+    gameTopKey=key;
+    /* 같은 «자릿수» 라도 글자 폭은 다르다(실측 14px: «888.88» 42.83px vs «111.11» 39.7px). 자릿수로만 다시 맞추면
+       그 3px 차이에서 다음 처치가 잘린다 — 그래서 잴 때만 숫자를 전부 8 로 바꿔 «그 자릿수의 최대 폭» 으로 맞춘다. */
+    const k8=ks.replace(/\d/g,'8'), g8=gs.replace(/\d/g,'8');
+    $('gKills').textContent=k8; $('gGold').textContent=g8;
+    fitTopRow($('topbar'),['gKills','gGold']);
+    $('gKills').textContent=ks; $('gGold').textContent=gs;
+  }
+}
+
 /* ================= LOBBY ================= */
 function renderLobby(){
   save.selChapter=clamp(save.selChapter,1,save.maxChapter);
@@ -1099,6 +1157,7 @@ function renderLobby(){
   $('lbGold').textContent=fmt(save.gold);
   $('lbGem').textContent=fmt(save.gem);
   $('lbPower').textContent=fmt(power());
+  fitLobbyTop();
   drawDiorama(); drawAvatar();
 }
 /* ---- T36: 챕터 300 대응 이동 UI (게임 로직·밸런스 무관, 순수 UI) ----
@@ -1182,6 +1241,8 @@ function renderTopBars(){
   document.querySelectorAll('.tPower').forEach(e=>e.textContent=p);
   document.querySelectorAll('.tGold').forEach(e=>e.textContent=g);
   document.querySelectorAll('.tGem').forEach(e=>e.textContent=m);
+  /* ⚑ T64 — 세 화면에 같은 줄이 하나씩 있고 보이는 것은 언제나 하나뿐이다(숨은 줄은 폭 0 이라 못 잰다). */
+  document.querySelectorAll('.top-bar').forEach(r=>fitTopRow(r,r.querySelectorAll('span')));
 }
 
 /* ================= 장비 화면 (PLAN §11.1·§11.3·§11.4) ================= */
@@ -1940,9 +2001,11 @@ function startChapter(c){
   };
   G.player.G=G;   /* sim.js 의 p.G 와 동일 — 특전 ap 본문이 p.G.perkChances / p.G.legendOnly 를 쓴다 */
   $('chapHudName').textContent='CHAPTER '+c;
-  $('gKills').textContent='0'; $('gGold').textContent='0'; $('progIn').style.width='0%';
+  $('progIn').style.width='0%';
   lastBars='';
-  showScreen('game'); closeOverlay(); renderStatsGrid(); updateBars(); renderBuffBar(); renderPerkStrip();
+  showScreen('game'); closeOverlay();
+  gameTopKey=''; syncGameTop(0,0);      /* 줄이 화면에 뜬 «뒤» 에 맞춘다 — 숨은 줄은 폭이 0 이라 못 잰다 */
+  renderStatsGrid(); updateBars(); renderBuffBar(); renderPerkStrip();
 }
 
 function showScreen(n){
@@ -2281,8 +2344,7 @@ function onKill(e){
   G.kills++; G.killed++;
   const drop=Math.round(TUNE.goldKill(G.chapter)*p.goldMul);
   G.gold+=drop;
-  $('gKills').textContent=G.kills;
-  $('gGold').textContent=fmt(G.gold);
+  syncGameTop();
   AU.play('poof'); AU.play('coin');
   poof(e.worldX,0);
   /* ⚑ T57 — 전투 중 유일하게 fmt 를 안 거치던 표기였다. 데미지·회복·반격은 전부 fmt 를 쓰는데
@@ -3126,7 +3188,12 @@ function loop(now){
   }
   requestAnimationFrame(loop);
 }
-window.addEventListener('resize',()=>{ if(screenName==='lobby') renderLobby(); });
+/* ⚑ T64 — 주소창이 뜨고 지면 프레임 폭이 바뀌므로(9:19 고정 = 높이가 폭을 정한다) 상단 줄 배율도 다시 잡는다.
+   로비는 renderLobby 안에서, 인게임은 여기서 직접 — 폭이 넓어졌을 때 원래 크기로 되돌아오는 경로이기도 하다. */
+window.addEventListener('resize',()=>{
+  if(screenName==='lobby') renderLobby();
+  if(screenName==='game'){ gameTopKey=''; syncGameTop(); }
+});
 renderLobby();
 requestAnimationFrame(loop);
 </script>
