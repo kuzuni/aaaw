@@ -46,6 +46,20 @@ function sliceFrom(src,head,end){
 }
 const CONF=sliceFrom(PLAN,'**현재 확정값','```');
 
+/* ---- ⚑ T35: 배열 상수(등급별 기여표·구간별 성장률) 뽑기 ----
+   등비 생성(`atkUnit`/`hpUnit`/`rarStep`)과 단일 성장률(`eHpG`/`eDmgG`)이 폐기되면서
+   PLAN 대조 대상이 «스칼라» 에서 «표» 로 바뀌었다. 표는 아래 별도 루프에서 대조한다. */
+function arr(blk,key){
+  const m=blk.match(new RegExp(`(?:^|[{,\\s])${key}\\s*:\\s*\\[([^\\]]*)\\]`,'m'));
+  if(!m) throw new Error(`배열 상수 ${key} 를 못 찾았다`);
+  return m[1].split(',').map(s=>Number(s.trim()));
+}
+function segArr(blk,key){   /* [[하한,배수],…] → 배수만 */
+  const m=blk.match(new RegExp(`(?:^|[{,\\s])${key}\\s*:\\s*\\[(\\[[\\s\\S]*?\\])\\]\\s*,`,'m'));
+  if(!m) throw new Error(`구간 상수 ${key} 를 못 찾았다`);
+  return [...m[1].matchAll(/\[\s*\d+\s*,\s*([\d.]+)\s*\]/g)].map(x=>Number(x[1]));
+}
+
 /* ---- 대조표: [항목, 엔진값, PLAN 정규식(캡처 1개), PLAN 위치 설명, 배율?, 범위?] ----
    배율: PLAN 표기가 % 등 다른 단위일 때 «문서값 = 엔진값 × 배율» (기본 1). 범위: 기본 PLAN 전문. */
 const CHECKS=[
@@ -63,21 +77,19 @@ const CHECKS=[
 
   /* §6 적 수치 (현재 확정값 블록만 — 초기값 블록은 되돌림용 기록이라 제외) */
   ['eBaseHp',  T('eBaseHp'),  /적 HP\s+= (\d+) \*/,                             '§6 확정값',1,CONF],
-  ['eHpG',     T('eHpG'),     /적 HP\s+= \d+ \* ([\d.]+)\^/,                    '§6 확정값',1,CONF],
   ['waveHp',   T('waveHp'),   /적 HP\s+= .*\(1\+([\d.]+)\*웨이브\)/,             '§6 확정값',1,CONF],
   ['wallHp',   T('wallHp'),   /적 HP\s+= .*c>=10: ×([\d.]+)/,                   '§6 확정값',1,CONF],
   ['wall2Hp',  T('wall2Hp'),  /적 HP\s+= .*c>=15: ×([\d.]+)/,                   '§6 확정값',1,CONF],
   ['eBaseDmg', T('eBaseDmg'), /적 DMG\s+=\s+(\d+) \*/,                          '§6 확정값',1,CONF],
-  ['eDmgG',    T('eDmgG'),    /적 DMG\s+=\s+\d+ \* ([\d.]+)\^/,                 '§6 확정값',1,CONF],
   ['waveDmg',  T('waveDmg'),  /적 DMG\s+= .*\(1\+([\d.]+)\*웨이브\)/,            '§6 확정값',1,CONF],
   ['wallDmg',  T('wallDmg'),  /적 DMG\s+= .*c>=10: ×([\d.]+)/,                  '§6 확정값',1,CONF],
   ['wall2Dmg', T('wall2Dmg'), /적 DMG\s+= .*c>=15: ×([\d.]+)/,                  '§6 확정값',1,CONF],
   ['bossHp',   T('bossHp'),   /보스: HP ×(\d+), DMG/,                           '§6 확정값',1,CONF],
   ['bossDmg',  T('bossDmg'),  /보스: HP ×\d+, DMG ×([\d.]+)/,                   '§6 확정값',1,CONF],
-  ['wall3Hp',  T('wall3Hp'),  /90 대형 벽\s+: c>=90\s+→ HP ×([\d.]+)/,                      '§6 T6 추가분'],
-  ['wall3Dmg', T('wall3Dmg'), /90 대형 벽\s+: c>=90\s+→ HP ×[\d.]+ · DMG ×([\d.]+)/,        '§6 T6 추가분'],
-  ['wall4Hp',  T('wall4Hp'),  /300 최종 벽 : c>=300 → HP ×([\d.]+)/,                        '§6 T6 추가분'],
-  ['wall4Dmg', T('wall4Dmg'), /300 최종 벽 : c>=300 → HP ×[\d.]+ · DMG ×([\d.]+)/,          '§6 T6 추가분'],
+  ['wall3Hp',  T('wall3Hp'),  /90 대형 벽\s+: c>=90\s+→ HP ×([\d.]+)/,                      '§6 확정값',1,CONF],
+  ['wall3Dmg', T('wall3Dmg'), /90 대형 벽\s+: c>=90\s+→ HP ×[\d.]+ · DMG ×([\d.]+)/,        '§6 확정값',1,CONF],
+  ['wall4Hp',  T('wall4Hp'),  /300 최종 벽 : c>=300 → HP ×([\d.]+)/,                        '§6 확정값',1,CONF],
+  ['wall4Dmg', T('wall4Dmg'), /300 최종 벽 : c>=300 → HP ×[\d.]+ · DMG ×([\d.]+)/,          '§6 확정값',1,CONF],
   ['goldGrowth(§6 R07)',T('goldGrowth'),/goldGrowth\s+: [\d.]+ → ([\d.]+)/,                '§6 R07 블록'],
   ['slotCostBase(§6 R07)',G('slotCostBase'),/슬롯 비용\s+: [\d.]+ \* [\d.]+\^L → (\d+) \*/, '§6 R07 블록'],
   ['slotCostG(§6 R07)',G('slotCostG'),/슬롯 비용\s+: .*→ \d+ \* ([\d.]+)\^L/,               '§6 R07 블록'],
@@ -102,11 +114,14 @@ const CHECKS=[
   ['iapGem',   G('iapGem'),   /₩110,000 = 다이아 ([\d,]+)개/,                                '§11.5'],
 
   /* §11.5-a 장비·슬롯 수치 블록 */
-  ['atkUnit',  G('atkUnit'),  /atkUnit ([\d.]+) ·/,                                          '§11.5-a'],
-  ['hpUnit',   G('hpUnit'),   /atkUnit [\d.]+ · hpUnit ([\d.]+)/,                            '§11.5-a'],
-  ['rarStep',  G('rarStep'),  /rarStep\s+(\d+)\s/,                                           '§11.5-a'],
+  /* ⚑ T35: atkUnit·hpUnit·rarStep·slotG 는 폐기된 상수라 대조 대상에서 제거했다.
+     그 자리를 «기본치 3종 + 등급별 기여표 15칸 + 슬롯 2상수» 가 대신한다 (표는 아래 T35 루프). */
+  ['pAtk0',    T('pAtk0'),    /기본치\(노템\) = 공격력 (\d+) ·/,                              '§11.5-a'],
+  ['pHp0',     T('pHp0'),     /기본치\(노템\) = 공격력 \d+ · 체력 (\d+) ·/,                    '§11.5-a'],
+  ['pSh0',     T('pSh0'),     /기본치\(노템\) = 공격력 \d+ · 체력 \d+ · 실드 (\d+)/,           '§11.5-a'],
   ['plusStep', G('plusStep'), /plusStep\s+([\d.]+)\s/,                                       '§11.5-a'],
-  ['slotG',    G('slotG'),    /slotG\s+([\d.]+)\s/,                                          '§11.5-a'],
+  ['slotLvMax',G('slotLvMax'),/슬롯 레벨 상한 (\d+) ·/,                                       '§11.5-a'],
+  ['slotStep', G('slotStep'), /슬롯 레벨 상한 \d+ · 1렙당 \+([\d.]+)%/,                        '§11.5-a',100],
   ['slotCostBase(§11.5-a)', G('slotCostBase'), /슬롯 강화 비용 = floor\((\d+) \*/,            '§11.5-a'],
   ['slotCostG(§11.5-a)',    G('slotCostG'),    /슬롯 강화 비용 = floor\(\d+ \* ([\d.]+)\^/,   '§11.5-a'],
 
@@ -114,8 +129,30 @@ const CHECKS=[
   ['runsPerDay', G('runsPerDay'), /하루 플레이 판수 = (\d+)판/,                               '§7'],
 ];
 
+/* ---- ⚑ T35 표 대조: [항목, 엔진값, PLAN 정규식, 위치, 배율] — 소수 표기라 허용오차 1e-6 ---- */
+const RAR=['일반','희귀','영웅','전설','신화'];
+const TABLE=[];
+{
+  const eAtk=arr(GB,'atk'), eHp=arr(GB,'hp'), eSh=arr(GB,'sh');
+  /* §11.5-a «등급별 1부위 기여» 표: | 일반 | 4.167 | 16.667 | 25.000 | */
+  for(let i=0;i<5;i++){
+    const row=new RegExp(`\\|\\s*${RAR[i]}\\s*\\|\\s*([\\d.]+)\\s*\\|\\s*([\\d.]+)\\s*\\|\\s*([\\d.]+)\\s*\\|`);
+    TABLE.push([`기여 ${RAR[i]} 공`, eAtk[i], row, '§11.5-a 기여표', 1, 1]);
+    TABLE.push([`기여 ${RAR[i]} 체`, eHp[i],  row, '§11.5-a 기여표', 1, 2]);
+    TABLE.push([`기여 ${RAR[i]} 실`, eSh[i],  row, '§11.5-a 기여표', 1, 3]);
+  }
+  /* §11.7 «구간별 성장률» 표: | 5 → 15 | 7.18% | 4.97% | — 엔진은 배수라 (배수-1)*100 로 비교 */
+  const eHpS=segArr(TB,'eHpSeg'), eDmgS=segArr(TB,'eDmgSeg');
+  const SEG=[['5','15'],['15','30'],['30','50'],['50','70'],['70','120'],['120','260']];
+  SEG.forEach(([a,b],i)=>{
+    const row=new RegExp(`\\|\\s*${a}\\s*→\\s*${b}\\s*\\|\\s*([\\d.]+)%\\s*\\|\\s*([\\d.]+)%\\s*\\|`);
+    TABLE.push([`성장 ${a}→${b} HP`,  (eHpS[i]-1)*100,  row, '§11.7 구간표', 1, 1]);
+    TABLE.push([`성장 ${a}→${b} DMG`, (eDmgS[i]-1)*100, row, '§11.7 구간표', 1, 2]);
+  });
+}
+
 let bad=0,ok=0,miss=0;
-console.log('=== PLAN.md ↔ sim.js 상수 대조 (T16 게이트) ===');
+console.log('=== PLAN.md ↔ sim.js 상수 대조 (T16 게이트 · T35 개편 반영) ===');
 for(const [name,eng,re,where,scale,scope] of CHECKS){
   const m=(scope||PLAN).match(re);
   if(!m){ miss++; console.log(`  ⚠ 미검출  ${name.padEnd(22)} ${where} — PLAN 에서 해당 표기를 못 찾았다(문구 변경?)`); continue; }
@@ -123,6 +160,13 @@ for(const [name,eng,re,where,scale,scope] of CHECKS){
   if(Math.abs(doc-want)<1e-9){ ok++; }
   else{ bad++; console.log(`  ✗ 불일치  ${name.padEnd(22)} PLAN ${where} = ${doc}  ≠  엔진 = ${want}`); }
 }
-console.log(`\n일치 ${ok} · 불일치 ${bad} · 미검출 ${miss} (총 ${CHECKS.length}항목)`);
+for(const [name,eng,re,where,scale,grp] of TABLE){
+  const m=PLAN.match(re);
+  if(!m){ miss++; console.log(`  ⚠ 미검출  ${name.padEnd(22)} ${where} — PLAN 에서 해당 표 행을 못 찾았다`); continue; }
+  const doc=Number(m[grp]), want=eng*(scale||1);
+  if(Math.abs(doc-want)<1e-6){ ok++; }
+  else{ bad++; console.log(`  ✗ 불일치  ${name.padEnd(22)} PLAN ${where} = ${doc}  ≠  엔진 = ${want}`); }
+}
+console.log(`\n일치 ${ok} · 불일치 ${bad} · 미검출 ${miss} (총 ${CHECKS.length+TABLE.length}항목)`);
 if(bad||miss){ console.log('→ 실패: PLAN 과 엔진이 어긋났다. 둘 중 옳은 쪽으로 맞춰라(엔진 수치 변경은 T1 회차 절차를 따를 것).'); process.exit(1); }
 console.log('→ 통과');

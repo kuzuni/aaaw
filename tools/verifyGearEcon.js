@@ -13,14 +13,14 @@
    아무도 안 본다.** §11.1~§11.4 의 뽑기 천장·피티·합성 체인·옵션 개수·균등 보너스는
    전부 코드 «동작» 이라 상수 대조로는 잡히지 않는다.
 
-   ⚑ 특히 §11.3 의 «신화 +0강 > 전설 +9강» 은 **주인 확정 제약**인데,
-   그 성립 여부가 `rarStep`·`plusStep` 이라는 **T1 튜닝 노브의 파생값**이다:
-       신화0강 = unit                                (rarStep^0)
-       전설9강 = unit / rarStep * (1 + plusStep*9)
-       → 성립 조건: rarStep > 1 + plusStep*9   (현행 plusStep 0.12 → 하한 2.08)
-   R10 이 이미 rarStep 을 10/30/60 으로 스윕했고, T22(승인 대기 17번)는 **155 → 2.86 하향**을
-   제안하고 있다. 2.86 은 하한 2.08 까지 여유가 1.375배뿐이라, 다음 회차가 한 번 더 내리면
-   주인 확정 제약이 **아무 경고 없이** 깨진다. 이 게이트가 그 순간 exit 1 로 막는다.
+   ⚑ 특히 §11.3 의 «신화 +0강 > 전설 +9강» 은 **주인 확정 제약**이다.
+   **T35 개편으로 판정 방식이 바뀌었다**: 종전에는 등급 기여가 등비수열(`unit / rarStep^n`)이라
+   «`rarStep > 1 + plusStep*9`» 라는 조건식 하나로 전 축을 덮을 수 있었지만,
+   주인이 §11.5-a 에서 **등급별·축별 절대 기여값을 직접 확정**하면서 `rarStep` 자체가 폐기됐다.
+   그래서 이제는 조건식이 아니라 **등급별 표를 축(공/체/실) 별로 직접 대조**한다 —
+   축마다 여유가 다르기 때문이다(공 1.072배 · 체 1.212배 · 실 1.122배).
+   PLAN §11.5-a 가 «신화 체력만 2000 → 2385 로 올렸다» 고 적은 이유가 바로 체력 축의 여유가
+   2000 기준으로는 0.998배(위반)였기 때문이다. 이 게이트가 그 재발을 exit 1 로 막는다.
 
    구현 메모: `sim.js` 는 하단 CLI 디스패처가 있어 그냥 require 하면 실험이 돌아버린다.
    T16 은 그래서 소스를 «텍스트 파싱» 했는데, 동작 검증에는 실제 함수가 필요하다.
@@ -55,24 +55,40 @@ function chk(name, pass, detail) {
 console.log('=== 장비 경제 동작 게이트 (T29) — §11.1~§11.4 규칙을 엔진을 실제로 굴려 확인 ===');
 
 /* ---------------------------------------------------------------- */
-console.log('\n[① §11.3 주인 확정 제약 — 신화 +0강 > 전설 +9강 (공/체 기여 기준)]');
+console.log('\n[① §11.3 주인 확정 제약 — 신화 +0강 > 전설 +9강 (공/체/실 3축 · ⚑ T35 등급별 표 대조)]');
 {
-  const m0a = GT.atk[4], m0h = GT.hp[4];
-  const l9a = GT.atk[3] * (1 + GT.plusStep * 9), l9h = GT.hp[3] * (1 + GT.plusStep * 9);
-  chk('공격력 기여', m0a > l9a, `신화0강 ${m0a.toExponential(3)} vs 전설9강 ${l9a.toExponential(3)} (여유 ${(m0a / l9a).toFixed(3)}배)`);
-  chk('체력 기여',   m0h > l9h, `신화0강 ${m0h.toExponential(3)} vs 전설9강 ${l9h.toExponential(3)} (여유 ${(m0h / l9h).toFixed(3)}배)`);
-
-  /* 노브 하한 — T1 이 rarStep·plusStep 을 만질 때 이 선을 넘으면 제약이 깨진다 */
-  const floor = 1 + GT.plusStep * 9;
-  const margin = GT.rarStep / floor;
-  chk('노브 여유 (rarStep > 1 + plusStep*9)', GT.rarStep > floor,
-      `rarStep ${GT.rarStep} · 하한 ${floor.toFixed(3)} (plusStep ${GT.plusStep}) → 여유 ${margin.toFixed(3)}배`);
-  if (margin < 2) console.log(`     ⚠ 여유가 ${margin.toFixed(2)}배뿐이다 — rarStep 을 ${floor.toFixed(2)} 이하로 내리면 주인 확정 제약 위반이다.`);
+  const AX = [['공격력', GT.atk], ['체력', GT.hp], ['실드', GT.sh]];
+  const k9 = 1 + GT.plusStep * 9;
+  for (const [nm, tbl] of AX) {
+    const m0 = tbl[4], l9 = tbl[3] * k9, margin = m0 / l9;
+    chk(`${nm} 기여`, m0 > l9,
+        `신화0강 ${m0.toFixed(3)} vs 전설9강 ${l9.toFixed(3)} (여유 ${margin.toFixed(3)}배 · +9강 배수 ${k9.toFixed(2)})`);
+    if (m0 > l9 && margin < 1.05)
+      console.log(`     ⚠ ${nm} 여유가 ${margin.toFixed(3)}배뿐이다 — plusStep 을 ${((m0 / tbl[3] - 1) / 9).toFixed(4)} 이상으로 올리면 제약 위반이다.`);
+  }
+  /* 등급 사다리 단조성: 축마다 일반<희귀<영웅<전설<신화 여야 한다 (표를 손댈 때의 오타 방지) */
+  for (const [nm, tbl] of AX) {
+    const mono = tbl.every((v, i) => i === 0 || v > tbl[i - 1]);
+    chk(`${nm} 등급 단조 증가`, mono, tbl.map(v => v.toFixed(2)).join(' < '));
+  }
 
   /* 실제 빌드로도 확인 (옵션·슬롯·균등보너스 전부 포함한 종합 전투력) */
   const pm = X.buildPower(X.mkBuild(4, 0, 0)), pl = X.buildPower(X.mkBuild(3, 9, 0));
-  chk('풀셋 종합 전투력(슬롯 0렙)', pm.atk > pl.atk && pm.hp > pl.hp,
-      `신화0강 공 ${pm.atk.toExponential(3)}/체 ${pm.hp.toExponential(3)} vs 전설9강 공 ${pl.atk.toExponential(3)}/체 ${pl.hp.toExponential(3)}`);
+  chk('풀셋 종합 전투력(슬롯 0렙)', pm.atk > pl.atk && pm.hp > pl.hp && pm.sh > pl.sh,
+      `신화0강 공 ${pm.atk.toFixed(0)}/체 ${pm.hp.toFixed(0)}/실 ${pm.sh.toFixed(0)} vs 전설9강 공 ${pl.atk.toFixed(0)}/체 ${pl.hp.toFixed(0)}/실 ${pl.sh.toFixed(0)}`);
+
+  /* ⚑ T35: 확정 스탯 사다리(§11.7) 재현 — 기본치 + 6부위가 주인 표와 맞는지 */
+  const WANT = [['일반', 0, 0, 50, 250, 400], ['희귀', 1, 0, 100, 500, 800], ['영웅', 2, 0, 200, 700, 1300],
+                ['전설', 3, 0, 530, 1000, 2200], ['신화', 4, 0, 1200, 2385, 5000], ['신화+9강', 4, 9, 2600, 5000, 10000]];
+  const nt = X.buildPower(X.mkBuild(-1, 0, 0));
+  chk('노템 기본치 = 공25/체150/실250', Math.abs(nt.atk - 25) < .01 && Math.abs(nt.hp - 150) < .01 && Math.abs(nt.sh - 250) < .01,
+      `공 ${nt.atk} / 체 ${nt.hp} / 실 ${nt.sh}`);
+  for (const [nm, r, p, wa, wh, ws] of WANT) {
+    const q = X.buildPower(X.mkBuild(r, p, 0));
+    const d = [(q.atk / wa - 1) * 100, (q.hp / wh - 1) * 100, (q.sh / ws - 1) * 100];
+    chk(`사다리 ${nm} 풀셋 스탯 (확정표 ±6%)`, d.every(x => Math.abs(x) <= 6),
+        `공 ${q.atk.toFixed(0)}/${wa} · 체 ${q.hp.toFixed(0)}/${wh} · 실 ${q.sh.toFixed(0)}/${ws} (오차 ${d.map(x => x.toFixed(1) + '%').join(' · ')})`);
+  }
 }
 
 /* ---------------------------------------------------------------- */

@@ -8,16 +8,26 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 /* ---------- 튜닝 파라미터 (여기 숫자를 게임에 이식) ---------- */
 const TUNE={
   eBaseHp:40, eBaseDmg:8,
-  eHpG:1.185, eDmgG:1.08,       // 챕터당 성장 (R06 — 중반 6~9 를 조이려 HP 성장 상향, 후반 즉사 압박을 줄이려 DMG 성장 하향)
-  wallHp:1.95, wallDmg:1.25,    // 10챕터 이상 벽 배수 (R06 — eHpG 상향분만큼 HP 배수를 내려 챕터10 절대 난도 유지)
-  wall2Hp:0.82, wall2Dmg:1.0,   // 15챕터 이상 추가 배수 (R06 — 챕터15~19 상한 초과 완화)
+  /* ⚑ T35: 단일 성장률 `eHpG 1.185`·`eDmgG 1.08` 폐기 → PLAN §11.7 «구간별 성장률» 표.
+     적 HP 는 플레이어 «공격력» 축, 적 DMG 는 «체력+실드» 축에서 주인 확정 스탯 사다리로부터 역산된 값이다.
+     [하한, 성장률] — 챕터 c 에서 c+1 로 갈 때 적용할 배수를 c 로 찾는다.
+     1~5 는 5→15 구간률을 앞으로, 260~300 은 120→260 구간률을 뒤로 연장한다 (PLAN §11.7 괄호 규정). */
+  eHpSeg:[[0,1.0718],[15,1.0473],[30,1.0353],[50,1.0499],[70,1.0165],[120,1.0055]],
+  eDmgSeg:[[0,1.0497],[15,1.0473],[30,1.0218],[50,1.0238],[70,1.0169],[120,1.0051]],
+  /* ⚑ T35 임시값: 벽 배수 4종 전부 1.0 (= 비활성). 근거는 PROGRESS T35 행.
+     요약 — PLAN §11.7 구간별 성장률은 «벽이 없는 매끈한 곡선» 으로 사다리 7점(5·15·30·50·70·120·260)에서
+     직접 역산된 값이라, 그 위에 벽 배수를 얹으면 사다리가 곧바로 어긋난다(종전 3.6 은 새 곡선에서 83챕터분).
+     T35 의 과녁은 사다리이므로 벽을 임시로 껐다. «사다리 유지 + 벽 존재» 를 동시에 만족하는 값은 T1 재산정 몫. */
+  wallHp:1.0, wallDmg:1.0,      // 10챕터 이상 벽 배수 (임시 비활성 — T1 재산정)
+  wall2Hp:1.0, wall2Dmg:1.0,    // 15챕터 이상 추가 배수 (임시 비활성 — T1 재산정)
   waveHp:0.15, waveDmg:0.08,    // 웨이브 인덱스당 (R03)
-  wall3Hp:3.6, wall3Dmg:1.30,   // 90챕터 대형 벽 (PLAN §11.7 앵커 A)
-  wall4Hp:3.6, wall4Dmg:1.30,   // 300챕터 최종 벽 (PLAN §11.7 앵커 B)
+  wall3Hp:1.0, wall3Dmg:1.0,    // 90챕터 대형 벽 (임시 비활성 — T1 재산정)
+  wall4Hp:1.0, wall4Dmg:1.0,    // 300챕터 최종 벽 (임시 비활성 — T1 재산정)
   bossHp:8, bossDmg:1.8,        // 주인 확정 상수 (튜닝 노브 아님) — 5배수 챕터 추가 배수 폐기
   maxChapter:300,               // PLAN §2.4 (§11 도입으로 20 → 100 → 주인 추가 지시로 300)
-  /* 플레이어 기본치 (영구강화 4종 폐지 — 성장은 §11 장비 + 슬롯 강화가 전담) */
-  pAtk0:30, pHp0:300, pAspd0:1.0, pCrit0:5,
+  /* 플레이어 기본치 (영구강화 4종 폐지 — 성장은 §11 장비 + 슬롯 강화가 전담)
+     ⚑ T35 주인 확정(PLAN §11.5-a): 공 25 / 체 150 / 실드 250. 실드는 `maxHp*0.8` 파생이 아니라 독립 스탯이다. */
+  pAtk0:25, pHp0:150, pSh0:250, pAspd0:1.0, pCrit0:5,
   goldKillBase:0.6, goldKillPer:0.10, goldClearPer:3,
   goldGrowth:1.22,              // 챕터당 골드 성장 배수 (R07: 1.185 → 1.22. 1.185 는 챕터 90 대형 벽에서 슬롯 13 에 갇혀 F2P·과금 둘 다 영구 정체했다 — 실험4 실측. eHpG 보다 높게 둬야 후반 벽에서 수입이 적 성장을 따라잡는다)
   expKill:3, expBoss:9, expNeed:lv=>4+2*lv,
@@ -61,13 +71,22 @@ function chapterLayout(c){
   out.push({t:'boss'});
   return out;
 }
+/* ⚑ T35: 구간별 성장률 누적 배수. 챕터 1 을 1.0 으로 두고 1→c 까지 각 스텝의 구간 배수를 곱한다.
+   결과는 메모이즈한다 (실험3/4 가 챕터 300 까지 수만 번 호출한다). */
+function segRate(seg,c){ let r=seg[0][1]; for(const s of seg){ if(c>=s[0]) r=s[1]; } return r; }
+function segGrow(seg,cache,c){
+  if(cache[c]!==undefined) return cache[c];
+  let v=1; for(let k=1;k<c;k++) v*=segRate(seg,k);
+  cache[c]=v; return v;
+}
+const _hpGrow={}, _dmgGrow={};
 function enemyStats(c,w){
-  let hp=TUNE.eBaseHp*Math.pow(TUNE.eHpG,c-1)*(1+TUNE.waveHp*w);
-  let dmg=TUNE.eBaseDmg*Math.pow(TUNE.eDmgG,c-1)*(1+TUNE.waveDmg*w);
+  let hp=TUNE.eBaseHp*segGrow(TUNE.eHpSeg,_hpGrow,c)*(1+TUNE.waveHp*w);
+  let dmg=TUNE.eBaseDmg*segGrow(TUNE.eDmgSeg,_dmgGrow,c)*(1+TUNE.waveDmg*w);
   if(c>=10){hp*=TUNE.wallHp; dmg*=TUNE.wallDmg;}
   if(c>=15){hp*=TUNE.wall2Hp; dmg*=TUNE.wall2Dmg;}
-  if(c>=90){hp*=TUNE.wall3Hp; dmg*=TUNE.wall3Dmg;}     /* 90 대형 벽 (PLAN §11.7 앵커 A) */
-  if(c>=300){hp*=TUNE.wall4Hp; dmg*=TUNE.wall4Dmg;}    /* 300 최종 벽 (PLAN §11.7 앵커 B) */
+  if(c>=90){hp*=TUNE.wall3Hp; dmg*=TUNE.wall3Dmg;}     /* 90 대형 벽 (PLAN §11.7) */
+  if(c>=300){hp*=TUNE.wall4Hp; dmg*=TUNE.wall4Dmg;}    /* 300 최종 벽 (PLAN §11.7) */
   return {hp:Math.round(hp), dmg:Math.round(dmg)};
 }
 
@@ -201,12 +220,17 @@ const GT={
     plate:'판금갑옷',chain:'사슬갑옷',robe:'로브',gauntlet:'건틀릿',leather:'가죽장갑',handwrap:'핸드랩',
     sandal:'샌들',boots:'부츠',greave:'장화',pendant:'펜던트',amulet:'부적',beads:'구슬목걸이'},
   rarName:['일반','희귀','영웅','전설','신화'],
-  /* 공/체 기여 — 신화(최고 등급) 1부위 기준값에서 등급 1단계 내려갈 때마다 rarStep 으로 나눈다.
-     rarStep·slotG 는 PLAN §11.7 앵커 3점(C=30·A=90·B=300)에서 역산한 값이다 — 아래 «앵커 역산» 주석 참조.
-     신화0강 > 전설9강 제약: 전설 = 신화/155 이므로 +9강(×2.08) 을 곱해도 신화 0강의 1/100 — 여유롭게 성립. */
-  atkUnit:0.5904, hpUnit:5.904, rarStep:155,
-  plusStep:0.12,                 // 강화 1레벨당 해당 장비 공/체 +12% (위임)
-  slotG:2.68,                    // 슬롯 레벨당 그 슬롯 장비 공/체 배수 (앵커 A→B 역산)
+  /* ⚑ T35 — 등급별 1부위 기여 (0강·슬롯 0렙). PLAN §11.5-a 주인 확정표를 그대로 옮긴 값이다.
+     종전의 «기준값 ÷ rarStep^n» 등비 생성(`atkUnit`·`hpUnit`·`rarStep 155`)은 전면 폐기 — 역산 금지.
+     인덱스 = 일반0 · 희귀1 · 영웅2 · 전설3 · 신화4. 실드는 체력 파생이 아니라 독립 기여축이다.
+     검산(기본치 공25/체150/실250 + 6부위): 일반 50/250/400 · 희귀 100/500/800 · 영웅 200/700/1300 ·
+     전설 530/1000/2200 · 신화 1200/2385/5000 · 신화+9강 2575/5000/10558 (PLAN §11.7 사다리표와 일치). */
+  atk:[4.167, 12.500,  29.167,  84.167, 195.833],
+  hp: [16.667, 58.333,  91.667, 141.667, 372.500],
+  sh: [25.000, 91.667, 175.000, 325.000, 791.667],
+  plusStep:0.13,                 // 강화 1레벨당 해당 장비 공/체/실 +13% (주인 확정 — 종전 0.12)
+  slotLvMax:150,                 // 슬롯 레벨 상한 (주인 확정)
+  slotStep:0.01,                 // 슬롯 1레벨당 공/체/실 +1% (가산 — 종전 `slotG 2.68` 등비 폐기)
   slotCostBase:600, slotCostG:3.5,   // 슬롯 강화 비용 = base*costG^L
   /* R07: 150/5.5 → 600/4.2. T6 의 «costG < goldGrowth^6» 규칙은 틀렸다 — 5.5 는 그 규칙을 지키고도 실험4 가
      챕터 118 에서 40일 정체했다. 올바른 조건은 «슬롯 1렙이 벌어주는 챕터 수(ln slotG/ln eHpG = 5.808챕터) 동안의
@@ -217,7 +241,7 @@ const GT={
      3.3 이하는 폭주(91~300 전부 시도 1회), 3.8 이상은 열화 시점이 밀릴 뿐 곡선이 같다 — 유효 구간 3.4~3.6.
      ⚠ 대가: 챕터 90 도달 시 슬롯이 14~15렙(=앵커 A 스펙)에서 16렙으로 올라가 90 대형 벽이 무너진다(R09 6런 0/6).
         slotCostBase 로 되돌리려면 3000 이 필요한데 그 지점에서 챕터 10~18 이 400회 상한에 막힌다 — 승인 대기 14번. */
-  evenStep:0.05, evenPer:5,      // 6슬롯 전부 5N렙 → 공/체 +5%*N (PLAN §11.4)
+  evenStep:0.05, evenPer:5,      // 6슬롯 전부 5N렙 → 공/체/실 +5%*N (PLAN §11.4 — T35 로 실드에도 적용)
   pullCost:400, dailyGem:2500, iapGem:12000,   // 주인 확정 상수
   legendToMythPlus:10,           // 전설 +10강 도달 시 신화 0강으로 변환
   runsPerDay:30,                 // (위임) 하루 플레이 판수 — 실험3/4 의 다이아 적립 환산 기준
@@ -227,9 +251,8 @@ if(process.env.GT_OVERRIDE){
   const o=JSON.parse(process.env.GT_OVERRIDE);
   for(const k in o){ if(Array.isArray(o[k])||typeof o[k]!=='object'||!o[k]) GT[k]=o[k]; else Object.assign(GT[k],o[k]); }
 }
-GT.atk=[0,1,2,3,4].map(i=>GT.atkUnit/Math.pow(GT.rarStep,4-i));
-GT.hp =[0,1,2,3,4].map(i=>GT.hpUnit /Math.pow(GT.rarStep,4-i));
-GT.slotMul=L=>Math.pow(GT.slotG,L);
+/* ⚑ T35: GT.atk/hp/sh 는 위 확정표를 그대로 쓴다 (파생 생성 없음). 슬롯은 «1렙당 +1% 가산 · 상한 150». */
+GT.slotMul=L=>1+GT.slotStep*Math.min(L,GT.slotLvMax);
 GT.slotCost=L=>Math.floor(GT.slotCostBase*Math.pow(GT.slotCostG,L));
 GT.allTypes=[]; for(const pt of GT.parts) for(const ty of GT.types[pt]) GT.allTypes.push({part:pt,type:ty});
 /* 옵션 개수: 등급별 + 신화 강화 보너스 */
@@ -485,17 +508,17 @@ function mkBuild(rar,plus,slotLv,typeIdx){
 }
 const evenBonus=b=>1+GT.evenStep*Math.floor(Math.min(...GT.parts.map(pt=>b.slots[pt]||0))/GT.evenPer);
 /* 진단용 평탄 빌드: 장비/옵션 없이 공/체만 직접 지정 (앵커 요구 전투력 역산 fit 모드) */
-function flatBuild(atk,hp){ const slots={}; for(const pt of GT.parts) slots[pt]=0; return {eq:{},slots,flat:{atk,hp}}; }
+function flatBuild(atk,hp,sh){ const slots={}; for(const pt of GT.parts) slots[pt]=0; return {eq:{},slots,flat:{atk,hp,sh:sh===undefined?TUNE.pSh0:sh}}; }
 function buildPower(b){
   if(b.flat)return b.flat;
-  let atk=0,hp=0;
+  let atk=0,hp=0,sh=0;
   for(const pt of GT.parts){
     const g=b.eq[pt]; if(!g)continue;
     const m=GT.slotMul(b.slots[pt]||0)*(1+GT.plusStep*g.plus);
-    atk+=GT.atk[g.rar]*m; hp+=GT.hp[g.rar]*m;
+    atk+=GT.atk[g.rar]*m; hp+=GT.hp[g.rar]*m; sh+=GT.sh[g.rar]*m;
   }
   const ev=evenBonus(b);
-  return {atk:(TUNE.pAtk0+atk)*ev, hp:(TUNE.pHp0+hp)*ev};
+  return {atk:(TUNE.pAtk0+atk)*ev, hp:(TUNE.pHp0+hp)*ev, sh:(TUNE.pSh0+sh)*ev};
 }
 
 /* ---------- 엔진 ---------- */
@@ -522,7 +545,7 @@ function mkPlayer(build,G){
   const p={G, worldX:0, atkTimer:0, nextAtk:0, nextCrit:false,
     dmg:pw.atk, aspd:TUNE.pAspd0, critR:TUNE.pCrit0, critF:200,
     def:5, counter:10, evade:8, steal:0, killHeal:0, misfire:0, goldMul:1, walkMul:1, healAmp:0,
-    maxHp, hp:maxHp, maxSh:Math.round(maxHp*0.8), sh:Math.round(maxHp*0.8),
+    maxHp, hp:maxHp, maxSh:pw.sh, sh:pw.sh,   /* ⚑ T35: 실드 독립 스탯 (`maxHp*0.8` 파생 폐기) */
     level:1, exp:0, buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]}, px:basePx()};
   /* 장비 계열 옵션 적용 (PLAN §11.1 — 상위 등급은 하위 옵션 포함) */
   for(const pt of GT.parts){
@@ -887,6 +910,7 @@ function accBuySlots(a){
   for(;;){
     let lo=null;
     for(const pt of GT.parts) if(lo===null||a.slots[pt]<a.slots[lo]) lo=pt;
+    if(a.slots[lo]>=GT.slotLvMax)break;          /* ⚑ T35: 슬롯 레벨 상한 150 (주인 확정) */
     const c=GT.slotCost(a.slots[lo]);
     if(a.gold<c)break;
     a.gold-=c; a.slots[lo]++; bought++;
@@ -1023,33 +1047,49 @@ function exp4_gearProgress(){
   console.log(`최종: 챕터 ${chap-1} 클리어 · 슬롯 ${slotStr(a)} · 신화 부위 ${my}/6 · 뽑기 ${a.pulls}회 · 합성 ${a.fuses}회 · 총 ${total}판`);
   if(stuckFrom>0)console.log(`** 정체 감지: 챕터 ${stuckFrom} 에서 ${stuck}판(${(stuck/GT.runsPerDay).toFixed(0)}일) 연속 실패 — 90·300 은 대형 벽이라 정상, 그 외 챕터면 경제가 막힌 것 **`);
 }
-/* ---------- 실험5: 앵커 검증 (PLAN §11.7 주인 확정 과녁 3점) ---------- */
-/* C = 전설 풀셋 0강 · 슬롯 균등 10렙 → 챕터 30 «겨우»
-   A = 신화 풀셋 0강 · 슬롯 균등 15렙 → 챕터 90 «겨우» (91+ 벽)
-   B = 신화 풀셋 +9강 · 슬롯 균등 50렙 → 챕터 300 «겨우» (301+ 벽) */
-const ANCHORS=[
-  {id:'C', rar:3, plus:0, slot:+(process.env.EXP5_C_SLOT||10), at:30,  span:[28,32]},   /* R07 진단: 앵커 C 슬롯값 가정을 바꿔 보는 용도 (기본은 주인 확정 10) */
-  {id:'A', rar:4, plus:0, slot:15, at:90,  span:[88,92]},
-  {id:'B', rar:4, plus:9, slot:50, at:300, span:[298,301]},
+/* ---------- 실험5: 스탯 사다리 7점 검증 (⚑ T35 — PLAN §11.7 주인 확정 과녁) ---------- */
+/* 종전의 앵커 3점(C=30 · A=90 · B=300)은 주인이 폐기했다. 유일한 과녁은 아래 «등급별 스탯 사다리» 다:
+   노템 5 · 일반 15 · 희귀 30 · 영웅 50 · 전설 70 · 신화 120 · 신화+9강 260 (전부 슬롯 0렙 · 특전 미획득).
+   합격 구간은 §7 T6 제안 기준을 그대로 승계한다 — 과녁 챕터 클리어율 2~10% (기대 재도전 10~50회). */
+const LADDER=[
+  {id:'노템',      rar:-1, plus:0, at:5,   want:[25,150,250]},
+  {id:'일반',      rar:0,  plus:0, at:15,  want:[50,250,400]},
+  {id:'희귀',      rar:1,  plus:0, at:30,  want:[100,500,800]},
+  {id:'영웅',      rar:2,  plus:0, at:50,  want:[200,700,1300]},
+  {id:'전설',      rar:3,  plus:0, at:70,  want:[530,1000,2200]},
+  {id:'신화',      rar:4,  plus:0, at:120, want:[1200,2385,5000]},
+  {id:'신화+9강',  rar:4,  plus:9, at:260, want:[2600,5000,10000]},
 ];
-function exp5_anchor(){
+function exp5_ladder(){
   const N=parseInt(process.env.EXP5_N||'200',10);
-  const only=process.env.EXP5_ONLY;                 /* 'A' 등으로 한 앵커만 측정 */
-  console.log(`\n=== 실험5: 앵커 검증 (C=30 · A=90 · B=300, 각 챕터 ${N}판) ===`);
-  for(const a of ANCHORS){
-    if(only&&only!==a.id)continue;
-    const b=mkBuild(a.rar,a.plus,a.slot);
+  const only=process.env.EXP5_ONLY;                 /* '신화' 등으로 한 칸만 측정 */
+  const span=parseInt(process.env.EXP5_SPAN||'0',10);   /* >0 이면 과녁 ±span 챕터도 함께 측정 */
+  console.log(`\n=== 실험5: 스탯 사다리 7점 (PLAN §11.7 · 각 챕터 ${N}판 · 슬롯 0렙 · 합격 2~10%) ===`);
+  const rows=[];
+  for(const L of LADDER){
+    if(only&&only!==L.id)continue;
+    const b=mkBuild(L.rar,L.plus,0);
     const pw=buildPower(b);
-    console.log(`\n  [앵커 ${a.id}] ${GT.rarName[a.rar]}${a.plus?'+'+a.plus+'강':' 0강'} 풀셋 · 슬롯 균등 ${a.slot}렙 → 과녁 챕터 ${a.at}`);
-    console.log(`    전투력: 공격력 ${pw.atk.toExponential(3)} · 최대체력 ${pw.hp.toExponential(3)} (균등보너스 x${evenBonus(b).toFixed(2)})`);
-    for(let c=a.span[0];c<=a.span[1];c++){
+    const dev=(v,w)=>((v/w-1)*100).toFixed(1).padStart(5)+'%';
+    console.log(`\n  [${L.id}] 풀셋 ${L.plus?'+'+L.plus+'강':'0강'} → 과녁 챕터 ${L.at}`);
+    console.log(`    스탯: 공 ${pw.atk.toFixed(1)} / 체 ${pw.hp.toFixed(1)} / 실 ${pw.sh.toFixed(1)}`+
+                `  (확정표 ${L.want.join('/')} 대비 ${dev(pw.atk,L.want[0])}·${dev(pw.hp,L.want[1])}·${dev(pw.sh,L.want[2])})`);
+    for(let c=L.at-span;c<=L.at+span;c++){
+      if(c<1)continue;
       let w=0;
       for(let i=0;i<N;i++) if(runChapter(c,b,{}).clear)w++;
       const rate=w/N*100;
       const exp=rate>0?(100/rate).toFixed(1)+'회':'∞';
-      console.log(`    챕터 ${String(c).padStart(3)}: 클리어율 ${rate.toFixed(1)}%  (기대 재도전 ${exp})${c===a.at?'   ← 과녁':''}`);
+      const tag=c===L.at?(rate>=2&&rate<=10?'   ← 과녁 ✓':'   ← 과녁 ✗(합격 2~10%)'):'';
+      console.log(`    챕터 ${String(c).padStart(3)}: 클리어율 ${rate.toFixed(1)}%  (기대 재도전 ${exp})${tag}`);
+      if(c===L.at) rows.push([L.id,L.at,rate]);
     }
   }
+  console.log(`\n  — 사다리 요약 (합격 2~10%) —`);
+  console.log(`  | 상태 | 과녁 챕터 | 클리어율 | 판정 |`);
+  console.log(`  |---|---|---|---|`);
+  for(const [id,at,rate] of rows)
+    console.log(`  | ${id} | ${at} | ${rate.toFixed(1)}% | ${rate>=2&&rate<=10?'✓':'✗'} |`);
 }
 
 /* ---------- 계열 옵션표 덤프 (PLAN §11.6 등재용) ---------- */
@@ -1089,4 +1129,4 @@ if(mode==='1'||mode==='all')exp1_rarityLadder();
 if(mode==='2'||mode==='all')exp2_perkWinrate();
 if(mode==='3'||mode==='all')exp3_progression();
 if(mode==='4'||mode==='all')exp4_gearProgress();
-if(mode==='5'||mode==='all')exp5_anchor();
+if(mode==='5'||mode==='all')exp5_ladder();

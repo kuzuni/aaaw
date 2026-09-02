@@ -151,37 +151,32 @@ function cmp(name, plan, impl, note) {
   }
 }
 
-/* ─────────── 실험5 (앵커) ─────────── */
+/* ─────────── 실험5 (⚑ T35: 앵커 3점 → 스탯 사다리 7점) ─────────── */
 {
-  const e5 = PLAN.slice(PLAN.indexOf('실험5 (앵커 검증'), PLAN.indexOf('조정 노브:'));
-  const want = [...e5.matchAll(/앵커 ([CAB]) = \*\*(전설|신화|영웅|희귀|일반) (?:\+(\d+)강 )?(?:풀셋 )?(?:(\d)강 )?\+ 슬롯 균등 (\d+)렙\*\*으로 챕터 (\d+)~(\d+)/g)];
-  if (want.length !== 3) parseFails.push(`PLAN 실험5 앵커 3점을 못 읽었다 (읽은 개수 ${want.length})`);
-  const got = [...SIM.matchAll(/\{id:'([CAB])',\s*rar:(\d+),\s*plus:(\d+),\s*slot:([^,]+),\s*at:(\d+),\s*span:\[(\d+),(\d+)\]\}/g)];
-  if (got.length !== 3) parseFails.push(`sim.js ANCHORS 3점을 못 읽었다 (읽은 개수 ${got.length})`);
-  for (const w of want) {
-    const g = got.find(x => x[1] === w[1]);
-    if (!g) { parseFails.push(`sim.js ANCHORS 에 앵커 ${w[1]} 없음`); continue; }
-    const plus = w[3] || w[4] || '0';
-    const slotImpl = /EXP5_C_SLOT\|\|(\d+)/.test(g[4]) ? g[4].match(/EXP5_C_SLOT\|\|(\d+)/)[1] : g[4].trim();
-    cmp(`실험5 앵커 ${w[1]} 등급`, w[2], RAR[Number(g[2])]);
-    cmp(`실험5 앵커 ${w[1]} 강화`, plus, g[3]);
-    cmp(`실험5 앵커 ${w[1]} 슬롯`, w[5], slotImpl);
-    cmp(`실험5 앵커 ${w[1]} 측정 구간`, `${w[6]}~${w[7]}`, `${g[6]}~${g[7]}`);
+  /* PLAN §11.7 «주인 확정 스탯 사다리» 표 7행을 그대로 읽어 sim.js 의 LADDER 와 대조한다.
+     종전에는 §7 산문(«앵커 C = 전설 풀셋 …»)을 파싱했는데, 주인이 확정한 것은 산문이 아니라 §11.7 표다. */
+  const t = PLAN.slice(PLAN.indexOf('⚑ 주인 확정 스탯 사다리'));
+  const want = [...t.matchAll(/\|\s*(노템|일반 풀셋|희귀 풀셋|영웅 풀셋|전설 풀셋|신화 풀셋|신화 \+9강 풀셋)\s*\|\s*([\d,]+)\s*\|\s*([\d,]+)\s*\|\s*([\d,]+)\s*\|\s*([\d,]+)\s*\|/g)];
+  if (want.length !== 7) parseFails.push(`PLAN §11.7 사다리 7행을 못 읽었다 (읽은 개수 ${want.length})`);
+  const got = [...SIM.matchAll(/\{id:'([^']+)',\s*rar:(-?\d+),\s*plus:(\d+),\s*at:(\d+),\s*want:\[([\d.]+),([\d.]+),([\d.]+)\]\}/g)];
+  if (got.length !== 7) parseFails.push(`sim.js LADDER 7점을 못 읽었다 (읽은 개수 ${got.length})`);
+  const n = s => String(s).replace(/,/g, '');
+  if (want.length === 7 && got.length === 7) for (let i = 0; i < 7; i++) {
+    const w = want[i], g = got[i], nm = w[1].replace(' 풀셋', '').replace(' ', '');
+    cmp(`실험5 사다리 ${nm} 이름`, nm, g[1]);
+    cmp(`실험5 사다리 ${nm} 과녁 챕터`, n(w[2]), g[4]);
+    cmp(`실험5 사다리 ${nm} 목표 스탯`, [w[3], w[4], w[5]].map(n).join('/'), [g[5], g[6], g[7]].join('/'));
   }
-  /* 과녁 챕터: PLAN 기준 문장의 «앵커 챕터(30·90·300)» ↔ ANCHORS.at */
-  const at = pick(PLAN, 'PLAN 실험5 과녁 챕터', /앵커 챕터\(([\d·]+)\) 클리어율/, 1);
-  if (at && got.length === 3) {
-    const order = ['C', 'A', 'B'];
-    cmp('실험5 과녁 챕터', at.split('·').join('·'),
-      order.map(id => got.find(x => x[1] === id)[5]).join('·'));
-  }
+  /* 합격 밴드의 과녁 목록(§7 기준 문장) ↔ LADDER.at */
+  const at = pick(PLAN, 'PLAN 실험5 과녁 챕터', /과녁 챕터\(([\d·]+)\) 클리어율/, 1);
+  if (at && got.length === 7) cmp('실험5 과녁 챕터 목록', at, got.map(g => g[4]).join('·'));
 }
 
 /* ─────────── 등재된 기존 차이 (KNOWN) ─────────── */
 const KNOWN = [
   { name: '실험4 기준① 정체 임계(일)', why: 'T30 / 승인 대기 — T6 가 «90·300 벽이 걸린다» 를 이유로 엔진 임계만 20일→40일로 올리고 PLAN §7 기준① 문면(20일·600판)은 그대로 뒀다. 벽 예외를 코드로 넣는 대신 임계를 2배로 늘린 탓에, 벽이 아닌 챕터의 600~1200판 정체가 «정체 감지 0» 으로 조용히 합격 처리된다' },
   { name: '실험4 기준① 정체 임계(판)', why: '위와 같은 건 (600판 ↔ 1200판)' },
-  { name: '실험5 앵커 B 측정 구간', why: 'T30 / PLAN §7 은 «챕터 295~301», sim.js ANCHORS 는 [298,301]. 판정에 필요한 «직전 2개»(298·299)는 덮으므로 채점 결과는 바뀌지 않지만 문서와 구현이 다르다' },
+  /* ⚑ T35: «실험5 앵커 B 측정 구간» 항목은 앵커 3점 폐기로 소멸 — 사다리 7점에는 측정 구간 개념이 없다. */
 ];
 
 /* ─────────── 출력 ─────────── */
