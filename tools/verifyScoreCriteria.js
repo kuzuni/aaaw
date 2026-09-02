@@ -42,19 +42,24 @@ function cmp(name, plan, impl, note) {
   rows.push({ name, plan: String(plan), impl: String(impl), ok: String(plan) === String(impl), note });
 }
 
+/* PLAN §7 하니스 표기: «<등급>[+<강화>] 6부위 · 슬롯 <N>렙» (T31 이 +강 표기를 추가했다).
+   그룹 1=등급 · 2=강화(없으면 undefined → 0강) · 3=슬롯. */
+const HAR_RE = /장비 «(전설|신화|영웅|희귀|일반)(?:\+(\d+))? 6부위 · 슬롯 (\d+)렙»/g;
+
 /* ─────────── 실험1 (등급 사다리) ─────────── */
 {
   const planH = pick(PLAN, 'PLAN 실험1 하니스', /실험1 \(등급 사다리\)[\s\S]*?장비 «([^»]+)»(?![\s\S]{0,400}?실험1 \(등급 사다리\))/, 1);
   /* 문면은 취소선으로 옛 값이 함께 남아 있다 — «마지막» 하니스 표기가 현행이다. */
-  const allH = [...PLAN.matchAll(/장비 «(전설|신화|영웅|희귀|일반) 6부위 · 슬롯 (\d+)렙»/g)];
+  /* T31: 하니스 표기에 «+강» 이 붙을 수 있다(«일반+2 6부위 · 슬롯 0렙») — 없으면 0강으로 읽는다. */
+  const allH = [...PLAN.matchAll(HAR_RE)];
   const e1sec = PLAN.slice(PLAN.indexOf('실험1 (등급 사다리)'), PLAN.indexOf('실험2 (특전별 기여도)'));
-  const e1m = [...e1sec.matchAll(/장비 «(전설|신화|영웅|희귀|일반) 6부위 · 슬롯 (\d+)렙»/g)].pop();
+  const e1m = [...e1sec.matchAll(HAR_RE)].pop();
   if (!e1m) parseFails.push('PLAN 실험1 하니스');
   const simE1 = pick(SIM, 'sim 실험1 하니스', /harness\('EXP1_GEAR',\s*(\d+),\s*(\d+),\s*(\d+)\)/);
   if (e1m && simE1) {
     cmp('실험1 하니스 등급', e1m[1], RAR[Number(simE1[1])]);
-    cmp('실험1 하니스 슬롯', e1m[2], simE1[3]);
-    cmp('실험1 하니스 강화', '0', simE1[2], 'PLAN 문면에 +강 표기가 없으면 0강');
+    cmp('실험1 하니스 슬롯', e1m[3], simE1[3]);
+    cmp('실험1 하니스 강화', e1m[2] || '0', simE1[2], 'PLAN 문면에 +강 표기가 없으면 0강');
   }
   const e1ch = pick(e1sec, 'PLAN 실험1 챕터', /실험1 \(등급 사다리\)\*\*:\s*챕터(\d+)/, 1);
   const simE1ch = pick(SIM, 'sim 실험1 챕터', /runChapter\((\d+),\s*h\.b,\s*rar===null/, 1);
@@ -67,13 +72,13 @@ function cmp(name, plan, impl, note) {
 /* ─────────── 실험2 (특전별 기여도) ─────────── */
 {
   const e2sec = PLAN.slice(PLAN.indexOf('실험2 (특전별 기여도)'), PLAN.indexOf('실험3 (진행 곡선)'));
-  const e2m = [...e2sec.matchAll(/장비 «(전설|신화|영웅|희귀|일반) 6부위 · 슬롯 (\d+)렙»/g)].pop();
+  const e2m = [...e2sec.matchAll(HAR_RE)].pop();
   if (!e2m) parseFails.push('PLAN 실험2 하니스');
   const simE2 = pick(SIM, 'sim 실험2 하니스', /harness\('EXP2_GEAR',\s*(\d+),\s*(\d+),\s*(\d+)\)/);
   if (e2m && simE2) {
     cmp('실험2 하니스 등급', e2m[1], RAR[Number(simE2[1])]);
-    cmp('실험2 하니스 슬롯', e2m[2], simE2[3]);
-    cmp('실험2 하니스 강화', '0', simE2[2], 'PLAN 문면에 +강 표기가 없으면 0강');
+    cmp('실험2 하니스 슬롯', e2m[3], simE2[3]);
+    cmp('실험2 하니스 강화', e2m[2] || '0', simE2[2], 'PLAN 문면에 +강 표기가 없으면 0강');
   }
   const e2ch = pick(e2sec, 'PLAN 실험2 챕터', /챕터(\d+)에서 (\d+)판/);
   const simE2ch = pick(SIM, 'sim 실험2 챕터', /const r=runChapter\((\d+),\s*h\.b,\s*\{\}\);/, 1);

@@ -16,17 +16,21 @@
    즉 «엔진이 규칙대로 구르나» 까지는 보는데, **«그 엔진을 어떤 지점에서 재고 있나»(측정 설정)**
    는 아무도 안 본다. 채점표 10점 중 실험1·2 몫(v2 기준 3점)이 전부 이 두 하니스 한 줄에 달려 있는데도.
 
-   ⚑ T5 는 주인 승인 규칙이다: **«하니스 = 실험3 관측, 그 챕터 도달 시점 중앙값»**,
-   그리고 «경제 노브를 바꾼 라운드마다 재보정». 그런데 이 규칙에는 게이트가 없어서
-   T26(R09 가 slotCostG 4.2→3.5 를 바꾸고 실험1 하니스 재보정을 빠뜨림)이 사람 눈으로만 잡혔다.
-   이 게이트는 그 규칙을 매번 실측해 자동으로 대조한다.
+   ⚑ 정본 규칙 = **«변별점 규칙»** (주인 확정 2026-09-02 15:1X · 승인 25번 3안 채택 · PLAN §7).
+   종전 T5 규칙(«하니스 = 그 챕터 도달 시점 관측 중앙값»)은 이 규칙으로 **개정**됐다 —
+   규칙이 둘이라 충돌했고(T31), 코드는 처음부터 변별점 쪽으로 돌고 있었다.
+   T5 의 «경제 노브를 바꾼 라운드마다 재보정» 조항만 그대로 살아 있다(기준이 «중앙값» → «변별점» 으로 바뀐 것).
 
    재는 것 3가지:
-     ① 변별력  — 하니스가 바닥/천장 포화면 실험1·2 는 측정 자체가 무의미하다 (T7 재발 방지).
-     ② 대표성  — 하니스 클리어율 vs «실험3 도달 시점 실제 계정» 클리어율 중앙값의 괴리.
-     ③ T5 문자 그대로 — 하니스 슬롯 레벨 = 실측 도달 시점 슬롯 레벨 중앙값 (T26 이 이것 하나였다).
-   ②③ 의 «현재 알려진 괴리» 는 아래 BASELINE 에 등재돼 있다(T31). 기준선 이내면 통과,
-   악화되면 exit 1. 하니스나 경제 노브를 건드린 회차는 이 게이트로 재측정하고 BASELINE 을 갱신할 것.
+     ① 변별력(정본 ①②③) — 하니스가 바닥/천장 포화면 실험1·2 는 측정 자체가 무의미하다 (T7 재발 방지).
+        실험1: 등급 4단 전부 1~99% 비포화 + 인접 ≥2%p 분리 · 실험2: 전체 클리어율 15~85% 안, 목표 밴드 60~70%.
+     ② 재보정 감시(정본 ④) — 하니스 값이 기준선 측정 당시와 다르거나, 경제·난이도 노브가 바뀌어
+        하니스가 등재 밴드를 이탈했으면 위반. **T26(R09 가 slotCostG 4.2→3.5 를 바꾸고 재보정을 빠뜨림)이
+        사람 눈으로만 잡혔던 그 사고는 이제 ①②가 함께 잡는다** — 노브를 바꾸면 하니스 클리어율이 밴드를 벗어나기 때문이다.
+     ③ 참고 지표(정본 ⑤ · **위반 아님**) — 하니스 클리어율 vs «실험3 도달 시점 실제 계정» 클리어율 중앙값의 괴리.
+        3안 채택에 따라 점수/통과 판정에서 빠지고 표시만 한다. 실험3 곡선이 §7 목표에 들어올수록 저절로 줄어든다.
+   ①② 의 등재 기준선은 아래 BASELINE 에 있다(T31 재보정, 2026-09-02). 하니스나 경제 노브를 건드린 회차는
+   이 게이트로 재측정하고 `--rebase` 로 BASELINE 을 갱신할 것.
 
    구현 메모: sim.js 는 하단 CLI 디스패처 때문에 require 하면 실험이 돌아버린다.
    T29 와 같은 방식으로 디스패처 앞까지 잘라 vm 컨텍스트에서 평가한다
@@ -65,18 +69,19 @@ function readHarness(env) {
 }
 const H = { 6: readHarness('EXP1_GEAR'), 8: readHarness('EXP2_GEAR') };
 
-/* ---------------- 등재 기준선 (T31, 2026-09-02 측정) ----------------
-   gap  : 하니스 클리어율 − 실측 도달시점 중앙값 클리어율 (%p). 이보다 GAP_TOL 이상 커지면 위반.
-   slot : 하니스 슬롯 − 실측 슬롯 중앙값 (렙). 이보다 커지면 위반 (T5 문자 그대로).
-   har  : 기준선을 잴 때의 하니스 값. 소스와 다르면 «재보정됨 → 기준선 갱신 필요» 로 위반.
-   floorRungs : 실험1 사다리에서 «이미 바닥 포화로 등재된» 등급. 여기 없는 등급이 새로 포화되면 위반. */
+/* ---------------- 등재 기준선 (T31 재보정, 2026-09-02 스탯 사다리 개편 후 측정) ----------------
+   har  : 기준선을 잴 때의 하니스 값. 소스와 다르면 «재보정됨 → 기준선 갱신 필요» 로 위반(②).
+   rate : 그때 잰 하니스 전체 클리어율(%). 여기서 DRIFT_TOL 이상 벗어나면 «경제·난이도 노브가 움직였다
+          → 정본 ④ 재보정 의무» 로 위반(②). T26 이 이 항목이다.
+   gap  : 하니스 클리어율 − 실측 도달시점 중앙값 클리어율 (%p). **참고 지표(③)라 위반 판정에 안 쓴다.** */
 const BASELINE = {
-  6: { har: { rar: 3, plus: 0, slot: 1 }, gap: 20.3, slot: 0, floorRungs: ['일반'] },
-  8: { har: { rar: 4, plus: 0, slot: 0 }, gap: 66.0, slot: -2 },
+  6: { har: { rar: 0, plus: 2, slot: 0 }, rate: 52.7, gap: -27.7 },
+  8: { har: { rar: 0, plus: 7, slot: 0 }, rate: 66.3, gap: 30.5 },
 };
-const GAP_TOL = 5.0;      /* %p — 시드 잡음 여유 */
+const DRIFT_TOL = 12.0;   /* %p — 이만큼 밴드에서 밀리면 재보정하라는 뜻 (시드 잡음 ±3%p 대비 충분히 크게) */
 const FLOOR = 1.0, CEIL = 99.0;   /* 등급별 클리어율이 이 밖이면 포화(측정 불능) */
-const EXP2_LO = 15.0, EXP2_HI = 85.0;  /* 실험2 전체 클리어율 변별 구간 */
+const BAND_LO = 15.0, BAND_HI = 85.0;      /* 정본 ① 변별 구간 (두 하니스 공통) */
+const E2_LO = 60.0, E2_HI = 70.0, E2_TOL = 8.0;  /* 정본 ② 실험2 목표 밴드 + 허용치 */
 
 let bad = 0, ok = 0;
 function chk(name, pass, detail) {
@@ -143,68 +148,77 @@ for (const ch of [6, 8]) {
   console.log(`  실측 부위별 등급 중앙값 ${obsRar >= 0 ? GT.rarName[Math.round(obsRar)] : '미장착'}(${obsRar}) · 슬롯 중앙값 ${obsSlot}렙`);
 }
 
+/* 실험1 사다리는 ①(변별력)과 --rebase 양쪽이 쓰므로 한 번만 잰다. */
+const LADDER_NAMES = ['일반', '희귀', '전설', '신화'];
+const ladder = (() => {
+  const h = H[6], hb = mkBuild(h.rar, h.plus, h.slot);
+  return [0, 1, 2, 3].map(lock => rateOf(6, hb, { rarityLock: lock }));
+})();
+
 if (REBASE) {
-  console.log('\n--rebase — 아래를 BASELINE 에 그대로 넣어라 (등재 사유를 PROGRESS 에 함께 적을 것):');
+  console.log('\n--rebase — 아래를 BASELINE 에 그대로 넣어라 (재보정 사유·실측표를 PROGRESS 에 함께 적을 것):');
   for (const ch of [6, 8]) {
     const h = H[ch], r = result[ch];
-    const fr = BASELINE[ch].floorRungs ? `, floorRungs: ${JSON.stringify(BASELINE[ch].floorRungs)}` : '';
-    console.log(`  ${ch}: { har: { rar: ${h.rar}, plus: ${h.plus}, slot: ${h.slot} }, gap: ${r.gap.toFixed(1)}, slot: ${r.slotGap}${fr} },`);
+    console.log(`  ${ch}: { har: { rar: ${h.rar}, plus: ${h.plus}, slot: ${h.slot} }, rate: ${r.hRate.toFixed(1)}, gap: ${r.gap.toFixed(1)} },`);
   }
-  console.log('  ※ floorRungs 는 자동 산출이 아니다 — ① 출력의 등급별 클리어율을 보고 직접 판단해 적을 것.');
+  console.log(`  ※ 참고 — 실험1 사다리 ${ladder.map((r, i) => `${LADDER_NAMES[i]} ${r.toFixed(1)}%`).join(' · ')}`);
+  console.log('  ※ 정본 규칙(PLAN §7)은 ② 실험2 60~70% · ③ 실험1 4단 비포화+인접 ≥2%p 다. 밴드 밖 값을 기준선으로 박지 말 것 — 하니스를 다시 고르는 게 맞다.');
   process.exit(0);
 }
 
-/* ---------------- ① 변별력 (T7 재발 방지) ---------------- */
-console.log('\n[① 변별력 — 하니스가 바닥/천장 포화면 실험1·2 는 측정 자체가 무의미하다]');
+/* ---------------- ① 변별력 = 정본 규칙 ①②③ (T7 재발 방지) ---------------- */
+console.log('\n[① 변별력 — 정본 «변별점 규칙» ①②③ (하니스가 포화면 실험1·2 는 측정 자체가 무의미하다)]');
 {
-  const h = H[6], hb = mkBuild(h.rar, h.plus, h.slot);
-  const names = ['일반', '희귀', '전설', '신화'];
-  const rs = [0, 1, 2, 3].map(lock => rateOf(6, hb, { rarityLock: lock }));
-  const reg = BASELINE[6].floorRungs || [];
-  const newSat = names.filter((nm, i) => (rs[i] <= FLOOR && !reg.includes(nm)) || rs[i] >= CEIL);
-  chk('실험1 등급 4단에 신규 포화 없음',
-      newSat.length === 0,
-      rs.map((r, i) => `${names[i]} ${r.toFixed(1)}%`).join(' · ') +
-      `  (허용 ${FLOOR}~${CEIL}% · 등재된 바닥 포화 [${reg.join(',') || '없음'}]` +
-      (newSat.length ? ` · 신규 포화 [${newSat.join(',')}]` : '') + ')');
+  const sat = LADDER_NAMES.filter((nm, i) => ladder[i] <= FLOOR || ladder[i] >= CEIL);
+  chk('실험1 등급 4단 전부 비포화',
+      sat.length === 0,
+      ladder.map((r, i) => `${LADDER_NAMES[i]} ${r.toFixed(1)}%`).join(' · ') +
+      `  (허용 ${FLOOR}~${CEIL}%` + (sat.length ? ` · 포화 [${sat.join(',')}]` : '') + ')');
   chk('실험1 사다리 인접 간격이 잡음 이상(각 ≥ 2%p 분리)',
-      rs.every((r, i) => i === 0 || Math.abs(r - rs[i - 1]) >= 2.0),
-      rs.map((r, i) => i ? `${names[i - 1]}→${names[i]} ${(r - rs[i - 1]).toFixed(1)}%p` : '').filter(Boolean).join(' · '));
+      ladder.every((r, i) => i === 0 || Math.abs(r - ladder[i - 1]) >= 2.0),
+      ladder.map((r, i) => i ? `${LADDER_NAMES[i - 1]}→${LADDER_NAMES[i]} ${(r - ladder[i - 1]).toFixed(1)}%p` : '').filter(Boolean).join(' · '));
 }
-chk('실험2 하니스가 변별 구간 안(전체 클리어율 15~85%)',
-    result[8].hRate > EXP2_LO && result[8].hRate < EXP2_HI,
+chk(`실험1 하니스가 변별 구간 안(전체 클리어율 ${BAND_LO}~${BAND_HI}%)`,
+    result[6].hRate > BAND_LO && result[6].hRate < BAND_HI,
+    `${result[6].hRate.toFixed(1)}%`);
+chk(`실험2 하니스가 변별 구간 안(전체 클리어율 ${BAND_LO}~${BAND_HI}%)`,
+    result[8].hRate > BAND_LO && result[8].hRate < BAND_HI,
     `${result[8].hRate.toFixed(1)}%`);
+chk(`실험2 하니스가 목표 밴드 ${E2_LO}~${E2_HI}% 안(허용 ±${E2_TOL}%p)`,
+    result[8].hRate >= E2_LO - E2_TOL && result[8].hRate <= E2_HI + E2_TOL,
+    `${result[8].hRate.toFixed(1)}%  — 정본 ② 는 «변별력 최대인 60~70% 지점». 벗어났으면 하니스를 다시 골라라(강화 축이 +1강당 약 13%)`);
 
-/* ---------------- ② 대표성 (하니스 ↔ 실측 괴리) ---------------- */
-console.log('\n[② 대표성 — 하니스 클리어율 vs 실험3 도달시점 실제 계정 클리어율]');
+/* ---------------- ② 재보정 감시 = 정본 ④ (T26 재현 방지) ---------------- */
+console.log('\n[② 재보정 감시 — 하니스가 기준선과 같은가 · 노브가 움직여 밴드를 이탈했나 (정본 ④)]');
 for (const ch of [6, 8]) {
   const base = BASELINE[ch], r = result[ch];
   const sameHar = base.har.rar === H[ch].rar && base.har.plus === H[ch].plus && base.har.slot === H[ch].slot;
+  const hs = h => `${GT.rarName[h.rar]}${h.plus ? '+' + h.plus : ''}·슬롯${h.slot}`;
   if (!sameHar) {
     chk(`챕터 ${ch} 기준선 유효성`, false,
-        `하니스가 기준선 측정 당시(${GT.rarName[base.har.rar]}·슬롯${base.har.slot})와 다르다(현재 ${GT.rarName[H[ch].rar]}·슬롯${H[ch].slot}) ` +
-        `— T5 재보정이 일어났다면 \`--rebase\` 로 기준선을 갱신하고 PROGRESS 에 사유를 남겨라`);
+        `하니스가 기준선 측정 당시(${hs(base.har)})와 다르다(현재 ${hs(H[ch])}) ` +
+        `— 재보정했다면 \`--rebase\` 로 기준선을 갱신하고 PROGRESS 에 사유를 남겨라`);
     continue;
   }
-  chk(`챕터 ${ch} 괴리 ${r.gap.toFixed(1)}%p ≤ 등재 기준선 ${base.gap}%p + 허용 ${GAP_TOL}%p`,
-      r.gap <= base.gap + GAP_TOL,
-      `하니스 ${r.hRate.toFixed(1)}% vs 실측 중앙값 ${r.obsRate.toFixed(1)}%` +
-      (!FAST && r.gap <= base.gap - GAP_TOL ? '  ⇧ 기준선보다 개선됨 — --rebase 로 기준선을 조여라' : ''));
+  const drift = r.hRate - base.rate;
+  const pass = Math.abs(drift) <= DRIFT_TOL + (FAST ? 5 : 0);
+  chk(`챕터 ${ch} 하니스 클리어율이 등재값 ${base.rate}% 근처(±${DRIFT_TOL}%p)`, pass,
+      `현재 ${r.hRate.toFixed(1)}% (${drift >= 0 ? '+' : ''}${drift.toFixed(1)}%p)` + (pass ? '' :
+      ` — 경제·난이도 노브가 움직였다는 뜻이다. 정본 ④ 는 «노브를 바꾼 회차마다 재보정» 을 요구한다: ` +
+      `하니스를 다시 고르고 \`--rebase\` 로 기준선을 갱신하라 (T26 이 이 사고였다)`));
 }
 
-/* ---------------- ③ T5 문자 그대로 (슬롯 = 도달 시점 중앙값) ---------------- */
-console.log('\n[③ T5 주인 승인 규칙 — 하니스 슬롯 = 실험3 도달 시점 관측 중앙값]');
+/* ---------------- ③ 참고 지표 = 정본 ⑤ (위반 판정 없음) ---------------- */
+console.log('\n[③ 참고 지표 — 도달 시점 실제 계정과의 괴리 (정본 ⑤ · 위반 아님 · 승인 25번 3안)]');
 for (const ch of [6, 8]) {
   const base = BASELINE[ch], r = result[ch];
-  if (base.har.slot !== H[ch].slot) { console.log(`  · 챕터 ${ch}: 하니스 슬롯이 바뀌었다 — ② 에서 이미 위반 처리`); continue; }
-  const pass = r.slotGap === base.slot;
-  chk(`챕터 ${ch} 슬롯 하니스 ${H[ch].slot}렙 vs 실측 중앙값 ${r.obsSlot}렙`,
-      pass,
-      pass ? `차 ${r.slotGap}렙 = 등재값` :
-      `차가 ${base.slot}렙 → ${r.slotGap}렙 으로 바뀌었다 — T5 는 «경제 노브를 바꾼 라운드마다 재보정» 을 요구한다. ` +
-      `재보정했다면 \`--rebase\` 로 기준선을 갱신하라 (T26 이 이 항목 하나였다)`);
+  const d = r.gap - base.gap;
+  console.log(`  · 챕터 ${ch}: 괴리 ${r.gap.toFixed(1)}%p (등재 ${base.gap}%p, ${d >= 0 ? '+' : ''}${d.toFixed(1)}%p) ` +
+              `— 하니스 ${r.hRate.toFixed(1)}% vs 도달시점 계정 중앙값 ${r.obsRate.toFixed(1)}% · ` +
+              `슬롯 하니스 ${H[ch].slot}렙 vs 실측 중앙값 ${r.obsSlot}렙`);
 }
+console.log('  ※ 이 괴리는 하니스 결함이 아니라 «실험3 진행 곡선이 §7 목표 미달» 의 그림자다 — 실험3 이 목표에 들면 저절로 줄어든다.');
 
 console.log(`\n통과 ${ok} · 위반 ${bad}`);
 if (bad) { console.log('→ 실패'); process.exit(1); }
-console.log('→ 통과 (등재된 기존 괴리 이내)');
+console.log('→ 통과 (정본 «변별점 규칙» ①②③④ 준수 · ⑤ 괴리는 참고 지표)');
