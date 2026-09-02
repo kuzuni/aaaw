@@ -199,6 +199,60 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   const held = await p.evaluate(() => save.selChapter);
   chk('▶ 길게 누르면 가속 이동', held >= 10, `1.6초에 1 → ${held}`);
 
+  /* ---------- ⑤ 절대배치 뱃지의 기준 상자 (T60) ----------
+     `.bang`(합성 «!» 알림 점)은 absolute + 음수 오프셋이라 호스트 버튼이 positioned 여야
+     그 모서리에 붙는다. `#fuseBtn` 이 static 이던 시절엔 기준 상자가 `#gear` 로 밀려
+     화면 우상단(378..394 × -6..10)으로 날아갔고 `#frame{overflow:hidden}` 에 잘렸다.
+     정적 게이트(`verifyT2` ㉘)는 «CSS 에 position 이 있나» 까지만 보므로 **실제 위치는 여기서 본다.** */
+  console.log('\n=== ⑤ 절대배치 뱃지의 기준 상자 (T60) ===');
+  const ESC_OK = ['sndBtnL'];   /* 의도적으로 조상(#lobby)에 거는 것 — T54 가 🔊 를 상단 줄 밖으로 뺐다 */
+  for (const vw of [390, 360]) {
+    await p.setViewportSize({ width: vw, height: 844 });
+    await p.evaluate(() => {                       /* 합성 가능 재료(일반 3개씩) → 뱃지가 뜨는 상태 */
+      save.inv = []; save.eq = {};
+      for (const pt of GT.parts) { const ty = GT.types[pt][0]; for (let i = 0; i < 3; i++) save.inv.push(newGear(pt, ty, 0, 0)); }
+      save.gold = 1e9; persist(); showScreen('gear');
+    });
+    await p.waitForTimeout(350);
+    const bg = await p.evaluate(() => {
+      const btn = document.getElementById('fuseBtn'), el = btn.querySelector('.bang');
+      if (!el) return { none: true };
+      const fr = document.getElementById('frame').getBoundingClientRect();
+      const rb = btn.getBoundingClientRect(), rg = el.getBoundingClientRect();
+      return {
+        anchor: el.offsetParent ? (el.offsetParent.id || el.offsetParent.tagName) : 'null',
+        clip: Math.round(Math.max(0, rg.right - fr.right) + Math.max(0, fr.top - rg.top) +
+                         Math.max(0, fr.left - rg.left) + Math.max(0, rg.bottom - fr.bottom)),
+        dx: Math.round(rg.right - rb.right), dy: Math.round(rg.top - rb.top),
+        box: [rg.left, rg.top, rg.right, rg.bottom].map(Math.round).join(','),
+      };
+    });
+    chk(`[${vw}px] 합성 «!» 뱃지가 #fuseBtn 에 걸린다`, bg.anchor === 'fuseBtn', `기준 상자=${bg.anchor} · ${bg.box}`);
+    chk(`[${vw}px] 뱃지가 프레임 안에 온전히 들어온다 (잘림 0px)`, bg.clip === 0, `잘림 ${bg.clip}px · ${bg.box}`);
+    chk(`[${vw}px] 뱃지가 버튼 우상단 모서리에 붙는다`, Math.abs(bg.dx - 4) <= 1 && Math.abs(bg.dy + 6) <= 1, `버튼 대비 우 ${bg.dx}px · 상 ${bg.dy}px`);
+
+    /* 같은 실패 모드 전수 감시 — 부모가 static 인 absolute 요소 (화면별) */
+    for (const sc of ['gear', 'forge']) {
+      await p.evaluate(s => showScreen(s), sc); await p.waitForTimeout(250);
+      const esc = await p.evaluate(okIds => {
+        const out = [];
+        document.querySelectorAll('#frame *').forEach(el => {
+          if (el.offsetParent === null) return;
+          if (getComputedStyle(el).position !== 'absolute') return;
+          const par = el.parentElement;
+          if (!par || getComputedStyle(par).position !== 'static') return;
+          if (okIds.includes(el.id)) return;
+          out.push((el.id ? '#' + el.id : '.' + String(el.className).split(' ')[0]) +
+                   '←' + (par.id ? '#' + par.id : '.' + String(par.className).split(' ')[0]));
+        });
+        return out;
+      }, ESC_OK);
+      chk(`[${vw}px] ${sc} 화면 — 기준 상자가 부모를 벗어난 absolute 요소 0`, esc.length === 0, esc.join(' / '));
+    }
+    await p.evaluate(() => showScreen('gear'));
+  }
+  await p.setViewportSize({ width: 390, height: 844 });
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 3).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);

@@ -109,7 +109,9 @@
   #gearStats .gs small{display:block; font-size:10px; color:var(--ink-dim);}
   .gear-actionbar{flex:none; display:flex; align-items:center; gap:8px; padding:4px 10px 6px;}
   .even-note{flex:1; font-size:11px; color:var(--ink-dim); line-height:1.25;}
-  #fuseBtn{padding:9px 16px; border-radius:12px; font-size:15px; background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; box-shadow:0 3px 0 #C77E12;}
+  /* T60 — `position:relative` 필수. `.bang`(!) 뱃지가 absolute 라 이게 없으면 버튼이 아니라
+     조상 `#gear` 에 걸려 화면 우상단(top:-6·right:-4)으로 날아가 프레임 밖으로 잘린다. */
+  #fuseBtn{position:relative; padding:9px 16px; border-radius:12px; font-size:15px; background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; box-shadow:0 3px 0 #C77E12;}
   #fuseBtn:disabled{filter:grayscale(.8); opacity:.55; box-shadow:none;}
   #invGrid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(5,1fr);
     gap:6px; padding:8px 10px 10px; align-content:start;}
