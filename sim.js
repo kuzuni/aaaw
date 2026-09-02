@@ -55,6 +55,13 @@ const grand=()=>(RNG_GACHA||Math.random)();
    ① 적 총 수 ≤ 100 (보스 제외 웨이브 적 합) ② 쉼터 1~4 ③ 악마 정확히 1 ④ 천사 정확히 1.
    가중치(45/30/25) 배치는 폐기 — 악마1·천사1 을 먼저 깔고 남는 슬롯을 전부 쉼터로 채운 뒤 순서만 시드 셔플한다. */
 const LAYOUT_MAXENEMY=100;
+/* ⚑ 주인 확정 상수 (PLAN §2.3, 2026-09-02 15:4X) — 적 전원 회피율 10%.
+   튜닝 노브가 아니다(TUNE 밖에 둔 이유). 적중률(명중) 스탯·특전·장비 옵션·버프는 이 게임에 존재 금지 —
+   흡혈 증가 금지와 같은 축이라, 이 상수를 «뚫는» 수단을 추가하면 게이트(verifyT2 ⑲)가 빨개진다.
+   적용 범위(주인 명시): 기본공격 · 소환(창/도끼/화살/번개/검기) · 반격.
+   제외(위임 판단, PROGRESS T43 에 근거 등재): 가시 반사·오발 화살 — 플레이어가 겨눈 타격이 아니라
+   적의 공격이 되돌아온 것이라 «적이 회피한다» 가 성립하지 않는다. */
+const ENEMY_EVADE=0.10;
 function chapterLayout(c){
   const rnd=mulberry(c*1013904223+77);
   let waveCount=4+(rnd()<0.4?1:0);
@@ -638,6 +645,11 @@ function dealDmg(G,e,ratio,fromBasic){
   if(fromBasic&&p.nextCrit){cr=100;}
   const crit=Math.random()*100<cr;
   if(fromBasic&&p.nextCrit)p.nextCrit=false;
+  /* ⚑ 적 회피 10% (PLAN §2.3 주인 확정). 판정을 치명타 굴림 «뒤» 에 두는 이유:
+     빗맞아도 그 «공격» 은 일어난 것이라 nextCrit(여기) 과 nextAtk(playerStrike) 가 함께 소모된다 — 위임 기본값.
+     여기가 유일한 빗맞음 지점이므로 신설될 «빗맞음 트리거» 축(주인 15:5X)도 이 자리에 붙는다. */
+  G.atkTries++;
+  if(Math.random()<ENEMY_EVADE){G.miss++;return false;}
   let d=effDmg(p)*ratio*(crit?effCritF(p)/100:1)*rand(0.92,1.08);
   if(full&&px.firstHit)d*=1+0.20*px.firstHit;
   if(px.execute&&e.hp<=e.maxHp*0.5)d*=2.2;
@@ -685,6 +697,10 @@ function procOnAttack(G){
 function doCounter(G,src,depth){
   const p=G.player,px=p.px;
   if(!src||src.hp<=0)return;
+  /* 반격도 «플레이어의 타격» 이라 적 회피 10% 를 탄다 (PLAN §2.3 주인 명시 3종 중 하나).
+     빗맞으면 반격 연쇄(counterChain)도 끊긴다 — 위임 기본값. */
+  G.atkTries++;
+  if(Math.random()<ENEMY_EVADE){G.miss++;return;}
   const cd=effDmg(p)*0.7*(1+px.counterX);
   src.hp-=cd;
   if(px.counterAtkS)addBuff(p,'atk',0.05*px.counterAtkS,3,3);
@@ -785,7 +801,7 @@ function runChapter(chapter,build,opts){
   opts=opts||{};
   const G={chapter,player:null,nodes:[],pprojs:[],arrows:[],gold:0,kills:0,
     perkChances:0,taken:[],legendOnly:false,overBoltCd:0,autoBoltT:2,
-    dead:false,cleared:false,t:0,
+    dead:false,cleared:false,t:0,atkTries:0,miss:0,   /* 적 회피 10% 실측용 (PLAN §2.3) */
     rarityLockOn:opts.rarityLock!==undefined,rarityLock:opts.rarityLock};
   const p=mkPlayer(build,G);G.player=p;p.G=G;
   const layout=chapterLayout(chapter);
@@ -898,7 +914,7 @@ function runChapter(chapter,build,opts){
       if(done)G.pprojs.splice(i,1);
     }
   }
-  return {clear:G.cleared,time:G.t,gold:G.gold,taken:G.taken.map(t=>t.id),level:p.level};
+  return {clear:G.cleared,time:G.t,gold:G.gold,taken:G.taken.map(t=>t.id),level:p.level,atkTries:G.atkTries,miss:G.miss};
 }
 
 /* ---------- 계정 진행 모델 (장비 + 슬롯 + 다이아) ---------- */

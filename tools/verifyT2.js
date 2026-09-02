@@ -980,6 +980,103 @@ console.log('\n[⑲ T3 발견 버그 회귀 방지]');
   }
 }
 
+/* ---------- ⑳ 적 회피 10% + 적중률 금지 (주인 확정 15:4X · T43) ---------- */
+console.log('\n[⑳ 적 회피 10% · 적중률(명중) 스탯 금지 (PLAN §2.3, T43)]');
+{
+  /* 주석은 «적중률 금지» 를 설명하느라 금지어를 쓸 수밖에 없다 — 검사는 항상 주석을 뺀 코드/설명문만 본다. */
+  const strip = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
+  const SIMC = strip(SIM), HTMLC = strip(HTML);
+
+  /* (1) 상수 — 두 파일 다 0.10, 그리고 TUNE 안이 아니어야 한다(주인 확정 상수 = 튜닝 노브 아님). */
+  const evOf = (src, who) => {
+    const m = src.match(/const ENEMY_EVADE=([\d.]+);/);
+    if (!m) { bad(`${who}: ENEMY_EVADE 상수가 없다 — 적 회피 10% 미반영 (PLAN §2.3 주인 확정)`); return null; }
+    return Number(m[1]);
+  };
+  const evS = evOf(SIMC, 'sim.js'), evH = evOf(HTMLC, 'index.html');
+  if (evS !== null && evH !== null) {
+    evS === 0.10 ? ok(`sim.js ENEMY_EVADE = ${evS}`) : bad(`sim.js ENEMY_EVADE = ${evS} — 주인 확정값 0.10 이 아니다`);
+    evH === 0.10 ? ok(`index.html ENEMY_EVADE = ${evH}`) : bad(`index.html ENEMY_EVADE = ${evH} — 주인 확정값 0.10 이 아니다`);
+    evS === evH ? ok('두 엔진의 회피율이 같다') : bad(`sim ${evS} ≠ 게임 ${evH} — sim↔게임 괴리`);
+  }
+  for (const [src, who] of [[SIMC, 'sim.js'], [HTMLC, 'index.html']]) {
+    const t = src.match(/const TUNE=\{[\s\S]*?\n\};/) || src.match(/TUNE=\{[\s\S]*?\n\};/);
+    (t && /ENEMY_EVADE|enemyEvade/.test(t[0]))
+      ? bad(`${who}: 적 회피율이 TUNE 안에 있다 — 주인 확정 상수라 튜닝 노브가 아니다`)
+      : ok(`${who}: 회피율이 TUNE 밖 (노브 아님)`);
+  }
+
+  /* (2) 적용 지점 — 주인이 명시한 3종(기본공격·소환·반격)이 전부 걸려야 한다.
+     기본공격·소환은 dealDmg/dealPlayerDamage 한 곳으로 모이고, 반격은 doCounter 다. */
+  const fnBody = (src, re, who, what) => {
+    const m = src.match(re);
+    if (!m) { bad(`${who}: ${what} 본문을 못 찾았다 — 게이트를 갱신할 것`); return null; }
+    return m[0];
+  };
+  const SITES = [
+    [SIMC, 'sim.js', '기본공격·소환(dealDmg)', /function dealDmg\(G,e,ratio,fromBasic\)\{[\s\S]*?\n\}/],
+    [HTMLC, 'index.html', '기본공격·소환(dealPlayerDamage)', /function dealPlayerDamage\(e,ratio,icon\)\{[\s\S]*?\n\}/],
+    [SIMC, 'sim.js', '반격(doCounter)', /function doCounter\(G,src,depth\)\{[\s\S]*?\n\}/],
+    [HTMLC, 'index.html', '반격(doCounter)', /function doCounter\(src,depth\)\{[\s\S]*?\n\}/],
+  ];
+  for (const [src, who, what, re] of SITES) {
+    const b = fnBody(src, re, who, what);
+    if (b === null) continue;
+    /Math\.random\(\)<ENEMY_EVADE/.test(norm(b))
+      ? ok(`${who} ${what} — 회피 판정 있음`)
+      : bad(`${who} ${what} — 회피 판정이 없다 (적 회피 10% 가 이 경로를 안 탄다)`);
+  }
+
+  /* (3) 게임은 회피 «지점마다» «MISS» 팝을 띄워야 한다 (PLAN §2.3 위임 표시 규약).
+     전역 grep 이면 한쪽이 지워져도 다른 쪽 팝에 가려 통과한다 — 함수 본문별로 본다. */
+  for (const [what, re] of [
+    ['기본공격·소환(dealPlayerDamage)', /function dealPlayerDamage\(e,ratio,icon\)\{[\s\S]*?\n\}/],
+    ['반격(doCounter)', /function doCounter\(src,depth\)\{[\s\S]*?\n\}/]]) {
+    const b = fnBody(HTMLC, re, 'index.html', what);
+    if (b === null) continue;
+    /addText\('MISS'/.test(b) ? ok(`index.html ${what} — «MISS» 팝 있음`)
+      : bad(`index.html ${what} — 회피 시 «MISS» 팝이 없다 (주인이 눈으로 확인할 수단이 사라진다)`);
+  }
+
+  /* (4) ⚑ 적중률(명중) 금지 — 흡혈 증가 금지(07:1X)와 같은 축.
+     설명문(특전 102종 tx · 장비 옵션 126칸 d)과 px 키 이름에 «적 회피를 뚫는» 축이 생기면 불합격.
+     PLAN §3·§11.6 표도 같이 본다 — 표에 먼저 들어오고 엔진이 뒤따르는 순서로 새는 일이 실제로 있었다(T8·T9·T11·T12). */
+  const BAN = /(명중|적중률|적중\s*확률|적중\s*\+|회피\s*무시|accuracy|hitRate|hitChance)/;
+  const banScan = [];
+  if (H) for (const h of H) if (BAN.test(h.tx || '')) banScan.push(`특전 ${h.id}: «${h.tx}»`);
+  {
+    const g = goptTable(SIMC), g2 = goptTable(HTMLC);
+    for (const [tbl, who] of [[g, 'sim.js'], [g2, 'index.html']])
+      if (tbl) for (const ty of Object.keys(tbl)) tbl[ty].forEach((o, i) => {
+        if (BAN.test(o.d || '')) banScan.push(`${who} 장비 ${ty} 옵션${i + 1}: «${o.d}»`);
+      });
+  }
+  for (const [src, who] of [[SIMC, 'sim.js'], [HTMLC, 'index.html']]) {
+    const keys = (src.match(/\b(acc|accuracy|hitRate|hitChance|toHit|ignoreEvade)\b\s*[:+]/g) || []);
+    if (keys.length) banScan.push(`${who} px/스탯 키: ${[...new Set(keys)].join(' ')}`);
+  }
+  /* PLAN 은 §2.3(금지 선언)·§3.0(빗맞음 축 설명)에서 금지어를 «금지한다» 는 문장으로 쓴다 —
+     그 두 문장은 규칙 선언이므로 제외하고, 특전표(§3.1~§3.4)·옵션표(§11.6) 행만 본다. */
+  const PLANSRC = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
+  const planRows = PLANSRC.split('\n').filter(l => /^\|/.test(l) && BAN.test(l));
+  for (const l of planRows) banScan.push(`PLAN 표 행: «${l.trim().slice(0, 90)}»`);
+  banScan.length === 0
+    ? ok('적중률(명중)·회피 무시 항목 0건 — 특전 102종 · 장비 126칸 · px 키 · PLAN 표 전수')
+    : bad(`적중률(명중) 축이 생겼다 ${banScan.length}건 — 주인 금지 (PLAN §2.3):\n    ` + banScan.join('\n    '));
+
+  /* (5) 제외 경로 문서화 — 가시 반사·오발 화살은 «플레이어가 겨눈 타격» 이 아니라 회피 대상이 아니다(위임, T43).
+     두 엔진이 같은 판단이어야 한다(한쪽만 걸면 sim↔게임 괴리). */
+  for (const [src, who, re] of [
+    [SIMC, 'sim.js', /thorns&&src&&src\.hp>0&&pkk\([^)]*\)\)\{?[^\n]*/],
+    [HTMLC, 'index.html', /thorns&&src&&src\.hp>0&&pkk\([^)]*\)\)\{?[^\n]*/]]) {
+    const m = src.match(re);
+    if (!m) { bad(`${who}: 가시 반사 지점을 못 찾았다 — 게이트를 갱신할 것`); continue; }
+    /ENEMY_EVADE/.test(m[0])
+      ? bad(`${who}: 가시 반사에 회피가 걸렸다 — T43 위임 판단(제외)과 어긋난다. 바꾸려면 양쪽 동시에 + PROGRESS 갱신`)
+      : ok(`${who}: 가시 반사는 회피 제외 (위임, T43)`);
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
