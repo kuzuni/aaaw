@@ -583,6 +583,108 @@ console.log('\n=== ⑦ 반격 연쇄 — «반드시 한 번 더, 연쇄 2회 �
   }
 }
 
+/* ---------- ⑧ 킬 회복 축 — 주인 확정 «처치 시 체력 5% 회복» + 등급 차등 (T82) ---------- */
+/* 주인 원문(2026-09-03): «🍖 c_killHeal2 = «처치 시 체력 5% 회복» 고정 (주인 확정 상수 — 튜닝 노브 아님)» +
+   «특전 수치를 소수점(0.37%·0.5%·0.55%)으로 깎는 것 금지 — 남는 강함은 적 난이도를 올려서 흡수한다».
+   그래서 이 축은 «수치가 맞나» 만이 아니라 «다시 소수점으로 깎이지 않았나» 를 봐야 한다:
+     - c_killHeal2 = 정확히 5% (한 자리라도 다르면 빨개진다 — T1 이 이걸 노브로 쓰면 안 된다)
+     - 킬 회복 4종 전부 5%의 배수 (0.37/0.5/0.55/0.75 같은 소수점 체급으로 되돌아가면 빨개진다)
+     - 전설 > 일반 (주인: «전설은 일반보다 좋게»)
+     - 두 엔진 상수 일치 · PLAN §3 표시 텍스트 일치
+     - **실행 단언** — 실제로 onKill 한 번에 최대 체력의 5% 가 회복되고 실드가 5%/10% 충전되는가
+       (상수만 맞고 호출부가 죽어 있던 T69 형 사고를 막는다) */
+console.log('\n=== ⑧ 킬 회복 축 — 주인 확정 5% 체급 (PLAN §3 · T82) ===');
+{
+  const vm=require('vm');
+  const HTML=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  /* (1) 네 값의 정적 대조 — 두 엔진 + PLAN */
+  const num=(re,src,what)=>{ const m=src.match(re); if(!m){fail(`${what} 를 소스에서 못 찾았다 — 정규식 기준이 바뀌었다`);return null;} return Number(m[1]); };
+  const V={
+    killHealC:[num(/add\('c_killHeal2',0,p=>p\.killHeal\+=([\d.]+)\)/,SIM,'sim c_killHeal2'),
+               num(/id:'c_killHeal2'[^}]*p\.killHeal\+=([\d.]+)/,HTML,'index c_killHeal2'), 0.05, '일반 킬힐'],
+    killHealL:[num(/add\('l_killHeal5',2,p=>p\.killHeal\+=([\d.]+)\)/,SIM,'sim l_killHeal5'),
+               num(/id:'l_killHeal5'[^}]*p\.killHeal\+=([\d.]+)/,HTML,'index l_killHeal5'), null, '전설 킬힐'],
+    killSh3:  [num(/p\.maxSh\*([\d.]+)\*px\.killShield3/,SIM,'sim killShield3'),
+               num(/p\.maxSh\*([\d.]+)\*px\.killShield3/,HTML,'index killShield3'), null, '일반 킬실드'],
+    killSh10: [num(/p\.maxSh\*([\d.]+)\*px\.killShield10/,SIM,'sim killShield10'),
+               num(/p\.maxSh\*([\d.]+)\*px\.killShield10/,HTML,'index killShield10'), null, '전설 킬실드'],
+  };
+  for(const k in V){
+    const [a,b,fixed,nm]=V[k];
+    if(a===null||b===null) continue;
+    (a===b) ? pass(`${nm} 상수가 두 엔진에서 같다 (${(a*100).toFixed(0)}%)`)
+            : fail(`${nm} 상수가 두 엔진에서 다르다 — sim ${a} / index.html ${b}`);
+    if(fixed!==null){
+      (a===fixed) ? pass(`c_killHeal2 = ${(fixed*100).toFixed(0)}% (주인 확정 상수 — 튜닝 노브 아님)`)
+                  : fail(`c_killHeal2 가 ${(a*100)}% 다 — 주인 확정 상수는 5%. 밸런스가 안 맞으면 특전이 아니라 난이도를 움직여라(ROUTINE 2026-09-03 «밸런싱 방향 전환»)`);
+    }
+    const pct=+(a*100).toFixed(6);
+    (Number.isInteger(pct)&&pct%5===0)
+      ? pass(`${nm} ${pct}% 가 읽히는 체급(5% 단위)이다`)
+      : fail(`${nm} 가 ${pct}% 다 — 주인 확정 «소수점 금지·수치 계수 5% 단위» 위반. 소수점으로 깎지 말고 난이도로 흡수할 것`);
+  }
+  if(V.killHealL[0]!==null&&V.killHealC[0]!==null)
+    (V.killHealL[0]>V.killHealC[0]) ? pass(`전설 킬힐(${V.killHealL[0]*100}%) > 일반 킬힐(${V.killHealC[0]*100}%) — 주인 «전설은 일반보다 좋게»`)
+                                    : fail(`전설 킬힐 ${V.killHealL[0]*100}% 가 일반 ${V.killHealC[0]*100}% 이하다 — 주인 확정 «전설은 일반보다 좋게» 위반`);
+  if(V.killSh10[0]!==null&&V.killSh3[0]!==null)
+    (V.killSh10[0]>V.killSh3[0]) ? pass(`전설 킬실드(${V.killSh10[0]*100}%) > 일반 킬실드(${V.killSh3[0]*100}%)`)
+                                 : fail(`전설 킬실드 ${V.killSh10[0]*100}% 가 일반 ${V.killSh3[0]*100}% 이하다 — 등급 차등 위반`);
+  /* (2) PLAN §3 표시 텍스트 대조 — 게임에 뜨는 문장이 엔진 값과 같은가 */
+  const planRow=(re,want,nm)=>{ const m=PLAN.match(re);
+    if(!m) fail(`PLAN §3 에서 ${nm} 행을 못 찾았다`);
+    else (Number(m[1])===want) ? pass(`PLAN §3 «${nm} ${m[1]}%» 가 엔진과 일치`)
+                               : fail(`PLAN §3 «${nm} ${m[1]}%» 가 엔진 ${want}% 와 다르다`); };
+  planRow(/c_killHeal2 \| 🍖 처치 시 체력 ([\d.]+)% 회복/, 100*V.killHealC[0], 'c_killHeal2');
+  planRow(/c_killShield3 \| 🔰 처치 시 실드 ([\d.]+)% 충전/, 100*V.killSh3[0], 'c_killShield3');
+  planRow(/l_killHeal5 \| 💉 처치 시 체력 ([\d.]+)% 회복/, 100*V.killHealL[0], 'l_killHeal5');
+  planRow(/l_killShield10 \| 🏯 처치 시 실드 ([\d.]+)% 충전/, 100*V.killSh10[0], 'l_killShield10');
+  /* index.html 표시 텍스트(tx)도 같은 값인가 — 태그를 걷어내고 본다(T79 ㊳ 과 같은 취지) */
+  const txPct=(id)=>{ const m=HTML.match(new RegExp(`id:'${id}'[^}]*tx:'([^']*)'`)); if(!m)return null;
+                      const t=m[1].replace(/<[^>]*>/g,''); const n=t.match(/([\d.]+)%/); return n?Number(n[1]):null; };
+  [['c_killHeal2',100*V.killHealC[0]],['c_killShield3',100*V.killSh3[0]],
+   ['l_killHeal5',100*V.killHealL[0]],['l_killShield10',100*V.killSh10[0]]].forEach(([id,want])=>{
+    const got=txPct(id);
+    (got===want) ? pass(`index.html 표시 텍스트 «${id} ${got}%» 가 엔진과 일치`)
+                 : fail(`index.html 표시 텍스트 «${id} ${got}%» 가 엔진 ${want}% 와 다르다 — 게임에 틀린 숫자가 뜬다`);
+  });
+  /* (3) 실행 단언 — onKill 한 번이 실제로 그만큼 회복시키는가 */
+  const CUT="const mode=process.argv[2]||'all';";
+  const at=SIM.indexOf(CUT);
+  if(at<0) fail('sim.js 에서 CLI 디스패처를 못 찾았다 — 잘림 기준이 바뀌었다');
+  else{
+    const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
+    vm.createContext(ctx);
+    vm.runInContext(SIM.slice(0,at)+'\n;globalThis.__K={onKill,PERKS,mkPlayer,mkBuild};',ctx);
+    const K=ctx.__K||ctx.globalThis.__K;
+    const run=(perkId)=>{
+      const p=K.mkPlayer(K.mkBuild(-1,0,0));   /* 미장착 = 장비 옵션 0개 (희귀 풀셋은 옵1 에 healAmp 가 붙어 회복량이 1.15배가 된다) */ const perk=K.PERKS.find(x=>x.id===perkId);
+      if(!perk) return null;
+      perk.ap(p);
+      p.hp=p.maxHp/2; p.sh=0;
+      const e={worldX:100,hp:0,maxHp:100,dead:false,isBoss:false,stun:0};
+      const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,t:0,
+               taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,stunAuraT:2.5,overBoltCd:0,atkTries:0,miss:0};
+      p.G=G;
+      const hp0=p.hp, sh0=p.sh;
+      K.onKill(G,e);
+      return {dHp:(p.hp-hp0)/p.maxHp*100, dSh:(p.sh-sh0)/p.maxSh*100};
+    };
+    const near=(a,b)=>Math.abs(a-b)<1e-6;
+    [['c_killHeal2','dHp',100*V.killHealC[0],'체력'],['l_killHeal5','dHp',100*V.killHealL[0],'체력'],
+     ['c_killShield3','dSh',100*V.killSh3[0],'실드'],['l_killShield10','dSh',100*V.killSh10[0],'실드']].forEach(([id,f,want,nm])=>{
+      const r=run(id);
+      if(!r) return fail(`특전 ${id} 가 PERKS 에 없다`);
+      near(r[f],want) ? pass(`${id}: 처치 1회에 최대 ${nm}의 ${r[f].toFixed(2)}% 가 실제로 채워진다`)
+                      : fail(`${id}: 처치 1회 실측 ${r[f].toFixed(4)}% ≠ 표시 ${want}% — 특전이 사장됐거나 호출부가 끊겼다`);
+     });
+    /* 특전이 없으면 0 이어야 한다 (다른 경로가 몰래 회복시키고 있지 않은가) */
+    const none=run('c_atkPerm');
+    (none&&near(none.dHp,0)&&near(none.dSh,0))
+      ? pass('킬 회복 특전이 없으면 처치로 체력·실드가 늘지 않는다')
+      : fail(`킬 회복 특전이 없는데 처치로 체력 ${none&&none.dHp.toFixed(2)}% · 실드 ${none&&none.dSh.toFixed(2)}% 가 찼다 — 무료 회복 경로가 있다`);
+  }
+}
+
 console.log(`\n대조 ${CHECKS.length}항목 · 일치 ${okN}개 · 불일치 ${bad}건 · 미문서화 신규 ${undocNew}건 · 등재된 기존 ${undocKnown}건`);
 console.log(bad?'→ 불합격':'→ 통과');
 process.exit(bad?1:0);

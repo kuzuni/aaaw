@@ -147,11 +147,12 @@ console.log('\n[Ⓑ 추상 표현 금지 — 주인 지시 ««대폭 증가» �
 
 /* ---------- Ⓒ~Ⓕ 래칫 축 ---------- */
 /* ⚑ 아래 네 목록은 **T81 1단계 시점의 기존 위반 동결분**이다. 정리는 T81 2단계 몫.
+   ⚑ T82 (주인 확정 «킬힐 5% 기준») — 킬 회복 4종(c_killHeal2 · c_killShield3 · l_killHeal5 · l_killShield10)이
+   5·10% 로 정리돼 **동결분에서 빠졌다**. 이제 이 넷이 다시 소수점으로 깎이면 여기서 곧장 빨개진다.
    목록에 없는 id 가 위반하면 = 신규 위반 = 불합격. 새 특전·옵션을 넣을 땐 규칙대로 쓰면 그만이다. */
 
 /* Ⓒ 소수점 금지 (주인: «0.37% 같은 값 금지») */
-const KNOWN_DECIMAL = ['특전 c_killHeal2', '특전 c_killShield3', '특전 c_stunHit', '특전 l_killHeal5',
-  '특전 l_killShield10', '특전 l_overBolt', '특전 l_perkHp', '특전 l_legendOnly', '특전 m_procX2',
+const KNOWN_DECIMAL = ['특전 c_stunHit', '특전 l_overBolt', '특전 l_perkHp', '특전 l_legendOnly', '특전 m_procX2',
   '특전 m_autoBolt', '특전 m_stunLord', '특전 m_stunKill', '특전 m_stunAura', '장비 greatsword옵7',
   '장비 hood옵5', '장비 robe옵7', '장비 gauntlet옵7', '장비 greave옵2', '장비 greave옵6',
   '장비 beads옵4', '장비 beads옵7'];
@@ -163,12 +164,12 @@ const KNOWN_PROB = ['특전 c_wardHit', '특전 r_hitEvade', '특전 r_wardCrit'
 const KNOWN_DUR = ['특전 l_overBolt', '특전 m_autoBolt', '특전 m_stunKill', '장비 hood옵5'];
 
 /* Ⓕ 수치 계수 5% 단위 */
-const KNOWN_COEF = ['특전 c_atkPerm', '특전 c_killHeal2', '특전 c_killShield3', '특전 c_defHit',
+const KNOWN_COEF = ['특전 c_atkPerm', '특전 c_defHit',
   '특전 c_hitHeal', '특전 c_evadeEv', '특전 c_healBoost', '특전 c_healShield', '특전 c_hp12',
   '특전 c_rangeShield', '특전 r_atkBuffM', '특전 r_critFBuff', '특전 r_critHeal3', '특전 r_killCrit',
   '특전 r_defBuff2', '특전 r_hitEvade', '특전 r_evadeHeal', '특전 r_counterAtkM', '특전 r_counterCrit',
   '특전 r_healShield5', '특전 r_healAtk', '특전 r_def6', '특전 r_missAspd', '특전 l_killAspd',
-  '특전 l_killHeal5', '특전 l_killShield10', '특전 l_evadeAtk', '특전 l_counterHeal', '특전 l_perkHp',
+  '특전 l_evadeAtk', '특전 l_counterHeal', '특전 l_perkHp',
   '특전 l_legendOnly', '특전 m_revive', '특전 m_clone', '특전 m_guard', '특전 m_time', '특전 m_def20',
   '특전 m_crit25', '특전 m_giant', '특전 m_lucky', '장비 greatsword옵1', '장비 greatsword옵3',
   '장비 axe옵1', '장비 bow옵1', '장비 helmet옵7', '장비 plate옵1', '장비 plate옵2', '장비 plate옵5',

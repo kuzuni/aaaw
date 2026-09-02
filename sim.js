@@ -156,7 +156,8 @@ function mkPerks(){
   add('c_critChain',0,p=>p.px.critChain++);
   add('c_critF',0,p=>p.px.critFsmall++);
   add('c_critHeal1',0,p=>p.px.critHealS++);
-  add('c_killHeal2',0,p=>p.killHeal+=0.0037);
+  /* ⚑ T82 주인 확정 상수 — «처치 시 체력 5% 회복» (튜닝 노브 아님. 0.0037 → 0.05) */
+  add('c_killHeal2',0,p=>p.killHeal+=0.05);
   add('c_killShield3',0,p=>p.px.killShield3++);
   add('c_defHit',0,p=>p.px.defHitBuff++);
   add('c_shieldHit',0,p=>p.px.shieldOnHit++);
@@ -223,7 +224,8 @@ function mkPerks(){
   add('l_critAtk',2,p=>p.px.critAtkBuff++);
   add('l_critAspd',2,p=>p.px.critAspdBuff++);
   add('l_killAspd',2,p=>p.px.killAspd=true,1);
-  add('l_killHeal5',2,p=>p.killHeal+=0.0055);
+  /* ⚑ T82 — 킬힐 5% 체급을 기준 삼은 전설 차등 (일반의 2배. 0.0055 → 0.10) */
+  add('l_killHeal5',2,p=>p.killHeal+=0.10);
   add('l_killShield10',2,p=>p.px.killShield10++);
   add('l_thorns',2,p=>p.px.thorns++);
   add('l_evadeHitBuff',2,p=>p.px.evadeHitBuff++);
@@ -716,8 +718,8 @@ function onKill(G,e){
   G.kills++;
   G.gold+=Math.round(TUNE.goldKill(G.chapter)*p.goldMul);
   if(p.killHeal>0)heal(p,p.maxHp*p.killHeal);
-  if(px.killShield3)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.005*px.killShield3);   /* ⚑ T1 R01 등급 내 재분배: 0.007 → 0.005 (일반 2위 85.0% 하향) */
-  if(px.killShield10)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.0075*px.killShield10);
+  if(px.killShield3)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05*px.killShield3);    /* ⚑ T82 0.005 → 0.05 (일반 «실드 5% 충전»). 특전 c_killShield3 + 장비 axe옵6·robe옵2 공용 */
+  if(px.killShield10)p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.10*px.killShield10);  /* ⚑ T82 0.0075 → 0.10 (전설 «실드 10% 충전»). 특전 l_killShield10 + 장비 robe옵5·amulet옵6 공용 */
   if(px.aspdKill)addBuff(p,'aspd',0.20*px.aspdKill,4,3);
   if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff))addBuff(p,'critR',14,4,3);
   if(px.killDefBuff)addBuff(p,'def',10*px.killDefBuff,3,3);

@@ -164,8 +164,8 @@
 | c_critChain | 💥 치명타 시 3초간 치명타 확률 +5% (최대 5중첩) | addBuff critR 5*n |
 | c_critF | 🔥 치명타 시 3초간 치명타 배율 +20% (최대 3중첩) | addBuff critF 20*n (⚑R01↑) |
 | c_critHeal1 | ❣️ 치명타 시 20% 확률로 체력 5% 회복 | heal 5% (⚑R01↑) |
-| c_killHeal2 | 🍖 처치 시 체력 0.37% 회복 | killHeal+=0.0037 (R03↓·R07↓) |
-| c_killShield3 | 🔰 처치 시 실드 0.5% 충전 | sh += maxSh*0.005*n (⚑R01↓) |
+| c_killHeal2 | 🍖 처치 시 체력 5% 회복 | killHeal+=0.05 (⚑T82 주인 확정 상수 — 노브 아님) |
+| c_killShield3 | 🔰 처치 시 실드 5% 충전 | sh += maxSh*0.05*n (⚑T82↑) |
 | c_defHit | 🛡️ 피격 시 3초간 방어력 +3% (최대 5중첩) | addBuff def 3*n |
 | c_shieldHit | 🔋 피격 시 5% 확률로 실드 5% 충전 | ⚑R01↓ | |
 | c_hitHeal | 🩹 피격 시 15% 확률로 체력 2% 회복 | |
@@ -237,8 +237,8 @@
 | l_critAtk | 🔥 치명타 시 4초간 공격력 +15% (최대 3중첩) |
 | l_critAspd | ⚡💥 치명타 시 3초간 공격속도 +25% (최대 3중첩) |
 | l_killAspd | 👑 처치 시 공격속도 영구 +1% (고유) |
-| l_killHeal5 | 💉 처치 시 체력 0.55% 회복 |
-| l_killShield10 | 🏯 처치 시 실드 0.75% 충전 |
+| l_killHeal5 | 💉 처치 시 체력 10% 회복 |
+| l_killShield10 | 🏯 처치 시 실드 10% 충전 |
 | l_thorns | 🌵 피격 시 60% 확률로 받은 피해의 150% 반사 |
 | l_evadeHitBuff | 👥 피격 시 30% 확률로 3초간 회피 +15% (최대 2중첩) |
 | l_defBuffL | 🛡️ 피격 시 20% 확률로 4초간 방어력 +15% (최대 2중첩) |

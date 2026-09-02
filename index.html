@@ -1674,8 +1674,8 @@ const PERKS=[
   {id:'c_critChain', r:0, ic:'💥', tx:'치명타 시 <b>3초간</b> 치명타 확률 <b>+5%</b> (최대 <b>5중첩</b>)', ap:p=>p.px.critChain++},
   {id:'c_critF', r:0, ic:'🔥', tx:'치명타 시 <b>3초간</b> 치명타 배율 <b>+20%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.critFsmall++},
   {id:'c_critHeal1', r:0, ic:'❣️', tx:'치명타 시 <b>20%</b> 확률로 체력 <b>5%</b> 회복', ap:p=>p.px.critHealS++},
-  {id:'c_killHeal2', r:0, ic:'🍖', tx:'처치 시 체력 <b>0.37%</b> 회복', ap:p=>p.killHeal+=0.0037},
-  {id:'c_killShield3', r:0, ic:'🔰', tx:'처치 시 실드 <b>0.5%</b> 충전', ap:p=>p.px.killShield3++},
+  {id:'c_killHeal2', r:0, ic:'🍖', tx:'처치 시 체력 <b>5%</b> 회복', ap:p=>p.killHeal+=0.05},
+  {id:'c_killShield3', r:0, ic:'🔰', tx:'처치 시 실드 <b>5%</b> 충전', ap:p=>p.px.killShield3++},
   {id:'c_defHit', r:0, ic:'🛡️', tx:'피격 시 <b>3초간</b> 방어력 <b>+3%</b> (최대 <b>5중첩</b>)', ap:p=>p.px.defHitBuff++},
   {id:'c_shieldHit', r:0, ic:'🔋', tx:'피격 시 <b>5%</b> 확률로 실드 <b>5%</b> 충전', ap:p=>p.px.shieldOnHit++},
   {id:'c_hitHeal', r:0, ic:'🩹', tx:'피격 시 <b>15%</b> 확률로 체력 <b>2%</b> 회복', ap:p=>p.px.hitHeal++},
@@ -1741,8 +1741,8 @@ const PERKS=[
   {id:'l_critAtk', r:2, ic:'🔥', tx:'치명타 시 <b>4초간</b> 공격력 <b>+15%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.critAtkBuff++},
   {id:'l_critAspd', r:2, ic:'⚡💥', tx:'치명타 시 <b>3초간</b> 공격속도 <b>+25%</b> (최대 <b>3중첩</b>)', ap:p=>p.px.critAspdBuff++},
   {id:'l_killAspd', r:2, ic:'👑', tx:'처치 시 공격속도 영구 <b>+1%</b>', ap:p=>p.px.killAspd=true, u:1},
-  {id:'l_killHeal5', r:2, ic:'💉', tx:'처치 시 체력 <b>0.55%</b> 회복', ap:p=>p.killHeal+=0.0055},
-  {id:'l_killShield10', r:2, ic:'🏯', tx:'처치 시 실드 <b>0.75%</b> 충전', ap:p=>p.px.killShield10++},
+  {id:'l_killHeal5', r:2, ic:'💉', tx:'처치 시 체력 <b>10%</b> 회복', ap:p=>p.killHeal+=0.10},
+  {id:'l_killShield10', r:2, ic:'🏯', tx:'처치 시 실드 <b>10%</b> 충전', ap:p=>p.px.killShield10++},
   {id:'l_thorns', r:2, ic:'🌵', tx:'피격 시 <b>60%</b> 확률로 받은 피해의 <b>150%</b> 반사', ap:p=>p.px.thorns++},
   {id:'l_evadeHitBuff', r:2, ic:'👥', tx:'피격 시 <b>30%</b> 확률로 <b>3초간</b> 회피 <b>+15%</b> (최대 <b>2중첩</b>)', ap:p=>p.px.evadeHitBuff++},
   {id:'l_defBuffL', r:2, ic:'🛡️', tx:'피격 시 <b>20%</b> 확률로 <b>4초간</b> 방어력 <b>+15%</b> (최대 <b>2중첩</b>)', ap:p=>p.px.defBuffL++},
@@ -2387,8 +2387,8 @@ function onKill(e){
      챕터 240 부터는 JS 지수표기(«+9.25e+22 🪙»)가 캔버스에 그대로 떴다 — 게임 표기 규약(T54) 밖이다. */
   addText('+'+fmt(drop)+' 🪙','#FFD54F',e.worldX,-100);
   if(p.killHeal>0) heal(p,p.maxHp*p.killHeal);
-  if(px.killShield3) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.005*px.killShield3);   /* ⚑ T1 R01 등급 내 재분배: 0.007 → 0.005 */
-  if(px.killShield10) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.0075*px.killShield10);
+  if(px.killShield3) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.05*px.killShield3);    /* ⚑ T82 0.005 → 0.05 (일반 «실드 5% 충전») */
+  if(px.killShield10) p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.10*px.killShield10);  /* ⚑ T82 0.0075 → 0.10 (전설 «실드 10% 충전») */
   if(px.aspdKill) addBuff(p,'aspd',0.20*px.aspdKill,4,3,'aspdKill');
   if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff)) addBuff(p,'critR',14,4,3,'killCritBuff');
   if(px.killDefBuff) addBuff(p,'def',10*px.killDefBuff,3,3,'killDefBuff');
