@@ -1676,7 +1676,6 @@ const PERKS=[
   {id:'c_critHeal1', r:0, ic:'❣️', tx:'치명타 시 <b>20%</b> 확률로 체력 <b>1%</b> 회복', ap:p=>p.px.critHealS++},
   {id:'c_killHeal2', r:0, ic:'🍖', tx:'처치 시 체력 <b>0.37%</b> 회복', ap:p=>p.killHeal+=0.0037},
   {id:'c_killShield3', r:0, ic:'🔰', tx:'처치 시 실드 <b>0.7%</b> 충전', ap:p=>p.px.killShield3++},
-  {id:'c_gold30', r:0, ic:'🪙', tx:'처치 시 골드 <b>+30%</b>', ap:p=>p.goldMul+=0.3},
   {id:'c_defHit', r:0, ic:'🛡️', tx:'피격 시 <b>3초간</b> 방어력 <b>+3%</b> (최대 <b>5중첩</b>)', ap:p=>p.px.defHitBuff++},
   {id:'c_shieldHit', r:0, ic:'🔋', tx:'피격 시 <b>10%</b> 확률로 실드 <b>5%</b> 충전', ap:p=>p.px.shieldOnHit++},
   {id:'c_hitHeal', r:0, ic:'🩹', tx:'피격 시 <b>15%</b> 확률로 체력 <b>2%</b> 회복', ap:p=>p.px.hitHeal++},
@@ -1692,7 +1691,6 @@ const PERKS=[
   {id:'c_firstHit', r:0, ic:'🎯', tx:'체력이 가득 찬 적에게 데미지 <b>+20%</b>', ap:p=>p.px.firstHit++},
   {id:'c_hp12', r:0, ic:'❤️', tx:'최대 체력 <b>+12%</b> (즉시 회복)', ap:p=>{const a=p.maxHp*0.12;p.maxHp+=a;heal(p,a,true);}},
   {id:'c_sh15', r:0, ic:'🔷', tx:'실드 최대치 <b>+15%</b>', ap:p=>p.maxSh*=1.15},
-  {id:'c_walk20', r:0, ic:'🏃', tx:'이동 속도 <b>+20%</b>', ap:p=>p.walkMul+=0.2},
   {id:'c_def3', r:0, ic:'🧱', tx:'방어력 <b>+3%</b>', ap:p=>p.def+=3},
   {id:'c_stunHit', r:0, ic:'💫', tx:'피격 시 <b>12%</b> 확률로 공격한 적 <b>1.5초</b> 기절', ap:p=>p.px.stunHitS++},
   {id:'c_missAtk', r:0, ic:'💨', tx:'빗나갈 시 <b>3초간</b> 공격력 <b>+6%</b> (최대 <b>5중첩</b>)', ap:p=>p.px.missAtk++},
@@ -1783,8 +1781,6 @@ const PERKS=[
   {id:'m_spear200', r:3, ic:'🔱', tx:'창의 대가 — 창 데미지가 공격력의 <b>1350%</b>', ap:p=>p.px.spearMaster=1, u:1},
   {id:'m_bolt3', r:3, ic:'⚡', tx:'번개 지배자 — 번개가 <b>20회</b>씩 발동', ap:p=>p.px.boltCount=1, u:1},
   {id:'m_wave4', r:3, ic:'🌊', tx:'검기의 왕 — 검기가 <b>20명</b>까지 관통 (사거리 340→1400)', ap:p=>p.px.waveKing=1, u:1},
-  {id:'m_gold2', r:3, ic:'💰', tx:'황금 기사 — 골드 획득 <b>2배</b>', ap:p=>p.goldMul*=2, u:1},
-  {id:'m_sage', r:3, ic:'🌟', tx:'현자 — 처치 시 경험치 +1', ap:p=>p.px.sage=true, u:1},
   {id:'m_def20', r:3, ic:'🛡️', tx:'불괴 — 방어력 <b>+8%p</b>', ap:p=>p.def+=8},
   {id:'m_crit25', r:3, ic:'🎯', tx:'정밀 — 치명타 확률 <b>+9%</b>', ap:p=>p.critR+=9},
   {id:'m_giant', r:3, ic:'🦾', tx:'거인화 — 최대 체력 <b>+16%</b> (즉시 회복)', ap:p=>{const a=p.maxHp*0.16;p.maxHp+=a;heal(p,a,true);}},
@@ -2066,7 +2062,7 @@ function closeOverlay(){ ov.classList.remove('on'); ov.innerHTML=''; ov.onclick=
    종전엔 그 표기를 tx 문자열에 손으로 박아 뒀는데 T48 신규 9종에만 박혀서, 나머지 26종
    (m_revive·m_clone·m_procX2·l_rage·r_lastStand …)은 «중복 획득 불가» 가 화면에 아예 안 떴다.
    `u:1` 이 유일성의 유일한 근거이므로 표기도 거기서 파생시킨다 — 특전을 새로 넣을 때 손으로
-   덧붙일 것이 없어지고, 게이트(`verifyT2` ㊱)가 PLAN §3 표와 132종 전수를 1:1 로 대조한다.
+   덧붙일 것이 없어지고, 게이트(`verifyT2` ㊱)가 PLAN §3 표와 특전 전수를 1:1 로 대조한다.
    T3 `battle.js` 는 그 문자열이 실제 DOM 까지 갔는지를 따로 본다. */
 const perkText=p=>p.tx+(p.u?' (고유)':'');
 function perkCardHTML(p,i,extra){

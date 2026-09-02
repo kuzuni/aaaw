@@ -92,11 +92,12 @@ else {
   catch (e) { bad('구문 오류: ' + e.message); }
 }
 
-/* ---------- ② 특전 전수 대조 (T48 로 102 → 117종) ---------- */
+/* ---------- ② 특전 전수 대조 (T48 로 102 → 132 → T77 로 128종) ---------- */
 /* ⚑ 개수는 더 이상 고정이 아니다 — 주인 확정(16:0X): «등급당 30~40 까지 허용, 단 등급 간 개수는 골고루».
    그래서 «102 인가» 가 아니라 «두 파일이 같은가 + 등급별 편차 ≤ PERK_RAR_GAP» 을 본다.
-   T48 최종 목표는 각 등급 33종(총 132)이고 지금은 1단계(스턴·빗맞음 축)까지 반영된 상태다. */
-const PERK_TOTAL = 132, PERK_RAR_GAP = 6;
+   T48 이 각 등급 33종(총 132)까지 채웠고, T77(주인 확정 «전투 무관 특전 4종 삭제»)이
+   일반 2종(c_gold30·c_walk20)·신화 2종(m_gold2·m_sage)을 빼 31/33/33/31 = 128종, 편차 2 가 됐다. */
+const PERK_TOTAL = 128, PERK_RAR_GAP = 6;
 console.log(`\n[② 특전 ${PERK_TOTAL}종 — id·등급·고유·ap 본문 전수 대조]`);
 const S = simPerks(), H = htmlPerks();
 if (!H) { bad('index.html 에서 const PERKS=[...] 를 찾지 못했다'); }
@@ -2434,6 +2435,83 @@ console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
   (cardOK && devilOK && useN >= 2)
     ? ok(`⑦ 렌더 지점 2곳 전부 perkText() 경유 — 특전 카드 ✓ · 악마 거래 획득 팝업 ✓ (총 ${useN}회 호출)`)
     : bad(`⑦ 렌더 지점 누락 — 특전 카드 ${cardOK ? 'OK' : '✗'} · 악마 거래 팝업 ${devilOK ? 'OK' : '✗'} (perkText 호출 ${useN}회)`);
+}
+
+/* ---------- ㊲ 전투 무관 특전 금지 — 경제(골드·경험치)·이동속도류 (T77) ----------
+   ⚑ 주인 확정(2026-09-03): «132종에서 🪙 c_gold30 · 💰 m_gold2 · 🌟 m_sage · 🏃 c_walk20 삭제.
+   향후 경제/이속류 특전 추가 금지(흡혈·적중률 금지와 같은 축, 게이트 감시)».
+   금지어 목록만 두면 «px 키를 새로 파서 우회하는» 되돌림을 못 잡으므로, 판정을 구조로 건다:
+   특전의 ap 가 «대입하는 대상 집합» 이 전부 금지축(goldMul·px.sage·walkMul)이면 전투 무관 특전이다.
+   🕰️ m_time 은 walkMul 과 함께 aspd(전투 스탯)를 올리므로 이 판정을 통과한다 — 주인 삭제 목록에도 없다.
+   ※ 장비 옵션(GOPT)에는 골드·경험치 옵션이 그대로 있다. 주인 지시는 «특전» 축이므로 여기서 보지 않는다. */
+console.log('\n[㊲ 전투 무관 특전 금지 — 경제·이속류 (T77 · 주인 확정 2026-09-03)]');
+{
+  const GONE = ['c_gold30', 'm_gold2', 'm_sage', 'c_walk20'];
+  const BAN = { goldMul: '경제(골드)', sage: '경제(경험치)', walkMul: '이동속도' };
+  const PLANTXT77 = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
+  const S77 = simPerks(), H77 = htmlPerks() || [];
+
+  /* ① 삭제된 4종이 어디서도 되살아나지 않는다 (두 엔진 + PLAN §3 표) */
+  {
+    const back = [];
+    for (const id of GONE) {
+      if (S77.some(p => p.id === id)) back.push(`sim.js:${id}`);
+      if (H77.some(p => p.id === id)) back.push(`index.html:${id}`);
+      if (new RegExp('^\\|\\s*' + id + '\\s*\\|', 'm').test(PLANTXT77)) back.push(`PLAN §3:${id}`);
+    }
+    back.length === 0
+      ? ok(`① 주인 확정 삭제 4종(${GONE.join(', ')}) 이 두 엔진·PLAN §3 어디에도 없다`)
+      : bad(`① 삭제된 특전이 되살아났다: ${back.join(' · ')}`);
+  }
+
+  /* ap 가 «대입하는 대상» 집합 — p.<키> / p.px.<키> 양쪽 */
+  const targets = ap => {
+    const out = new Set();
+    for (const m of String(ap || '').matchAll(/p\.(?:px\.)?([A-Za-z0-9_]+)\s*(\+\+|--|\+=|-=|\*=|\/=|=(?!=))/g)) out.add(m[1]);
+    return out;
+  };
+  /* ② 전투 기여가 0 인 특전 0종 — 대입 대상이 전부 금지축이면 그건 전투 무관 특전이다 */
+  for (const [nm, arr] of [['sim.js', S77], ['index.html', H77]]) {
+    const hit = [];
+    for (const p of arr) {
+      const t = [...targets(p.ap)];
+      if (t.length === 0) continue;                       // 대입이 없는 특전(🎲 r_refresh 류)은 T66 관할
+      if (t.every(k => BAN[k])) hit.push(`${p.id}(${t.map(k => BAN[k]).join('+')})`);
+    }
+    hit.length === 0
+      ? ok(`② ${nm} — 전투 기여 없이 금지축(골드·경험치·이동속도)만 올리는 특전 0종`)
+      : bad(`② ${nm} — 전투 무관 특전 ${hit.length}종: ${hit.join(', ')} — 주인 확정으로 금지된 축이다`);
+  }
+  /* ③ 두 파일이 같은 판정을 받는다 (한쪽만 되돌아가는 것 방지) */
+  {
+    const key = arr => arr.filter(p => [...targets(p.ap)].some(k => BAN[k])).map(p => p.id).sort().join(',');
+    const a = key(S77), b = key(H77);
+    a === b
+      ? ok(`③ 금지축을 건드리는 특전 집합이 두 파일에서 동일 (${a || '없음'})`)
+      : bad(`③ 금지축 특전 집합 불일치 — sim.js [${a}] vs index.html [${b}]`);
+  }
+  /* ④ 표시 문구 금지어 — 특전 tx·PLAN §3 표에 «골드»·«경험치» 0건
+     (이동속도는 m_time 이 정당하게 쓰므로 ② 의 구조 판정이 담당한다) */
+  {
+    const WORD = /골드|경험치|gold|exp획득/i;
+    const txHit = H77.filter(p => WORD.test(p.tx)).map(p => p.id);
+    const planHit = [];
+    for (const line of PLANTXT77.split('\n')) {
+      const m = line.match(/^\|\s*([a-z]_[A-Za-z0-9]+)\s*\|\s*(.+?)\s*\|/);
+      if (m && WORD.test(m[2])) planHit.push(m[1]);
+    }
+    (txHit.length === 0 && planHit.length === 0)
+      ? ok('④ 특전 표시 문구·PLAN §3 표에 «골드»·«경험치» 0건')
+      : bad(`④ 경제 문구가 특전에 남았다 — index.html tx [${txHit.join(', ')}] · PLAN §3 [${planHit.join(', ')}]`);
+  }
+  /* ⑤ 등급별 개수 — 주인 확정 삭제 후 31/33/33/31 (편차 2, 기준 ≤6) */
+  {
+    const ns = [0, 1, 2, 3].map(r => S77.filter(p => p.r === r).length);
+    const want = [31, 33, 33, 31];
+    ns.join(',') === want.join(',')
+      ? ok(`⑤ 등급별 개수 일반 ${ns[0]} · 희귀 ${ns[1]} · 전설 ${ns[2]} · 신화 ${ns[3]} (편차 ${Math.max(...ns) - Math.min(...ns)})`)
+      : bad(`⑤ 등급별 개수 ${ns.join('/')} — 주인 확정 삭제 후 기대값 ${want.join('/')}`);
+  }
 }
 
 /* ---------- 결과 ---------- */

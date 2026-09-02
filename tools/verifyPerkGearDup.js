@@ -53,7 +53,6 @@ const KNOWN = {
   'bool|l_counterChain|boots|7': 'T24 / 승인 대기 19번',
   'bool|r_lastStand|greave|7': 'T24 / 승인 대기 19번',
   'bool|l_overheal|pendant|7': 'T24 / 승인 대기 19번',
-  'bool|m_sage|amulet|5': 'T24 / 승인 대기 19번',
   'bool|m_spear200|beads|4': 'T24 / 승인 대기 19번',
   'bool|m_procX2|beads|7': 'T24 / 승인 대기 19번',
   'prob|l_counterWave|greatsword': 'T24 / 승인 대기 19번 — 기저 1.0 이라 대검 옵6 하나로 이미 확정',
@@ -84,7 +83,7 @@ for (let i = pStart; i < pEnd; i++) {
     keys[mm[1]] = mm[2].startsWith('=') ? 'bool' : 'inc';
   PERKS.push({ id: m[1], r: Number(m[2]), uniq: /,\s*1\s*\)\s*;/.test(lines[i]), line: i + 1, keys });
 }
-if (PERKS.length !== 132) { console.error(`✗ 특전이 132종이 아니다 (파싱 결과 ${PERKS.length}종). T48 로 늘어나는 중이라, 늘렸으면 이 숫자도 같이 올릴 것`); process.exit(1); }
+if (PERKS.length !== 128) { console.error(`✗ 특전이 128종이 아니다 (파싱 결과 ${PERKS.length}종). T77(전투 무관 4종 삭제)로 132 → 128 이 됐다 — 개수를 바꿨으면 이 숫자도 같이 고칠 것`); process.exit(1); }
 
 /* ── ③ GOPT 파싱 ──────────────────────────────────── */
 const gStart = lines.findIndex(l => /^const GOPT\s*=\s*\{/.test(l));

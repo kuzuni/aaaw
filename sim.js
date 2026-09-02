@@ -139,7 +139,8 @@ function enemyStats(c,w){
   return {hp:Math.round(hp), dmg:Math.round(dmg)};
 }
 
-/* ---------- 특전 정의 (132종 — T48 로 102 → 132. 등급당 33종씩 균등, 편차 0) ---------- */
+/* ---------- 특전 정의 (128종 — T48 로 102 → 132, T77(주인 확정 «전투 무관 4종 삭제»)로 → 128.
+   일반 31 · 희귀 33 · 전설 33 · 신화 31, 편차 2. 경제(골드·경험치)·이속류 특전은 추가 금지 — `verifyT2` ㊲ 감시) ---------- */
 /* ap(p): 적용. u: 고유. 이름은 게임과 동일 키 */
 function mkPerks(){
   const P=[];
@@ -153,7 +154,6 @@ function mkPerks(){
   add('c_critHeal1',0,p=>p.px.critHealS++);
   add('c_killHeal2',0,p=>p.killHeal+=0.0037);
   add('c_killShield3',0,p=>p.px.killShield3++);
-  add('c_gold30',0,p=>p.goldMul+=0.3);
   add('c_defHit',0,p=>p.px.defHitBuff++);
   add('c_shieldHit',0,p=>p.px.shieldOnHit++);
   add('c_hitHeal',0,p=>p.px.hitHeal++);
@@ -169,7 +169,6 @@ function mkPerks(){
   add('c_firstHit',0,p=>p.px.firstHit++);
   add('c_hp12',0,p=>{const a=p.maxHp*0.12;p.maxHp+=a;heal(p,a,true);});
   add('c_sh15',0,p=>p.maxSh*=1.15);
-  add('c_walk20',0,p=>p.walkMul+=0.2);
   add('c_def3',0,p=>p.def+=3);
   add('c_stunHit',0,p=>p.px.stunHitS++);
   add('c_missAtk',0,p=>p.px.missAtk++);
@@ -260,8 +259,6 @@ function mkPerks(){
   add('m_spear200',3,p=>p.px.spearMaster=1,1);
   add('m_bolt3',3,p=>p.px.boltCount=1,1);
   add('m_wave4',3,p=>p.px.waveKing=1,1);
-  add('m_gold2',3,p=>p.goldMul*=2,1);
-  add('m_sage',3,p=>p.px.sage=true,1);
   add('m_def20',3,p=>p.def+=8);
   add('m_crit25',3,p=>p.critR+=9);
   add('m_giant',3,p=>{const a=p.maxHp*0.16;p.maxHp+=a;heal(p,a,true);});
