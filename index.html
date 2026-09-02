@@ -102,13 +102,51 @@
   #fuseBtn:disabled{filter:grayscale(.8); opacity:.55; box-shadow:none;}
   #invGrid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(5,1fr);
     gap:6px; padding:8px 10px 10px; align-content:start;}
-  .inv-cell{position:relative; aspect-ratio:1; border-radius:11px; background:rgba(20,20,24,.55);
-    border:2.5px solid #55555F; display:flex; align-items:center; justify-content:center; font-size:22px; padding:0;}
-  .inv-cell .plus{position:absolute; bottom:-5px; left:50%; transform:translateX(-50%); font-size:9px;
+  /* 인벤 칸 — `docs/ref/캐릭터 장비.jpg`·`장비 합성 업글창.jpg` 구도: 등급색 타일 + 좌상단 부위 태그 + 하단 «장착» 띠 + 금색 +N */
+  .inv-cell{position:relative; aspect-ratio:1; border-radius:11px; overflow:visible;
+    border:2.5px solid #55555F; display:flex; align-items:center; justify-content:center; font-size:22px; padding:0;
+    background:linear-gradient(#4A4A56,#2C2C34);}
+  .inv-cell .plus{position:absolute; bottom:-5px; left:50%; transform:translateX(-50%); font-size:9px; z-index:2;
     background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; border-radius:99px; padding:0 4px;}
   .inv-cell .eqm{position:absolute; inset:auto 0 0 0; font-size:8.5px; background:rgba(10,10,14,.72); border-radius:0 0 8px 8px;}
-  .inv-cell .fus{position:absolute; top:-5px; right:-4px; font-size:9px; background:#E8483F; border-radius:99px; padding:0 4px;}
+  .inv-cell .fus{position:absolute; top:-5px; right:-4px; font-size:9px; background:#E8483F; border-radius:99px; padding:0 4px; z-index:2;}
+  /* 부위 태그 — 스크린샷의 좌상단 마름모 라벨 */
+  .inv-cell .ptag,.fg-cell .ptag{position:absolute; top:-6px; left:-5px; font-size:8px; line-height:1.35; z-index:2;
+    padding:1px 4px; border-radius:5px 5px 5px 0; color:#12121A; font-family:inherit;
+    box-shadow:0 1px 0 rgba(0,0,0,.35);}
   .inv-empty{grid-column:1/-1; text-align:center; color:var(--ink-dim); font-size:13px; padding:26px 10px; line-height:1.5;}
+  /* ---------- 합성(대장간) 화면 — 참고: docs/ref/장비 합성 업글창.jpg ---------- */
+  #forge{background:radial-gradient(120% 70% at 50% 0%, #35353E, #1E1E24 60%, #17171B);}
+  #forgeStage{flex:none; position:relative; display:flex; align-items:center; gap:10px; padding:10px 12px 12px;
+    background:linear-gradient(#5B4636,#3E2F24); border-bottom:3px solid #241A13;}
+  #forgeCol{display:flex; flex-direction:column; align-items:center; gap:2px; width:33%;}
+  .fg-slot{position:relative; width:74px; height:74px; border-radius:13px; display:flex; align-items:center;
+    justify-content:center; font-size:30px; background:rgba(16,16,20,.55); border:3px solid #6A6A78;}
+  .fg-slot.empty{border-style:dashed; color:#8A8A96;}
+  .fg-slot .plus{position:absolute; bottom:-7px; left:50%; transform:translateX(-50%); font-size:10px;
+    background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; border-radius:99px; padding:0 5px;}
+  .fg-up{font-size:19px; color:#5CD65C; line-height:1; text-shadow:0 2px 0 rgba(0,0,0,.4);}
+  #fgMats{display:flex; gap:5px;}
+  .fg-cell{position:relative; width:44px; height:44px; border-radius:10px; display:flex; align-items:center;
+    justify-content:center; font-size:19px; background:rgba(16,16,20,.5); border:2.5px solid #6A6A78; padding:0;}
+  .fg-cell.empty{border-style:dashed; color:#8A8A96; font-size:17px;}
+  #fgBanner{flex:1; align-self:stretch; display:flex; align-items:center; justify-content:center; text-align:center;
+    font-size:14px; line-height:1.5; background:rgba(10,10,14,.55); border-radius:12px; padding:8px 6px;}
+  #fgBanner b{color:var(--gold);}
+  .forge-actionbar{flex:none; display:flex; align-items:center; gap:8px; padding:7px 10px;
+    background:linear-gradient(#4A3A2C,#3A2C21); border-bottom:2px solid #241A13;}
+  .forge-actionbar button{position:relative; flex:1; padding:10px 4px; border-radius:12px; font-size:15px;}
+  #fgAuto{background:linear-gradient(#5AA8E8,#3B7FC4); color:#08243D; box-shadow:0 3px 0 #285C93;}
+  #fgFuse{background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; box-shadow:0 3px 0 #C77E12;}
+  .forge-actionbar button:disabled{filter:grayscale(.8); opacity:.55; box-shadow:none;}
+  .bang{position:absolute; top:-6px; right:-4px; width:16px; height:16px; border-radius:99px; background:#E8483F;
+    font-size:11px; line-height:16px; color:#fff;}
+  #fgGrid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(5,1fr);
+    gap:6px; padding:8px 10px 10px; align-content:start;}
+  #fgGrid .inv-cell.sel{border-color:#5CD65C; box-shadow:0 0 12px rgba(92,214,92,.55);}
+  #fgGrid .inv-cell.off{opacity:.32; filter:grayscale(.7);}
+  .forge-back{flex:none; padding:7px 10px calc(7px + env(safe-area-inset-bottom)); background:var(--panel);}
+  #fgBack{width:100%; padding:10px 4px; border-radius:12px; font-size:15px; background:var(--panel3);}
   #shopBody{flex:1 1 auto; min-height:0; overflow-y:auto; padding:4px 10px 12px;}
   .shop-sec{font-size:15px; color:var(--ink-dim); margin:12px 0 7px; text-align:center;}
   .gacha-card{border-radius:18px; padding:12px; background:linear-gradient(150deg,#5A3E8C,#8A4FA8 60%,#C05C9E);
@@ -307,6 +345,29 @@
     </div>
     <div id="invGrid"></div>
     <div class="bottomNav" data-tab="gear"></div>
+  </div>
+
+  <!-- ============ 합성 / 대장간 (PLAN §11.3 · 참고: 장비 합성 업글창.jpg) ============ -->
+  <div id="forge" class="screen">
+    <div class="top-bar">
+      <div class="pill">⚔️ <span class="tPower">0</span></div>
+      <div class="pill">🪙 <span class="tGold">0</span></div>
+      <div class="pill">💎 <span class="tGem">0</span></div>
+    </div>
+    <div id="forgeStage">
+      <div id="forgeCol">
+        <div id="fgResult" class="fg-slot empty">🛠️</div>
+        <div class="fg-up">▲</div>
+        <div id="fgMats"></div>
+      </div>
+      <div id="fgBanner"></div>
+    </div>
+    <div class="forge-actionbar">
+      <button id="fgAuto">자동</button>
+      <button id="fgFuse">합성</button>
+    </div>
+    <div id="fgGrid"></div>
+    <div class="forge-back"><button id="fgBack">◀ 장비로</button></div>
   </div>
 
   <!-- ============ 상점 (PLAN §11.2·§11.5 · 참고: 상점 (1).jpg, 상점 (2).jpg) ============ -->
@@ -628,6 +689,19 @@ function gachaPull(st){
 
 /* ---- 합성 (PLAN §11.3) ---- */
 const gearKey=g=>`${g.part}|${g.type}|${g.rar}|${g.plus}`;
+/* 합성 산출물 규칙 — 자동(fuseAll)·수동(합성 화면) 둘 다 **이 함수 하나만** 쓴다.
+   규칙을 두 곳에 적으면 T8·T9·T11·T12 계열(«같은 수치를 손으로 두 번 옮기다 어긋남») 이 재발한다.
+   base = 재료 3개 중 최고 강화품(호출부가 정렬해서 넘긴다). */
+function fuseMake(base){
+  if(base.rar<3) return {part:base.part,type:base.type,rar:base.rar+1,plus:0};
+  if(base.rar===3){
+    const np=base.plus+1;
+    return np>=GT.legendToMythPlus
+      ? {part:base.part,type:base.type,rar:4,plus:0}            /* +10강 도달 → 신화 0강 변환 */
+      : {part:base.part,type:base.type,rar:3,plus:np};
+  }
+  return {part:base.part,type:base.type,rar:4,plus:base.plus+1};   /* 신화 무한 강화 */
+}
 /* inv: 배열. equipped: Set(장착 중인 객체) — 재료에서 제외 */
 function fuseAll(inv,equipped){
   let did=true,count=0;
@@ -644,14 +718,7 @@ function fuseAll(inv,equipped){
       if(arr.length<3)continue;
       arr.sort((a,b)=>b.plus-a.plus);          /* 재료 중 최고 강화 기준 */
       const mats=arr.slice(0,3), base=mats[0];
-      let made;
-      if(base.rar<3) made={part:base.part,type:base.type,rar:base.rar+1,plus:0};
-      else if(base.rar===3){
-        const np=base.plus+1;
-        made = np>=GT.legendToMythPlus
-          ? {part:base.part,type:base.type,rar:4,plus:0}          /* +10강 도달 → 신화 0강 변환 */
-          : {part:base.part,type:base.type,rar:3,plus:np};
-      }else made={part:base.part,type:base.type,rar:4,plus:base.plus+1};   /* 신화 무한 강화 */
+      const made=fuseMake(base);
       for(const m of mats){const i=inv.indexOf(m);inv.splice(i,1);}
       inv.push(made);count++;did=true;
       break;                                    /* 인벤이 바뀌었으니 재그룹화 */
@@ -948,29 +1015,106 @@ function renderGear(){
   $('evenNote').innerHTML=`균등 보너스 <b style="color:var(--gold)">+${bon}%</b> — 최저 슬롯 Lv.${mn} `+
     `(6슬롯 전부 Lv.${(Math.floor(mn/GT.evenPer)+1)*GT.evenPer} 이면 +${bon+GT.evenStep*100}%)`;
   const fk=fusableKeys();
-  const fb=$('fuseBtn'); fb.disabled=fk.size===0;
-  fb.textContent=fk.size?`🔨 합성 (${fk.size})`:'🔨 합성';
+  const fb=$('fuseBtn'); fb.disabled=false;              /* 대장간은 재료가 없어도 열린다 (스크린샷의 Forge 버튼) */
+  fb.innerHTML=`🔨 합성${fk.size?`<span class="bang">!</span>`:''}`;
   /* 인벤토리 — 장착분 먼저, 그다음 등급·강화 내림차순 */
-  const sorted=save.inv.slice().sort((a,b)=>(isEquipped(b)-isEquipped(a))||(gearScore(b)-gearScore(a))||a.part.localeCompare(b.part));
-  $('invGrid').innerHTML = sorted.length ? sorted.map(g=>{
-    const f=fk.has(`${g.part}|${g.type}|${g.rar}`);
-    return `<button class="inv-cell" data-u="${g.u}" style="border-color:${GT.rarColor[g.rar]}">`+
-      `${GT.typeIcon[g.type]}${g.plus?`<span class="plus">+${g.plus}</span>`:''}`+
-      `${isEquipped(g)?'<span class="eqm">장착</span>':''}${f?'<span class="fus">3</span>':''}</button>`;
-  }).join('') : `<div class="inv-empty">장비가 없습니다.<br>🏪 상점에서 뽑기로 장비를 얻으세요.</div>`;
+  $('invGrid').innerHTML = save.inv.length ? invSorted().map(g=>invCellHTML(g,{fus:fk.has(`${g.part}|${g.type}|${g.rar}`)})).join('')
+    : `<div class="inv-empty">장비가 없습니다.<br>🏪 상점에서 뽑기로 장비를 얻으세요.</div>`;
   $('invGrid').querySelectorAll('.inv-cell').forEach(b=>b.onclick=()=>{ AU.play('click'); openGearDetail(+b.dataset.u); });
   drawGearAvatar();
 }
-$('fuseBtn').onclick=()=>{
+/* 인벤 정렬·칸 HTML — 장비 탭과 합성 화면이 같은 함수를 쓴다 (구도가 갈라지지 않게) */
+function invSorted(){
+  return save.inv.slice().sort((a,b)=>(isEquipped(b)-isEquipped(a))||(gearScore(b)-gearScore(a))||a.part.localeCompare(b.part));
+}
+function invCellHTML(g,o){
+  o=o||{};
+  return `<button class="inv-cell${o.cls?' '+o.cls:''}" data-u="${g.u}" `+
+    `style="border-color:${GT.rarColor[g.rar]};background:linear-gradient(${GT.rarColor[g.rar]}55,${GT.rarColor[g.rar]}22)">`+
+    `<span class="ptag" style="background:${GT.rarColor[g.rar]}">${GT.partName[g.part]}</span>`+
+    `${GT.typeIcon[g.type]}${g.plus?`<span class="plus">+${g.plus}</span>`:''}`+
+    `${isEquipped(g)?'<span class="eqm">장착</span>':''}${o.fus?'<span class="fus">3</span>':''}</button>`;
+}
+$('fuseBtn').onclick=()=>{ AU.play('click'); openForge(); };
+
+/* ================= 합성 / 대장간 화면 (PLAN §11.3 · 참고: docs/ref/장비 합성 업글창.jpg) =================
+   스크린샷의 «수동 3칸 선택» 구도: 재료 3칸 → ▲ → 결과 미리보기, 아래에 자동/합성 버튼과 인벤 그리드.
+   ⚠ 산출물은 `fuseMake()` 하나만 쓴다 — 자동(fuseAll)과 규칙이 갈라질 수 없다.
+   ⚠ 재료 제한은 엔진(sim.js accRefresh)과 같은 «장착분도 재료» 다. PLAN §11.3 의 «장착 제외(위임)» 와
+      어긋나는 건 T41(승인 28번)로 등재돼 있고, 주인이 답하기 전에 게임만 바꾸면 sim 과 다시 벌어진다. */
+let FG=[];                                   /* 선택된 재료 uid 배열 (최대 3) */
+const fgMatsGear=()=>FG.map(invById).filter(Boolean);
+function fgKey(g){ return `${g.part}|${g.type}|${g.rar}`; }
+function openForge(){ FG=[]; showScreen('forge'); }
+function renderForge(){
+  renderTopBars();
+  const mats=fgMatsGear();
+  if(mats.length!==FG.length) FG=mats.map(g=>g.u);          /* 사라진 uid 정리 */
+  const lock=mats.length?fgKey(mats[0]):null;
+  /* 재료 3칸 */
+  $('fgMats').innerHTML=[0,1,2].map(i=>{
+    const g=mats[i];
+    if(!g) return `<button class="fg-cell empty" data-i="${i}">＋</button>`;
+    return `<button class="fg-cell" data-i="${i}" style="border-color:${GT.rarColor[g.rar]};background:linear-gradient(${GT.rarColor[g.rar]}55,${GT.rarColor[g.rar]}22)">`+
+      `<span class="ptag" style="background:${GT.rarColor[g.rar]}">${GT.partName[g.part]}</span>${GT.typeIcon[g.type]}</button>`;
+  }).join('');
+  $('fgMats').querySelectorAll('.fg-cell').forEach(b=>b.onclick=()=>{
+    const g=mats[+b.dataset.i]; if(!g) return;
+    AU.play('click'); FG=FG.filter(u=>u!==g.u); renderForge();       /* 재료 칸을 누르면 해제 */
+  });
+  /* 결과 미리보기 — 3개가 다 찼을 때만 실제 산출물을 보여준다 */
+  const res=$('fgResult');
+  if(mats.length===3){
+    const base=mats.slice().sort((a,b)=>b.plus-a.plus)[0], made=fuseMake(base);
+    res.className='fg-slot';
+    res.style.borderColor=GT.rarColor[made.rar];
+    res.style.boxShadow=`0 0 14px ${GT.rarGlow[made.rar]}`;
+    res.innerHTML=`${GT.typeIcon[made.type]}${made.plus?`<span class="plus">+${made.plus}</span>`:''}`;
+    $('fgBanner').innerHTML=`<div><b>${GT.rarName[made.rar]} ${GT.typeName[made.type]}</b>${made.plus?` <b>+${made.plus}</b>`:''}<br>`+
+      `<span style="font-size:12px;color:var(--ink-dim)">재료 3개가 사라지고 위 장비 1개가 됩니다</span></div>`;
+  }else{
+    res.className='fg-slot empty'; res.style.borderColor=''; res.style.boxShadow=''; res.innerHTML='🛠️';
+    $('fgBanner').innerHTML=mats.length
+      ? `<div>같은 <b>${GT.partName[mats[0].part]} · ${GT.typeName[mats[0].type]} · ${GT.rarName[mats[0].rar]}</b> 을(를)<br>`+
+        `<b>${3-mats.length}개</b> 더 고르세요</div>`
+      : `<div>합성할 장비를<br>선택하세요<br><span style="font-size:12px;color:var(--ink-dim)">같은 부위·종류·등급 3개</span></div>`;
+  }
+  const fk=fusableKeys();
+  $('fgAuto').disabled=fk.size===0;
+  $('fgAuto').innerHTML=fk.size?`⚙️ 자동 (${fk.size})<span class="bang">!</span>`:'⚙️ 자동';
+  $('fgFuse').disabled=mats.length!==3;
+  $('fgFuse').textContent=`🔨 합성 (${mats.length}/3)`;
+  /* 인벤 — 선택된 것은 초록, 다른 키는 흐리게 */
+  $('fgGrid').innerHTML = save.inv.length ? invSorted().map(g=>{
+    const sel=FG.includes(g.u);
+    const off=lock&&!sel&&fgKey(g)!==lock;
+    return invCellHTML(g,{cls:(sel?'sel':'')+(off?' off':''),fus:!lock&&fk.has(fgKey(g))});
+  }).join('') : `<div class="inv-empty">장비가 없습니다.<br>🏪 상점에서 뽑기로 장비를 얻으세요.</div>`;
+  $('fgGrid').querySelectorAll('.inv-cell').forEach(b=>b.onclick=()=>{
+    const g=invById(+b.dataset.u); if(!g) return;
+    if(FG.includes(g.u)){ AU.play('click'); FG=FG.filter(u=>u!==g.u); renderForge(); return; }
+    if(lock&&fgKey(g)!==lock){ toast(`같은 부위·종류·등급만 재료가 됩니다 (${GT.partName[mats[0].part]} · ${GT.typeName[mats[0].type]} · ${GT.rarName[mats[0].rar]})`); return; }
+    if(FG.length>=3){ toast('재료는 3개까지입니다'); return; }
+    AU.play('click'); FG.push(g.u); renderForge();
+  });
+}
+$('fgBack').onclick=()=>{ AU.play('click'); showScreen('gear'); };
+$('fgFuse').onclick=()=>{
+  const mats=fgMatsGear(); if(mats.length!==3) return;
+  AU.play('levelup');
+  const base=mats.slice().sort((a,b)=>b.plus-a.plus)[0], made=fuseMake(base);
+  for(const m of mats){ const i=save.inv.indexOf(m); if(i>=0) save.inv.splice(i,1); }
+  made.u=save.uid++; save.inv.push(made); save.fuses++;
+  FG=[]; autoEquipBest(); persist(); renderForge();
+  toast(`🔨 ${GT.rarName[made.rar]} ${GT.typeName[made.type]}${made.plus?` +${made.plus}`:''} 완성!`);
+};
+$('fgAuto').onclick=()=>{
   AU.play('click');
-  /* ⚠ sim.js accRefresh() 와 같이 «장착분도 재료» 다 — 합성 직후 autoEquipBest 로 상위품이 바로 장착되므로
-     플레이어는 손해를 보지 않는다. PLAN §11.3 의 «장착 중인 장비는 재료에서 제외(위임)» 와 어긋나는데,
-     엔진(sim.js)이 기준이라 엔진을 따랐다 — 주인 판단 대기 항목으로 PROGRESS 에 등재(T38). */
   const before=save.inv.length;
   const n=fuseAll(save.inv,new Set());
   for(const g of save.inv) if(!g.u) g.u=save.uid++;      /* fuseAll 이 만든 신품에 uid 부여 */
-  save.fuses+=n;
-  if(n){ AU.play('levelup'); autoEquipBest(); persist(); renderGear();
+  save.fuses+=n; FG=[];
+  if(n){ AU.play('levelup'); autoEquipBest(); persist(); renderForge();
     toast(`🔨 ${n}회 합성 (장비 ${before} → ${save.inv.length})`); }
   else toast('합성할 조합이 없습니다 (같은 부위·종류·등급 3개)');
 };
@@ -1121,7 +1265,8 @@ function doPull(n){
   openOverlay(`<div class="ov-banner" style="font-size:24px">🎁 ${n}회 뽑기</div>
     <div class="ov-sub">최고 등급 <b style="color:${GT.rarColor[best.rar]}">${GT.rarName[best.rar]}</b> · 빈 부위는 자동 장착됩니다</div>
     <div class="pull-list">${got.map(g=>
-      `<div class="inv-cell" style="border-color:${GT.rarColor[g.rar]};box-shadow:0 0 9px ${GT.rarGlow[g.rar]}">${GT.typeIcon[g.type]}</div>`).join('')}</div>
+      `<div class="inv-cell" style="border-color:${GT.rarColor[g.rar]};box-shadow:0 0 9px ${GT.rarGlow[g.rar]};background:linear-gradient(${GT.rarColor[g.rar]}55,${GT.rarColor[g.rar]}22)">`+
+      `<span class="ptag" style="background:${GT.rarColor[g.rar]}">${GT.partName[g.part]}</span>${GT.typeIcon[g.type]}</div>`).join('')}</div>
     <div style="font-size:12.5px;color:var(--ink-dim);line-height:1.5">${got.map(g=>`${GT.rarName[g.rar]} ${GT.typeName[g.type]}`).join(' · ')}</div>
     <button class="ghost-btn" id="pullClose">닫기</button>`,{rays:best.rar>=3});
   $('pullClose').onclick=()=>{ AU.play('click'); closeOverlay(); renderShop(); };
@@ -1530,10 +1675,11 @@ function startChapter(c){
 
 function showScreen(n){
   screenName=n;
-  for(const id of ['lobby','game','gear','shop']) $(id).classList.toggle('on',n===id);
+  for(const id of ['lobby','game','gear','shop','forge']) $(id).classList.toggle('on',n===id);
   if(n==='lobby') renderLobby();
   if(n==='gear') renderGear();
   if(n==='shop') renderShop();
+  if(n==='forge') renderForge();
 }
 function bankAndLobby(){
   if(G){ save.gold+=G.gold; persist(); }

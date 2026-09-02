@@ -458,6 +458,19 @@ function gachaPull(st){
 
 /* ---- 합성 (PLAN §11.3) ---- */
 const gearKey=g=>`${g.part}|${g.type}|${g.rar}|${g.plus}`;
+/* 합성 산출물 규칙 — 자동(fuseAll)·수동(합성 화면) 둘 다 **이 함수 하나만** 쓴다.
+   규칙을 두 곳에 적으면 T8·T9·T11·T12 계열(«같은 수치를 손으로 두 번 옮기다 어긋남») 이 재발한다.
+   base = 재료 3개 중 최고 강화품(호출부가 정렬해서 넘긴다). */
+function fuseMake(base){
+  if(base.rar<3) return {part:base.part,type:base.type,rar:base.rar+1,plus:0};
+  if(base.rar===3){
+    const np=base.plus+1;
+    return np>=GT.legendToMythPlus
+      ? {part:base.part,type:base.type,rar:4,plus:0}            /* +10강 도달 → 신화 0강 변환 */
+      : {part:base.part,type:base.type,rar:3,plus:np};
+  }
+  return {part:base.part,type:base.type,rar:4,plus:base.plus+1};   /* 신화 무한 강화 */
+}
 /* inv: 배열. equipped: Set(장착 중인 객체) — 재료에서 제외 */
 function fuseAll(inv,equipped){
   let did=true,count=0;
@@ -474,14 +487,7 @@ function fuseAll(inv,equipped){
       if(arr.length<3)continue;
       arr.sort((a,b)=>b.plus-a.plus);          /* 재료 중 최고 강화 기준 */
       const mats=arr.slice(0,3), base=mats[0];
-      let made;
-      if(base.rar<3) made={part:base.part,type:base.type,rar:base.rar+1,plus:0};
-      else if(base.rar===3){
-        const np=base.plus+1;
-        made = np>=GT.legendToMythPlus
-          ? {part:base.part,type:base.type,rar:4,plus:0}          /* +10강 도달 → 신화 0강 변환 */
-          : {part:base.part,type:base.type,rar:3,plus:np};
-      }else made={part:base.part,type:base.type,rar:4,plus:base.plus+1};   /* 신화 무한 강화 */
+      const made=fuseMake(base);
       for(const m of mats){const i=inv.indexOf(m);inv.splice(i,1);}
       inv.push(made);count++;did=true;
       break;                                    /* 인벤이 바뀌었으니 재그룹화 */

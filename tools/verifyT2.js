@@ -461,6 +461,7 @@ console.log('\n[⑪ 장비 엔진 함수 1:1 + 영구강화 4종 폐지 (PLAN §
 {
   const FNS = [
     ['gachaPull (확률·50천장·10피티)', /function gachaPull\(st\)\{[\s\S]*?\n\}/],
+    ['fuseMake (합성 산출물 규칙 — 자동·수동 공용)', /function fuseMake\(base\)\{[\s\S]*?\n\}/],
     ['fuseAll (3→1 · 전설 +강 · +10강 신화 변환)', /function fuseAll\(inv,equipped\)\{[\s\S]*?\n\}/],
     ['autoEquip', /function autoEquip\(inv\)\{[\s\S]*?\n\}/],
     ['buildPower (기본치 + 6부위 × 슬롯 × 강화 × 균등보너스)', /function buildPower\(b\)\{[\s\S]*?\n\}/],
@@ -616,6 +617,94 @@ console.log('\n[⑬ 인게임 UI — 발동 중 버프 아이콘 · 얻은 특�
     const cs = HTML.match(/function chapStep\(d\)\{[\s\S]*?\n\}/);
     (cs && /clamp\(save\.selChapter\+d,1,save\.maxChapter\)/.test(cs[0])) ? ok('챕터 이동이 해금 범위(1~maxChapter)를 넘지 않는다') : bad('챕터 이동이 해금 범위를 넘을 수 있다');
   }
+}
+
+/* ---------- ⑭ 합성(대장간) 화면 — 수동 3칸 선택 (참고: docs/ref/장비 합성 업글창.jpg · T2 5단계) ---------- */
+/* 왜 게이트인가 — 수동 합성은 «산출물 규칙» 을 화면이 한 번 더 계산한다. 그 규칙을 두 곳에 적으면
+   T8·T9·T11·T12 계열(«같은 규칙을 손으로 두 번 옮기다 어긋남») 이 그대로 재발한다.
+   여기서는 문자열 대조가 아니라 **두 파일의 fuseMake 를 실제로 실행해** 전 등급·강화 조합을 비교한다. */
+console.log('\n[⑭ 합성 화면 — 수동 3칸 선택 (PLAN §11.3, 스크린샷 구도)]');
+{
+  /* (1) 화면·구성 요소 존재 */
+  const NEED = [
+    ['#forge 화면', /<div id="forge" class="screen">/],
+    ['결과 미리보기 슬롯 #fgResult', /id="fgResult"/],
+    ['재료 3칸 컨테이너 #fgMats', /id="fgMats"/],
+    ['자동 합성 버튼 #fgAuto', /id="fgAuto"/],
+    ['수동 합성 버튼 #fgFuse', /id="fgFuse"/],
+    ['인벤 그리드 #fgGrid', /id="fgGrid"/],
+    ['뒤로 버튼 #fgBack', /id="fgBack"/],
+  ];
+  for (const [nm, re] of NEED) re.test(HTML) ? ok(nm) : bad(`${nm} 이(가) 없다 — 합성 화면 구도가 깨졌다`);
+  /* (2) showScreen 이 forge 를 알고 렌더한다 */
+  const ss = HTML.match(/function showScreen\(n\)\{[\s\S]*?\n\}/);
+  (ss && /'forge'/.test(ss[0]) && /renderForge\(\)/.test(ss[0]))
+    ? ok('showScreen 이 forge 화면을 켜고 renderForge 를 부른다')
+    : bad('showScreen 이 forge 를 다루지 않는다 — 합성 화면이 열리지 않는다');
+  /* (3) 재료는 정확히 3칸이고, 3개가 찼을 때만 합성 버튼이 열린다 */
+  const rf = HTML.match(/function renderForge\(\)\{[\s\S]*?\n\}/);
+  if (!rf) bad('renderForge 가 없다');
+  else {
+    /\[0,1,2\]\.map/.test(rf[0]) ? ok('재료 칸이 정확히 3칸 (PLAN §11.3 «3개 → 1개»)') : bad('재료 칸이 3칸이 아니다');
+    /\$\('fgFuse'\)\.disabled\s*=\s*mats\.length!==3/.test(rf[0])
+      ? ok('재료 3개가 다 차야만 «합성» 이 활성화된다') : bad('재료가 3개가 아닌데도 합성이 가능하다');
+    /mats\.length===3/.test(rf[0]) ? ok('결과 미리보기는 3개가 찼을 때만 실제 산출물을 보여준다') : bad('결과 미리보기 조건이 없다');
+    /fgKey\(g\)!==lock/.test(rf[0]) ? ok('첫 재료와 다른 부위·종류·등급은 재료로 못 고른다')
+      : bad('아무 장비나 재료로 섞을 수 있다 — PLAN §11.3 «같은 부위+종류+등급» 위반');
+  }
+  /* (4) 수동 합성이 fuseMake 를 쓴다 (규칙 중복 구현 금지) */
+  const ff = HTML.match(/\$\('fgFuse'\)\.onclick=\(\)=>\{[\s\S]*?\n\};/);
+  if (!ff) bad('#fgFuse 핸들러가 없다');
+  else {
+    /fuseMake\(base\)/.test(ff[0]) ? ok('수동 합성이 fuseMake() 하나만 쓴다 (자동과 규칙 공유)')
+      : bad('수동 합성이 산출물 규칙을 따로 계산한다 — 자동(fuseAll)과 갈라진다');
+    /sort\(\(a,b\)=>b\.plus-a\.plus\)\[0\]/.test(ff[0]) ? ok('재료 중 최고 강화품이 base (fuseAll 과 같은 기준)')
+      : bad('base 선택 기준이 fuseAll 과 다르다');
+    /save\.fuses\+\+/.test(ff[0]) ? ok('수동 합성도 합성 횟수(save.fuses)를 센다') : bad('수동 합성이 합성 횟수에 안 잡힌다');
+    /autoEquipBest\(\)/.test(ff[0]) ? ok('합성 후 상위품 자동 장착 (재료가 장착분이어도 알몸이 되지 않는다)')
+      : bad('합성 후 자동 장착이 없다 — 장착분을 재료로 쓰면 그 부위가 빈다');
+  }
+  /* (5) ⚑ 행동 대조 — 두 파일의 fuseMake 를 실제로 실행해 전 조합 비교 */
+  const grab = (src, re) => { const m = src.match(re); return m ? m[0] : null; };
+  const fmS = grab(SIM, /function fuseMake\(base\)\{[\s\S]*?\n\}/);
+  const fmH = grab(HTML, /function fuseMake\(base\)\{[\s\S]*?\n\}/);
+  if (!fmS || !fmH) bad('fuseMake 를 두 파일에서 찾지 못했다 — 게이트를 갱신할 것');
+  else {
+    const L2M = (SIM.match(/legendToMythPlus\s*:\s*(\d+)/) || [])[1];
+    if (!L2M) bad('GT.legendToMythPlus 를 sim.js 에서 읽지 못했다');
+    else {
+      const mk = body => { const c = { GT: { legendToMythPlus: +L2M } }; vm.createContext(c); vm.runInContext(body + '\nfuseMake', c); return c.fuseMake; };
+      const a = mk(fmS), b = mk(fmH);
+      let diff = 0, n = 0;
+      for (let rar = 0; rar <= 4; rar++) for (let plus = 0; plus <= 14; plus++) {
+        const base = { part: 'weapon', type: 'greatsword', rar, plus };
+        n++;
+        if (JSON.stringify(a(base)) !== JSON.stringify(b(base))) diff++;
+      }
+      diff === 0 ? ok(`fuseMake 실행 대조 ${n}조합(등급 5 × 강화 0~14) 전부 동일`)
+        : bad(`fuseMake 산출물이 두 파일에서 ${diff}/${n} 조합 다르다`);
+      /* 주인 확정 규칙 3개를 산출물로 직접 못박는다 */
+      const r1 = JSON.stringify(a({ part: 'weapon', type: 'greatsword', rar: 1, plus: 0 }));
+      r1.includes('"rar":2') ? ok('일반~영웅 3개 → 다음 등급 (PLAN §11.3)') : bad(`등급업 규칙 위반 — ${r1}`);
+      const r2 = a({ part: 'weapon', type: 'greatsword', rar: 3, plus: 0 });
+      (r2.rar === 3 && r2.plus === 1) ? ok('전설 3개 → 등급업이 아니라 +1강 (PLAN §11.3)') : bad(`전설 합성 규칙 위반 — ${JSON.stringify(r2)}`);
+      const r3 = a({ part: 'weapon', type: 'greatsword', rar: 3, plus: +L2M - 1 });
+      (r3.rar === 4 && r3.plus === 0) ? ok(`전설 +${+L2M - 1} 합성 → 신화 0강 변환 (PLAN §11.3)`) : bad(`+${L2M}강 신화 변환 규칙 위반 — ${JSON.stringify(r3)}`);
+      const r4 = a({ part: 'weapon', type: 'greatsword', rar: 4, plus: 9 });
+      (r4.rar === 4 && r4.plus === 10) ? ok('신화는 무한 강화 (변환 없음 — PLAN §11.3)') : bad(`신화 무한강화 규칙 위반 — ${JSON.stringify(r4)}`);
+    }
+  }
+  /* (6) 인벤 칸 구도 — 스크린샷의 등급색 타일 + 부위 태그 (장비 탭·합성 화면 공용 함수) */
+  const ic = HTML.match(/function invCellHTML\(g,o\)\{[\s\S]*?\n\}/);
+  if (!ic) bad('invCellHTML 공용 함수가 없다 — 장비 탭과 합성 화면의 칸 구도가 갈라진다');
+  else {
+    /class="ptag"/.test(ic[0]) ? ok('인벤 칸에 부위 태그 (스크린샷 좌상단 라벨)') : bad('인벤 칸에 부위 태그가 없다');
+    /background:linear-gradient\(\$\{GT\.rarColor\[g\.rar\]\}/.test(ic[0]) ? ok('인벤 칸이 등급색 타일 (스크린샷 구도 — 테두리만이 아니다)')
+      : bad('인벤 칸이 등급색 배경 타일이 아니다');
+    /isEquipped\(g\)\?'<span class="eqm">장착<\/span>'/.test(ic[0]) ? ok('장착 중인 칸에 «장착» 띠') : bad('«장착» 표시가 없다');
+  }
+  (/\$\('invGrid'\)\.innerHTML[^\n]*invCellHTML/.test(HTML) && /\$\('fgGrid'\)\.innerHTML[^\n]*[\s\S]{0,400}invCellHTML/.test(HTML))
+    ? ok('장비 탭·합성 화면이 같은 invCellHTML 을 쓴다') : bad('두 화면이 인벤 칸을 따로 그린다 — 구도가 갈라진다');
 }
 
 /* ---------- 결과 ---------- */
