@@ -27,12 +27,14 @@ function num(blk,key){
 const TB=block(SIM,'const TUNE={'), GB=block(SIM,'const GT={');
 const T=k=>num(TB,k), G=k=>num(GB,k);
 
-/* 가챠 확률: rar = r<0.1?4 : r<2.1?3 : r<12.1?2 : r<42.1?1 : 0 → 등급별 % */
+/* 가챠 확률: T65 로 누적 임계 리터럴이 GT.gachaRate 단일 출처가 됐다 (일반→신화 순, 단위 %).
+   종전엔 `rar = r<0.1?4 : …` 분기에서 누적값을 되돌려 풀었다. */
 function gachaPct(){
-  const m=SIM.match(/rar\s*=\s*r<([\d.]+)\?4\s*:\s*r<([\d.]+)\?3\s*:\s*r<([\d.]+)\?2\s*:\s*r<([\d.]+)\?1\s*:\s*0/);
-  if(!m) throw new Error('가챠 확률 분기를 못 찾았다');
-  const c=m.slice(1,5).map(Number);
-  return {myth:c[0], leg:c[1]-c[0], hero:c[2]-c[1], rare:c[3]-c[2], norm:100-c[3]};
+  const m=SIM.match(/gachaRate:\s*\[([^\]]*)\]/);
+  if(!m) throw new Error('GT.gachaRate 를 못 찾았다 (T65 이후 가챠 확률의 단일 출처)');
+  const r=m[1].split(',').map(Number);
+  if(r.length!==5||r.some(isNaN)) throw new Error(`GT.gachaRate 를 5칸 숫자로 못 읽었다: «${m[1]}»`);
+  return {myth:r[4], leg:r[3], hero:r[2], rare:r[1], norm:r[0]};
 }
 const GP=gachaPct();
 

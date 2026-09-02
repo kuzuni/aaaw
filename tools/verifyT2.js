@@ -487,10 +487,14 @@ console.log('\n[⑪ 장비 엔진 함수 1:1 + 영구강화 4종 폐지 (PLAN §
     const strip = s => norm(s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, ''));
     strip(a[0]) === strip(b[0]) ? ok(nm) : bad(`${nm} — 본문이 두 파일에서 다르다\n      sim  : ${strip(a[0]).slice(0, 160)}\n      index: ${strip(b[0]).slice(0, 160)}`);
   }
-  /* 뽑기 확률 리터럴은 주인 확정값이라 따로 못박는다 (PLAN §11.2) */
-  const RAR = /r<0\.1\?4\s*:\s*r<2\.1\?3\s*:\s*r<12\.1\?2\s*:\s*r<42\.1\?1\s*:\s*0/;
-  (RAR.test(SIM) && RAR.test(HTML)) ? ok('뽑기 확률 신화 0.1 / 전설 2 / 영웅 10 / 희귀 30 / 일반 57.9%')
-    : bad('뽑기 확률 리터럴이 주인 확정값과 다르다 (PLAN §11.2)');
+  /* 뽑기 확률은 주인 확정값이라 따로 못박는다 (PLAN §11.2).
+     T65 로 리터럴 임계가 `GT.gachaRate` 단일 출처로 바뀌었다 — 여기서는 «두 파일이 같은 파생 굴림을 쓴다» 만 보고,
+     PLAN 산문·상점 안내문까지 엮은 3자 대조는 ㉜ 가 본다(리터럴 정규식은 이제 오히려 되돌림을 유도한다). */
+  const RAR = /GT\.rarRoll=r=>\{[^}]*\}/;
+  const sr = SIM.match(RAR), hr = HTML.match(RAR);
+  (sr && hr && norm(sr[0]) === norm(hr[0]))
+    ? ok('뽑기 등급 굴림 GT.rarRoll 이 두 파일에서 같다 (확률값 자체는 ㉜ 가 PLAN·상점과 3자 대조)')
+    : bad('GT.rarRoll 이 두 파일에서 다르거나 없다 (PLAN §11.2)');
   /* 영구강화 폐지 — UP_DEFS·save.up 잔재가 남아 있으면 안 된다 */
   !/UP_DEFS/.test(HTML) ? ok('영구강화 UP_DEFS 잔재 0 (PLAN §11.4 폐지)') : bad('index.html 에 UP_DEFS 가 남아 있다');
   !/save\.up\b/.test(HTML) ? ok('save.up{} 잔재 0 (저장 포맷 v2 교체)') : bad('index.html 에 save.up 이 남아 있다');
@@ -1900,6 +1904,127 @@ console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
   /overflow:\s*hidden/.test(rule('#frame'))
     ? ok('#frame 이 overflow:hidden 이다 — 줄 밖으로 나간 ☰ 는 눌리지 않는다(피해 근거)')
     : bad('#frame 의 overflow:hidden 이 사라졌다 — ㉛ 의 피해 전제가 바뀌었다. 항목을 재작성할 것');
+}
+
+/* ============================================================================
+   ㉜ 뽑기 확률·천장·피티 = 주인 확정 상수 한 곳에서만 나온다 (PLAN §11.2, T65)
+
+   T65 전까지 이 세 값이 **세 군데에 손으로 베껴져** 있었다 —
+     ⓐ PLAN §11.2 산문 «신화 0.1% / 전설 2% / …», «50회 천장», «전설 10회 피티»
+     ⓑ 두 엔진의 `gachaPull` 누적 임계 리터럴 (`r<0.1?4 : r<2.1?3 : r<12.1?2 : r<42.1?1 : 0`) 과 `>=50`·`>=10`
+     ⓒ index.html 상점 안내문 문자열 «신화 0.1% · 전설 2% · … · 일반 57.9%» 와 `50-st.p50` · `10-st.p10`
+   ⓑ 는 `verifyGearEcon` ③ 이 «엔진이 실제로 그렇게 구는가» 로 보지만, **ⓒ 를 보는 게이트는 없었다.**
+   즉 임계를 손보면 상점이 조용히 거짓 확률을 광고하고(주인 확정 상수 = 노브 아님), 천장을 60 으로
+   올리면 «천장까지 -9회» 가 화면에 뜬다. T8·T9·T11·T12 가 네 번 반복한 «설명문↔엔진 불일치» 와 같은 모양이다.
+
+   그래서 «지금 값이 맞나» 가 아니라 **«한 곳에서만 나오나»** 를 못박는다:
+     ① PLAN 산문 ↔ 두 파일의 `GT.gachaRate`/`pityMyth`/`pityLegend` 3자 일치 · 확률 합 100%
+     ② 두 파일이 서로 같다
+     ③ `gachaPull` 이 리터럴이 아니라 `GT.rarRoll`·`GT.pityMyth`·`GT.pityLegend` 를 쓴다
+     ④ 파생 임계(`GT.gachaCum`)가 종전 리터럴 [0.1,2.1,12.1,42.1,100] 과 **비트 단위로** 같다
+        (1ULP 만 밀려도 시드 재현성이 깨진다 — T65 는 1,000,000 뽑기 전수 대조로 동치를 확인했다)
+     ⑤ 상점 안내문이 리터럴을 안 쓴다 — 확률 줄은 `gachaRateText()`, 천장·피티는 `GT.pityMyth`/`GT.pityLegend`
+     ⑥ `gachaRateText()` 를 실제로 돌린 문자열이 PLAN 산문의 등급·값·순서와 일치한다
+   ============================================================================ */
+{
+  console.log('\n[㉜ 뽑기 확률·천장·피티 단일 출처 (PLAN §11.2, T65)]');
+  const PLAN = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
+  const RN = ['일반', '희귀', '영웅', '전설', '신화'];
+
+  /* ---- PLAN 산문 파싱 ---- */
+  const mRate = PLAN.match(/신화\s*([\d.]+)%\s*\/\s*전설\s*([\d.]+)%\s*\/\s*영웅\s*([\d.]+)%\s*\/\s*희귀\s*([\d.]+)%\s*\/\s*일반\s*([\d.]+)%/);
+  const mM = PLAN.match(/\*\*(\d+)회 천장\*\*/);
+  const mL = PLAN.match(/\*\*전설 (\d+)회 피티\*\*/);
+  const planRate = mRate ? [+mRate[5], +mRate[4], +mRate[3], +mRate[2], +mRate[1]] : null;   /* 일반→신화 순으로 뒤집는다 */
+  const planM = mM ? +mM[1] : null, planL = mL ? +mL[1] : null;
+  (planRate && planM !== null && planL !== null)
+    ? ok(`PLAN §11.2 파싱 — 확률 [${planRate.join(', ')}]% · 천장 ${planM}회 · 피티 ${planL}회`)
+    : bad('PLAN §11.2 의 확률/천장/피티 문장을 못 찾았다 — 문구가 바뀌었으면 ㉜ 파서를 함께 고칠 것');
+
+  /* ---- 엔진 상수 추출 ---- */
+  const grab = src => {
+    const r = (src.match(/gachaRate:\s*\[([^\]]*)\]/) || [])[1];
+    return {
+      rate: r ? r.split(',').map(Number) : null,
+      m: Number((src.match(/pityMyth:\s*(\d+)/) || [])[1]),
+      l: Number((src.match(/pityLegend:\s*(\d+)/) || [])[1]),
+    };
+  };
+  const S = grab(SIM), H = grab(HTML);
+
+  /* ① PLAN ↔ 두 파일 3자 일치 */
+  if (planRate) {
+    for (const [nm, g] of [['sim.js', S], ['index.html', H]]) {
+      const eq = g.rate && g.rate.length === 5 && g.rate.every((v, i) => v === planRate[i]);
+      eq ? ok(`${nm} GT.gachaRate = PLAN 산문 [${planRate.join(', ')}]%`)
+         : bad(`${nm} GT.gachaRate «${g.rate}» ≠ PLAN «${planRate}» — 상점이 거짓 확률을 광고한다 (주인 확정 상수)`);
+      g.m === planM ? ok(`${nm} GT.pityMyth ${g.m} = PLAN «${planM}회 천장»`)
+                    : bad(`${nm} GT.pityMyth ${g.m} ≠ PLAN ${planM}`);
+      g.l === planL ? ok(`${nm} GT.pityLegend ${g.l} = PLAN «전설 ${planL}회 피티»`)
+                    : bad(`${nm} GT.pityLegend ${g.l} ≠ PLAN ${planL}`);
+    }
+    const sum = planRate.reduce((a, b) => a + b, 0);
+    Math.abs(sum - 100) < 1e-9 ? ok(`확률 5단 합 ${sum}% = 100%`)
+                               : bad(`확률 5단 합이 ${sum}% 다 — 100% 가 아니면 최하 등급 비중이 조용히 어긋난다 (T25 «합 105%» 선례)`);
+  }
+
+  /* ② 두 파일이 서로 같다 */
+  (S.rate && H.rate && String(S.rate) === String(H.rate) && S.m === H.m && S.l === H.l)
+    ? ok('sim.js ↔ index.html 뽑기 상수 3종 일치')
+    : bad(`두 파일의 뽑기 상수가 벌어졌다 — sim [${S.rate}]/${S.m}/${S.l} vs html [${H.rate}]/${H.m}/${H.l}`);
+
+  /* ③ gachaPull 이 리터럴을 안 쓴다 */
+  for (const [nm, src] of [['sim.js', SIM], ['index.html', HTML]]) {
+    const body = src.slice(src.indexOf('function gachaPull(st){'));
+    const fn = body.slice(0, body.indexOf('\n}') + 2);
+    (/GT\.rarRoll\(/.test(fn) && /GT\.pityMyth/.test(fn) && /GT\.pityLegend/.test(fn))
+      ? ok(`${nm} gachaPull 이 GT.rarRoll·pityMyth·pityLegend 를 쓴다`)
+      : bad(`${nm} gachaPull 이 파생 상수를 안 쓴다 — 임계를 리터럴로 되돌리면 상점 안내문과 갈라진다 (T65 재발)`);
+    /r\s*<\s*\d+\.?\d*\s*\?/.test(fn)
+      ? bad(`${nm} gachaPull 에 누적 임계 리터럴(«r<0.1?…»)이 돌아왔다 — 단일 출처가 깨졌다`)
+      : ok(`${nm} gachaPull 에 누적 임계 리터럴이 없다`);
+  }
+
+  /* ④ 파생 임계가 종전 리터럴과 비트 단위로 같다 */
+  {
+    const mCum = SIM.match(/GT\.gachaCum=\(\(\)=>\{[\s\S]*?\}\)\(\);/);
+    const ctx = { GT: { gachaRate: S.rate } };
+    vm.createContext(ctx);
+    let cum = null;
+    if (mCum) { try { vm.runInContext(mCum[0], ctx); cum = ctx.GT.gachaCum; } catch (e) { cum = null; } }
+    const want = [100, 42.1, 12.1, 2.1, 0.1];
+    (cum && cum.length === 5 && cum.every((v, i) => Object.is(v, want[i])))
+      ? ok(`GT.gachaCum = [${want.join(', ')}] — 종전 리터럴 임계와 비트 단위로 같다 (1,000,000 뽑기 동치 확인, T65)`)
+      : bad(`GT.gachaCum 이 «${cum}» 이다 — [${want.join(', ')}] 와 다르면 시드 재현성이 깨진다`);
+  }
+
+  /* ⑤ 상점 안내문이 리터럴을 안 쓴다 */
+  {
+    const mShop = HTML.match(/<div class="pity">[\s\S]*?<\/div>/);
+    const shop = mShop ? mShop[0] : '';
+    (/\$\{gachaRateText\(\)\}/.test(shop))
+      ? ok('상점 확률 줄이 gachaRateText() 로 만들어진다')
+      : bad('상점 확률 줄이 문자열 리터럴로 돌아왔다 — 임계를 손보면 거짓 확률을 광고한다 (T65 재발)');
+    (/GT\.pityMyth/.test(shop) && /GT\.pityLegend/.test(shop))
+      ? ok('상점 천장·피티 잔여 표시가 GT.pityMyth·GT.pityLegend 를 쓴다')
+      : bad('상점 천장·피티 표시에 리터럴(«50-st.p50» 류)이 돌아왔다 — 천장을 올리면 «-9회» 가 화면에 뜬다');
+    /[\d.]+\s*%/.test(shop)
+      ? bad(`상점 안내문에 확률 숫자 리터럴이 남아 있다 — «${(shop.match(/[\d.]+\s*%/) || [])[0]}»`)
+      : ok('상점 안내문에 확률 숫자 리터럴이 없다');
+  }
+
+  /* ⑥ gachaRateText() 실행 결과 ↔ PLAN 산문 */
+  {
+    const mFn = HTML.match(/function gachaRateText\(\)\{[\s\S]*?\n\}/);
+    const ctx = { GT: { gachaRate: H.rate, rarName: RN } };
+    vm.createContext(ctx);
+    let txt = null;
+    if (mFn) { try { vm.runInContext(mFn[0] + '\n__t=gachaRateText();', ctx); txt = ctx.__t; } catch (e) { txt = null; } }
+    const want = planRate ? RN.map((nm, i) => `${nm} ${+planRate[i]}%`).reverse().join(' · ') : null;
+    (txt && want && txt === want)
+      ? ok(`gachaRateText() = «${txt}» (PLAN 산문과 등급·값·순서 일치)`)
+      : bad(`gachaRateText() 가 «${txt}» 다 — PLAN 기준 «${want}» 여야 한다`);
+  }
 }
 
 /* ---------- 결과 ---------- */

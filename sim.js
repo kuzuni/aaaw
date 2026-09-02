@@ -311,6 +311,13 @@ const GT={
         slotCostBase 로 되돌리려면 3000 이 필요한데 그 지점에서 챕터 10~18 이 400회 상한에 막힌다 — 승인 대기 14번. */
   evenStep:0.05, evenPer:5,      // 6슬롯 전부 5N렙 → 공/체/실 +5%*N (PLAN §11.4 — T35 로 실드에도 적용)
   pullCost:400, dailyGem:2500, iapGem:12000,   // 주인 확정 상수
+  /* 뽑기 확률·천장·피티 — 주인 확정 상수 (PLAN §11.2, 노브 아님).
+     T65 전까지 이 세 값이 «gachaPull 의 누적 임계 리터럴» 과 «상점 안내문 문자열» 에 각각 손으로
+     베껴져 있었다 — T8·T9·T11·T12 가 네 번 반복한 «설명문↔엔진 불일치» 와 같은 모양이다.
+     이제 굴림도 안내문도 이 배열 하나만 본다. 순서 = 등급 인덱스(0 일반 … 4 신화), 단위 %. */
+  gachaRate:[57.9,30,10,2,0.1],
+  pityMyth:50,                   // 50회 천장 (누적 50회째 신화 확정)
+  pityLegend:10,                 // 10회 피티 (10회당 전설 이상 확정)
   legendToMythPlus:10,           // 전설 +10강 도달 시 신화 0강으로 변환
   runsPerDay:30,                 // (위임) 하루 플레이 판수 — 실험3/4 의 다이아 적립 환산 기준
 };
@@ -323,6 +330,10 @@ if(process.env.GT_OVERRIDE){
 GT.slotMul=L=>1+GT.slotStep*Math.min(L,GT.slotLvMax);
 GT.slotCost=L=>Math.floor(GT.slotCostBase*Math.pow(GT.slotCostG,L));
 GT.allTypes=[]; for(const pt of GT.parts) for(const ty of GT.types[pt]) GT.allTypes.push({part:pt,type:ty});
+/* 뽑기 굴림 임계 — gachaRate 를 «높은 등급부터» 누적한 값. 종전 리터럴(0.1/2.1/12.1/42.1)과 비트 단위로 같다
+   (toFixed(6) 로 부동소수 누적 오차를 끊는다 — 임계가 1ULP 라도 밀리면 시드 재현성이 깨진다). */
+GT.gachaCum=(()=>{ const c=[]; let a=0; for(let i=GT.gachaRate.length-1;i>=0;i--){ a=+(a+GT.gachaRate[i]).toFixed(6); c[i]=a; } return c; })();
+GT.rarRoll=r=>{ for(let i=GT.gachaRate.length-1;i>0;i--) if(r<GT.gachaCum[i]) return i; return 0; };
 /* 옵션 개수: 등급별 + 신화 강화 보너스 */
 GT.optCount=(rar,plus)=>{
   let n=rar;                                   // 일반0 희귀1 영웅2 전설3 신화4
@@ -507,12 +518,12 @@ const GOPT={
 function newGacha(){ return {p50:0,p10:0,pulls:0}; }
 function gachaPull(st){
   st.pulls++; st.p50++; st.p10++;
-  const pityM=st.p50>=50, pityL=st.p10>=10;
+  const pityM=st.p50>=GT.pityMyth, pityL=st.p10>=GT.pityLegend;
   let rar;
   if(pityM) rar=4;
   else{
     const r=grand()*100;
-    rar = r<0.1?4 : r<2.1?3 : r<12.1?2 : r<42.1?1 : 0;
+    rar = GT.rarRoll(r);            /* 임계는 GT.gachaRate 에서 파생 — 리터럴로 되돌리지 말 것 (T65) */
     if(pityL&&rar<3) rar=3;
   }
   if(rar===4){
