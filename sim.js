@@ -19,7 +19,7 @@ const TUNE={
   /* 플레이어 기본치 (영구강화 4종 폐지 — 성장은 §11 장비 + 슬롯 강화가 전담) */
   pAtk0:30, pHp0:300, pAspd0:1.0, pCrit0:5,
   goldKillBase:0.6, goldKillPer:0.10, goldClearPer:3,
-  goldGrowth:1.185,             // 챕터당 골드 성장 배수 (신규 노브 — 슬롯 비용이 6.9^렙 이라 수입도 지수여야 한다. eHpG 와 같은 값으로 두면 슬롯 1렙 ≈ 6챕터로 맞는다)
+  goldGrowth:1.22,              // 챕터당 골드 성장 배수 (R07: 1.185 → 1.22. 1.185 는 챕터 90 대형 벽에서 슬롯 13 에 갇혀 F2P·과금 둘 다 영구 정체했다 — 실험4 실측. eHpG 보다 높게 둬야 후반 벽에서 수입이 적 성장을 따라잡는다)
   expKill:3, expBoss:9, expNeed:lv=>4+2*lv,
 };
 TUNE.goldKill=c=>(TUNE.goldKillBase+TUNE.goldKillPer*c)*Math.pow(TUNE.goldGrowth,c-1)*rand(1,1.8);
@@ -69,7 +69,7 @@ function mkPerks(){
   add('c_critChain',0,p=>p.px.critChain++);
   add('c_critF',0,p=>p.px.critFsmall++);
   add('c_critHeal1',0,p=>p.px.critHealS++);
-  add('c_killHeal2',0,p=>p.killHeal+=0.005);
+  add('c_killHeal2',0,p=>p.killHeal+=0.0037);
   add('c_killShield3',0,p=>p.px.killShield3++);
   add('c_gold30',0,p=>p.goldMul+=0.3);
   add('c_defHit',0,p=>p.px.defHitBuff++);
@@ -161,9 +161,9 @@ function mkPerks(){
   add('m_wave4',3,p=>p.px.waveKing=1,1);
   add('m_gold2',3,p=>p.goldMul*=2,1);
   add('m_sage',3,p=>p.px.sage=true,1);
-  add('m_def20',3,p=>p.def+=17);
-  add('m_crit25',3,p=>p.critR+=21);
-  add('m_giant',3,p=>{const a=p.maxHp*0.21;p.maxHp+=a;heal(p,a,true);});
+  add('m_def20',3,p=>p.def+=8);
+  add('m_crit25',3,p=>p.critR+=9);
+  add('m_giant',3,p=>{const a=p.maxHp*0.16;p.maxHp+=a;heal(p,a,true);});
   add('m_lucky',3,p=>{p.evade+=11;p.counter+=11;});
   add('m_choice4',3,p=>p.px.choice4=true,1);
   add('m_fortress',3,p=>p.maxSh*=2.4);
@@ -193,7 +193,11 @@ const GT={
   atkUnit:0.5904, hpUnit:5.904, rarStep:155,
   plusStep:0.12,                 // 강화 1레벨당 해당 장비 공/체 +12% (위임)
   slotG:2.68,                    // 슬롯 레벨당 그 슬롯 장비 공/체 배수 (앵커 A→B 역산)
-  slotCostBase:150, slotCostG:5.5,   // 슬롯 강화 비용 = base*costG^L (goldGrowth^6=6.93 보다 낮게 둬야 후반이 막히지 않는다 — T6 실측)
+  slotCostBase:600, slotCostG:4.2,   // 슬롯 강화 비용 = base*costG^L
+  /* R07: 150/5.5 → 600/4.2. T6 의 «costG < goldGrowth^6» 규칙은 틀렸다 — 5.5 는 그 규칙을 지키고도 실험4 가
+     챕터 118 에서 40일 정체했다. 올바른 조건은 «슬롯 1렙이 벌어주는 챕터 수(ln slotG/ln eHpG ≈ 5.8챕터) 동안의
+     골드 증가분 goldGrowth^5.8 ≥ costG». 4.2 는 이를 만족(1.22^5.8=3.2 대비 여유가 작아 폭주도 안 한다).
+     3.2 로 더 내리면 실험4 가 60일차에 챕터 911 로 폭주하고, 4.8 은 챕터 90 에서 다시 정체한다 — R07 실측. */
   evenStep:0.05, evenPer:5,      // 6슬롯 전부 5N렙 → 공/체 +5%*N (PLAN §11.4)
   pullCost:400, dailyGem:2500, iapGem:12000,   // 주인 확정 상수
   legendToMythPlus:10,           // 전설 +10강 도달 시 신화 0강으로 변환
@@ -224,7 +228,7 @@ const GOPT={
     {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
     {d:'공격 시 20% 확률 검기 발사', ap:p=>p.px.wave++},
     {d:'공격 시 30% 확률 공격력 +14% 4초', ap:p=>p.px.atkBuffM++},
-    {d:'검기 관통 4·사거리 증가', ap:p=>p.px.waveKing=1},
+    {d:'검기 관통 20·사거리 1400', ap:p=>p.px.waveKing=1},
     {d:'공격 시 15% 확률 공격력 +25% 5초', ap:p=>p.px.atkBuffL++},
     {d:'반격 시 30% 확률 검기 발사', ap:p=>p.px.counterWave++},
     {d:'체력 50% 이하 적에게 피해 1.5배', ap:p=>p.px.execute=true},
@@ -233,7 +237,7 @@ const GOPT={
     {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
     {d:'공격 시 15% 확률 도끼 발사', ap:p=>p.px.axe++},
     {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
-    {d:'도끼 4개로 증가',        ap:p=>p.px.axeCount=1},
+    {d:'도끼 14개로 증가',       ap:p=>p.px.axeCount=1},
     {d:'도끼 발사 확률 +15%p',   ap:p=>p.px.axe++},
     {d:'처치 시 실드 충전',      ap:p=>p.px.killShield3++},
     {d:'최대 체력 적 첫 타격 피해 +20%', ap:p=>p.px.firstHit++},
@@ -242,7 +246,7 @@ const GOPT={
     {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
     {d:'공격 시 15% 확률 화살 2발', ap:p=>p.px.arrow2++},
     {d:'치명타 배율 +30',       ap:p=>p.critF+=30},
-    {d:'화살 4발로 증가',        ap:p=>p.px.arrowCount=1},
+    {d:'화살 24발로 증가',       ap:p=>p.px.arrowCount=1},
     {d:'치명타 시 75% 확률 추가타', ap:p=>p.px.extraHit++},
     {d:'화살 발사 확률 +15%p',   ap:p=>p.px.arrow2++},
     {d:'최대 체력 적에게 치명타 확정', ap:p=>p.px.fullHpCrit=true},
@@ -270,7 +274,7 @@ const GOPT={
     {d:'치명타 배율 +25',       ap:p=>p.critF+=25},
     {d:'공격 시 10% 확률 번개 2발', ap:p=>p.px.bolt++},
     {d:'치명타 시 치명 배율 +34 4초', ap:p=>p.px.critFBuff++},
-    {d:'번개 3발로 증가',        ap:p=>p.px.boltCount=1},
+    {d:'번개 20회로 증가',       ap:p=>p.px.boltCount=1},
     {d:'2초마다 번개 자동 발사', ap:p=>p.px.autoBolt++},
     {d:'치명타 시 공격속도 +15% 3초', ap:p=>p.px.critAspdBuff++},
     {d:'공격 시 20% 확률 소환 무작위 발사', ap:p=>p.px.arsenal++},
@@ -382,10 +386,10 @@ const GOPT={
     {d:'공격력 +5%',            ap:p=>p.dmg*=1.05},
     {d:'공격 시 7.5% 확률 창 발사', ap:p=>p.px.spear++},
     {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
-    {d:'창 피해 2배·전체 관통',  ap:p=>p.px.spearMaster=1},
+    {d:'창 피해 13.5배·관통',    ap:p=>p.px.spearMaster=1},
     {d:'창 발사 확률 +7.5%p',    ap:p=>p.px.spear++},
     {d:'적 화살 30% 확률 오발',  ap:p=>p.misfire+=0.30},
-    {d:'모든 발동 확률 1.7배',   ap:p=>p.px.procX2=true},
+    {d:'모든 발동 확률 1.22배',  ap:p=>p.px.procX2=true},
   ],
 };
 
@@ -517,7 +521,7 @@ function addBuff(p,k,amt,dur,max){
   if(arr.length>=max){let mi=0;for(let i=1;i<arr.length;i++)if(arr[i].t<arr[mi].t)mi=i;arr[mi]={t:dur,amt};}
   else arr.push({t:dur,amt});
 }
-const pkk=(p,ch)=>Math.random()<ch*(p.px.procX2?1.7:1);
+const pkk=(p,ch)=>Math.random()<ch*(p.px.procX2?1.22:1);
 const effDmg=p=>{let m=1+bsum(p,'atk');if(p.px.rage&&p.sh<=0)m*=1.5;return p.dmg*m;};
 const effAspd=p=>p.aspd*(1+bsum(p,'aspd'));
 const effCritR=p=>p.critR+bsum(p,'critR');
@@ -605,10 +609,10 @@ function dealDmg(G,e,ratio,fromBasic){
   return crit;
 }
 function fireAxe(p){const G=p.G,n=p.px.axeCount?14:1;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'axe',x:p.worldX+14,tgt:t,ratio:0.50,spd:430});}}
-function fireArrows(p){const G=p.G,n=p.px.arrowCount?14:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560});}}
-function fireBolts(p){const G=p.G,n=p.px.boltCount?16:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)dealDmg(G,t,0.75);}}
-function fireWave(p){const G=p.G;G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?900:340),hit:new Set(),pierce:p.px.waveKing?12:2});}
-function fireSpear(p){const G=p.G;G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?11.0:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set()});}
+function fireArrows(p){const G=p.G,n=p.px.arrowCount?24:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560});}}
+function fireBolts(p){const G=p.G,n=p.px.boltCount?20:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)dealDmg(G,t,0.75);}}
+function fireWave(p){const G=p.G;G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?1400:340),hit:new Set(),pierce:p.px.waveKing?20:2});}
+function fireSpear(p){const G=p.G;G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set()});}
 function procOnAttack(G){
   const p=G.player,px=p.px;
   if(px.atkPerm&&pkk(p,0.10*px.atkPerm))p.dmg*=1.01;
@@ -647,7 +651,7 @@ function hitPlayer(G,dmg,isMelee,src){
     if(px.evadeRush&&p.nextAtk<1.5)p.nextAtk=Math.min(1.5,p.nextAtk+0.5*px.evadeRush);
     if(px.evadeCrit)p.nextCrit=true;
     if(px.evadeHeal&&pkk(p,0.15*px.evadeHeal))heal(p,p.maxHp*0.07);
-    if(px.evadeShield&&pkk(p,0.15*px.evadeShield))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.18);
+    if(px.evadeShield&&pkk(p,0.15*px.evadeShield))p.sh=Math.min(p.maxSh,p.sh+p.maxSh*0.14);
     if(px.evadeCounter&&pkk(p,1.0*px.evadeCounter))doCounter(G,src);
     if(px.evadeAxe&&pkk(p,0.10*px.evadeAxe))fireAxe(p);   /* 장비 계열 옵션(샌들) — 주인 예시 */
     return;
@@ -892,7 +896,7 @@ function harness(env,defRar,defPlus,defSlot){
   return {b:mkBuild(rar,plus,slot),desc:`${GT.rarName[rar]}${plus?'+'+plus:''} 6부위 · 슬롯 ${slot}렙`};
 }
 function exp1_rarityLadder(){
-  const h=harness('EXP1_GEAR',3,0,1);   /* 실험3 관측: 챕터6 도달 시점 중앙값 = 전설 장비·슬롯 1렙 (T5 재보정 규칙) */
+  const h=harness('EXP1_GEAR',3,0,2);   /* 실험3 관측: 챕터6 도달 시점 중앙값 = 전설 장비·슬롯 2렙 (T5 재보정 규칙 — R07 재보정, 5런 전부 슬롯 최저 2렙) */
   console.log(`\n=== 실험1: 등급 고정 파워 사다리 (챕터6, 하니스 ${h.desc}, 300판) ===`);
   for(const rar of [null,0,1,2,3]){
     let wins=0,times=0,n=300;
@@ -957,7 +961,8 @@ function exp3_progression(){
       attempts++;total++;
       if(accAttempt(a,c).clear)cleared=true;
     }
-    console.log(`챕터 ${String(c).padStart(3)}: 시도 ${String(attempts).padStart(3)}회  슬롯 ${slotStr(a)}  장비 ${eqStr(a)}  뽑기 ${a.pulls}회  ${cleared?'':'** '+LIMIT+'회 실패 **'}`);
+    const pw=buildPower(accBuild(a));   /* R07 진단: 전투력이 챕터를 따라 자라는지(=성장 축이 살아있는지) 확인용 */
+    console.log(`챕터 ${String(c).padStart(3)}: 시도 ${String(attempts).padStart(3)}회  슬롯 ${slotStr(a)}  장비 ${eqStr(a)}  뽑기 ${a.pulls}회  전투력 공${pw.atk.toExponential(2)}·체${pw.hp.toExponential(2)}  ${cleared?'':'** '+LIMIT+'회 실패 **'}`);
     if(!cleared)break;
   }
   console.log(`총 시도: ${total}  (환산 ${(total/GT.runsPerDay).toFixed(0)}일)`);
@@ -991,7 +996,7 @@ function exp4_gearProgress(){
    A = 신화 풀셋 0강 · 슬롯 균등 15렙 → 챕터 90 «겨우» (91+ 벽)
    B = 신화 풀셋 +9강 · 슬롯 균등 50렙 → 챕터 300 «겨우» (301+ 벽) */
 const ANCHORS=[
-  {id:'C', rar:3, plus:0, slot:10, at:30,  span:[28,32]},
+  {id:'C', rar:3, plus:0, slot:+(process.env.EXP5_C_SLOT||10), at:30,  span:[28,32]},   /* R07 진단: 앵커 C 슬롯값 가정을 바꿔 보는 용도 (기본은 주인 확정 10) */
   {id:'A', rar:4, plus:0, slot:15, at:90,  span:[88,92]},
   {id:'B', rar:4, plus:9, slot:50, at:300, span:[298,301]},
 ];
