@@ -660,7 +660,9 @@ function fireAxe(p){const G=p.G,n=p.px.axeCount?14:1;for(let k=0;k<n;k++){const 
 function fireArrows(p){const G=p.G,n=p.px.arrowCount?24:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)G.pprojs.push({type:'parrow',x:p.worldX+14,tgt:t,ratio:0.65,spd:560});}}
 function fireBolts(p){const G=p.G,n=p.px.boltCount?20:2;for(let k=0;k<n;k++){const t=randTarget(G);if(t)dealDmg(G,t,0.75);}}
 function fireWave(p){const G=p.G;G.pprojs.push({type:'wave',x:p.worldX+14,ratio:0.70,spd:470,maxX:p.worldX+(p.px.waveKing?1400:340),hit:new Set(),pierce:p.px.waveKing?20:2});}
-function fireSpear(p){const G=p.G;G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set()});}
+/* 창 관통 상한 8마리 — PLAN §3.3 l_spear «일직선 8명 거리(88px×8) 관통» 의 «8명» 이 엔진에 없어
+   12마리 웨이브에서 총출력이 162배까지 갔다(T34). 신화 m_spear200 은 데미지만 올리고 관통 수는 그대로. */
+function fireSpear(p){const G=p.G;G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set(),pierce:8});}
 function procOnAttack(G){
   const p=G.player,px=p.px;
   if(px.atkPerm&&pkk(p,0.10*px.atkPerm))p.dmg*=1.01;
@@ -879,7 +881,7 @@ function runChapter(chapter,build,opts){
         for(const e of aliveList(G)){
           if(!pr.hit.has(e)&&Math.abs(e.worldX-pr.x)<16){
             pr.hit.add(e);dealDmg(G,e,pr.ratio);
-            if(pr.type==='wave'&&pr.hit.size>=pr.pierce){done=true;break;}
+            if(pr.hit.size>=pr.pierce){done=true;break;}
           }
         }
         if(pr.x>pr.maxX)done=true;

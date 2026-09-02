@@ -2082,7 +2082,8 @@ function fireWave(p){
 }
 function fireSpear(p){
   AU.play('throw');
-  G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set()});
+  /* 창 관통 상한 8마리 — PLAN §3.3 l_spear «일직선 8명 거리(88px×8) 관통» (T34). sim.js:663 과 동일 */
+  G.pprojs.push({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:1.0,spd:520,maxX:p.worldX+88*8,hit:new Set(),pierce:8});
 }
 function gainExp(n){
   const p=G.player;
@@ -2394,7 +2395,7 @@ function update(dt){
         if(!pr.hit.has(e)&&Math.abs(e.worldX-pr.x)<16){
           pr.hit.add(e);
           dealPlayerDamage(e,pr.ratio,pr.type==='spear'?'🔱':'🌊');
-          if(pr.type==='wave'&&pr.hit.size>=2){ done=true; break; }
+          if(pr.hit.size>=pr.pierce){ done=true; break; }
         }
       }
       if(pr.x>pr.maxX) done=true;

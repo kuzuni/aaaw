@@ -914,6 +914,47 @@ console.log('\n[⑰ UI 아이콘 — 스탯 7 · 하단 탭 5 (인라인 SVG, �
     : ok('sim.js 무관 (표시 전용 메타 — 밸런스 영향 0)');
 }
 
+/* ---------- ⑱ 관통 투사체 상한 (주인 지시 15:0X · 승인 24번 종결 · T34) ---------- */
+console.log('\n[⑱ 관통 투사체 상한 — 창 ≤8마리 · 검기가 pierce 를 실제로 따르는가 (PLAN §3.3, T34)]');
+{
+  /* (1) 창: 두 파일 다 pierce:8 을 실어야 한다. PLAN §3.3 «일직선 8명 거리» 의 «8명» 이 상한이다. */
+  const spearOf = (src, who) => {
+    const m = src.match(/type:'spear',[^}]*?\}/);
+    if (!m) { bad(`${who} 에서 창 투사체 생성부를 못 찾았다 — 게이트를 갱신할 것`); return null; }
+    const p = m[0].match(/pierce:(\d+)/);
+    if (!p) { bad(`${who} 의 창에 관통 상한(pierce)이 없다 — 상한 없는 창은 12마리 웨이브에서 총출력 162배가 된다 (T34)`); return null; }
+    return Number(p[1]);
+  };
+  const sSpear = spearOf(SIM, 'sim.js'), hSpear = spearOf(HTML, 'index.html');
+  const planSpear = Number((fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8').match(/일직선 (\d+)명 거리/) || [])[1]);
+  if (sSpear !== null && hSpear !== null) {
+    if (sSpear !== hSpear) bad(`창 관통 상한이 두 파일에서 다르다 — sim.js ${sSpear} · index.html ${hSpear}`);
+    else if (!planSpear) bad('PLAN §3.3 l_spear 에서 «일직선 N명 거리» 를 못 찾았다 — 게이트를 갱신할 것');
+    else if (sSpear !== planSpear) bad(`창 관통 상한이 PLAN §3.3 «${planSpear}명» 과 다르다 — 엔진 ${sSpear}`);
+    else ok(`창 관통 상한 ${sSpear}마리 — sim.js · index.html · PLAN §3.3 3자 일치`);
+  }
+  /* (2) 신화 m_spear200 은 «데미지만» 올린다 — 관통 수를 건드리면 주인 확정 스펙 위반 */
+  for (const [src, who] of [[SIM, 'sim.js'], [HTML, 'index.html']]) {
+    const m = src.match(/type:'spear',[^}]*?\}/);
+    if (!m) continue;
+    /spearMaster[^,]*pierce|pierce:[^,}]*spearMaster/.test(m[0])
+      ? bad(`${who}: m_spear200(창의 대가)이 관통 수를 바꾼다 — 주인 확정: 데미지 200%(엔진 13.5배)로만 작동, 관통 수 불변`)
+      : ok(`${who}: m_spear200 은 데미지만 올린다 (관통 수 불변)`);
+  }
+  /* (3) 관통 판정이 리터럴이 아니라 pr.pierce 를 봐야 한다.
+     실제로 index.html 이 `pr.type==='wave'&&pr.hit.size>=2` 로 2를 박아 둬서
+     m_wave4(검기의 왕, 20명 관통)가 게임에서 통째로 죽어 있었다(T34 에서 발견). */
+  for (const [src, who] of [[SIM, 'sim.js'], [HTML, 'index.html']]) {
+    const m = src.match(/pr\.hit\.size\s*>=\s*([A-Za-z0-9_.]+)/);
+    if (!m) { bad(`${who} 에서 관통 상한 판정을 못 찾았다 — 게이트를 갱신할 것`); continue; }
+    if (m[1] !== 'pr.pierce') bad(`${who}: 관통 판정이 «pr.hit.size>=${m[1]}» — 리터럴을 박으면 pierce 를 올리는 특전(m_wave4 20명)이 죽는다`);
+    else ok(`${who}: 관통 판정이 pr.pierce 를 따른다`);
+    if (/pr\.type==='wave'&&pr\.hit\.size/.test(src.replace(/\s/g, '')))
+      bad(`${who}: 관통 판정이 wave 에만 걸려 있다 — 창(spear)이 상한 없이 뚫는다 (T34)`);
+    else ok(`${who}: 관통 판정이 창·검기 양쪽에 걸린다`);
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
