@@ -450,6 +450,28 @@ console.log('\n[⑪ 장비 엔진 함수 1:1 + 영구강화 4종 폐지 (PLAN §
     : bad('계열 옵션 적용 루프가 index.html 에 없다');
 }
 
+/* ---------- ⑫ 모바일 viewport (주인 긴급 지시 14:4X · T40) ---------- */
+/* 왜 게이트인가 — 원인이 «한 줄이 없는 것» 이라 T2 전면 재작성에서 조용히 사라지기 쉽다.
+   주인이 핸드폰 크롬에서 UI 축소로 직접 관측한 회귀라 재발 비용이 크다. PLAN §2.1. */
+console.log('\n[⑫ 모바일 viewport — PLAN §2.1, 주인 긴급 지시]');
+{
+  const mv = HTML.match(/<meta\s+name=["']viewport["']\s+content=["']([^"']+)["']\s*\/?>/i);
+  if (!mv) bad('viewport 메타가 없다 — 모바일이 데스크톱 폭으로 렌더 후 축소한다 (PLAN §2.1)');
+  else {
+    const c = mv[1].replace(/\s+/g, '');
+    const need = [['width=device-width', 'width=device-width'], ['initial-scale=1', 'initial-scale=1'], ['viewport-fit=cover', 'viewport-fit=cover']];
+    const miss = need.filter(([, t]) => !c.includes(t)).map(([n]) => n);
+    miss.length ? bad(`viewport 메타에 필수 항목 누락: ${miss.join(' · ')} (현재 "${mv[1]}")`)
+                : ok(`viewport 메타 확정값 존재 — "${mv[1]}"`);
+  }
+  /* 프레임이 모바일에서 실제로 꽉 차는가 = 주소창을 뺀 높이(dvh) 기준이어야 한다.
+     100vh 만 쓰면 크롬 모바일에서 하단 5탭이 화면 밖으로 잘린다. */
+  const fr = HTML.match(/#frame\{[\s\S]*?\}/);
+  if (!fr) bad('#frame 규칙을 찾지 못했다 — 게이트를 갱신할 것');
+  else if (!/100dvh/.test(fr[0])) bad('#frame 이 100vh 만 쓴다 — 모바일 크롬에서 주소창 높이만큼 하단이 잘린다 (100dvh 병기 필요)');
+  else ok('#frame 높이가 100dvh 병기 — 모바일에서 주소창 제외 실높이를 채운다');
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');

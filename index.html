@@ -1,3 +1,4 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
 <title>꼬마기사 키우기</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
 <style>
@@ -13,11 +14,16 @@
     margin:0; background:#141418; color:var(--ink);
     font-family:'Jua','Malgun Gothic',sans-serif;
     display:flex; justify-content:center; align-items:center; min-height:100vh;
+    min-height:100dvh; /* 모바일 주소창 표시/숨김에 따라 실제 보이는 높이로 (T40) */
   }
   #frame{
     position:relative; aspect-ratio:9/19;
     height:100vh; max-height:100vh; max-width:100vw;
     width:min(100vw, calc(100vh * 9 / 19));
+    /* T40 — dvh 지원 브라우저(모바일 크롬 108+)에서는 주소창을 뺀 실제 높이 기준.
+       100vh 는 «주소창 숨김» 높이라 하단 5탭이 화면 밖으로 잘린다. */
+    height:100dvh; max-height:100dvh;
+    width:min(100vw, calc(100dvh * 9 / 19));
     background:var(--panel); overflow:hidden;
     box-shadow:0 0 60px rgba(0,0,0,.6);
   }
