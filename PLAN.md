@@ -31,6 +31,7 @@
 
 ### 2.1 화면/기본
 - 프레임: **9:19 세로**, 화면 중앙 배치, `aspect-ratio:9/19`.
+- **⚑ 주인 지시(2026-09-02): 모바일 크롬에서 글씨·UI가 축소돼 보이는 문제 수정.** 원인 = viewport 메타 부재(모바일이 데스크톱 폭으로 렌더 후 축소). `<head>` 에 `<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">` 필수(핀치줌 금지는 게임이라 기본값 — 위임). 모바일에서는 9:19 프레임이 화면을 꽉 채우고 데스크톱에서는 중앙 배치 유지. **T3 검증에 «모바일 폭(390px급)에서 글씨/UI 크기 정상» 항목 추가.**
 - 폰트: Google Fonts **Jua**. 카툰/캐주얼 스타일, 다크 패널 + 골드 액센트 (현 index.html 스타일 유지).
 - 오디오: **BGM 없음. 효과음만** (Web Audio 합성; click/hit/crit/hurt/arrow/bolt/throw/coin/poof/shield/evade/levelup/perk/heal/devil/angel/boss/win/lose). 음소거 토글은 로비/게임 양쪽 🔊 버튼, localStorage 저장.
 - 저장(localStorage, key `kkoma-knight-v1`): `{gold, maxChapter, selChapter, muted, up:{dmg,hp,aspd,crit}}`. try/catch 필수.
