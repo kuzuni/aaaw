@@ -1906,9 +1906,24 @@ function payDevilCost(p){
 /* ⚑ 주인 확정 제약 (PLAN §2.4, 2026-09-02 14:2X) — 전 500 챕터 공통 (⚑ T102 로 300 → 500):
    ① 적 총 수 ≤ LAYOUT_MAXENEMY ② 쉼터 고정 ③ 악마 정확히 1 ④ 천사 정확히 1.
    가중치(45/30/25) 배치는 폐기 — 악마1·천사1 을 먼저 깔고 남는 슬롯을 전부 쉼터로 채운 뒤 순서만 시드 셔플한다. */
-const LAYOUT_MAXENEMY=80;   /* ⚑⚑⚑ T100 주인 확정 — 50 → 80 (상한). 실제 구성은 아래 고정값으로 76 마리 */
-/* ⚑ 고정 구성 (주인 확정 2026-09-03 · T100) — 웨이브 5 × 15마리 + 보스 1 = 적 76 · 쉼터 2. sim.js 와 같은 값. */
-const LAYOUT_WAVES=5, LAYOUT_WAVE_SIZE=15, LAYOUT_RESTS=2;
+const LAYOUT_MAXENEMY=50;   /* ⚑⚑⚑ T107 주인 확정 — 80 → 50 (상한 · «50마리 넘으면 피로하다»). T100 의 76 고정 폐기 */
+/* ⚑ 고정 구성 — 웨이브 5개 · 쉼터 2 (전 챕터 동일). sim.js 와 같은 값. */
+const LAYOUT_WAVES=5, LAYOUT_RESTS=2;
+/* ⚑⚑⚑ T107 (주인 확정 2026-09-03 17:3X) — **챕터별 적 수 곡선**. 주인 원문: «적수를 1챕터~5까지 17마리,
+   6챕터부터 1 올라갈 때마다 1개씩 추가, 그리고 적 개수 50개 되면 더이상 안 올리기».
+     N(c) = c ≤ 5 ? 17 : min(50, 17 + (c − 5))   — 챕터 6 = 18 · … · **38 부터 50 고정**
+   «17» 은 보스 포함 총 수라 일반 적은 N − 1 이고, 웨이브 5개에 균등 분배(나머지는 앞 웨이브부터).
+   sim.js 와 같은 함수·같은 값 — 게이트 verifyChapterFixed 가 두 엔진을 전수 대조한다. */
+const ENEMY_CURVE={early:17, from:6, cap:50};
+function chapterEnemyCount(c){
+  return c<ENEMY_CURVE.from ? ENEMY_CURVE.early
+       : Math.min(ENEMY_CURVE.cap, ENEMY_CURVE.early+(c-(ENEMY_CURVE.from-1)));
+}
+function chapterWaveSizes(c){
+  const n=chapterEnemyCount(c)-1, b=Math.floor(n/LAYOUT_WAVES), r=n%LAYOUT_WAVES, out=[];
+  for(let i=0;i<LAYOUT_WAVES;i++) out.push(b+(i<r?1:0));   /* 나머지는 앞 웨이브부터 */
+  return out;
+}
 /* ⚑⚑⚑ T105 (주인 확정 2026-09-03 17:0X) — 원거리 적 비율 40%(웨이브 첫 마리 제외). 비율은 종전 그대로이고
    바뀐 것은 «자리가 챕터별로 고정» 이라는 점뿐이다. `chapterLayout` 안에서만 쓴다. sim.js 와 같은 값. */
 const RANGED_P=0.40;
@@ -1929,21 +1944,20 @@ const WAVE_PIERCE=2, WAVE_PIERCE_BIG=8, SPEAR_PIERCE=8;
    장비 옵션이 쓰는 `autoBolt`(3초 주기)만 남는다. sim.js 와 1:1. */
 /* ⚑ 방어막(ward)은 장수 상한이 없다(주인 확정 «무한»). */
 function chapterLayout(c){
-  /* ⚑⚑⚑ T100 (주인 확정 2026-09-03) — 새 경험치 곡선(5·Lv+1) 위에서 «완주 = 특전 10개» 를 다시 맞춘 구성.
-     **전 챕터 동일 고정 구성**이고 제비뽑기는 «순서» 에만 남는다 (sim.js chapterLayout 과 1:1):
-       웨이브 5 × 15마리 = 75 · 보스 1 → 적 **76마리**(상한 LAYOUT_MAXENEMY 80 이내)
-       쉼터 2 (고정) · 악마 1 · 천사 1
-     공급 = 75×3 + 9(보스) + 2×26(쉼터) = **286** ≥ 필요 Σ(5·L+1), L=1..10 = **285**
-     → 완주하면 정확히 특전 10개(보스 전 공급 277 로 레벨업 9번 + 악마의 «다음 순번 앞당김» 1장).
-     ⚑ 적 «수» 는 더 이상 난이도 노브가 아니다 — 난이도는 적 스탯(구간 성장률·벽 배수)으로만 만든다. */
+  /* ⚑⚑⚑ T107 (주인 확정 2026-09-03 17:3X) — 챕터별 적 수 곡선 위의 고정 구성 (sim.js chapterLayout 과 1:1):
+       웨이브 5개(크기는 `chapterWaveSizes(c)`) · 보스 1 → 적 **N(c)마리**(상한 LAYOUT_MAXENEMY 50)
+       쉼터 2 (고정) · 악마 1 · 천사 1 — «순서» 만 챕터 시드로 섞인다.
+     ⚑ 특전은 «그 챕터의 경험치가 주는 만큼»(주인 «특전은 걍 되는 만큼»). 처치 3·보스 9·쉼터 26×2·`5·Lv+1`
+       은 불변이고 T100 의 «완주 = 정확히 10개» 항등식만 사라졌다 — 1~5챕터 6개 · 15 = 7 · 28 = 8 · 38+ = 9.
+     ⚑ 적 «수» 는 난이도 노브가 아니다 — 난이도는 적 스탯(구간 성장률·벽 배수)으로만 만든다. */
   const rnd=mulberry(c*1013904223+77);
-  const waveCount=LAYOUT_WAVES, size=LAYOUT_WAVE_SIZE;
+  const waveCount=LAYOUT_WAVES, sizes=chapterWaveSizes(c);
   const evs=['devil','angel'];                                  /* 악마 1 · 천사 1 */
   for(let i=0;i<LAYOUT_RESTS;i++) evs.push('rest');             /* 쉼터 2 고정 */
   for(let i=evs.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); const t=evs[i]; evs[i]=evs[j]; evs[j]=t; }
   const out=[];
   /* 웨이브 5 · 이벤트 4 — «웨이브 뒤 이벤트» 를 이벤트가 떨어질 때까지 반복하면 마지막 웨이브가 보스 앞에 붙는다 */
-  for(let i=0;i<waveCount;i++){ out.push({t:'wave',size}); if(i<evs.length) out.push({t:evs[i]}); }
+  for(let i=0;i<waveCount;i++){ out.push({t:'wave',size:sizes[i]}); if(i<evs.length) out.push({t:evs[i]}); }
   out.push({t:'boss'});
   /* ⚑⚑⚑ T105 (주인 확정 2026-09-03 17:0X) — «같은 챕터 = 같은 원거리 자리». 매판 굴리던
      `Math.random()<0.4` 를 챕터 시드 RNG 로 옮겨 노드에 `ranged[]` 로 싣는다.

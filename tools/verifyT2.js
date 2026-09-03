@@ -335,8 +335,11 @@ function loadLayout(src, label) {
   const mul = src.split('\n').find(l => l.startsWith('function mulberry'));
   const lines = src.split('\n');
   const a = lines.findIndex(l => l.startsWith('const LAYOUT_MAXENEMY'));
-  const b = lines.findIndex((l, i) => i > a && l === '}');
-  if (!mul || a < 0 || b < 0) return null;
+  /* ⚑ T107 — LAYOUT_MAXENEMY 와 chapterLayout 사이에 `chapterEnemyCount`·`chapterWaveSizes` 가 생겼다.
+     «첫 들여쓰기 없는 `}`» 으로 자르면 그 함수에서 끊긴다 — chapterLayout 을 닫는 `}` 까지 떠 온다. */
+  const f = lines.findIndex((l, i) => i > a && l.startsWith('function chapterLayout'));
+  const b = lines.findIndex((l, i) => i > f && l === '}');
+  if (!mul || a < 0 || f < 0 || b < 0) return null;
   const code = mul + '\nconst clamp=(v,x,y)=>Math.max(x,Math.min(y,v));\n' + lines.slice(a, b + 1).join('\n') + '\n;chapterLayout';
   try { return vm.runInNewContext(code, { Math }); } catch (e) { return null; }
 }
@@ -352,7 +355,9 @@ else {
     const tot = A.filter(n => n.t === 'wave').reduce((s, n) => s + n.size, 0);
     minE = Math.min(minE, tot); maxE = Math.max(maxE, tot);
     const why = [];
-    if (tot > 100) why.push(`적 ${tot}마리>100`);
+    /* ⚑ T107 — 챕터별 적 수 곡선(보스 포함 N(c) = c≤5?17:min(50,12+c))이 들어와 총수가 챕터마다 다르다.
+       여기서는 상한만 본다(공식 전수 대조는 전용 게이트 verifyChapterFixed 가 한다). */
+    if (tot + 1 > 50) why.push(`적 ${tot + 1}마리>50`);
     if (cnt('devil') !== 1) why.push(`악마 ${cnt('devil')}개≠1`);
     if (cnt('angel') !== 1) why.push(`천사 ${cnt('angel')}개≠1`);
     if (cnt('rest') < 1 || cnt('rest') > 4) why.push(`쉼터 ${cnt('rest')}개(1~4 밖)`);
@@ -363,7 +368,7 @@ else {
   const nm = mism.filter(Boolean);
   mism.length ? bad(`두 파일 레이아웃 불일치 ${mism.length}챕터: ${nm.join(' / ')}`) : ok('챕터 1~420 레이아웃 전수 동일 (sim.js ↔ index.html · ⚑ T103)');
   const nv = viol.filter(Boolean);
-  viol.length ? bad(`주인 확정 제약 위반 ${viol.length}챕터: ${nv.join(' / ')}`) : ok(`제약 4종 전수 만족 — 적 총수 ${minE}~${maxE}(≤100) · 쉼터 1~4 · 악마 1 · 천사 1`);
+  viol.length ? bad(`주인 확정 제약 위반 ${viol.length}챕터: ${nv.join(' / ')}`) : ok(`제약 4종 전수 만족 — 적 총수(보스 포함) ${minE + 1}~${maxE + 1}(≤50 · ⚑ T107 곡선) · 쉼터 1~4 · 악마 1 · 천사 1`);
   /* 가중치 배치 폐기 흔적: 45/30/25 잔재가 남아 있으면 안 된다 */
   const legacy = /r<0\.45\?'rest'/;
   (legacy.test(SIM) || legacy.test(HTML)) ? bad('폐기된 가중치(45/30/25) 배치 코드가 남아 있다') : ok('가중치(45/30/25) 배치 잔재 0');
