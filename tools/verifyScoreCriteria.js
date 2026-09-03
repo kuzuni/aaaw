@@ -204,6 +204,18 @@ const HAR_RE = /장비 «(전설|신화|영웅|희귀|일반)(?:\+(\d+))? 6부�
   /* 합격 밴드의 과녁 목록(§7 기준 문장) ↔ LADDER.at */
   const at = pick(PLAN, 'PLAN 실험5 과녁 챕터', /과녁 챕터\(([\d·]+)\) 클리어율/, 1);
   if (at && got.length === 7) cmp('실험5 과녁 챕터 목록', at, got.map(g => g[4]).join('·'));
+  /* ⚑ T87 — 채점 판수도 실험2 와 같은 방식으로 못박는다(PLAN 문면 ↔ 상수 ↔ 기본값 자리).
+     200판에서는 사다리 7과녁 중 최소 1개가 잡음만으로 탈락할 확률이 ≈22% 라 «n/7 유지» 가 동전 던지기였다(T74). */
+  const e5n = pick(PLAN, 'PLAN 실험5 판수', /측정 판수는 과녁당 (\d+)판/, 1);
+  const simE5n = pick(SIM, 'sim 실험5 판수', /const EXP5_SCORE_N\s*=\s*(\d+)\s*;/, 1);
+  const usesE5 = /N\s*=\s*parseInt\(process\.env\.EXP5_N\s*\|\|\s*String\(EXP5_SCORE_N\)\s*,\s*10\)/.test(SIM);
+  cmp('실험5 판수 기본값이 EXP5_SCORE_N 을 쓴다', 'yes', usesE5 ? 'yes' : 'no',
+      'EXP5_N 미지정 시 상수가 그대로 채점 판수가 되어야 한다 (리터럴 우회 차단)');
+  cmp('실험5 판수', e5n, simE5n);
+  const EXP5_N_FLOOR = 1000;
+  if (simE5n !== null)
+    rows.push({ name: '실험5 판수 하한(≥1000)', plan: `≥${EXP5_N_FLOOR}`, impl: String(simE5n),
+                ok: Number(simE5n) >= EXP5_N_FLOOR, note: 'T87 — PLAN·엔진이 사이좋게 같이 내려가는 것도 막는다' });
 }
 
 /* ─────────── 등재된 기존 차이 (KNOWN) ─────────── */
