@@ -404,6 +404,25 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('클리어로 다음 챕터 해금', after.maxCh >= 2, `maxChapter=${after.maxCh}`);
   await p.screenshot({ path: `${OUT}/t3-clear.png` });
 
+  /* ---------- ⚑⚑⚑ T105 — «같은 챕터 두 번 시작 → 원거리 자리 동일» (주인 확정 2026-09-03 17:0X) ----------
+     정적 게이트(`verifyChapterFixed` ⓔ~ⓙ)는 `chapterLayout` 이 내놓는 `ranged[]` 를 보지만, 게임이 실제로
+     그것을 «읽어서» 적을 세우는지는 여기서만 확인된다(중간에 다시 굴리면 정적 검사는 초록인 채 깨진다).
+     맨 끝에 두는 이유 — `startChapter` 가 전역 G 를 갈아치우므로 앞의 검사들이 끝난 뒤에야 안전하다. */
+  console.log('\n=== ⚑ T105 같은 챕터 = 같은 원거리 자리 (실측) ===');
+  const rangedRun = c => p.evaluate(ch => {
+    startChapter(ch);
+    return {
+      pat: G.nodes.filter(n => n.type === 'wave').map(n => n.enemies.map(e => e.ranged ? '1' : '0').join('')).join('|'),
+      n: G.nodes.flatMap(n => n.type === 'wave' ? n.enemies : []).filter(e => e.ranged).length,
+    };
+  }, c);
+  const r3a = await rangedRun(3), r3b = await rangedRun(3), r4 = await rangedRun(4);
+  chk('⚑ 같은 챕터를 두 번 시작하면 원거리 자리가 완전히 같다', r3a.pat === r3b.pat && r3a.pat.length > 0,
+    `챕터 3 원거리 ${r3a.n}마리 · 두 번째 ${r3b.n}마리`);
+  chk('다른 챕터는 다른 자리다 (고정이 «전 챕터 동일» 로 뭉개지지 않았다)', r3a.pat !== r4.pat,
+    `ch3 ${r3a.n}마리 / ch4 ${r4.n}마리`);
+  chk('웨이브 첫 마리는 원거리가 아니다', r3a.pat.split('|').every(w => w[0] === '0'));
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);

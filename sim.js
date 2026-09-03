@@ -156,6 +156,10 @@ function payDevilCost(p){
 const LAYOUT_MAXENEMY=80;
 /* ⚑ 고정 구성 (주인 확정 2026-09-03 · T100) — 웨이브 5 × 15마리 + 보스 1 = 적 76 · 쉼터 2. index.html 과 같은 값. */
 const LAYOUT_WAVES=5, LAYOUT_WAVE_SIZE=15, LAYOUT_RESTS=2;
+/* ⚑⚑⚑ T105 (주인 확정 2026-09-03 17:0X) — 원거리 적 비율. «자리» 는 챕터 시드로 고정되지만 «비율» 은
+   종전 그대로 40% 다(주인이 바꾼 것은 자리의 고정이지 비율이 아니다). 웨이브 첫 마리는 원거리 제외.
+   이 상수는 `chapterLayout` 안에서만 쓴다 — 웨이브 생성부에서 다시 굴리면 챕터별 고정이 깨진다. */
+const RANGED_P=0.40;
 /* ⚑ 쉼터 보상 (PLAN §2.4 · 주인 확정 2026-09-02 17:1X · T49) — «❤️ 체력 260 회복(고정값)» vs «🌟 경험치 +26».
    고정값이라 최대체력 비율로 되돌리지 말 것. index.html 과 이름·값이 같아야 한다(게이트 verifyRestPolicy). */
 const REST_HEAL=260, REST_EXP=26;
@@ -201,6 +205,18 @@ function chapterLayout(c){
      그 마지막 웨이브가 보스 직전에 붙는다(웨이브가 처음과 끝을 모두 차지한다). */
   for(let i=0;i<waveCount;i++){ out.push({t:'wave',size}); if(i<evs.length) out.push({t:evs[i]}); }
   out.push({t:'boss'});
+  /* ⚑⚑⚑ T105 (주인 확정 2026-09-03 17:0X) — «같은 챕터 = 같은 원거리 자리».
+     종전에는 웨이브 생성부가 매판 `Math.random()<0.4` 를 굴려 같은 챕터라도 판마다 원거리 자리·마릿수가
+     달랐다. 그 굴림을 여기(챕터 시드 RNG)로 옮겨 노드에 `ranged[]` 로 실어 보낸다.
+     ⚑ 스트림 소비 순서를 지킬 것 — **이벤트 셔플이 끝난 뒤에** 굴린다. 그래야 챕터마다 이미 정해져 있는
+       쉼터·악마·천사 순서가 한 챕터도 안 바뀐다(verifyT2 레이아웃 전수 대조가 그 불변을 지킨다).
+     ⚑ `j>0` 여부와 무관하게 굴림 자체는 마리마다 한 번씩 소비한다(첫 마리에서 굴림을 건너뛰면
+       뒤 마리들의 자리가 통째로 밀린다). 보스는 원거리가 아니라 굴리지 않는다. */
+  for(const nd of out){
+    if(nd.t!=='wave') continue;
+    const r=[]; for(let j=0;j<nd.size;j++) r.push(rnd()<RANGED_P&&j>0);
+    nd.ranged=r;
+  }
   return out;
 }
 /* ⚑ T35: 구간별 성장률 누적 배수. 챕터 1 을 1.0 으로 두고 1→c 까지 각 스텝의 구간 배수를 곱한다.
@@ -1027,7 +1043,7 @@ function runChapter(chapter,build,opts){
     if(node.t==='wave'){
       const st=enemyStats(chapter,wi);
       for(let j=0;j<node.size;j++){
-        const ranged=Math.random()<0.4&&j>0;
+        const ranged=node.ranged[j];   /* ⚑ T105 — 챕터 시드로 이미 정해져 있다 (여기서 다시 굴리지 말 것) */
         nd.enemies.push({worldX:x+j*88,hp:st.hp,maxHp:st.hp,dmg:st.dmg,ranged,
           atkTimer:rand(0.4,1.2),stun:0,slow:0,wave:nd,dead:false,isBoss:false,exp:0});
       }
