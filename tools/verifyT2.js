@@ -169,7 +169,7 @@ const FORMULAS = [
      대신 «순서 지급 동사» 가 두 엔진에서 같은 자리에 있는지를 여기서 본다. */
   ['순서 지급 동사(grantNextPerk)', /function grantNextPerk\(G\)\{/, /function grantNextPerk\(\)\{/],
   ['특전 소환 확률 상수', /const PERK_ATK_M=1\.20, PERK_DEF_M=1\.10/, /const PERK_ATK_M=1\.20, PERK_DEF_M=1\.10/],
-  ['경험치 요구식', /expNeed:lv=>4\+3\*lv/, /expNeed=lv=>4\+3\*lv/],   /* ⚑ T96 4단계 — 4+4 → 4+3 */
+  ['경험치 요구식', /expNeed:lv=>5\*lv\+1/, /expNeed=lv=>5\*lv\+1/],   /* ⚑⚑⚑ T100 — 4+3*lv → 5*lv+1 */
 ];
 /* ⚑ T1 회귀2 R02 — 세 번째 칸이 «함수» 면 sim.js 에서 뽑은 값을 넣어 index.html 쪽 정규식을 만든다.
    종전에는 양쪽에 같은 «숫자» 를 박아 둬서 밸런스 튜닝을 할 때마다 게이트가 빨개졌고(이번 회차 4건),
@@ -1240,22 +1240,22 @@ console.log('\n[㉓ 레벨업 필요 경험치 = 4+3*Lv (PLAN §2.4, T96)]');
   const strip = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
   const SIMC = strip(SIM), HTMLC = strip(HTML);
 
-  /* (1) 두 엔진의 식이 «4+4*lv» 인가. index.html 은 정의가 둘(전역 상수 + TUNE) 이라 둘 다 본다 —
-     T47 조사에서 실제로 두 곳에 같은 식이 중복돼 있었다(게임 로직은 전역 쪽만 쓴다). */
+  /* (1) 두 엔진의 식이 «5*lv+1» 인가 (⚑⚑⚑ T100 — 종전 4+3*lv). index.html 은 정의가 둘(전역 상수 + TUNE)
+     이라 둘 다 본다 — T47 조사에서 실제로 두 곳에 같은 식이 중복돼 있었다(게임 로직은 전역 쪽만 쓴다). */
   const forms = [
-    ['sim.js TUNE.expNeed',      SIMC,  /expNeed:lv=>(\d+)\+(\d+)\*lv/],
-    ['index.html 전역 expNeed',  HTMLC, /const expNeed=lv=>(\d+)\+(\d+)\*lv/],
-    ['index.html TUNE.expNeed',  HTMLC, /expNeed:lv=>(\d+)\+(\d+)\*lv/],
+    ['sim.js TUNE.expNeed',      SIMC,  /expNeed:lv=>(\d+)\*lv\+(\d+)/],
+    ['index.html 전역 expNeed',  HTMLC, /const expNeed=lv=>(\d+)\*lv\+(\d+)/],
+    ['index.html TUNE.expNeed',  HTMLC, /expNeed:lv=>(\d+)\*lv\+(\d+)/],
   ];
   const got = [];
   for (const [who, src, re] of forms) {
     const m = src.match(re);
     if (!m) { bad(`${who}: 경험치 요구식을 못 찾았다 — 코드 모양이 바뀌었나 (게이트를 갱신할 것)`); got.push(null); continue; }
-    const base = Number(m[1]), step = Number(m[2]);
-    got.push(`${base}+${step}`);
-    (base === 4 && step === 3)
-      ? ok(`${who} = ${base}+${step}*Lv`)
-      : bad(`${who} = ${base}+${step}*Lv — 주인 확정(2026-09-03 · T96)은 4+3*Lv`);
+    const step = Number(m[1]), base = Number(m[2]);
+    got.push(`${step}*lv+${base}`);
+    (step === 5 && base === 1)
+      ? ok(`${who} = ${step}*Lv+${base} (Lv1→${step + base})`)
+      : bad(`${who} = ${step}*Lv+${base} — 주인 확정(2026-09-03 · T100)은 5*Lv+1`);
   }
   const uniq = [...new Set(got.filter(Boolean))];
   uniq.length <= 1 ? ok('세 정의가 전부 같은 식 (sim↔게임·게임 내부 중복 일치)')
