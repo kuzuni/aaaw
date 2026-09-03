@@ -74,8 +74,11 @@ const PATCH = [
   ['l_noCritAtk3', "p=>p.px.l_noCritAtk3?0:p.critR", 'p=>p.px.l_noCritAtk3?(__F("M_noCrit",{l_noCritAtk3:1}),0):p.critR'],
   /* 🃏🔁 특전 1개당 반격 (삼항) */
   ['c_collCounter', "p.px.c_collCounter?2*perkN(p):0", 'p.px.c_collCounter?(__F("M_collCounter",{c_collCounter:1}),2*perkN(p)):0'],
-  /* 🪓🌪️ 도끼 3회전 (삼항) */
-  ['l_axeSpin', 'const times=px.l_axeSpin?3:1;', 'const times=px.l_axeSpin?(__F("M_axeSpin",{l_axeSpin:1}),3):1;'],
+  /* 🪓🌪️ 도끼 회전 (삼항) — ⚑ P3 R04: 회전 수가 주인 승인 40번 ⓔ 로 튜닝 노브가 됐다.
+     원문에 숫자를 박으면 회차마다 패치표가 깨지므로 정규식으로 받아 `$1` 로 되꽂는다(R02·R03 규약).
+     ⚑ 그리고 **회전 수가 1보다 클 때만** 발동으로 센다 — 그러지 않으면 `?1:1`(효과 완전 무력화)로
+     바꿔도 삼항의 참 가지를 지나므로 게이트가 초록이었다(R03 이 r_counterX 에서 막은 것과 같은 구멍). */
+  ['l_axeSpin', /const times=px\.l_axeSpin\?(\d+):1;/, 'const times=px.l_axeSpin?(((($1)>1)?__F("M_axeSpin",{l_axeSpin:1}):0),$1):1;'],
   /* ⚜️ 반격 피해 +100% (삼항) */
   /* ⚑ P3 R03: 반격 계수는 튜닝 노브라 값을 정규식으로 받는다(R02 의 정규식 패치 규약). */
   ['r_counterX', /\*\(px\.r_counterX\?([\d.]+):1\);/, '*(px.r_counterX?(((($1)>1)?__F("M_counterX",{r_counterX:1}):0),$1):1);'],

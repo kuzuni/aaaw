@@ -529,7 +529,7 @@ console.log('\n=== ⑥ 횟수형 방어막 · 회피 즉사 (PLAN §3.0 주인 1
   }
 }
 
-console.log('\n=== ⑦ 반격 연쇄 — «반드시 한 번 더, 연쇄 2회 제한» (PLAN §3.3 l_counterChain · T69) ===');
+console.log('\n=== ⑦ 반격 연쇄 — «반드시 두 번 더» (PLAN §3.3 l_counterChain · T69 · ⚑ P3 R04 승인 40번 ⓔ) ===');
 /* T69: sim.js 의 가드가 `depth<2` 였다. 바깥 호출부는 depth 를 안 넘기므로 `undefined<2` = false —
    즉 전설 특전이 sim 에서 한 번도 안 터졌다(1200판 발동 0회). 게임(index.html)은 `!depth` 라 정상이었다.
    그래서 여기서는 «상수 대조» 가 아니라 **실제로 몇 번 반격하는지 세어** 본다:
@@ -566,35 +566,48 @@ console.log('\n=== ⑦ 반격 연쇄 — «반드시 한 번 더, 연쇄 2회 �
       Math.random=rnd;
       return G.atkTries;                    /* doCounter 진입 1회당 1 */
     };
+    /* ⚑ P3 R04 — 연쇄 횟수가 주인 승인 40번 ⓔ 로 튜닝 노브(COUNTER_CHAIN_N)가 됐다.
+       그래서 «2회» 를 게이트에 박지 않고 **상수를 두 엔진에서 읽어** 기대값을 만든다.
+       T69 가 잡은 실패(«가드가 undefined 와 비교돼 특전이 통째로 사장») 는 여전히 실행 단언으로 막는다. */
+    const cn=(s)=>{ const m=s.match(/COUNTER_CHAIN_N\s*=\s*(\d+)/); return m?Number(m[1]):null; };
+    const ns=cn(SIM), nh=cn(HTML);
+    (ns!==null&&ns===nh) ? pass(`두 엔진의 COUNTER_CHAIN_N 이 같다 (${ns})`)
+                         : fail(`COUNTER_CHAIN_N 이 두 엔진에서 다르다 — sim ${ns} / index.html ${nh}`);
+    const want=(ns===null?2:ns)+1;    /* 첫 반격 1회 + 연쇄 N회 */
     const n0=count({}), n1=count({l_counterChain:1});
     n0===1 ? pass('특전 없으면 반격 1회 (연쇄 없음)')
            : fail(`특전 없는 반격이 ${n0}회다 — 1회여야 한다`);
-    n1===2 ? pass('l_counterChain 이 있으면 정확히 2회 (반격 + 연쇄 1회)')
-           : fail(`l_counterChain 반격이 ${n1}회다 — PLAN §3.3 «반드시 한 번 더 · 연쇄 2회 제한» 위반`+
-                  (n1===1?' (특전이 사장돼 한 번도 안 터진다 — T69 재발)':''));
+    n1===want ? pass(`l_counterChain 이 있으면 정확히 ${want}회 (반격 + 연쇄 ${want-1}회 = COUNTER_CHAIN_N)`)
+              : fail(`l_counterChain 반격이 ${n1}회다 — 상수 COUNTER_CHAIN_N=${ns} 이면 ${want}회여야 한다`+
+                     (n1===1?' (특전이 사장돼 한 번도 안 터진다 — T69 재발)':''));
     /* 두 엔진 가드 형태 대조 + «undefined 비교» 가드 금지 */
-    const grab=(s)=>{ const m=s.match(/else if\(\(px\.counterChain\|\|px\.l_counterChain\)&&([^)]*)\)\s*doCounter/); return m?m[1].replace(/\s+/g,''):null; };
+    const grab=(s)=>{ const m=s.match(/else if\(px\.l_counterChain&&([^)]*\)?[^)]*)\)\s*doCounter/); return m?m[1].replace(/\s+/g,''):null; };
     const gs=grab(SIM), gh=grab(HTML);
     (gs&&gh&&gs===gh) ? pass(`두 엔진의 연쇄 가드가 같다 («${gs}»)`)
                       : fail(`연쇄 가드가 두 엔진에서 다르다 — sim «${gs}» / index.html «${gh}»`);
-    /* depth 를 숫자와 비교하면 바깥 호출부(인자 미전달)에서 undefined 비교가 되어 죽는다 */
+    /* depth 를 숫자와 비교해도 되지만 **반드시 `depth||0` 으로 정규화한 뒤**여야 한다.
+       바깥 호출부는 depth 를 안 넘기므로 날 depth 를 숫자와 비교하면 undefined 비교 = 항상 거짓이다(T69). */
     [['sim.js',gs],['index.html',gh]].forEach(([f,g])=>{
-      (g&&!/depth[<>]=?\d/.test(g))
-        ? pass(`${f} 의 가드가 depth 를 숫자와 비교하지 않는다 (undefined 비교 회귀 차단)`)
-        : fail(`${f} 의 가드 «${g}» 가 depth 를 숫자와 비교한다 — 호출부가 depth 를 안 넘기므로 항상 거짓이 된다(T69)`);
+      (g&&(!/depth[<>]=?\d/.test(g)||/\(depth\|\|0\)[<>]=?\d/.test(g)))
+        ? pass(`${f} 의 가드가 depth 를 정규화하고 비교한다 (undefined 비교 회귀 차단)`)
+        : fail(`${f} 의 가드 «${g}» 가 날 depth 를 숫자와 비교한다 — 호출부가 depth 를 안 넘기므로 항상 거짓이 된다(T69)`);
     });
-    /* 호출부가 실제로 depth 를 안 넘기는지 (넘기기 시작하면 위 가정이 깨진다) */
-    const outer=(s)=>[...s.matchAll(/(function\s+)?doCounter\(([^)]*)\)/g)]
+    /* 호출부 점검 — 바깥 호출은 depth 를 안 넘기고, 재귀 호출은 «1» 또는 «(depth||0)+1» 만 허용한다 */
+    /* 인자에 괄호가 있을 수 있으므로(`(depth||0)+1`) 한 겹까지 허용해서 뜬다 */
+    const outer=(s)=>[...s.matchAll(/(function\s+)?doCounter\(((?:[^()]|\([^()]*\))*)\)/g)]
                      .filter(m=>!m[1])                       /* 정의부는 제외 — 호출부만 본다 */
                      .map(m=>m[2].replace(/\s+/g,''))
-                     .filter(a=>a!=='G,src,1'&&a!=='src,1'); /* 재귀 호출(연쇄 1회)은 정상 */
+                     .filter(a=>!/^(G,)?src,(1|\(depth\|\|0\)\+1)$/.test(a));
     const so=outer(SIM).filter(a=>a!=='G,src'&&a!==''), ho=outer(HTML).filter(a=>a!=='src'&&a!=='');
     (so.length===0&&ho.length===0)
-      ? pass('바깥 호출부는 두 엔진 모두 depth 인자를 넘기지 않는다 (재귀 호출만 1)')
+      ? pass('바깥 호출부는 두 엔진 모두 depth 인자를 넘기지 않는다 (재귀 호출만 깊이를 넘긴다)')
       : fail(`depth 를 넘기는 예상 밖 호출부가 있다 — sim ${JSON.stringify(so)} / index.html ${JSON.stringify(ho)}`);
-    planHas(/\| l_counterChain \| 🔂 반격하면 반드시 한 번 더 반격 \|/)
-      ? pass('PLAN §3.3 에 «반격하면 반드시 한 번 더 반격» 행이 있다')
-      : fail('PLAN §3.3 의 l_counterChain 행 문구가 바뀌었다 — 게이트 기준과 대조할 것');
+    /* PLAN §3.3 문구 ↔ 상수: «두 번» 같은 우리말 수사도 상수에서 만들어 대조한다 */
+    const KO=['','한','두','세','네','다섯'];
+    const wantRow=new RegExp(`\\| l_counterChain \\| 🔂 반격하면 반드시 ${KO[ns]||ns} 번 더 반격 \\|`);
+    planHas(wantRow)
+      ? pass(`PLAN §3.3 의 l_counterChain 행이 «반드시 ${KO[ns]||ns} 번 더 반격» 이다 (상수 ${ns} 와 일치)`)
+      : fail(`PLAN §3.3 의 l_counterChain 행이 상수 COUNTER_CHAIN_N=${ns} 와 다르다 — 표시 텍스트와 엔진이 갈라졌다`);
   }
 }
 
@@ -649,9 +662,12 @@ console.log('\n=== ⑧ 킬 회복 축 — 주인 확정 5% 체급 (PLAN §3 · T
                        : fail(`두 엔진의 킬 회복 축이 다르다 — sim «${a}» / index.html «${b}»`);
   }
   /* (5) PLAN §3 표시 텍스트 ↔ 엔진 */
+  /* ⚑ P3 R04 — 💉 l_killHeal5 의 확률·수치는 튜닝 노브라 게이트에 박으면 회차마다 깨진다(R02·R03 규약).
+     엔진에서 읽은 값으로 기대 행을 만들어 대조한다. 🍖 c_killHeal2 만 주인 확정 상수라 5% 를 그대로 박는다. */
+  const pc=v=>String(Math.round(v*100));
   [['c_killHeal2', /\| c_killHeal2 \| 🍖 처치 시 체력 5% 회복 \|/],
-   ['l_killHeal5', /\| l_killHeal5 \| 💉 처치 시 40% 확률로 체력 10% 회복 \|/],
-   ['c_killShield3', /\| c_killShield3 \| 🔰 처치 시 10% 확률로 실드 10% 충전 \|/]].forEach(([id,re])=>{
+   ['l_killHeal5', new RegExp(`\\| l_killHeal5 \\| 💉 처치 시 ${pc(coef[2][1])}% 확률로 체력 ${pc(coef[1][1])}% 회복 \\|`)],
+   ['c_killShield3', new RegExp(`\\| c_killShield3 \\| 🔰 처치 시 ${pc(coef[4][1])}% 확률로 실드 ${pc(coef[3][1])}% 충전 \\|`)]].forEach(([id,re])=>{
     planHas(re) ? pass(`PLAN §3 의 ${id} 행이 엔진 수치와 같다`)
                 : fail(`PLAN §3 의 ${id} 행이 엔진 수치와 다르다 — 표시 텍스트와 엔진이 갈라졌다`);
   });

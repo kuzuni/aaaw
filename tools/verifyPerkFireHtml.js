@@ -74,7 +74,9 @@ const PATCH = [
     '  if(stunned&&px.c_stunNoEvade)__F("M_stunNoEvade",{c_stunNoEvade:1});\n  if(!(stunned&&px.c_stunNoEvade)&&Math.random()<ENEMY_EVADE){'],
   ['l_noCritAtk3', 'return p.px.l_noCritAtk3?0:p.critR', 'return p.px.l_noCritAtk3?(__F("M_noCrit",{l_noCritAtk3:1}),0):p.critR'],
   ['c_collCounter', 'p.px.c_collCounter?2*perkN():0', 'p.px.c_collCounter?(__F("M_collCounter",{c_collCounter:1}),2*perkN()):0'],
-  ['l_axeSpin', 'const times=px.l_axeSpin?3:1;', 'const times=px.l_axeSpin?(__F("M_axeSpin",{l_axeSpin:1}),3):1;'],
+  /* ⚑ P3 R04: 도끼 회전 수가 주인 승인 40번 ⓔ 로 튜닝 노브가 됐다 — 숫자를 박지 않고 정규식으로 받고,
+     **1보다 클 때만** 발동으로 센다(`?1:1` 무력화가 초록으로 지나가던 구멍 — R03 의 r_counterX 선례). */
+  ['l_axeSpin', /const times=px\.l_axeSpin\?(\d+):1;/, 'const times=px.l_axeSpin?(((($1)>1)?__F("M_axeSpin",{l_axeSpin:1}):0),$1):1;'],
   /* ⚑ P3 R03: 반격 계수는 튜닝 노브라 값을 정규식으로 받는다(R02 의 정규식 패치 규약). */
   ['r_counterX', /\*\(px\.r_counterX\?([\d.]+):1\);/, '*(px.r_counterX?(((($1)>1)?__F("M_counterX",{r_counterX:1}):0),$1):1);'],
   ['l_wavePierce', 'const big=px.l_wavePierce;', 'const big=px.l_wavePierce;if(big)__F("M_wavePierce",{l_wavePierce:1});'],

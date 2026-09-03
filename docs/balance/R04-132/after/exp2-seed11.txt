@@ -1,0 +1,34 @@
+
+=== 실험2: 특전별 기여도 (챕터30, 하니스 희귀 6부위 · 슬롯 15렙, 12000판) ===
+전체 클리어율: 68.3%
+-- 상위 12 --
+  c_killHeal2(일) 97% (1037판)
+  l_autoSpear(전) 95% (734판)
+  l_noCritAtk3(전) 91% (748판)
+  l_spear2Atk(전) 91% (786판)
+  r_eventShield(희) 90% (835판)
+  r_spearKill(희) 90% (777판)
+  c_evadeKill(일) 88% (1093판)
+  l_killHeal5(전) 86% (742판)
+  l_dualWield(전) 86% (736판)
+  l_waveAtk(전) 85% (761판)
+  l_fullHpDmg(전) 85% (759판)
+  l_shieldIgnore(전) 84% (734판)
+-- 하위 12 --
+  r_stunDmgM(희) 62% (744판)
+  c_evadeHealS(일) 62% (1105판)
+  c_stunNoEvade(일) 61% (1050판)
+  r_counterAtkM(희) 61% (768판)
+  c_collCounter(일) 61% (1092판)
+  r_arrowX2(희) 61% (800판)
+  c_stunDmg(일) 61% (1041판)
+  c_critMiss(일) 61% (1035판)
+  r_critFBuff(희) 61% (756판)
+  r_shieldAtkM(희) 61% (740판)
+  c_arrowMiss(일) 61% (1104판)
+  r_stunCritR(희) 60% (807판)
+-- 등급별 스프레드 (표본 25판 이상만 · ⚑ 채점은 희귀·전설 각 1/2점, 일반은 참고 — 승인 39번 ⓐ) --
+  일반: 최상 c_killHeal2 97.0% / 최하 c_arrowMiss 60.5% → 폭 36.5%p 초과  ← 참고(채점 제외 · 일반 44종 동결)
+  희귀: 최상 r_eventShield 90.3% / 최하 r_stunCritR 60.5% → 폭 29.8%p 초과
+  전설: 최상 l_autoSpear 95.2% / 최하 l_aspdRamp 62.1% → 폭 33.2%p 초과
+  채점 합격 0/2 (희귀·전설 각 1/2점 — 승인 39번 ⓐ)

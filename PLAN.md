@@ -200,25 +200,25 @@
 | r_boltMiss | ⚡ 빗나가면 40% 확률로 번개 2회 | procOnMiss |
 | r_waveHit | 🌊 피격 시 30% 확률로 검기 2개 | hitPlayer |
 | r_waveCrit | 🌊 치명타 시 30% 확률로 검기 1개 | 치명타 분기 |
-| r_spearKill | 🔱 처치 시 60% 확률로 창 1개 | onKill |
-| r_spearCounter | 🔱 반격 시 30% 확률로 창 1개 | doCounter |
-| r_axeBounce | 🪞 도끼가 적을 맞히면 1번 튕겨서 다른 적을 또 맞힘 | 도끼 적중 후 다른 적 1회 재타격 |
+| r_spearKill | 🔱 처치 시 50% 확률로 창 1개 | onKill |
+| r_spearCounter | 🔱 반격 시 60% 확률로 창 1개 | doCounter |
+| r_axeBounce | 🪞 도끼가 적을 맞히면 2번 튕겨서 다른 적을 또 맞힘 | 도끼 적중 후 다른 적 1회 재타격 |
 | r_boltChain | 🔗 번개가 30% 확률로 옆 적에게 1번 튐 (연쇄 번개) | 번개 적중 후 인접 적 1회 |
 | r_arrowX2 | 🏹² 화살이 2배로 생성 | fireArrows 발수 ×2 |
-| r_atkBuffM | ⚔️ 공격 시 30% 확률로 7초간 공격력 +10% | addBuff atk 0.10 / 7초 |
+| r_atkBuffM | ⚔️ 공격 시 60% 확률로 7초간 공격력 +10% | addBuff atk 0.10 / 7초 |
 | r_critRBuff | 💥 치명타 시 70% 확률로 7초간 치명타 확률 +20% | addBuff critR 20 / 7초 |
 | r_critFBuff | 🔥 치명타 시 60% 확률로 7초간 치명타 데미지 +40% | addBuff critF 40 / 7초 |
-| r_defBuff2 | 🛡️ 피격 시 30% 확률로 7초간 방어력 +10% | addBuff def 10 / 7초 |
-| r_hitEvadeBuff | 🌫️ 피격 시 30% 확률로 7초간 회피 +10% | addBuff evade 10 / 7초 |
+| r_defBuff2 | 🛡️ 피격 시 60% 확률로 7초간 방어력 +10% | addBuff def 10 / 7초 |
+| r_hitEvadeBuff | 🌫️ 피격 시 60% 확률로 7초간 회피 +10% | addBuff evade 10 / 7초 |
 | r_aspdKill | ⚡👑 처치 시 40% 확률로 7초간 공격속도 +10% | addBuff aspd 0.10 / 7초 |
-| r_counterAtkM | 🗡️👑 반격 시 40% 확률로 7초간 공격력 +10% | addBuff atk 0.10 / 7초 |
+| r_counterAtkM | 🗡️👑 반격 시 70% 확률로 7초간 공격력 +10% | addBuff atk 0.10 / 7초 |
 | r_missAspd | 💨⚡ 빗나가면 70% 확률로 7초간 공격속도 +20% | addBuff aspd 0.20 / 7초 |
 | r_shieldAtkM | 🎇 실드가 있으면 공격력 +20% | effDmg: `sh>0` 이면 ×1.20 (일반 c_shieldAtk 와 동일 효과 — §3.0 주인 검토) |
 | r_noShieldAtk | 😤👑 실드가 없는 동안 공격력 +50% | effDmg: `sh<=0` 이면 ×1.50 |
-| r_overheal | 🩸 처치 시 초과된 데미지만큼 체력 회복 (오버킬 힐) | onKill(초과 피해량 전달) → heal |
+| r_overheal | 🩸 처치 시 초과된 데미지의 10%만큼 체력 회복 (오버킬 힐) | onKill(초과 피해량 전달) → heal |
 | r_healAmp | 💞 체력 회복 효과 +150% | healAmp += 1.50 |
 | r_repairAmp | 🔧 실드 수리 효과 +150% | repairAmp += 1.50 |
-| r_critHeal3 | ❤️‍🔥 치명타 시 30% 확률로 체력 5% 회복 | 치명타 분기 |
+| r_critHeal3 | ❤️‍🔥 치명타 시 60% 확률로 체력 5% 회복 | 치명타 분기 |
 | r_evadeShield | 🔶 회피 시 20% 확률로 실드 10% 수리 | 회피 분기 |
 | r_counterHeal | 💧 반격 시 60% 확률로 체력 10% 회복 | doCounter |
 | r_lowShield | 🚑 체력이 30% 아래로 떨어지면 실드 30% 즉시 충전 (판당 1번) | 1회성 플래그 `lowShieldUsed` |
@@ -233,9 +233,9 @@
 | r_wardAtk | 🛡️✨ 공격 시 10% 확률로 방어막 1장 | gainWard |
 | r_hitCounter | 💢 피격 시 60% 확률로 즉시 반격 | doCounter |
 | r_fifthCrit | 🔨 공격 5회마다 다음 공격은 무조건 치명타 | 평타 카운터 `%5===0` |
-| r_evade3Dmg | 💃 3번 연속 회피에 성공하면 다음 공격 데미지 +300% | 연속 회피 카운터 → 가산 +3.00 |
-| r_stunEvade | 🕷️ 회피 시 30% 확률로 그 적 3초 기절 | applyStun 3 |
-| r_eventShield | 🚪 이벤트(쉼터/악마/천사)를 지날 때마다 실드 20% 충전 | 이벤트 노드 통과 시 (주기형 아님) |
+| r_evade3Dmg | 💃 2번 연속 회피에 성공하면 다음 공격 데미지 +300% | 연속 회피 카운터 → 가산 +3.00 |
+| r_stunEvade | 🕷️ 회피 시 60% 확률로 그 적 3초 기절 | applyStun 3 |
+| r_eventShield | 🚪 이벤트(쉼터/악마/천사)를 지날 때마다 실드 40% 충전 | 이벤트 노드 통과 시 (주기형 아님) |
 | r_stunCritR | 🧊 기절 중인 적에게 치명타 확률 +60% | dealDmg: `e.stun>0` 이면 cr +60 |
 | r_wardSpear | 🥅 방어막으로 화살을 막으면 창을 쏨 | ward 소모 + `!isMelee` → fireSpear |
 
@@ -245,8 +245,8 @@
 |---|---|---|
 | l_autoBolt | ⚡⏰ 2초마다 자동으로 번개 1회 | 주기 2.0초 (주기형 «공격» — 허용축) |
 | l_autoAxe | 🪓⏰ 2초마다 자동으로 도끼 2개 | 주기 2.0초 |
-| l_autoSpear | 🔱⏰ 2초마다 자동으로 창 1개 | 주기 2.0초 |
-| l_spear2Atk | 🔱⚔️ 공격 2회마다 창 1개 | 평타 카운터 `%2===0` |
+| l_autoSpear | 🔱⏰ 3초마다 자동으로 창 1개 | 주기 2.0초 |
+| l_spear2Atk | 🔱⚔️ 공격 3회마다 창 1개 | 평타 카운터 `%2===0` |
 | l_boltAtk | ⚡ 공격 시 20% 확률로 번개 2회 | procOnAttack |
 | l_axeAtk | 🪓 공격 시 20% 확률로 도끼 2개 | procOnAttack |
 | l_arrowAtk | 🏹 공격 시 20% 확률로 화살 2발 | procOnAttack |
@@ -255,36 +255,36 @@
 | l_boltHit | ⚡ 피격 시 60% 확률로 번개 2회 | hitPlayer |
 | l_arrowToSpear | 🏹→🔱 내가 쏘는 모든 화살이 창으로 바뀜 | fireArrows → fireSpear 로 치환 |
 | l_wavePierce | 🌊🔱 거대 검기 — 검기가 창처럼 일직선 최대 8마리 관통 | 검기 pierce 2 → 8 |
-| l_axeSpin | 🪓🌪️ 모든 도끼가 적 위치에서 3회전하며 3번 타격 | 도끼 적중 시 3타 |
+| l_axeSpin | 🪓🌪️ 모든 도끼가 적 위치에서 4회전하며 4번 타격 | 도끼 적중 시 3타 |
 | l_boltChainK | 🔗👑 번개가 무조건 옆 적으로 1번 튐 (튄 번개도 풀데미지) | 확률 100% · 계수 그대로 |
-| l_spearStun | 🔱💫 창에 뚫린 적들이 60% 확률로 3초 기절 | 창 적중마다 applyStun 3 |
+| l_spearStun | 🔱💫 창에 뚫린 적들이 90% 확률로 3초 기절 | 창 적중마다 applyStun 3 |
 | l_noCritAtk3 | 💀⚔️ 치명타 확률이 0%가 되는 대신 공격력 3배 | effCritR = 0 · p.dmg ×3 |
 | l_shieldIgnore | 💎 실드가 남아있는 동안 피격 시 70% 확률로 데미지 완전 무시 | hitPlayer (`sh>0`) |
 | l_slowAura | 🥶 위압의 오라 — 모든 적의 공격속도 -50% (상시) | 적 공격 타이머 ÷0.50 |
 | l_atkBuffL | ⚔️ 공격 시 50% 확률로 7초간 공격력 +20% | addBuff atk 0.20 / 7초 |
 | l_critFBuffL | 💥👑 치명타 시 60% 확률로 7초간 치명타 데미지 +100% | addBuff critF 100 / 7초 |
-| l_evadeAspdL | 🌪️ 회피 시 60% 확률로 7초간 공격속도 +20% | addBuff aspd 0.20 / 7초 |
+| l_evadeAspdL | 🌪️ 회피 시 80% 확률로 7초간 공격속도 +20% | addBuff aspd 0.20 / 7초 |
 | l_aspdRamp | 🎻 전투 중 3초마다 공격속도가 +10%씩 계속 빨라짐 (피격당하면 초기화) | 주기 3.0초 · 피격 시 스택 0 (주기형 «버프» — 허용축) |
-| l_overRepair | 🔧⚡ 처치 시 초과된 데미지만큼 실드 수리 (오버킬 수리) | onKill(초과 피해량) → repair |
+| l_overRepair | 🔧⚡ 처치 시 초과된 데미지의 10%만큼 실드 수리 (오버킬 수리) | onKill(초과 피해량) → repair |
 | l_healSync | 💠 체력을 회복할 때 같은 수치만큼 실드도 같이 수리 | heal 안에서 동량 repair |
-| l_critHealL | ❣️ 치명타 시 50% 확률로 체력 5% 회복 | 치명타 분기 |
-| l_killHeal5 | 💉 처치 시 40% 확률로 체력 10% 회복 | onKill |
+| l_critHealL | ❣️ 치명타 시 70% 확률로 체력 5% 회복 | 치명타 분기 |
+| l_killHeal5 | 💉 처치 시 30% 확률로 체력 10% 회복 | onKill |
 | l_wardHealK | 🛡️❤️👑 방어막으로 막을 때마다 체력 20% 회복 + 실드 20% 수리 | ward 소모 분기 |
-| l_stunHit3 | 💫 피격 시 50% 확률로 때린 적 6초 기절 | applyStun 6 |
-| l_stunExec | 🕳️ 마무리 일격 — 기절한 적에게 데미지 5배 | 배수 ×5 (`e.stun>0`) |
+| l_stunHit3 | 💫 피격 시 70% 확률로 때린 적 6초 기절 | applyStun 6 |
+| l_stunExec | 🕳️ 마무리 일격 — 기절한 적에게 데미지 8배 | 배수 ×5 (`e.stun>0`) |
 | l_dualWield | ⚔️⚔️ 이도류 — 평타가 항상 2연타 (두 번째 타격은 공격력의 100%) | playerStrike 2타차 |
 | l_cleave | 🗡️🌀 평타가 대상과 바로 뒤 적까지 같이 벰 | playerStrike 광역 2인 |
 | l_execute | 🩸 체력 40% 이하인 적 즉시 처치 (보스 포함) | dealDmg 후 판정 |
-| l_thorns | 🦔 피격 시 무조건 받은 피해의 400% 반사 | 확률 없음 |
-| l_evade2Dmg | 🎭 2번 연속 회피 성공 시 다음 공격 데미지 5배 | 연속 회피 카운터 → 배수 ×5 |
-| l_fullHpDmg | 🎯👑 체력 가득 찬 적에게 데미지 +150% | 가산 풀 +1.50 |
-| l_restWard | 🏕️🛡️ 쉼터에서 쉴 때마다 방어막 10장 | 쉼터 노드 통과 시 ward += 10 |
+| l_thorns | 🦔 피격 시 무조건 받은 피해의 600% 반사 | 확률 없음 |
+| l_evade2Dmg | 🎭 2번 연속 회피 성공 시 다음 공격 데미지 8배 | 연속 회피 카운터 → 배수 ×5 |
+| l_fullHpDmg | 🎯👑 체력 가득 찬 적에게 데미지 +200% | 가산 풀 +1.50 |
+| l_restWard | 🏕️🛡️ 쉼터에서 쉴 때마다 방어막 15장 | 쉼터 노드 통과 시 ward += 10 |
 | l_wardEvadeL | 🔰✨ 회피 시 50% 확률로 방어막 1장 | gainWard |
 | l_missCrit | 🎯💨 빗나가면 다음 공격 무조건 치명타 | procOnMiss → nextCrit |
 | l_missStack | 💢 빗나가면 «데미지 +150%» 스택 (무제한 적립, 적중 1타당 1개 소모) | 가산 +1.50 (한 타에 한 장) |
-| l_wardThorns | 🛡️💥 방어막으로 막을 때마다 그 적에게 공격력의 600% 반사 | ward 소모 분기 |
+| l_wardThorns | 🛡️💥 방어막으로 막을 때마다 그 적에게 공격력의 900% 반사 | ward 소모 분기 |
 | l_stunKillNear | 💫👑 처치 시 60% 확률로 가장 가까운 적 3초 기절 | onKill → 최근접 적 |
-| l_counterChain | 🔂 반격하면 반드시 한 번 더 반격 | doCounter 연쇄 1회 |
+| l_counterChain | 🔂 반격하면 반드시 두 번 더 반격 | doCounter 연쇄 1회 |
 
 ### 3.4 신화 — **폐지** (⚑ 주인 확정 2026-09-03)
 
