@@ -272,7 +272,7 @@ else {
      아래 필수 키는 index.html 에 반드시 존재해야 한다 (없으면 이식 누락). */
   /* ⚑ T35: 단일 성장률 eHpG·eDmgG 폐기 → 구간별 성장률 배열(아래에서 따로 대조) · 실드 기본치 pSh0 신설 */
   const MUST = ['eBaseHp','eBaseDmg','wallHp','wallDmg','wall2Hp','wall2Dmg','waveHp','waveDmg',
-                'wall3Hp','wall3Dmg','wall4Hp','wall4Dmg','bossHp','bossDmg','maxChapter',
+                'wall3Hp','wall3Dmg','wall4Hp','wall4Dmg','wall4At','bossHp','bossDmg','maxChapter',
                 'pAtk0','pHp0','pSh0','pAspd0','pCrit0',
                 'goldKillBase','goldKillPer','goldClearPer','goldGrowth','expKill','expBoss'];
   const missing = MUST.filter(k => !(k in TH));
@@ -281,7 +281,22 @@ else {
   diff.length ? bad(`TUNE 값 불일치 ${diff.length}건: ${diff.join(' / ')}`) : ok(`TUNE 값 ${MUST.length}개 전수 일치 (보스 ×${TS.bossHp}·×${TS.bossDmg}, 챕터 ${TS.maxChapter})`);
   if (TS.bossHp === 8 && TS.bossDmg === 1.8) ok('보스 = HP ×8 · DMG ×1.8 (주인 확정 상수, 07:3X)');
   else bad(`보스 배수가 주인 확정값이 아니다 — HP ×${TS.bossHp} · DMG ×${TS.bossDmg} (확정: ×8 · ×1.8)`);
-  if (TS.maxChapter === 300) ok('챕터 상한 300 (PLAN §2.4)'); else bad(`챕터 상한이 ${TS.maxChapter} (확정: 300)`);
+  /* ⚑⚑⚑ T102 — 주인 확정으로 300 → 500. 최종 벽도 같은 지시로 500 으로 옮겼다(10·15·90 은 위치 고정). */
+  if (TS.maxChapter === 500) ok('챕터 상한 500 (PLAN §2.4 · ⚑ T102)'); else bad(`챕터 상한이 ${TS.maxChapter} (확정: 500)`);
+  if (TS.wall4At === 500) ok('최종 벽 = 챕터 500 (⚑ T102 — 주인 «신화9강 부분만 벽 위치 변경»)');
+  else bad(`최종 벽 위치가 ${TS.wall4At} (확정: 500)`);
+  /* 최종 벽이 마지막 챕터 «위» 로 새면 벽이 영영 안 걸린다 — 위치와 상한을 함께 본다 */
+  if (TS.wall4At <= TS.maxChapter) ok(`최종 벽이 콘텐츠 안에 있다 (${TS.wall4At} ≤ ${TS.maxChapter})`);
+  else bad(`최종 벽 ${TS.wall4At} 이 챕터 상한 ${TS.maxChapter} 을 넘어 영영 안 걸린다`);
+  /* ⚑ T102 — index.html 세이브 정규화의 상한 리터럴 ↔ TUNE.maxChapter.
+     그 줄은 TUNE 선언보다 «위» 라 TDZ 때문에 상수를 못 쓰고 리터럴이 하나 남는다. 두 값이 갈라지면
+     로비 해금 상한과 전투 곡선이 어긋난다 — 정적으로라도 반드시 대조한다. */
+  {
+    const m = HTML.match(/save\.maxChapter\s*=\s*Math\.max\(1,\s*Math\.min\(save\.maxChapter\|0\|\|1,\s*(\d+)\)\)/);
+    if (!m) bad('index.html 세이브 정규화의 챕터 상한 리터럴을 못 찾았다 — 게이트를 갱신할 것');
+    else if (Number(m[1]) === TH.maxChapter) ok(`세이브 정규화 상한 ${m[1]} = TUNE.maxChapter (⚑ T102)`);
+    else bad(`세이브 정규화 상한 ${m[1]} ≠ TUNE.maxChapter ${TH.maxChapter} — 로비 해금과 전투 곡선이 갈라진다`);
+  }
   if (TH.pAtk0 === 25 && TH.pHp0 === 150 && TH.pSh0 === 250) ok('노템 기본치 공 25 · 체 150 · 실드 250 (주인 확정, PLAN §11.5-a)');
   else bad(`노템 기본치가 주인 확정값이 아니다 — 공 ${TH.pAtk0}(25) · 체 ${TH.pHp0}(150) · 실 ${TH.pSh0}(250)`);
 }
@@ -319,7 +334,7 @@ if (!LS || !LH) bad(`chapterLayout 추출 실패 (${!LS ? 'sim.js' : ''}${!LS &&
 else {
   const key = L => L.map(n => n.t === 'wave' ? 'w' + n.size : n.t[0]).join('>');
   let mism = [], viol = [], maxE = 0, minE = 1e9;
-  for (let c = 1; c <= 300; c++) {
+  for (let c = 1; c <= 500; c++) {   /* ⚑ T102 — 챕터 상한 300 → 500 */
     const A = LS(c), B = LH(c);
     if (key(A) !== key(B)) { if (mism.length < 3) mism.push(`ch${c}: sim=${key(A)} html=${key(B)}`); else mism.push(''); }
     const cnt = t => A.filter(n => n.t === t).length;
@@ -335,7 +350,7 @@ else {
     else if (why.length) viol.push('');
   }
   const nm = mism.filter(Boolean);
-  mism.length ? bad(`두 파일 레이아웃 불일치 ${mism.length}챕터: ${nm.join(' / ')}`) : ok('챕터 1~300 레이아웃 전수 동일 (sim.js ↔ index.html)');
+  mism.length ? bad(`두 파일 레이아웃 불일치 ${mism.length}챕터: ${nm.join(' / ')}`) : ok('챕터 1~500 레이아웃 전수 동일 (sim.js ↔ index.html · ⚑ T102)');
   const nv = viol.filter(Boolean);
   viol.length ? bad(`주인 확정 제약 위반 ${viol.length}챕터: ${nv.join(' / ')}`) : ok(`제약 4종 전수 만족 — 적 총수 ${minE}~${maxE}(≤100) · 쉼터 1~4 · 악마 1 · 천사 1`);
   /* 가중치 배치 폐기 흔적: 45/30/25 잔재가 남아 있으면 안 된다 */
@@ -368,8 +383,11 @@ function gtConsts(src) {
     const diff = MUST.filter(k => k in GH && GS[k] !== GH[k]).map(k => `${k} sim=${GS[k]} html=${GH[k]}`);
     missing.length ? bad(`index.html GT 누락 ${missing.length}개: ${missing.join(' ')}`) : ok(`GT 상수 ${MUST.length}개 전부 존재`);
     diff.length ? bad(`GT 값 불일치 ${diff.length}건: ${diff.join(' / ')}`) : ok(`GT 값 ${MUST.length}개 전수 일치 (plusStep ${GS.plusStep} · 슬롯 +${GS.slotStep * 100}%/렙·상한 ${GS.slotLvMax} · 슬롯비용 ${GS.slotCostBase}×${GS.slotCostG}^L)`);
-    if (GH.slotLvMax === 150 && GH.slotStep === 0.01 && GH.plusStep === 0.13) ok('주인 확정 성장 상수 — 슬롯 1렙당 +1% · 상한 150 · 강화 1렙당 +13% (PLAN §11.4·§11.5-a)');
-    else bad(`주인 확정 성장 상수 위반 — slotStep ${GH.slotStep}(0.01) · slotLvMax ${GH.slotLvMax}(150) · plusStep ${GH.plusStep}(0.13)`);
+    /* ⚑⚑⚑ T102 — plusStep 0.13 → 19/9. «+9강 = 정확히 ×20» 이 주인 확정의 실질이므로 리터럴이 아니라
+       그 산술을 단언한다(19/9 는 double 로 딱 떨어지지 않지만 1+ps*9 는 정확히 20 이 된다). */
+    const PS9 = 1 + GH.plusStep * 9;
+    if (GH.slotLvMax === 150 && GH.slotStep === 0.01 && PS9 === 20) ok(`주인 확정 성장 상수 — 슬롯 1렙당 +1% · 상한 150 · +9강 = 정확히 ×${PS9} (plusStep ${GH.plusStep} = 19/9 · PLAN §11.4·§11.5-a)`);
+    else bad(`주인 확정 성장 상수 위반 — slotStep ${GH.slotStep}(0.01) · slotLvMax ${GH.slotLvMax}(150) · 1+plusStep*9 = ${PS9}(20)`);
     if (GH.pullCost === 400 && GH.dailyGem === 2500 && GH.iapGem === 12000) ok('주인 확정 경제 상수 — 뽑기 400 · 일일 2500 · IAP 12000 (PLAN §11.2·§11.5)');
     else bad(`주인 확정 경제 상수 위반 — 뽑기 ${GH.pullCost}(400) · 일일 ${GH.dailyGem}(2500) · IAP ${GH.iapGem}(12000)`);
     if (GH.legendToMythPlus === 10) ok('전설 +10강 → 신화 0강 변환 임계 10 (PLAN §11.3)');
@@ -844,8 +862,10 @@ console.log('\n[⑯ 레벨업 특전 카드 — 메달리온 구도 · 순번 �
     : bad('새로고침 버튼/«남은 횟수» 줄이 되살아났다 — 주인 확정 «새로고침 폐지» 위반');
   /* 카드 태그는 등급이 아니라 획득 순번(«1/10»)이다 */
   const ch = HTML.match(/function perkCardHTML\(p,i,extra\)\{[\s\S]*?\n\}/);
-  (ch && /PERKS\.indexOf\(p\)/.test(ch[0]) && /\$\{n\+1\}\/\$\{PERKS\.length\}/.test(ch[0]))
-    ? ok('카드 태그가 획득 순번 «N/10» (등급 태그 폐지)')
+  /* ⚑ T102 — 분모가 PERKS.length(풀) 에서 PERK_PICKS(한 런 획득 수)로 바뀌었다. 둘 다 허용한다
+     (지금은 값이 같지만, 나중에 풀을 늘리면 태그는 «한 런 획득 총수» 를 보여야 맞다). */
+  (ch && /PERKS\.indexOf\(p\)/.test(ch[0]) && /\$\{n\+1\}\/\$\{PERK_PICKS\}/.test(ch[0]))
+    ? ok('카드 태그가 획득 순번 «N/PERK_PICKS» (등급 태그 폐지)')
     : bad('카드 태그가 획득 순번이 아니다 — 등급 태그가 되살아났는지 확인할 것');
   (ch && !/RARITY/.test(ch[0])) ? ok('카드에 등급색·등급명이 없다') : bad('카드가 아직 RARITY 를 참조한다');
 }

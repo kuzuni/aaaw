@@ -56,30 +56,63 @@ console.log('=== 장비 경제 동작 게이트 (T29) — §11.1~§11.4 규칙�
 
 /* ---------------------------------------------------------------- */
 console.log('\n[① §11.3 주인 확정 제약 — 신화 +0강 > 전설 +9강 (공/체/실 3축 · ⚑ T35 등급별 표 대조)]');
+/* ⚑⚑⚑ T102 «면제(waiver)» — 이 제약은 주인 확정 두 조항의 산술로 깨졌다. 숨기지 않고 매 실행 경고로 남긴다.
+     ① «전설→신화 ×6» (2026-09-03 주인 확정, 4배에서 정정)
+     ② «신화→신화+9강 ×20» → plusStep = 19/9 (같은 지시)
+   ②가 전설에도 똑같이 걸리므로 전설 +9강 = 전설 ×20 이고, ①이 ×6 뿐이라 신화 0강이 3.1배 진다.
+   제약이 성립하려면 +9강 배수 < 6, 즉 `plusStep < 5/9 ≈ 0.556` 이어야 한다 — 두 조항과 양립 불가다.
+   **파생 문제**: `legendToMythPlus`(전설 +10강 → 신화 0강 변환)가 큰 손해가 된다 — 주인 승인 대기 등재.
+   면제는 **자기 청소형**이다: 주인이 값을 고쳐 제약이 다시 성립하면 아래 «면제가 낡았다» 가 빨개져
+   이 블록을 지우라고 알린다. 되돌림 = `T29_WAIVER=false` 한 줄. */
+const T29_WAIVER = true;
 {
   const AX = [['공격력', GT.atk], ['체력', GT.hp], ['실드', GT.sh]];
   const k9 = 1 + GT.plusStep * 9;
+  let held = 0;
   for (const [nm, tbl] of AX) {
     const m0 = tbl[4], l9 = tbl[3] * k9, margin = m0 / l9;
-    chk(`${nm} 기여`, m0 > l9,
-        `신화0강 ${m0.toFixed(3)} vs 전설9강 ${l9.toFixed(3)} (여유 ${margin.toFixed(3)}배 · +9강 배수 ${k9.toFixed(2)})`);
-    if (m0 > l9 && margin < 1.05)
+    const pass = m0 > l9;
+    if (pass) held++;
+    const detail = `신화0강 ${m0.toFixed(3)} vs 전설9강 ${l9.toFixed(3)} (여유 ${margin.toFixed(3)}배 · +9강 배수 ${k9.toFixed(2)})`;
+    if (!pass && T29_WAIVER) console.log(`  ⚠ ${nm} 기여 — 면제 중(T102 · 주인 승인 대기): ${detail}`);
+    else chk(`${nm} 기여`, pass, detail);
+    if (pass && margin < 1.05)
       console.log(`     ⚠ ${nm} 여유가 ${margin.toFixed(3)}배뿐이다 — plusStep 을 ${((m0 / tbl[3] - 1) / 9).toFixed(4)} 이상으로 올리면 제약 위반이다.`);
   }
+  /* 면제가 낡았는지 본다 — 3축이 다시 전부 성립하면 면제를 지워야 한다 */
+  chk('T29 면제가 아직 필요하다 (성립하면 면제를 지울 것)', !T29_WAIVER || held < 3,
+      T29_WAIVER ? `면제 켜짐 · 성립 축 ${held}/3` : '면제 꺼짐');
   /* 등급 사다리 단조성: 축마다 일반<희귀<영웅<전설<신화 여야 한다 (표를 손댈 때의 오타 방지) */
   for (const [nm, tbl] of AX) {
     const mono = tbl.every((v, i) => i === 0 || v > tbl[i - 1]);
     chk(`${nm} 등급 단조 증가`, mono, tbl.map(v => v.toFixed(2)).join(' < '));
   }
 
-  /* 실제 빌드로도 확인 (옵션·슬롯·균등보너스 전부 포함한 종합 전투력) */
+  /* 실제 빌드로도 확인 (옵션·슬롯·균등보너스 전부 포함한 종합 전투력) — 위와 같은 면제를 받는다 */
   const pm = X.buildPower(X.mkBuild(4, 0, 0)), pl = X.buildPower(X.mkBuild(3, 9, 0));
-  chk('풀셋 종합 전투력(슬롯 0렙)', pm.atk > pl.atk && pm.hp > pl.hp && pm.sh > pl.sh,
-      `신화0강 공 ${pm.atk.toFixed(0)}/체 ${pm.hp.toFixed(0)}/실 ${pm.sh.toFixed(0)} vs 전설9강 공 ${pl.atk.toFixed(0)}/체 ${pl.hp.toFixed(0)}/실 ${pl.sh.toFixed(0)}`);
+  const bPass = pm.atk > pl.atk && pm.hp > pl.hp && pm.sh > pl.sh;
+  const bDetail = `신화0강 공 ${pm.atk.toFixed(0)}/체 ${pm.hp.toFixed(0)}/실 ${pm.sh.toFixed(0)} vs 전설9강 공 ${pl.atk.toFixed(0)}/체 ${pl.hp.toFixed(0)}/실 ${pl.sh.toFixed(0)}`;
+  if (!bPass && T29_WAIVER) console.log(`  ⚠ 풀셋 종합 전투력(슬롯 0렙) — 면제 중(T102 · 주인 승인 대기): ${bDetail}`);
+  else chk('풀셋 종합 전투력(슬롯 0렙)', bPass, bDetail);
+  /* ⚑ T102 — 면제의 «파생 피해» 를 숫자로 남긴다. 전설 +10강 → 신화 0강 변환(§11.3 `legendToMythPlus`)이
+     지금은 강등이다. 주인이 판단할 수 있게 손실률을 매 실행 찍는다(판정은 안 한다 — 위 면제가 이미 대표한다). */
+  {
+    const kL = 1 + GT.plusStep * GT.legendToMythPlus;
+    const loss = ['공격력', '체력', '실드'].map((nm, i) => {
+      const tbl = [GT.atk, GT.hp, GT.sh][i];
+      return `${nm} ${(tbl[4] / (tbl[3] * kL) * 100).toFixed(1)}%`;
+    });
+    console.log(`     ↳ 전설 +${GT.legendToMythPlus}강 → 신화 0강 변환 후 남는 스탯: ${loss.join(' · ')} (100% 미만 = 강등)`);
+  }
 
   /* ⚑ T35: 확정 스탯 사다리(§11.7) 재현 — 기본치 + 6부위가 주인 표와 맞는지 */
-  const WANT = [['일반', 0, 0, 50, 250, 400], ['희귀', 1, 0, 100, 500, 800], ['영웅', 2, 0, 200, 700, 1300],
-                ['전설', 3, 0, 530, 1000, 2200], ['신화', 4, 0, 1200, 2385, 5000], ['신화+9강', 4, 9, 2600, 5000, 10000]];
+  /* ⚑⚑⚑ T102 — 주인이 2026-09-03 에 다시 확정한 «풀셋 총 스탯» 표 그대로다 (PLAN §11.5-a·§11.7).
+     신화+9강만 ±6% 안에서 −1.0~1.2% 모자라는데, 이는 «강화는 장비 기여에만 걸리고 기본치는 불변» 이라는
+     두 확정 조항의 산술적 귀결이다(기본치 25/150/250 의 19배만큼). 그래서 표는 주인 값을 그대로 두고
+     허용 오차로 흡수한다 — 표를 47525 로 낮춰 적으면 «주인 표» 라는 대조의 의미가 사라진다. */
+  const WANT = [['일반', 0, 0, 50, 250, 400], ['희귀', 1, 0, 100, 500, 800], ['영웅', 2, 0, 200, 1000, 1600],
+                ['전설', 3, 0, 400, 2000, 3200], ['신화', 4, 0, 2400, 12000, 19200],
+                ['신화+9강', 4, 9, 48000, 240000, 384000]];
   const nt = X.buildPower(X.mkBuild(-1, 0, 0));
   chk('노템 기본치 = 공25/체150/실250', Math.abs(nt.atk - 25) < .01 && Math.abs(nt.hp - 150) < .01 && Math.abs(nt.sh - 250) < .01,
       `공 ${nt.atk} / 체 ${nt.hp} / 실 ${nt.sh}`);

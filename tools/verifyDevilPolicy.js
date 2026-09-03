@@ -87,9 +87,10 @@ console.log('\n[③] sim.js 악마 = 항상 수락 (SIM_DEVIL_POLICY · 승인 3
     /* ⚑ T96 — 가드가 둘이 됐다: ①noPerk(특전 미획득 측정 제외분) ②줄 특전이 남아 있는가.
        ②는 «조건부 수락» 이 아니라 «거래 대상이 없으면 거래가 성립하지 않는다» 다(주인 위임 기본값).
        체력·자원을 보는 조건이 되살아나면 아래 두 검사가 잡는다. */
-    /if\(!G\.noPerk&&G\.taken\.length<PERKS\.length\)\{/.test(body)
-      ? ok('수락 조건은 noPerk 가드 + «줄 특전이 남았나» 둘뿐 (체력 조건 없음)')
-      : bad('«if(!G.noPerk&&G.taken.length<PERKS.length){» 형태가 아니다 — 조건부 수락이 되살아났는지 확인할 것');
+    /* ⚑ T102 — 「남았나」 기준이 PERKS.length(풀)에서 PERK_PICKS(한 런 획득 상한)로 바뀌었다. */
+    /if\(!G\.noPerk&&G\.taken\.length<PERK_PICKS\)\{/.test(body)
+      ? ok('수락 조건은 noPerk 가드 + «줄 특전이 남았나(PERK_PICKS)» 둘뿐 (체력 조건 없음)')
+      : bad('«if(!G.noPerk&&G.taken.length<PERK_PICKS){» 형태가 아니다 — 조건부 수락이 되살아났는지 확인할 것');
     /grantNextPerk\(G\)/.test(body)
       ? ok('악마도 레벨업과 같은 지급 동사(grantNextPerk)를 쓴다 — 다음 순번 앞당김')
       : bad('악마가 grantNextPerk 를 안 쓴다 — «전설 확정» 시절 뽑기가 남아 있는지 확인할 것');

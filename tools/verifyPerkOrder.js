@@ -98,6 +98,24 @@ function run(simSrc, htmSrc, planSrc) {
     chk('⚑ 그 10종이 표 전체·순서대로다',
       Gx.taken.map(x => x.id).join() === S.PERKS.map(x => x.id).join(), Gx.taken.map(x => x.id).join('>'));
   }
+  /* ===== ②-b PERK_PICKS 분리 (⚑ 주인 방향 2026-09-03 · T102) =====
+     «풀 크기(PERKS.length)» 와 «한 런 획득 수(PERK_PICKS)» 를 분리해 뒀는지 본다.
+     지금은 둘 다 10 이라 동작이 불변이어야 하고(그 «동일성» 자체를 단언), 두 엔진이 같은 값을 써야 한다.
+     ⚑ PERK_PICKS 는 챕터 레벨업 횟수(T100 = 10)와 같아야 «완주 = 특전 10개» 가 성립한다. */
+  console.log('\n=== ②-b PERK_PICKS 분리 — 풀 크기 ↔ 한 런 획득 수 (⚑ T102) ===');
+  const htmPicks = (htmSrc.match(/const PERK_PICKS\s*=\s*(\d+)/) || [])[1];
+  chk('sim.js 에 PERK_PICKS 상수가 있다', typeof S.PERK_PICKS === 'number', `PERK_PICKS=${S.PERK_PICKS}`);
+  chk('index.html 에 PERK_PICKS 상수가 있다', htmPicks !== undefined, `PERK_PICKS=${htmPicks}`);
+  chk('두 엔진의 PERK_PICKS 가 같다', htmPicks !== undefined && Number(htmPicks) === S.PERK_PICKS,
+    `sim ${S.PERK_PICKS} / html ${htmPicks}`);
+  chk('풀 크기 ≥ 한 런 획득 수 (풀이 모자라면 순번 지급이 깨진다)', S.PERKS.length >= S.PERK_PICKS,
+    `풀 ${S.PERKS.length} ≥ 획득 ${S.PERK_PICKS}`);
+  chk('⚑ 지금은 풀 크기 = 한 런 획득 수 = 10 (동작 불변 — 나중에 풀만 늘린다)',
+    S.PERKS.length === 10 && S.PERK_PICKS === 10, `풀 ${S.PERKS.length} · 획득 ${S.PERK_PICKS}`);
+  /* 챕터 레벨업 횟수 = «보스 전 공급으로 레벨이 몇 번 오르나 + 악마 앞당김 1» = PERK_PICKS 여야 한다.
+     T100 산수(보스 전 공급 277 로 9레벨 + 악마 1 = 10)를 여기서도 못 박아, 둘이 갈라지면 빨개진다. */
+  chk('⚑ PERK_PICKS 가 챕터 «완주 = 특전 N개» 의 N(=10)과 같다', S.PERK_PICKS === 10,
+    `PERK_PICKS=${S.PERK_PICKS} · T100 완주 획득수 10`);
   /* 수치 — 획득 순서대로 하나씩 붙이며 실효 스탯 변화를 잰다 */
   const G0 = { taken: [], player: null, perkChances: 0 };
   const p = S.mkPlayer(S.mkBuild(-1, 0, 0), G0); G0.player = p; p.G = G0;
@@ -158,7 +176,7 @@ function run(simSrc, htmSrc, planSrc) {
 
 /* sim.js 를 모드 실행 없이 로드한다 (맨 아래 러너를 잘라 내고 필요한 것만 내보낸다) */
 function loadSim(src) {
-  const body = src.replace(/const mode=process\.argv[\s\S]*$/, 'module.exports={runChapter,PERKS,mkBuild,mkPlayer,grantNextPerk,TUNE};');
+  const body = src.replace(/const mode=process\.argv[\s\S]*$/, 'module.exports={runChapter,PERKS,PERK_PICKS,mkBuild,mkPlayer,grantNextPerk,TUNE};');
   const m = { exports: {} };
   vm.runInNewContext(body, { module: m, exports: m.exports, process, console: { log() {} }, require });
   return m.exports;
@@ -183,7 +201,8 @@ if (process.argv.includes('--self')) {
       .replace('function procOnAttack(G,e){\n  const p=G.player,px=p.px;', 'function procOnAttack(G,e){\n  const p=G.player,px=p.px;\n  if(px.p_axeHit&&pkk(p,0.5))fireAxe(p,1);'), null, null],
     ['특전을 11종으로 늘리면', s => s.replace("  ];\n}\nconst PERKS=mkPerks();", "    {id:'p_zzz', nm:'x', d:'x', ap:p=>p.px.p_zzz=1},\n  ];\n}\nconst PERKS=mkPerks();"), null, null],
     ['악마가 앞당김 대신 딴 짓을 하면', s => s.replace('            grantNextPerk(G);', '            /* nothing */'), null, null],
-    ['10개 상한을 없애면', s => s.replace('if(G.taken.length>=PERKS.length)return null;', ''), null, null],
+    ['한 런 획득 상한을 없애면', s => s.replace('if(G.taken.length>=PERK_PICKS)return null;', ''), null, null],
+    ['PERK_PICKS 를 챕터 레벨업 횟수와 다르게 하면', s => s.replace('const PERK_PICKS=10;', 'const PERK_PICKS=7;'), null, null],
   ];
   let caught = 0;
   const quiet = console.log;

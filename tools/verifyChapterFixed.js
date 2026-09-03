@@ -9,7 +9,7 @@
  *      (11레벨은 341 이 필요해 구조적으로 불가능).
  *
  * 보는 것 넷:
- *   ⓐ 적 총 수 ≤ LAYOUT_MAXENEMY(80)  ⓑ 챕터 1~300 구성이 전부 같다  ⓒ **완주 = 특전 10개 실측**
+ *   ⓐ 적 총 수 ≤ LAYOUT_MAXENEMY(80)  ⓑ 챕터 1~500 구성이 전부 같다(⚑ T102 로 상한 300 → 500)  ⓒ **완주 = 특전 10개 실측**
  *   ⓓ 두 엔진(sim.js · index.html)이 같은 상수·같은 구조
  *
  * 사용: node tools/verifyChapterFixed.js        (exit 0 = 통과, 1 = 불합격)
@@ -38,11 +38,14 @@ function run(simSrc, htmSrc) {
   R.length = 0;
   const S = loadSim(simSrc);
 
-  /* ===== ⓐⓑ 챕터 1~300 전수 구성 ===== */
-  console.log('\n=== ⓐⓑ 챕터 1~300 구성 — 상한 이내 · 전 챕터 동일 ===');
+  /* ===== ⓐⓑ 챕터 전수 구성 =====
+     ⚑ T102 — 상한을 `TUNE.maxChapter` 에서 읽는다. 리터럴 300 을 박아 두면 챕터가 500 으로 늘어난 뒤에도
+     게이트는 300 까지만 보고 초록을 내준다(«늘어난 200 챕터는 아무도 안 본다»). */
+  const MAXC = S.TUNE.maxChapter;
+  console.log(`\n=== ⓐⓑ 챕터 1~${MAXC} 구성 — 상한 이내 · 전 챕터 동일 ===`);
   const shapes = new Map();
   let maxN = 0, orders = new Set();
-  for (let c = 1; c <= 300; c++) {
+  for (let c = 1; c <= MAXC; c++) {
     const L = S.chapterLayout(c);
     let n = 0, w = 0, rest = 0, devil = 0, angel = 0, boss = 0;
     for (const x of L) {
@@ -58,7 +61,7 @@ function run(simSrc, htmSrc) {
   }
   const keys = [...shapes.keys()].filter(k => /^적/.test(k));
   chk(`적 총 수가 상한 ${WANT.cap} 이내다`, maxN <= WANT.cap, `최대 ${maxN}마리`);
-  chk('챕터 1~300 구성이 전부 같다 (제비뽑기 폐지)', keys.length === 1, keys.join(' · '));
+  chk(`챕터 1~${MAXC} 구성이 전부 같다 (제비뽑기 폐지)`, keys.length === 1, keys.join(' · '));
   chk(`구성이 주인 확정값과 같다 (적 ${WANT.total} · 웨이브 ${WANT.waves} · 쉼터 ${WANT.rests} · 악마 1 · 천사 1)`,
     keys.length === 1 && keys[0] === `적${WANT.total}/웨${WANT.waves}/쉼${WANT.rests}/악${WANT.devils}/천${WANT.angels}/보1`,
     keys[0]);
