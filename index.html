@@ -1800,7 +1800,9 @@ function playerBase(){
   return p;
 }
 /* ⚑⚑⚑ T100 (주인 확정 2026-09-03) — `4+3*lv` → **`5*lv+1`** (Lv1→2 에 6, 그다음부터 +5 씩).
-   10레벨 누적 Σ(5L+1)=285 를 고정 챕터의 공급 286 이 딱 한 번 넘긴다 (sim.js TUNE.expNeed 와 1:1). */
+   10레벨 누적 Σ(5L+1)=285 (sim.js TUNE.expNeed 와 1:1).
+   ⚑⚑⚑ T107 — T100 의 «고정 챕터 공급 286 → 완주 = 특전 10개» 항등식은 폐기됐다. 적 수가 챕터마다
+   다르므로 보스 전 공급 = (N−1)×3 + 52 가 그 챕터의 특전 수를 정한다(1~5 = 6 · 15 = 7 · 28 = 8 · 38+ = 9). */
 const expNeed=lv=>5*lv+1;
 
 /* ================= TUNE — sim.js 와 1:1 (T2 3단계 이식) ================= */
@@ -1868,7 +1870,7 @@ const TUNE={
   pAtk0:25, pHp0:150, pSh0:250, pAspd0:1.0, pCrit0:20, pCritF0:150, pCounter0:20, pDef0:20, pEvade0:20,
   goldKillBase:0.6, goldKillPer:0.10, goldClearPer:3,
   goldGrowth:1.22,              // 챕터당 골드 성장 배수 (R07: 1.185 → 1.22. 1.185 는 챕터 90 대형 벽에서 슬롯 13 에 갇혀 F2P·과금 둘 다 영구 정체했다 — 실험4 실측. eHpG 보다 높게 둬야 후반 벽에서 수입이 적 성장을 따라잡는다)
-  expKill:3, expBoss:9, expNeed:lv=>5*lv+1,   /* ⚑⚑⚑ T100 — 4+3*lv → 5*lv+1 (10레벨 요구 285 ≤ 고정 챕터 공급 286) */
+  expKill:3, expBoss:9, expNeed:lv=>5*lv+1,   /* ⚑⚑⚑ T100 — 4+3*lv → 5*lv+1 (10레벨 요구 285 · ⚑ T107 로 공급은 챕터별) */
 };
 TUNE.goldKill=c=>(TUNE.goldKillBase+TUNE.goldKillPer*c)*Math.pow(TUNE.goldGrowth,c-1)*rand(1,1.8);
 TUNE.goldClear=c=>TUNE.goldClearPer*c*Math.pow(TUNE.goldGrowth,c-1);

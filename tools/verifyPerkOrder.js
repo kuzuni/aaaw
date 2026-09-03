@@ -107,7 +107,9 @@ function run(simSrc, htmSrc, planSrc) {
   /* ===== ②-b PERK_PICKS 분리 (⚑ 주인 방향 2026-09-03 · T102) =====
      «풀 크기(PERKS.length)» 와 «한 런 획득 수(PERK_PICKS)» 를 분리해 뒀는지 본다.
      지금은 둘 다 10 이라 동작이 불변이어야 하고(그 «동일성» 자체를 단언), 두 엔진이 같은 값을 써야 한다.
-     ⚑ PERK_PICKS 는 챕터 레벨업 횟수(T100 = 10)와 같아야 «완주 = 특전 10개» 가 성립한다. */
+     ⚑ T107 로 «PERK_PICKS = 챕터 레벨업 횟수» 전제는 폐기됐다 — 한 판에 실제로 얻는 수는 그 챕터의
+     경험치가 정한다(1~5 = 6 · 15 = 7 · 28 = 8 · 38+ = 9 · 게이트 `verifyChapterFixed` ⓓ 가 실측).
+     여기서 PERK_PICKS 가 지키는 것은 «풀 크기 = 한 런 상한 = 10» 이라는 주인 확정 구성뿐이다. */
   console.log('\n=== ②-b PERK_PICKS 분리 — 풀 크기 ↔ 한 런 획득 수 (⚑ T102) ===');
   const htmPicks = (htmSrc.match(/const PERK_PICKS\s*=\s*(\d+)/) || [])[1];
   chk('sim.js 에 PERK_PICKS 상수가 있다', typeof S.PERK_PICKS === 'number', `PERK_PICKS=${S.PERK_PICKS}`);
@@ -118,10 +120,11 @@ function run(simSrc, htmSrc, planSrc) {
     `풀 ${S.PERKS.length} ≥ 획득 ${S.PERK_PICKS}`);
   chk('⚑ 지금은 풀 크기 = 한 런 획득 수 = 10 (동작 불변 — 나중에 풀만 늘린다)',
     S.PERKS.length === 10 && S.PERK_PICKS === 10, `풀 ${S.PERKS.length} · 획득 ${S.PERK_PICKS}`);
-  /* 챕터 레벨업 횟수 = «보스 전 공급으로 레벨이 몇 번 오르나 + 악마 앞당김 1» = PERK_PICKS 여야 한다.
-     T100 산수(보스 전 공급 277 로 9레벨 + 악마 1 = 10)를 여기서도 못 박아, 둘이 갈라지면 빨개진다. */
-  chk('⚑ PERK_PICKS 가 챕터 «완주 = 특전 N개» 의 N(=10)과 같다', S.PERK_PICKS === 10,
-    `PERK_PICKS=${S.PERK_PICKS} · T100 완주 획득수 10`);
+  /* ⚑ T107 — 종전엔 «보스 전 공급으로 오르는 레벨 + 악마 앞당김 1 = PERK_PICKS» 를 못 박았지만,
+     적 수가 챕터마다 달라져 그 항등식이 사라졌다. 남은 단언은 주인 확정 «풀 10종 · 한 런 상한 10» 이다
+     (챕터별 실제 획득 수는 `verifyChapterFixed` ⓓ 가 표와 대조한다 — 여기서 두 번 재지 않는다). */
+  chk('⚑ PERK_PICKS 가 주인 확정 «한 런 상한 10» 과 같다', S.PERK_PICKS === 10,
+    `PERK_PICKS=${S.PERK_PICKS} · 풀 10종 · 챕터별 실제 획득 6~9 (T107)`);
   /* 수치 — 획득 순서대로 하나씩 붙이며 실효 스탯 변화를 잰다.
      ⚑ T104 — 순서가 바뀌었고, 1번 특전은 스탯을 안 건드리는 트리거형(회피 시 회복)이라 스탯 델타 0 이다. */
   const G0 = { taken: [], player: null, perkChances: 0 };
