@@ -2342,7 +2342,7 @@ function pushProj(pr){
 function projHit(pr,e){
   const p=G.player, px=p.px;
   if(pr.type==='axe'){
-    const times=px.l_axeSpin?1:1;                              /* 🪓🌪️ 4회전 4타 */
+    const times=px.l_axeSpin?4:1;                              /* 🪓🌪️ 4회전 4타 */
     for(let i=0;i<times;i++){ if(e.hp<=0) break; summonHit(e,R_AXE,'🪓'); }
     if(px.r_axeBounce){                                        /* 🪞 2번 튕겨 다른 적 */
       const o=aliveEnemies().filter(x=>x!==e);
