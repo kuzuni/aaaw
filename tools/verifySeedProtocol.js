@@ -33,8 +33,13 @@ const pass = m => { okN++; console.log(`  ✓ ${m}`); };
 const fail = m => { bad++; console.log(`  ✗ ${m}`); };
 
 /* 값싼 픽스처: 노템 칸(챕터 5) 한 칸만 40판 — 규약 검사에 판수는 필요 없다. */
+/* ⚑ T97 — 탐침 판수 40 → 200. T97 재적합으로 «노템·챕터 5» 가 78% 대에서 **8% 대**로 내려가면서
+   40판에서는 세 시드가 «3/40 = 7.5%» 처럼 **같은 눈금에 겹쳐 찍히는 일**이 생겼다(②가 잡으려는
+   «SEED 가 안 물린다» 와 구별이 안 된다 — 실제로 이 게이트가 그렇게 한 번 빨개졌다).
+   200판이면 눈금이 0.5%p 라 세 시드가 갈린다(실측 5.5 / 10.5 / 9.5%). 자를 바꾼 것이 아니라
+   탐침의 해상도를 올린 것이고, 이 절은 «시드가 물리는가» 만 본다 — 밸런스 판정과 무관하다. */
 function runSeed(seed) {
-  const env = Object.assign({}, process.env, { SEED: String(seed), EXP5_ONLY: '노템', EXP5_N: '40' });
+  const env = Object.assign({}, process.env, { SEED: String(seed), EXP5_ONLY: '노템', EXP5_N: '200' });
   return execFileSync(process.execPath, ['sim.js', '5'], { cwd: root, env, encoding: 'utf8', maxBuffer: 1 << 26 });
 }
 
