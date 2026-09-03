@@ -136,9 +136,16 @@ console.log('\n[Ⓐ «%p» 표기 금지 — 주인 지시 «게이트의 금지
         재설계 폐기 뒤 살아 있는지가 불분명하므로, 워커가 임의로 13칸을 고치지 않고
         **래칫으로 동결 + 주인 검토 등재**만 한다(PROGRESS T81). */
   const BARE = /(방어력|회피|반격 확률|치명타 확률)\s*\+\d+(?!\s*%|\d)/;
-  const barePerk = perks.filter(x => BARE.test(strip(x.t))).map(x => `${x.k}: «${strip(x.t)}»`);
+  /* ⚑⚑ T96 (2026-09-03) — 새 특전 10종의 표시 텍스트는 **주인이 직접 쓴 문장**이다
+     («회피율 +10 · 반격률 +10 · 치명타 확률 +10 · 치명타 피해 +50»). 이 규칙은 그보다 앞선
+     워커 규약이므로 주인 문면이 이긴다 — 워커가 «+10%» 로 고치면 verifyPerkOrder 의 3자 대조가
+     빨개진다(그쪽이 주인 확정표를 기준으로 잡고 있다). 그래서 새 10종은 이 검사에서 뺀다.
+     ⚠ 이 면제는 «주인이 쓴 그 문장 그대로일 때만» 유효하다 — 문면을 바꾸려면 주인 확인이 필요하다. */
+  const OWNER_TX = ['회피율 +10', '반격률 +10', '치명타 확률 +10', '치명타 피해 +50'];
+  const barePerk = perks.filter(x => BARE.test(strip(x.t)) && !OWNER_TX.includes(strip(x.t)))
+    .map(x => `${x.k}: «${strip(x.t)}»`);
   barePerk.length ? bad(`특전 tx 에 단위 없는 스탯 표기 ${barePerk.length}건 — ${barePerk.join(' / ')}`)
-                  : ok('특전 128종 스탯 표기가 전부 «+N%» 꼴 (단위 누락 0건)');
+                  : ok('특전 스탯 표기 단위 누락 0건 (주인 확정 10종 문면은 면제 — 위 주석)');
   const KNOWN_BARE = ['장비 axe옵3', '장비 crown옵1', '장비 crown옵3', '장비 crown옵6', '장비 plate옵4',
     '장비 chain옵7', '장비 sandal옵1', '장비 sandal옵3', '장비 sandal옵6', '장비 boots옵1',
     '장비 boots옵3', '장비 greave옵7', '장비 beads옵3'];

@@ -39,13 +39,14 @@ const norm = s => s.replace(/\s+/g, '');
 
 /* ⚑ P1(T83) — mkPerks 가 «한 줄에 여러 add() · 대부분 ap 생략(기본형 p=>p.px[id]=1)» 으로 바뀌었다.
    고유 플래그(u)는 폐지됐다 — 주인 확정 «획득 중복 금지» 로 **전 특전이 고유**다. */
+/* ⚑ T96 — mkPerks() 가 `add(id, 등급, ap)` 호출 나열에서 **리터럴 배열**로 바뀌었다(등급 폐지).
+   id 와 ap 본문만 뽑아 index.html 과 대조한다 — 순서·수치·표시 텍스트의 3자 대조는 verifyPerkOrder 몫이다. */
 function simPerks() {
   const body = SIM.slice(SIM.indexOf('function mkPerks()'), SIM.indexOf('const PERKS=mkPerks()'));
   const out = [];
-  for (const m of body.matchAll(/add\('([^']+)',\s*(\d)\s*(?:,\s*([\s\S]*?))?\)\s*;/g)) {
-    const ap = (m[3] || '').trim();
-    /* 기본형은 소스에 ap 가 없다 — 두 파일 대조가 성립하도록 같은 표준형으로 채운다 */
-    out.push({ id: m[1], r: +m[2], ap: ap || `p=>p.px.${m[1]}=1`, u: true });
+  for (const line of body.split('\n')) {
+    const m = line.match(/\{id:'([^']+)',[\s\S]*?ap:\s*(.+?),?\s*\},?\s*$/);
+    if (m) out.push({ id: m[1], ap: m[2].trim().replace(/,$/, '') });
   }
   return out;
 }
@@ -90,46 +91,32 @@ else {
    그래서 «102 인가» 가 아니라 «두 파일이 같은가 + 등급별 편차 ≤ PERK_RAR_GAP» 을 본다.
    T48 이 각 등급 33종(총 132)까지 채웠고, T77(주인 확정 «전투 무관 특전 4종 삭제»)이
    일반 2종(c_gold30·c_walk20)·신화 2종(m_gold2·m_sage)을 빼 31/33/33/31 = 128종, 편차 2 가 됐다. */
-const PERK_TOTAL = 132, PERK_RAR_GAP = 6;   /* ⚑ P1(T83) 재설계본 — 일반 44 · 희귀 46 · 전설 42, 편차 4 */
-console.log(`\n[② 특전 ${PERK_TOTAL}종 — id·등급·고유·ap 본문 전수 대조]`);
+const PERK_TOTAL = 10;   /* ⚑⚑ T96 — 주인 확정 «고정 10종·순서 획득». 등급·고유 플래그는 폐지됐다 */
+console.log(`\n[② 특전 ${PERK_TOTAL}종 — id·순서·ap 본문 두 엔진 대조]`);
 const S = simPerks(), H = htmlPerks();
 if (!H) { bad('index.html 에서 const PERKS=[...] 를 찾지 못했다'); }
 else {
   if (S.length === PERK_TOTAL) ok(`sim.js mkPerks() = ${S.length}종`);
-  else bad(`sim.js mkPerks() 가 ${S.length}종 (${PERK_TOTAL} 이어야 함 — 특전을 늘렸으면 이 게이트의 PERK_TOTAL 도 같이 올릴 것)`);
+  else bad(`sim.js mkPerks() 가 ${S.length}종 (${PERK_TOTAL} 이어야 함 — 주인 확정표를 늘렸으면 verifyPerkOrder 의 WANT 도 같이 고칠 것)`);
   if (H.length === S.length) ok(`index.html PERKS = ${H.length}종`);
   else bad(`index.html PERKS = ${H.length}종 (sim ${S.length}종과 다름)`);
 
-  const cnt = r => [S.filter(x => x.r === r).length, H.filter(x => x.r === r).length];
-  const RN = ['일반', '희귀', '전설', '신화'];
-  for (let r = 0; r < 4; r++) {
-    const [a, b] = cnt(r);
-    if (a === b) ok(`${RN[r]} ${a}종 일치`);
-    else bad(`${RN[r]} 개수 불일치 — sim ${a} vs index ${b}`);
-  }
-
-  /* ⚑ 주인 확정 16:0X — 등급 간 개수가 골고루여야 한다(일반만 잔뜩 금지). 위임 기준: 최다−최소 ≤ 6종 */
-  {
-    const ns = [0, 1, 2].map(r => S.filter(x => x.r === r).length);   /* ⚑ 등급 3단 (신화 폐지) */
-    const gap = Math.max(...ns) - Math.min(...ns);
-    if (gap <= PERK_RAR_GAP) ok(`등급별 개수 편차 ${gap}종 (${ns.join('/')}) ≤ ${PERK_RAR_GAP}`);
-    else bad(`등급별 개수 편차 ${gap}종 (${ns.join('/')}) — 최다·최소 차가 ${PERK_RAR_GAP}종을 넘었다 (주인 확정 16:0X «등급 간 골고루»)`);
-  }
+  /* ⚑ T96 — 등급별 개수·편차 검사는 등급이 폐지되어 대상이 사라졌다. 대신 «순서» 를 본다:
+     두 엔진의 배열 순서가 곧 획득 순서이므로 순서가 어긋나면 게임과 시뮬이 다른 것을 잰다. */
+  (S.map(x => x.id).join() === H.map(x => x.id).join())
+    ? ok(`획득 순서가 두 엔진에서 같다 (${S.map(x => x.id).join('>')})`)
+    : bad(`획득 순서가 다르다 — sim ${S.map(x => x.id).join('>')} / index ${H.map(x => x.id).join('>')}`);
 
   const hm = new Map(H.map(x => [x.id, x]));
   let miss = [], rdiff = [], udiff = [], apdiff = [];
   for (const s of S) {
     const h = hm.get(s.id);
     if (!h) { miss.push(s.id); continue; }
-    if (h.r !== s.r) rdiff.push(`${s.id}(sim ${s.r} vs index ${h.r})`);
-    if (h.u !== s.u) udiff.push(`${s.id}(sim u=${s.u} vs index u=${h.u})`);
     if (norm(h.ap) !== norm(s.ap)) apdiff.push(`${s.id}\n      sim  : ${s.ap}\n      index: ${h.ap}`);
   }
   const extra = H.filter(x => !S.find(s => s.id === x.id)).map(x => x.id);
   miss.length ? bad(`index.html 에 없는 특전 ${miss.length}종: ${miss.join(' ')}`) : ok('누락 특전 0');
   extra.length ? bad(`sim.js 에 없는 특전 ${extra.length}종: ${extra.join(' ')}`) : ok('잉여 특전 0');
-  rdiff.length ? bad(`등급 불일치 ${rdiff.length}건: ${rdiff.join(' ')}`) : ok('등급 전수 일치');
-  udiff.length ? bad(`고유(u) 불일치 ${udiff.length}건: ${udiff.join(' ')}`) : ok('고유 플래그 전수 일치');
   apdiff.length ? bad(`ap 본문 불일치 ${apdiff.length}건:\n    ` + apdiff.join('\n    ')) : ok(`ap 본문 ${S.length}종 전수 일치`);
 
   /* 표시 텍스트가 PLAN §3 표에서 온 것인지 (빈 tx·아이콘 누락 검출) */
@@ -157,12 +144,11 @@ function pxKeys(src) {
 console.log('\n[④ 대표 수식 대조 (ROUTINE §2 T2 «대표 수식 5개 이상»)]');
 const FORMULAS = [
   ['pkk 폭풍의 힘 배수', /procX2\?1\.22:1/, /procX2\?1\.22:1/],
-  ['effDef 상한', /return Math\.min\(80,d\);/, /return Math\.min\(80,d\);/],
+  ['effDef 상한', /const effDef=p=>Math\.min\(80,p\.def\+bsum\(p,'def'\)\);/, /function effDef\(p\)\{ return Math\.min\(80,\s*p\.def\+bsum\(p,'def'\)\); \}/],
   ['effEvade 상한·최후의 저항', /lastStand&&p\.hp<=p\.maxHp\*0\.10\)e\+=40;[\s\S]{0,400}?Math\.min\(90,e\)/, /lastStand&&p\.hp<=p\.maxHp\*0\.10\)\s*e\+=40;[\s\S]{0,400}?Math\.min\(90,e\)/],
   ['effDmg 격노 배수', /rage&&p\.sh<=0\)m?\s*\*=\s*1\.5/, /rage&&p\.sh<=0\)\s*m\*=1\.5/],
   ['처형(execute) 배수', /execute&&e\.hp<=e\.maxHp\*0\.5\)d\*=2\.2/, /execute&&e\.hp<=e\.maxHp\*0\.5\)\s*d\*=2\.2/],
-  ['배후(backDmg) 배수', /if\(px\.backDmg\)d\*=3\.2;/, /if\(px\.backDmg\) d\*=3\.2;/],
-  ['🔙 c_backDmg 가산', /if\(px\.c_backDmg\)addBonus\+=1\.00;/, /if\(px\.c_backDmg\) addBonus\+=1\.00;/],
+  ['배후(backDmg) 배수 — 장비 옵션', /if\(front&&e!==front\)d\*=3\.2;/, /if\(front&&e!==front\) d\*=3\.2;/],
   ['처형자(execKill) 임계', /execKill&&!e\.isBoss&&e\.hp>0&&e\.hp<=e\.maxHp\*0\.25/, /execKill&&!e\.isBoss&&e\.hp>0&&e\.hp<=e\.maxHp\*0\.25/],
   ['수호의 결정 감쇄', /guardCrystal&&p\.sh>0\)d\*=([\d.]+)/, v => new RegExp(`guardCrystal&&p\\.sh>0\\)\\s*d\\*=${numRe(v)}`)],
   ['부활 회복률', /revive--;p\.hp=p\.maxHp\*([\d.]+);p\.sh=p\.maxSh\*([\d.]+)/, (a,b) => new RegExp(`revive--;[\\s\\S]{0,40}p\\.hp=p\\.maxHp\\*${numRe(a)};\\s*p\\.sh=p\\.maxSh\\*${numRe(b)}`)],
@@ -170,7 +156,6 @@ const FORMULAS = [
   /* ⚑ P3 R02: 계수를 박지 않고 sim 에서 뽑아 html 과 대조하는 «값 추출형» 으로 바꿨다 —
      전설 반사 계수는 P3 ②단계가 움직이는 튜닝 노브라 200% 를 박으면 정당한 회차마다 빨개진다.
      이 항목이 지킬 것은 «두 엔진이 같은 계수를 쓴다 + 확률 없이 무조건» 이다. */
-  ['🦔 l_thorns 무조건 반사 계수', /px\.l_thorns\)reflect\(G,src,dmg\*([\d.]+)\)/, v => new RegExp(`px\\.l_thorns\\)\\s*reflect\\(src,dmg\\*${numRe(v)}`)],
   ['반격 피해 계수', /effDmg\(p\)\*0\.7\*\(1\+px\.counterX\)/, /effDmg\(p\)\*0\.7\*\(1\+px\.counterX\)/],
   ['추가타(extraHit) 확률·배수', /extraHit&&pkk\(p,0\.75\*px\.extraHit\)&&e\.hp>0\)dealDmg\(G,e,2\.3\)/, /extraHit&&pkk\(p,0\.75\*px\.extraHit\)&&e\.hp>0\)\s*dealPlayerDamage\(e,2\.3/],
   ['분신(clone) 계수', /clone&&e\.hp>0\)dealDmg\(G,e,([\d.]+)\)/, v => new RegExp(`clone&&e\\.hp>0\\)\\s*dealPlayerDamage\\(e,${numRe(v)}`)],
@@ -180,8 +165,10 @@ const FORMULAS = [
      문자열 대조(②)로는 잡히지 않는다. 상수 값이 두 파일에서 같은지 + 두 엔진이 리터럴이 아니라
      그 상수를 실제로 쓰는지를 함께 본다(한쪽만 540 으로 되돌리면 빨개진다). */
   /* ⚑ P1(T83) — 신화 폐지로 «충격파(m_stunKill)»·«👼 전설이상»·4단 굴림이 사라졌다. 3단 배열 대조로 교체. */
-  ['등급 등장 확률 배열', /const RARITY_P=\[0\.45,0\.35,0\.20\];/, /const RARITY_P=\[0\.45,0\.35,0\.20\];/],
-  ['등급 굴림이 배열을 쓴다', /return r<RARITY_P\[2\]\?2:r<RARITY_P\[2\]\+RARITY_P\[1\]\?1:0;/, /return r<RARITY_P\[2\]\?2 : r<RARITY_P\[2\]\+RARITY_P\[1\]\?1 : 0;/],
+  /* ⚑ T96 — 등급 확률 배열·등급 굴림은 폐지됐다(그 부재는 verifyPerkOrder ③ 이 감시).
+     대신 «순서 지급 동사» 가 두 엔진에서 같은 자리에 있는지를 여기서 본다. */
+  ['순서 지급 동사(grantNextPerk)', /function grantNextPerk\(G\)\{/, /function grantNextPerk\(\)\{/],
+  ['특전 소환 확률 상수', /const PERK_ATK_M=1\.20, PERK_DEF_M=1\.10/, /const PERK_ATK_M=1\.20, PERK_DEF_M=1\.10/],
   ['경험치 요구식', /expNeed:lv=>4\+4\*lv/, /expNeed=lv=>4\+4\*lv/],
 ];
 /* ⚑ T1 회귀2 R02 — 세 번째 칸이 «함수» 면 sim.js 에서 뽑은 값을 넣어 index.html 쪽 정규식을 만든다.
@@ -203,17 +190,29 @@ for (const [name, reSim, reHtml] of FORMULAS) {
 console.log('\n[⑤ 주인 지시 이행 — 배포 빌드에서 관측되는 동작]');
 const DIRECTIVES = [
   ['웨이브 전멸 실드 무료충전 폐지 (06:5X·08:5X)', () => !/wave\.done=true;[\s\S]{0,120}p\.sh=p\.maxSh/.test(HTML)],
-  ['특전 선택지 등급 통일 — 등급은 1번만 굴린다 (06:2X)', () => {
-    const m = HTML.match(/function rollPerks\(n\)\{[\s\S]*?\n\}/);
-    return !!m && (m[0].match(/rollRarity\(\)/g) || []).length === 1 && /const rar=rollRarity\(\)/.test(m[0]);
+  /* ⚑⚑ T96 — «선택지 등급 통일»·«선택지 3개 고정» 은 선택창 자체가 폐지되어 대상이 사라졌다.
+     그 자리에 새 체제의 관측 가능 동작 3건을 넣는다. */
+  ['⚑ 레벨업 = 순서 지급 (선택창 폐지 · 2026-09-03)', () => {
+    const m = HTML.match(/function openLevelUp\(\)\{[\s\S]*?\n\}/);
+    return !!m && /grantNextPerk\(\)/.test(m[0]) && !/rollPerks|perkPool|refreshLeft/.test(m[0]);
   }],
-  ['⚑ 선택지 3개 고정 (🔮 전지의 눈 폐지)', () => /rollPerks\(3\)/.test(HTML) && !/choice4/.test(HTML)],
+  ['⚑ 10종을 다 얻으면 레벨업 팝업이 안 뜬다', () => {
+    const m = HTML.match(/function openLevelUp\(\)\{[\s\S]*?\n\}/);
+    return !!m && /if\(!nextPerk\(\)\)\{[^}]*afterPerk\(\);\s*return;\s*\}/.test(m[0]);
+  }],
+  ['⚑ 순번은 «진짜 특전 수» 로 센다 (천사의 축복이 순번을 건너뛰지 않는다)',
+    () => /function perkOrderN\(\)\{[\s\S]{0,160}PERKS\.includes\(q\)/.test(HTML)
+       && /function nextPerk\(\)\{\s*const n=perkOrderN\(\);/.test(HTML)],
   ['챕터 종료 보스 킬 = 특전 스킵 (06:3X)', () => /G\.cleared=true/.test(HTML) && /lev>0\s*&&\s*!G\.over\s*&&\s*!G\.cleared/.test(HTML)],
   ['레벨업 회복·최대치 보정 없음 (06:4X)', () => {
     const m = HTML.match(/function gainExp\(n\)\{[\s\S]*?\n\}/);
     return !!m && !/maxHp|maxSh|p\.hp=|p\.sh=/.test(m[0]);
   }],
-  ['흡혈 증가 특전 0종 (07:1X)', () => !/ap:p=>p\.steal\+=/.test(HTML)],
+  /* ⚑ T96 — «흡혈 증가 금지»(2026-09-02 07:1X)는 주인 확정 ⑥ 으로 **폐기**됐다. 7번 «생명 흡수» 가
+     최신 확정이라 흡혈은 이제 정상 축이다. 다만 **적중률(명중) 금지는 그대로 유효**하며 ⑳ 이 지킨다.
+     여기서는 «흡혈이 그 특전 하나에만 붙어 있는가»(장비·다른 경로로 새지 않는가)를 본다. */
+  ['생명 흡수는 p_steal 하나뿐 (다른 경로로 안 샌다)',
+    () => (HTML.match(/p\.steal\s*\+=/g) || []).length === 1 && (SIM.match(/p\.steal\s*\+=/g) || []).length === 1],
   ['스탯 그리드에서 흡혈 행 제거 — 7종 (07:1X)', () => {
     const m = HTML.match(/const STAT_DEFS=\[[\s\S]*?\n\];/) || HTML.match(/\n\/\* =+ 스탯[\s\S]*?\n\];/);
     return !/\{ic:'🩸',lb:'흡혈'/.test(HTML);
@@ -230,11 +229,14 @@ for (const [name, fn] of DIRECTIVES) {
 /* ---------- ⑥ 특전 전수 실행 (예외 0) ---------- */
 console.log(`\n[⑥ 특전 ${PERK_TOTAL}종 ap 실행 — 런타임 예외 검출]`);
 if (H) {
+  /* ⚑ T96 — ap 본문이 엔진 상수(PERK_ATK_M …)를 쓰므로 sim.js 에서 그 값을 읽어 샌드박스에 깔아 준다.
+     상수를 리터럴로 되돌리면 여기서 잡히지 않지만 verifyPerkOrder ① 이 확정값과 대조한다. */
   const sandbox = {
     Math, console,
     heal: (p, a) => { p.hp = Math.min(p.maxHp, p.hp + a); },
-    G: { perkChances: 3, legendOnly: false, overBoltCd: 0 },
+    G: { perkChances: 3, overBoltCd: 0 },
   };
+  for (const m of SIM.matchAll(/\b(PERK_[A-Z_]+)=([0-9.]+)/g)) sandbox[m[1]] = Number(m[2]);
   vm.createContext(sandbox);
   let thrown = [];
   const mkP = () => {
@@ -604,7 +606,8 @@ console.log('\n[⑬ 인게임 UI — 발동 중 버프 아이콘 · 얻은 특�
   const rb = HTML.match(/function renderBuffBar\(\)\{[\s\S]*?\n\}/);
   if (!rb) bad('renderBuffBar() 가 없다');
   else {
-    /rarity/i.test(rb[0]) && /RARITY\[/.test(rb[0]) ? ok('버프 아이콘이 특전 등급색(RARITY)을 쓴다') : bad('renderBuffBar 가 RARITY 등급색을 쓰지 않는다');
+    /* ⚑ T96 — 등급이 폐지돼 «등급색» 이 없다. 특전 버프는 한 색(PERK_COLOR), 출처 불명은 회색 폴백. */
+    /PERK_COLOR/.test(rb[0]) ? ok('버프 아이콘이 특전 색(PERK_COLOR)을 쓴다') : bad('renderBuffBar 가 PERK_COLOR 를 쓰지 않는다');
     /g\.n>1/.test(rb[0]) ? ok('중첩 2 이상일 때만 중첩 수 뱃지') : bad('renderBuffBar 에 중첩 수 뱃지가 없다');
     /sort\(\(a,b\)=>a\.q-b\.q\)/.test(rb[0]) ? ok('버프 아이콘이 오래된 순(q)으로 세로 정렬') : bad('renderBuffBar 가 발동 순서로 정렬하지 않는다 (주인 지시: 오래된 것이 위)');
   }
@@ -622,7 +625,7 @@ console.log('\n[⑬ 인게임 UI — 발동 중 버프 아이콘 · 얻은 특�
   if (!rp) bad('renderPerkStrip() 이 없다');
   else {
     /for\(const pk of G\.perksTaken\)/.test(rp[0]) ? ok('미리보기 줄이 획득 순서(G.perksTaken)를 따른다') : bad('renderPerkStrip 이 획득 순서를 따르지 않는다');
-    /RARITY\[o\.pk\.r\]\.cc/.test(rp[0]) ? ok('미리보기 아이콘에 등급색') : bad('미리보기 줄에 등급색이 없다 (주인 지시: 등급색 포함)');
+    /cc\s*=\s*PERK_COLOR/.test(rp[0]) ? ok('미리보기 아이콘에 특전 색') : bad('미리보기 줄에 특전 색이 없다');
     /c>1\?/.test(rp[0]) ? ok('중복 획득은 아이콘 1개 + 개수 뱃지') : bad('중복 획득 개수 뱃지가 없다');
     /pv-more">\+\$\{more\}/.test(rp[0]) ? ok('한 줄을 넘치면 최신 것만 남기고 «+N» 으로 합침') : bad('넘침 처리(«+N»)가 없다');
     /slice\(order\.length-\(cap-1\)\)/.test(rp[0]) ? ok('넘칠 때 «최신 것들» 이 보인다') : bad('넘칠 때 최신이 아니라 앞쪽이 남는다 (주인 지시: 최신 것들이 보이게)');
@@ -630,7 +633,7 @@ console.log('\n[⑬ 인게임 UI — 발동 중 버프 아이콘 · 얻은 특�
   /* 특전을 얻는 두 경로(레벨업·천사의 축복) 모두에서 줄이 갱신돼야 한다 */
   const tp = HTML.match(/function takePerk\(perk\)\{[\s\S]*?\n\}/);
   (tp && /renderPerkStrip\(\)/.test(tp[0])) ? ok('takePerk 가 미리보기 줄을 갱신') : bad('takePerk 후 미리보기 줄이 갱신되지 않는다');
-  /천사의 축복[\s\S]{0,120}renderPerkStrip\(\)/.test(HTML) ? ok('천사의 축복도 미리보기 줄에 반영') : bad('천사의 축복 획득 시 미리보기 줄이 갱신되지 않는다');
+  /천사의 축복[\s\S]{0,220}renderPerkStrip\(\)/.test(HTML) ? ok('천사의 축복도 미리보기 줄에 반영') : bad('천사의 축복 획득 시 미리보기 줄이 갱신되지 않는다');
 
   /* (5) T36 — 챕터 300 이동 UI */
   /function openChapterJump\(\)/.test(HTML) ? ok('T36 — 챕터 이동 팝업(숫자 입력·±10·최신 해금) 존재') : bad('T36 미해소 — 챕터 300 인데 점프 수단이 없다');
@@ -823,28 +826,28 @@ console.log('\n[⑮ 장비 아이콘 — 인라인 SVG 18종 (스크린샷 구�
 /* ---------- ⑯ 특전 선택 화면 구도 (참고: docs/ref/perks.jpg · T2 6단계) ---------- */
 /* 스크린샷 구도의 두 축: ①특전 아이콘이 «등급색 팔각 메달리온» 안에 든다(맨 이모지 금지)
    ②무료 새로고침은 밑줄 텍스트가 아니라 주황 버튼 + 그 아래 «남은 횟수» 줄이다. */
-console.log('\n[⑯ 특전 선택 화면 — 등급 메달리온 · 새로고침 버튼 (스크린샷 구도)]');
+console.log('\n[⑯ 레벨업 특전 카드 — 메달리온 구도 · 순번 태그 (T96 · 선택창 폐지)]');
 {
   const icCss = HTML.match(/\.perk-card \.ic\{[^}]*\}/);
   if (!icCss) bad('.perk-card .ic 규칙이 없다');
   else {
     /clip-path:polygon/.test(icCss[0]) ? ok('특전 아이콘이 팔각 메달리온 (스크린샷 구도)')
       : bad('특전 아이콘이 맨 이모지다 — 스크린샷의 메달리온 구도가 아니다');
-    /var\(--pc/.test(icCss[0]) ? ok('메달리온 바탕이 등급색(--pc)') : bad('메달리온이 등급색을 쓰지 않는다');
+    /var\(--pc/.test(icCss[0]) ? ok('메달리온 바탕이 카드색(--pc)') : bad('메달리온이 카드색을 쓰지 않는다');
     /width:46px;\s*height:46px/.test(icCss[0]) ? ok('메달리온이 정사각(46px) — 팔각이 찌그러지지 않는다')
       : bad('메달리온 가로·세로가 어긋난다');
   }
-  const refCss = HTML.match(/#refBtn\{[^}]*\}/);
-  (refCss && /linear-gradient\(#FFCB4D,#F5A623\)/.test(refCss[0]))
-    ? ok('무료 새로고침이 주황 버튼 (스크린샷의 Refresh Free)')
-    : bad('무료 새로고침이 주황 버튼이 아니다 — 밑줄 텍스트 구도로 되돌아갔다');
-  /<button id="refBtn">/.test(HTML) ? ok('#refBtn 이 ghost-btn(밑줄 텍스트) 클래스를 쓰지 않는다')
-    : bad('#refBtn 이 여전히 밑줄 텍스트 버튼이다');
-  /<div id="refLeft">남은 횟수: <b>\$\{G\.refreshLeft\}<\/b><\/div>/.test(HTML)
-    ? ok('버튼 아래 «남은 횟수» 줄 (스크린샷의 Remain : N)') : bad('«남은 횟수» 줄이 없다');
-  /G\.refreshLeft<=0\)\{ rb\.style\.display='none'; \$\('refLeft'\)\.style\.display='none'; \}/.test(HTML)
-    ? ok('횟수가 0 이면 버튼과 «남은 횟수» 줄이 함께 사라진다')
-    : bad('횟수 소진 시 두 요소가 함께 숨겨지지 않는다 — 0 인데 줄만 남는다');
+  /* ⚑⚑ T96 — «무료 새로고침 버튼»·«남은 횟수» 줄은 선택창과 함께 폐지됐다.
+     되살아나면 빨개지게 반대 방향으로 잠근다(폐지의 회귀 방지 — ㉜ 와 같은 취지). */
+  !/#refBtn\{/.test(HTML) && !/id="refBtn"/.test(HTML) && !/id="refLeft"/.test(HTML)
+    ? ok('새로고침 버튼·«남은 횟수» 줄이 없다 (선택창 폐지 — 되살아나면 빨개진다)')
+    : bad('새로고침 버튼/«남은 횟수» 줄이 되살아났다 — 주인 확정 «새로고침 폐지» 위반');
+  /* 카드 태그는 등급이 아니라 획득 순번(«1/10»)이다 */
+  const ch = HTML.match(/function perkCardHTML\(p,i,extra\)\{[\s\S]*?\n\}/);
+  (ch && /PERKS\.indexOf\(p\)/.test(ch[0]) && /\$\{n\+1\}\/\$\{PERKS\.length\}/.test(ch[0]))
+    ? ok('카드 태그가 획득 순번 «N/10» (등급 태그 폐지)')
+    : bad('카드 태그가 획득 순번이 아니다 — 등급 태그가 되살아났는지 확인할 것');
+  (ch && !/RARITY/.test(ch[0])) ? ok('카드에 등급색·등급명이 없다') : bad('카드가 아직 RARITY 를 참조한다');
 }
 
 /* ---------- ⑰ UI 아이콘 — 스탯 그리드 7 + 하단 5탭 (참고: docs/ref/메인 게임화면.jpg · 메인로비.jpg · T2 7단계) ---------- */
@@ -955,7 +958,7 @@ console.log('\n[⑱ 관통 투사체 상한 — 창 ≤8마리 · 검기가 pier
     return Number(c[1]);
   };
   const sSpear = spearOf(SIM, 'sim.js'), hSpear = spearOf(HTML, 'index.html');
-  const planSpear = Number((fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8').match(/일직선 최대 (\d+)마리 관통/) || [])[1]);
+  const planSpear = Number((fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8').match(/일직선 최대 \*\*(\d+)마리\*\* 관통/) || [])[1]);
   if (sSpear !== null && hSpear !== null) {
     if (sSpear !== hSpear) bad(`창 관통 상한이 두 파일에서 다르다 — sim.js ${sSpear} · index.html ${hSpear}`);
     else if (!planSpear) bad('PLAN §3.0 에서 «일직선 최대 N마리 관통» 을 못 찾았다 — 게이트를 갱신할 것');
@@ -1223,33 +1226,10 @@ console.log('\n[㉒ 스턴 · 빗맞음 축 (PLAN §3.0·§4, T48 1단계)]');
     evadeBlocks === 2 ? ok(`${who}: 두 호출 다 적 회피 분기 안에 있다`)
                       : bad(`${who}: 적 회피 분기 안의 procOnMiss 가 ${evadeBlocks}곳 — 적중에도 굴러가면 축이 무너진다`);
   }
-  /* (5) 빗맞음 데미지 스택은 «가산» 이어야 한다 (주인 정정) — 배수 대입 금지, 적중 1타당 1장 소모 */
-  const missStackAmt = [];
-  for (const [src, who] of [[SIM, 'sim.js'], [HTML, 'index.html']]) {
-    const body = src.replace(/\/\*[\s\S]*?\*\//g, '');
-    /* ⚑ P3 R02: 계수(+100%)를 박지 않는다 — P3 ②단계가 움직이는 노브다.
-       구조(«가산 풀 addBonus 에 더한다 · 적중 1타당 1장 소모»)만 강제하고, 계수 자체는
-       PLAN §3.3 ↔ 엔진 대조를 `verifyCombatConst` ④ 가 본다. 두 엔진 값이 갈리면 아래 (5-b) 가 잡는다. */
-    const mstk = body.match(/p\.missStk--;\s*addBonus\s*\+=\s*([\d.]+);/);
-    mstk
-      ? ok(`${who}: 스택 소모가 «적중 1타당 1장 · 가산 +${(Number(mstk[1]) * 100).toFixed(0)}%» 이다`)
-      : bad(`${who}: 빗맞음 스택이 가산 풀(addBonus)로 들어가지 않는다 — 주인 정정(«×2 배수 아님») 위반`);
-    missStackAmt.push(mstk ? mstk[1] : null);
-    /* ⚑ 주인 확정 «무제한 적립» — 상한 대입이 되살아나면 빨개진다 */
-    !/MISS_STACK_CAP/.test(body) && /p\.missStk\+\+/.test(body)
-      ? ok(`${who}: 스택 적립에 상한이 없다 (주인 확정 «무제한 적립»)`)
-      : bad(`${who}: 빗맞음 스택에 상한이 되살아났다 — 주인 확정 «무제한 적립» 위반`);
-  }
-  /* (5-b) ⚑ P3 R02: 계수를 값 추출형으로 바꾼 대가로, 두 엔진이 갈리는 것은 여기서 잡는다 */
-  (missStackAmt[0] !== null && missStackAmt[0] === missStackAmt[1])
-    ? ok(`두 엔진의 빗맞음 스택 계수가 같다 (+${(Number(missStackAmt[0]) * 100).toFixed(0)}%)`)
-    : bad(`두 엔진의 빗맞음 스택 계수가 다르다 — sim ${missStackAmt[0]} / html ${missStackAmt[1]}`);
-  /* (6) 주인이 원문으로 명시한 필수 4종이 실제로 존재해야 한다 */
-  /* ⚑ P1(T83) — 구 l_stunCrit3 는 새 목록에서 희귀 💫 r_stunCrit(치명타 6초 기절)로 옮겨졌다 */
-  for (const id of ['l_stunHit3', 'r_stunCrit', 'l_missCrit', 'l_missStack'])
-    (SIM.includes(`'${id}'`) && HTML.includes(`'${id}'`))
-      ? ok(`주인 필수 예시 ${id} — 두 파일에 존재`)
-      : bad(`주인이 원문으로 지목한 필수 특전 ${id} 가 없다`);
+  /* ⚑⚑ T96 — (5)(5-b)(6) 은 대상이 사라졌다.
+     빗맞음 «스택»(💢 l_missStack)·주인 필수 예시 4종(l_stunHit3·r_stunCrit·l_missCrit·l_missStack)은
+     전부 폐지된 132종의 특전이다. **빗맞음·스턴 «축» 자체는 살아 있고**(장비 계열 옵션 miss*·stunHit*·stunCrit*)
+     위 (1)~(4) 가 그 축의 구조(호출 지점·회피 분기 안·두 엔진 동형)를 계속 지킨다. */
 }
 
 /* ---------- ㉓ 레벨업 필요 경험치 4+4*Lv (주인 확정 17:0X · T47) ---------- */
@@ -1353,7 +1333,8 @@ console.log('\n[㉔ 원거리 피격 · 반사 확장 · 고중첩 (PLAN §3.0, 
     /* 반사 3단(일반 30%/전설 60%/신화 확정)이 전부 hitPlayer 안에 있는가 */
     /* ⚑ P1(T83) — 반사 3단이 «일반 🌿 c_thornsS 30%/50% · 전설 🦔 l_thorns 확정 200%» 2단으로 바뀌었고,
        구 짧은 키(thornsS·thorns·thornsKing)는 장비 옵션 전용으로 남았다. 특전·장비 양쪽을 본다. */
-    for (const [key, label] of [['px.c_thornsS&&', '일반 🌿 30%/50% 반사(주인 필수 예시)'], ['px.l_thorns)', '전설 🦔 확정 200% 반사'], ['px.thorns&&', '장비 가시 옵션'], ['px.thornsKing)', '장비 가시왕 옵션']])
+    /* ⚑ T96 — 반사 특전 2종(🌿 c_thornsS · 🦔 l_thorns)은 폐지됐다. 반사 «축» 은 장비 옵션으로 남는다. */
+    for (const [key, label] of [['px.thorns&&', '장비 가시 옵션'], ['px.thornsKing)', '장비 가시왕 옵션'], ['px.thornsS&&', '장비 가시(소) 옵션']])
       body.includes(key) ? ok(`${who}: ${label} 존재`) : bad(`${who}: ${label} 가 없다`);
     /* 고중첩 변형 — 최대 중첩 인자가 10 이어야 한다 (기존 5중첩 계열의 상위 변형) */
     /* ⚑ P1(T83) — 주인 확정 «버프 무한 중첩» 으로 중첩 인자 자체가 폐지됐다(장비 옵션은 그대로 남음) */
@@ -1372,96 +1353,33 @@ console.log('\n[㉔ 원거리 피격 · 반사 확장 · 고중첩 (PLAN §3.0, 
       ? ok(`${who}: addBuff 가 상한 없이 push 만 한다 (무한 중첩)`)
       : bad(`${who}: addBuff 에 중첩 상한이 되살아났다`);
   }
-  /* 주인이 원문으로 지목한 필수 4종 (원거리 3 + 반사 1) */
-  /* ⚑ P1(T83) — 원거리 피격 축의 특전은 새 목록에서 일반 🏹🌵 c_rangeThorns 1종이다(나머지는 장비 옵션으로 남음) */
-  for (const id of ['c_rangeThorns', 'c_thornsS', 'l_thorns'])
-    (SIM.includes(`'${id}'`) && HTML.includes(`'${id}'`))
-      ? ok(`주인 필수 예시 ${id} — 두 파일에 존재`)
-      : bad(`주인이 원문으로 지목한 필수 특전 ${id} 가 없다`);
+  /* ⚑ T96 — «필수 특전» 목록은 132종 시절 주인 원문에서 온 것이라 대상이 사라졌다.
+     원거리 피격·반사 축의 **구조**(위 호출 지점·순서·회피 가드)는 그대로 지킨다. */
 }
 
-/* ---------- ㉕ 횟수형 방어막 · 회피 즉사(사신의 낫) (주인 16:5X·17:2X · T48 3단계) ---------- */
-/* 주인 원문: «공격 시 10% 확률로 적 공격 1회를 완전히 막아주는 방어막 1장. 5장 쌓였으면 5번 막음
-   (피격 1회당 1장 소모, 그 타격 데미지 완전 무효 — 수치형 실드와 별개 축). 버프 아이콘에 남은 장수 뱃지
-   + 막을 때 전용 이펙트» · «회피 시 10% 확률로 공격한 그 적 즉사. 사신의 낫 전용 연출 필수 —
-   낫이 베어 죽이는 이펙트, 일반 처치 연기와 구별». */
-console.log('\n[㉕ 횟수형 방어막 · 회피 즉사 (PLAN §3.0, T48 3단계)]');
+/* ---------- ㉕ 횟수형 방어막 (주인 17:2X · T48 3단계)
+   주인 원문: «적 공격 1회를 완전히 막아주는 방어막 1장. 5장 쌓였으면 5번 막음 (피격 1회당 1장 소모,
+   그 타격 데미지 완전 무효 — 수치형 실드와 별개 축). 버프 아이콘에 남은 장수 뱃지 + 막을 때 전용 이펙트».
+   ⚑ T96 — «회피 즉사»(☠️🌾 사신의 낫)는 그 특전이 폐지되면서 대상이 사라져 이 절에서 뺐다.
+   방어막은 장비 계열 옵션(wardAtk·wardEvade·wardCrit·wardHit)으로 그대로 살아 있다. ---------- */
+console.log('\n[㉕ 횟수형 방어막 (PLAN §3.0, T48 3단계)]');
 {
-  /* (1) 상수 3종이 두 파일에서 같아야 한다 */
-  const cv = (src, name) => (src.match(new RegExp(name + '\\s*=\\s*([\\d.]+)')) || [])[1];
-  /* ⚑ P1(T83) — 방어막 장수 상한 폐지(주인 «무한»)로 WARD_CAP·WARD_CAP_KING 이 사라졌다 */
-  for (const nm of ['REAPER_CH']) {
-    const a = cv(SIM, nm), b = cv(HTML, nm);
-    (a && a === b) ? ok(`${nm} = ${a} — 두 파일 일치`)
-                   : bad(`${nm} 이 두 파일에서 다르다 — sim.js ${a} · index.html ${b}`);
-  }
   for (const [src, who] of [[SIM, 'sim.js'], [HTML, 'index.html']]) {
     const body = src.replace(/\/\*[\s\S]*?\*\//g, '');
-    /* (2) 방어막 획득은 gainWard 한 곳으로만 — 직접 증가시키면 상한·신화 배수 규칙을 우회한다 */
-    /function gainWard\(/.test(body) ? ok(`${who}: gainWard 존재`) : bad(`${who}: gainWard 가 없다`);
-    /* ⚑ P1(T83) — 장비 옵션 축은 gainWard 를 계속 쓰고(4곳), 새 특전은 확률이 제각각이라
-       각자 자리에서 `p.ward++` 한다. 상한이 없어 우회할 규칙 자체가 없다 — 대신 «상한이 되살아났는가» 를 본다. */
-    const gains = (body.match(/gainWard\(p,/g) || []).length - 1;   /* 정의부 1건 제외 */
-    gains === 4 ? ok(`${who}: 장비 옵션 방어막 획득 4곳 (공격·치명타·피격·회피)`)
-                : bad(`${who}: gainWard 호출이 ${gains}곳 — 장비 옵션 넷이어야 한다`);
-    (!/wardCap/.test(body) && !/WARD_CAP/.test(body))
-      ? ok(`${who}: 방어막 장수 상한이 없다 (주인 확정 «무한»)`)
+    /function gainWard\(p,ch\)/.test(body) ? ok(`${who}: gainWard(p,ch) 한 동사로 모여 있다`)
+                                          : bad(`${who}: gainWard 동사가 없다`);
+    !/wardCap|WARD_CAP/.test(body)
+      ? ok(`${who}: 방어막 장수에 상한이 없다 (주인 확정 «무한»)`)
       : bad(`${who}: 방어막 장수 상한이 되살아났다 — 주인 확정 «무한» 위반`);
-    const gw = body.match(/function gainWard\(p,ch\)\{[\s\S]*?\n\}/) || body.match(/function gainWard\(p,ch\)\{[^\n]*/);
-    (gw && /p\.ward\+\+/.test(gw[0]) && !/Math\.min\(/.test(gw[0]))
-      ? ok(`${who}: gainWard 가 상한 없이 1장을 더한다`)
-      : bad(`${who}: gainWard 가 상한을 걸고 있다`);
-    /* (4) 소모는 «피격 1회당 1장 · 데미지 완전 무효» — 실드·방어력·체력을 아예 안 거쳐야 한다 */
-    /* ⚑ P1(T83) — 💎 l_shieldIgnore(50% 완전 무시)가 앞에 붙어 판정이 `warded`/`nulled` 두 단계가 됐다 */
-    /constwarded=!ignored&&p\.ward>0;/.test(body.replace(/\s+/g, ''))
-      ? ok(`${who}: 방어막 소모 판정이 존재한다 (💎 완전 무시가 앞선다)`)
+    /const warded=p\.ward>0;/.test(body) && /p\.ward--/.test(body)
+      ? ok(`${who}: 방어막 소모 판정(warded)이 피격 1회당 1장이다`)
       : bad(`${who}: 방어막 소모 판정(warded)이 없다`);
-    /letd=nulled\?0:/.test(body.replace(/\s+/g, ''))
-      ? ok(`${who}: 막은 타격은 데미지가 0 이다 (완전 무효)`)
-      : bad(`${who}: 막은 타격의 데미지가 완전 무효가 아니다 — 주인 «1회를 완전히 막는다» 위반`);
-    /!nulled&&p\.sh>0/.test(body.replace(/\s+/g, ''))
-      ? ok(`${who}: 막은 타격은 수치형 실드를 건드리지 않는다 (별개 축)`)
-      : bad(`${who}: 방어막으로 막았는데 수치형 실드가 깎인다 — 주인 «별개 축» 위반`);
-    /* (5) 회피 즉사 — 회피 분기 안 · 보스 제외 · 확률 상수 사용 */
-    /* ⚑ P1(T83) — 사신의 낫은 일반 등급 ☠️🌾 c_reaper 가 됐고 **보스 포함**이다(주인 명시) */
-    /px\.c_reaper&&src&&src\.hp>0&&pkk\(p,REAPER_CH\)/.test(body.replace(/\s+/g, ''))
-      ? ok(`${who}: 회피 즉사가 «보스 포함 · REAPER_CH» 조건이다`)
-      : bad(`${who}: 회피 즉사 조건이 스펙과 다르다 (보스 포함·확률 상수)`);
-    /* 회피 즉사·회피 방어막이 «회피 분기 안» 인지는 hitPlayer 본문 안에서만 따진다
-       (특전 정의부에도 px.reaper 가 나오므로 파일 전체 인덱스로 재면 오판한다). */
-    {
-      const hp = body.slice(body.search(/function hitPlayer\(/));
-      const iEv = hp.search(/effEvade\(p\)/), iRe = hp.indexOf('px.c_reaper'), iDmg = hp.search(/const warded=/);
-      (iEv >= 0 && iRe > iEv && iDmg > iRe)
-        ? ok(`${who}: 회피 즉사가 회피 분기 «안» 이다 (맞았을 때가 아니라 피했을 때)`)
-        : bad(`${who}: 회피 즉사가 회피 분기 밖이다 — 회피가 아닌 상황에서도 즉사가 터진다`);
-    }
+    /const nulled=warded;/.test(body)
+      ? ok(`${who}: 막은 타격은 데미지가 완전 무효다 (방어력·실드·체력 무손실)`)
+      : bad(`${who}: 막은 타격이 완전 무효가 아니다`);
   }
-  /* (6) 게임 전용 연출 — 사신의 낫은 일반 처치 연기(poof)와 구별돼야 한다 (주인 필수 지시) */
-  {
-    const H = HTML.replace(/\/\*[\s\S]*?\*\//g, '');
-    /function reapFx\(/.test(H) ? ok('index.html: 사신의 낫 전용 연출 reapFx 존재')
-                                : bad('index.html: 사신의 낫 전용 연출이 없다 (주인 필수 지시)');
-    const m = H.match(/function reapFx\(wx\)\{[\s\S]*?\n\}/);
-    (m && !/poof\(/.test(m[0]))
-      ? ok('index.html: reapFx 가 일반 처치 연기(poof)를 쓰지 않는다 — 구별된다')
-      : bad('index.html: reapFx 가 일반 처치 연기와 같은 연출을 쓴다 (주인 «구별되게» 위반)');
-    /G\.reaps/.test(H) ? ok('index.html: 낫 연출이 실제로 그려진다 (G.reaps)')
-                       : bad('index.html: 낫 연출 상태(G.reaps)가 없다 — 텍스트만 뜨고 낫이 안 보인다');
-    /function wardFx\(/.test(H) ? ok('index.html: 방어막 전용 이펙트 wardFx 존재 (주인 17:2X)')
-                                : bad('index.html: 방어막을 막을 때의 전용 이펙트가 없다');
-    /* 뱃지는 버프 줄 «맨 앞» 에 붙되(주인 17:2X) 시간제 버프와 구별되게 ward-ic 를 함께 단다 —
-       만료로 사라지지 않는 «장수» 라, 검사(T3)·로직이 시간제 버프와 섞으면 안 된다. */
-    /if\(p\.ward>0\)\{[\s\S]{0,300}?class="buff-ic ward-ic"[\s\S]{0,120}?\$\{p\.ward\}/.test(H)
-      ? ok('index.html: 버프 아이콘 줄에 남은 장수 뱃지가 붙는다 (.ward-ic 로 시간제 버프와 구별)')
-      : bad('index.html: 방어막 남은 장수 뱃지가 버프 아이콘 줄에 없다 (또는 .ward-ic 클래스가 빠졌다)');
-  }
-  /* (7) 주인이 원문으로 지목한 필수 2종 */
-  /* ⚑ P1(T83) — 방어막 획득 특전은 🛡️✨ r_wardAtk, 회피 즉사는 ☠️🌾 c_reaper 로 이름이 바뀌었다 */
-  for (const id of ['r_wardAtk', 'c_reaper'])
-    (SIM.includes(`'${id}'`) && HTML.includes(`'${id}'`))
-      ? ok(`주인 필수 예시 ${id} — 두 파일에 존재`)
-      : bad(`주인이 원문으로 지목한 필수 특전 ${id} 가 없다`);
+  /ward-ic/.test(HTML) ? ok('index.html: 버프바에 남은 장수 뱃지(.ward-ic)') : bad('index.html: 방어막 장수 뱃지가 없다');
+  /function wardFx\(/.test(HTML) ? ok('index.html: 막을 때 전용 이펙트(wardFx)') : bad('index.html: 방어막 전용 이펙트가 없다');
 }
 
 /* ============================================================================
@@ -2094,9 +2012,11 @@ console.log('\n[㉜ 🎲 새로고침 특전 폐지 — 되살아나지 않았�
   (!/r_refresh/.test(SIM) && !/r_refresh/.test(HTML))
     ? ok('두 엔진 어디에도 새로고침 특전이 없다 (주인 확정 삭제)')
     : bad('🎲 새로고침 특전이 되살아났다 — 주인 확정 «삭제» 위반');
-  /G\.refreshLeft=1;/.test(HTML) || /refreshLeft\s*=\s*1\b/.test(HTML)
-    ? ok('index.html: 무료 새로고침이 1회 고정이다')
-    : bad('index.html: 무료 새로고침 1회 고정이 아니다 (PLAN §2.4)');
+  /* ⚑⚑ T96 — 무료 새로고침은 «기본 기능» 으로도 폐지됐다(선택창 자체가 사라졌다).
+     특전으로도 기능으로도 되살아나면 빨개진다. */
+  (!/refreshLeft|refreshBonus/.test(SIM) && !/refreshLeft|refreshBonus/.test(HTML))
+    ? ok('두 엔진에 새로고침 상태(refreshLeft·refreshBonus)가 없다 (주인 확정 폐지)')
+    : bad('무료 새로고침이 되살아났다 — 주인 확정 «선택창·새로고침 폐지» 위반');
 }
 
 
@@ -2167,14 +2087,7 @@ console.log('\n[㊲ 전투 무관 특전 금지 — 경제·이속류 (T77 · �
       ? ok('④ 특전 표시 문구·PLAN §3 표에 «골드»·«경험치» 0건')
       : bad(`④ 경제 문구가 특전에 남았다 — index.html tx [${txHit.join(', ')}] · PLAN §3 [${planHit.join(', ')}]`);
   }
-  /* ⑤ 등급별 개수 — ⚑ P1(T83) 재설계본 44/46/42 (편차 4, 기준 ≤6) */
-  {
-    const ns = [0, 1, 2].map(r => S77.filter(p => p.r === r).length);
-    const want = [44, 46, 42];
-    ns.join(',') === want.join(',')
-      ? ok(`⑤ 등급별 개수 일반 ${ns[0]} · 희귀 ${ns[1]} · 전설 ${ns[2]} (편차 ${Math.max(...ns) - Math.min(...ns)})`)
-      : bad(`⑤ 등급별 개수 ${ns.join('/')} — 주인 확정 재설계본 기대값 ${want.join('/')}`);
-  }
+  /* ⚑ T96 — ⑤ «등급별 개수» 는 등급이 폐지되어 대상이 사라졌다. 개수·순서는 verifyPerkOrder 가 본다. */
 }
 
 /* ---------- ㊳ 주기형 회복 금지 (T79 · 주인 확정 2026-09-03) ----------
@@ -2277,7 +2190,7 @@ console.log('\n[㊴ 이벤트/팝업 중 게임 시간 정지 — 불변 규약 
    ② 복귀가 roll() 이면 → 선택지가 다시 굴려져 «보고 나서 고른다» 가 성립하지 않는다(새로고침 무료 무한)
    ③ 버튼을 절대 배치로 띄우면 → 좁은 화면에서 카드·새로고침 위에 올라탄다(주인 «겹치지 않는 위치»)
    덧붙여 이 작업은 UI 전용이라 sim.js 에 흔적이 없어야 한다(밸런스 영향 0). */
-console.log('\n[㊵ 특전 선택창 «보유 특전» 버튼 (T89 · 주인 지시 2026-09-03)]');
+console.log('\n[㊵ 레벨업 팝업 «보유 특전» 버튼 (T89 · ⚑ T96 에서 선택창 → 레벨업 팝업으로 이관)]');
 {
   /* 함수 본문을 중괄호를 세어 정확히 뜬다 (문자열 안의 괄호에 속지 않게 따옴표·백틱을 건너뛴다) */
   const fnBody = (src, name) => {
@@ -2294,14 +2207,14 @@ console.log('\n[㊵ 특전 선택창 «보유 특전» 버튼 (T89 · 주인 지
     }
     return out;
   };
-  const choice = fnBody(HTML, 'openPerkChoice');
+  const choice = fnBody(HTML, 'openLevelUp');   /* ⚑ T96 — 선택창(openPerkChoice) → 레벨업 팝업(openLevelUp) */
   const book = fnBody(HTML, 'openPerkBook');
   if (!choice || !book) bad('① openPerkChoice / openPerkBook 을 못 찾았다 (T89 대상 함수가 사라졌다)');
   else {
     /* ① 버튼 존재 + 오른쪽 하단 줄(.ov-foot) 안 */
     const inFoot = /<div class="ov-foot"><button id="perkBookBtn">/.test(choice.replace(/\s+/g, ' '));
-    inFoot ? ok('① 선택창에 #perkBookBtn 이 있고 오른쪽 정렬 줄(.ov-foot) 안에 있다')
-      : bad('① 선택창의 #perkBookBtn 이 없거나 .ov-foot 줄 밖으로 나갔다 (주인 지시: 오른쪽 하단)');
+    inFoot ? ok('① 레벨업 팝업에 #perkBookBtn 이 있고 오른쪽 정렬 줄(.ov-foot) 안에 있다')
+      : bad('① 레벨업 팝업의 #perkBookBtn 이 없거나 .ov-foot 줄 밖으로 나갔다 (주인 지시: 오른쪽 하단)');
     /* ② 버튼이 보유 특전 개수를 함께 보여준다 */
     /<button id="perkBookBtn">[^<]*<b>\$\{G\.perksTaken\.length\}<\/b>/.test(choice)
       ? ok('② 버튼이 보유 특전 개수(G.perksTaken.length)를 표시한다')
@@ -2310,8 +2223,9 @@ console.log('\n[㊵ 특전 선택창 «보유 특전» 버튼 (T89 · 주인 지
     /\$\('perkBookBtn'\)\.onclick\s*=\s*e\s*=>\s*\{\s*e\.stopPropagation\(\);\s*openPerkBook\(\s*paint\s*\);?\s*\}/.test(choice)
       ? ok('③ 📘 버튼이 stopPropagation 후 openPerkBook(paint) — 복귀 콜백을 넘긴다')
       : bad('③ 📘 버튼이 복귀 콜백(paint)을 안 넘기거나 stopPropagation 이 빠졌다 — 책이 열리자마자 되돌아가거나 복귀가 끊긴다');
-    /* ④ ⚑ 핵심: 굴림(rollPerks)은 roll() 에서만. paint 안에 있으면 책을 드나들 때마다 선택지가 바뀐다 */
-    const rollN = (choice.match(/rollPerks\s*\(/g) || []).length;
+    /* ④ ⚑ 핵심(T96 판): 지급(grantNextPerk)은 paint «밖» 에서 딱 한 번. paint 안에 있으면
+       책을 드나들 때마다 특전이 하나씩 더 지급된다(종전의 «재굴림» 문제가 «중복 지급» 으로 바뀐 것). */
+    const grantN = (choice.match(/grantNextPerk\s*\(/g) || []).length;
     const paintM = /const paint\s*=\s*\(\)\s*=>\s*\{/.exec(choice);
     let paintBody = '';
     if (paintM) {
@@ -2325,16 +2239,16 @@ console.log('\n[㊵ 특전 선택창 «보유 특전» 버튼 (T89 · 주인 지
         paintBody += ch;
       }
     }
-    if (!paintM) bad('④ openPerkChoice 안에 paint(다시 그리기) 가 없다 — 복귀가 곧 재굴림이 된다');
-    else if (rollN !== 1) bad(`④ openPerkChoice 안의 rollPerks 호출이 ${rollN}곳 (1곳이어야 한다)`);
-    else if (/rollPerks\s*\(/.test(paintBody)) bad('④ paint 가 rollPerks 를 부른다 — 책을 닫고 돌아오면 선택지가 바뀐다(무료 무한 새로고침)');
-    else ok('④ 굴림은 roll() 한 곳뿐 — 책을 드나들어도 선택지·새로고침 잔여가 그대로다');
+    if (!paintM) bad('④ openLevelUp 안에 paint(다시 그리기) 가 없다 — 복귀가 곧 재지급이 된다');
+    else if (grantN !== 1) bad(`④ openLevelUp 안의 grantNextPerk 호출이 ${grantN}곳 (1곳이어야 한다)`);
+    else if (/grantNextPerk\s*\(/.test(paintBody)) bad('④ paint 가 grantNextPerk 를 부른다 — 책을 닫고 돌아올 때마다 특전이 더 지급된다');
+    else ok('④ 지급은 paint 밖 한 곳뿐 — 책을 드나들어도 특전이 두 번 지급되지 않는다');
     /* ⑤ ⚑ 복귀 모드에서는 closeOverlay 를 부르지 않는다 (부르면 레벨업 특전이 통째로 날아간다) */
     const closeCalls = [...book.matchAll(/closeOverlay\s*\(\s*\)/g)];
     const guarded = closeCalls.every(m => /ret\s*\?\s*ret\(\)\s*:\s*$/.test(book.slice(Math.max(0, m.index - 24), m.index)));
     (closeCalls.length === 1 && guarded)
-      ? ok('⑤ 책의 closeOverlay 는 «복귀 콜백이 없을 때만» 불린다 (선택창에서 열면 특전을 안 날린다)')
-      : bad(`⑤ openPerkBook 의 closeOverlay 호출 ${closeCalls.length}건이 복귀 콜백 가드 밖에 있다 — 선택창에서 책을 닫으면 레벨업이 날아간다`);
+      ? ok('⑤ 책의 closeOverlay 는 «복귀 콜백이 없을 때만» 불린다 (레벨업 팝업에서 열면 팝업을 안 날린다)')
+      : bad(`⑤ openPerkBook 의 closeOverlay 호출 ${closeCalls.length}건이 복귀 콜백 가드 밖에 있다 — 레벨업 팝업에서 책을 닫으면 팝업이 날아간다`);
     /* ⑥ 복귀 모드 판별은 «함수인가» 로 한다 — HUD 버튼이 클릭 이벤트를 넘겨도 오작동하지 않게 */
     /typeof\s+back\s*===\s*'function'/.test(book)
       ? ok("⑥ 복귀 모드 판별이 typeof back === 'function' (클릭 이벤트가 들어와도 안전)")
@@ -2348,7 +2262,7 @@ console.log('\n[㊵ 특전 선택창 «보유 특전» 버튼 (T89 · 주인 지
   /* ⑧ 겹침 방지의 근거 = 흐름(flow) 배치. .ov-foot 가 절대·고정 배치면 좁은 화면에서 카드 위에 올라탄다 */
   const foot = /\.ov-foot\s*\{([^}]*)\}/.exec(HTML);
   if (!foot) bad('⑧ .ov-foot CSS 규칙이 없다');
-  else if (/position\s*:\s*(absolute|fixed)/.test(foot[1])) bad('⑧ .ov-foot 가 절대·고정 배치다 — 카드·새로고침과 겹칠 수 있다 (주인 «겹치지 않는 위치»)');
+  else if (/position\s*:\s*(absolute|fixed)/.test(foot[1])) bad('⑧ .ov-foot 가 절대·고정 배치다 — 카드와 겹칠 수 있다 (주인 «겹치지 않는 위치»)');
   else if (!/justify-content\s*:\s*flex-end/.test(foot[1])) bad('⑧ .ov-foot 가 오른쪽 정렬이 아니다 (주인 지시: 오른쪽 하단)');
   else ok('⑧ .ov-foot = 흐름 배치 + 오른쪽 정렬 — 카드·새로고침과 구조적으로 안 겹친다');
   /* ⑨ UI 전용 = sim.js 무관 (밸런스 영향 0) */

@@ -60,7 +60,7 @@ const CHECKS=[
   /* ⚑ T35: «maxSh = maxHp*0.8» 파생은 주인 지시로 폐기됐다 — 실드는 독립 기여축이다(§11.5-a).
      대조 대상을 «파생 배수» 에서 «노템 기본 실드» 로 교체한다. */
   ['기본 실드(노템)',       /pSh0:(\d+)/,                              /기본 실드는 노템 (\d+)/,                         '§2.3'],
-  ['방어력 상한',           /return Math\.min\((\d+),d\);\};/,          /`effDef`\(상한 (\d+)\)/,                    '§4'],
+  ['방어력 상한',           /const effDef=p=>Math\.min\((\d+),/,          /`effDef`\(상한 (\d+)\)/,                    '§4'],
   ['회피 상한',             /return Math\.min\((\d+),e\)/,              /`effEvade`\(lastStand 포함, 상한 (\d+)\)/,  '§4'],
   ['반격 데미지 계수',      /const cd=effDmg\(p\)\*([\d.]+)\*\(1\+px\.counterX\)/, /반격 데미지 `effDmg\*([\d.]+)\*/, '§4'],
   ['랜덤 타겟 사거리',      /return d>-\d+&&d<(\d+);/,                  /플레이어 앞 (\d+)px 이내/,                  '§4'],
@@ -75,7 +75,7 @@ const CHECKS=[
      T34 가 실측한 대로 상한이 없으면 12마리 웨이브에서 총출력 162배가 되고 앵커 A 가 5.3%→100% 로 무너진다.
      신화 m_spear200 은 데미지만 올리고 관통 수는 건드리지 않으므로 이 값은 상수 하나로 족하다. */
   /* ⚑ P1(T83) — 창 관통은 상수 SPEAR_PIERCE 로 올라갔고 PLAN 문면도 §3.0 «일직선 최대 8마리» 로 바뀌었다 */
-  ['창 관통 상한',          /const R_AXE=[\d.]+[^\n]*\n[^\n]*SPEAR_PIERCE=(\d+);/, /일직선 최대 (\d+)마리 관통/,        '§3.0'],
+  ['창 관통 상한',          /const R_AXE=[\d.]+[^\n]*\n[^\n]*SPEAR_PIERCE=(\d+);/, /일직선 최대 \*\*(\d+)마리\*\* 관통/, '§3.0'],
   /* ⚑ 주인 확정(2026-09-02 15:4X, T43): 적 전원 회피 10%. 튜닝 노브가 아니라 «주인 확정 상수» 라
      TUNE 밖 최상위 const 로 둔다 — 여기서 PLAN §2.3 문장과 직접 대조한다(엔진 0.10 ↔ PLAN 10%). */
   ['적 회피율',             /const ENEMY_EVADE=([\d.]+);/,             /적 전원 회피율 (\d+)% 고정/,                 '§2.3', 100],
@@ -287,46 +287,9 @@ console.log('\n=== ④ 스턴 · 빗맞음 축 (PLAN §3.0·§4 주인 지시 15
       Math.abs(e.stun-3.0)<1e-9 ? pass('짧은 스턴 재적용이 긴 스턴을 덮지도 합산하지도 않는다')
                                 : fail(`스턴 재적용 규칙 위반 (3초 뒤 1초 재적용 → ${e.stun})`);
     }
-    /* (4) 빗맞음 스택: ⚑ 주인 확정으로 **상한 없음(무제한 적립)**, 소모는 적중 1타당 1장 */
-    {
-      const {G,p,e}=mkG({l_missStack:1});
-      for(let i=0;i<8;i++) Y.procOnMiss(G,e);
-      p.missStk===8 ? pass('빗맞음 스택이 상한 없이 8장까지 쌓인다 (주인 확정 «무제한 적립»)')
-                    : fail(`빗맞음 스택 적립이 8장이 아니다 (${p.missStk}) — 상한이 되살아났나`);
-      const before=p.missStk;
-      /* 확정 적중 상태에서 한 타 — 정확히 한 장만 줄어야 한다 (여러 장이 한 타에 붙으면 주인 정정 위반) */
-      const rnd=Math.random; Math.random=()=>0.99;      /* 회피(0.10)·치명(0) 둘 다 안 뜨게 */
-      Y.dealDmg(G,e,1,true);
-      Math.random=rnd;
-      p.missStk===before-1 ? pass('적중 1타에 스택이 정확히 1장만 소모된다 (한 타에 +100% 한 번)')
-                           : fail(`적중 1타에 스택이 ${before-p.missStk}장 소모됐다 — 주인 정정(«한 타에 +100% 한 번만») 위반`);
-    }
-    /* (5) 스택 +100% 가 «가산» 이다 — 풀피 보너스(firstHit)와 곱이 아니라 합이어야 한다 */
-    {
-      const rnd=Math.random; Math.random=()=>0.99;
-      const hit=(px,stk)=>{
-        const {G,p,e}=mkG(px); p.missStk=stk;
-        e.hp=e.maxHp=1e6;          /* 1e12 는 배정밀도 유효자릿수 밖이라 «맞은 만큼» 을 못 잰다 */
-        const hp0=e.hp; Y.dealDmg(G,e,1,true); return hp0-e.hp;
-      };
-      const base=hit({},0), stack=hit({l_missStack:1},1), both=hit({l_missStack:1,firstHit:1},1);
-      Math.random=rnd;
-      /* ⚑ P3 R02 — 기대 수치를 상수로 박지 않고 **PLAN §3.3 l_missStack 행에서 읽는다.**
-         스택 계수는 P3 ②단계(«희귀 20·전설 80 을 특전 수치로»)가 움직이는 튜닝 노브라
-         100% 를 박아 두면 정당한 회차마다 게이트가 빨개진다. 이 항목이 지켜야 할 것은
-         «수치가 100%» 가 아니라 ① PLAN 문면 ↔ 엔진 일치 ② 다른 보너스와 **합연산**이다. */
-      const mrow=PLAN.match(/\|\s*l_missStack\s*\|[^|]*?데미지\s*\+(\d+)%/);
-      const want=mrow?Number(mrow[1])/100:1.00;
-      /* rand(0.92,1.08) 이 Math.random 고정으로 상수가 되므로 배수 비교가 성립한다 */
-      const okStack=Math.abs(stack/base-(1+want))<1e-6;
-      const okBoth=Math.abs(both/base-(1+want+0.20))<1e-6;   /* 합 = 1 + 스택 + 0.20 (곱이면 (1+스택)×1.2) */
-      mrow ? pass(`PLAN §3.3 에서 빗맞음 스택 계수를 읽었다 (+${(want*100).toFixed(0)}%)`)
-           : fail('PLAN §3.3 에 l_missStack «데미지 +N%» 행이 없다 — 기대 수치를 못 읽는다');
-      okStack ? pass(`빗맞음 스택 1장이 데미지 +${(want*100).toFixed(0)}% 를 준다 (PLAN 문면과 일치)`)
-              : fail(`빗맞음 스택 배수가 ${(stack/base).toFixed(3)} 배다 (PLAN 문면상 ${(1+want).toFixed(3)} 이어야 함)`);
-      okBoth ? pass(`풀피 보너스와 «합연산» 이다 (1+${want.toFixed(2)}+0.20 = ${(1+want+0.20).toFixed(2)}배 — 곱이면 ${((1+want)*1.2).toFixed(2)}배)`)
-             : fail(`스택+풀피가 ${(both/base).toFixed(3)} 배다 — 주인 정정(«가산, 다른 보너스와 합») 위반`);
-    }
+    /* ⚑ T96 — (4)(5) «빗맞음 스택»(💢 l_missStack) 실행 단언은 그 특전이 폐지되면서 대상이 사라졌다.
+       빗맞음 «축» 자체는 살아 있다(장비 옵션 missAtk·missDef·missAspd·missReset·missRush·missSpear) —
+       그 축이 실제로 굴러가는지는 위 ③ (6) «빗맞음 난수면 데미지 0» 대조군이 계속 지킨다. */
     /* (6) PLAN 에 주인 지시 문구가 살아 있는가 */
     /* ⚑ P1(T83) — §3.0 이 재작성되면서 문면이 바뀌었다. 두 축이 «트리거 축» 목록과 기절 조항으로 남아 있는지 본다. */
     planHas(/트리거 축: .*빗맞음/)
@@ -423,8 +386,10 @@ console.log('\n=== ⑤ 원거리 피격 축 · 고중첩 (PLAN §3.0 주인 16:1
   }
 }
 
-/* ---------- ⑥ 횟수형 방어막 · 회피 즉사 — 실행 단언 (주인 16:5X·17:2X · T48 3단계) ---------- */
-console.log('\n=== ⑥ 횟수형 방어막 · 회피 즉사 (PLAN §3.0 주인 16:5X·17:2X · T48) ===');
+/* ---------- ⑥ 횟수형 방어막 — 실행 단언 (주인 17:2X · T48 3단계)
+   ⚑ T96 — «회피 즉사»(☠️🌾 사신의 낫)는 그 특전이 폐지되면서 대상이 사라졌다. 방어막은 장비 옵션
+   축(wardAtk·wardEvade·wardCrit·wardHit)으로 그대로 살아 있어 아래 단언이 계속 유효하다. ---------- */
+console.log('\n=== ⑥ 횟수형 방어막 (PLAN §3.0 주인 17:2X · T48) ===');
 {
   const vm=require('vm');
   const CUT="const mode=process.argv[2]||'all';";
@@ -434,7 +399,7 @@ console.log('\n=== ⑥ 횟수형 방어막 · 회피 즉사 (PLAN §3.0 주인 1
     const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
     vm.createContext(ctx);
     vm.runInContext(SIM.slice(0,at)+
-      '\n;globalThis.__W={hitPlayer,gainWard,REAPER_CH};',ctx);
+      '\n;globalThis.__W={hitPlayer,gainWard};',ctx);
     const W=ctx.__W||ctx.globalThis.__W;
     const mkG=(px,boss)=>{
       const e={worldX:100,hp:1e6,maxHp:1e6,dead:false,isBoss:!!boss,stun:0};
@@ -493,232 +458,25 @@ console.log('\n=== ⑥ 횟수형 방어막 · 회피 즉사 (PLAN §3.0 주인 1
         ? pass('막은 타격도 «피격 시» 트리거를 굴린다 (데미지만 무효)')
         : fail('막은 타격이 «피격 시» 트리거를 굴리지 않는다');
     }
-    /* (5) 회피 즉사 — 회피에 성공했을 때만, 보스는 제외 */
-    {
-      const {G,e}=mkG({c_reaper:1});
-      G.player.evade=100;
-      Math.random=()=>0.0;                  /* 회피 성공 + 즉사 굴림 성공 */
-      W.hitPlayer(G,10,true,e);
-      Math.random=rnd;
-      e.hp<=0 ? pass('회피 시 사신의 낫이 그 적을 즉사시킨다')
-              : fail('회피 즉사가 안 터진다');
-    }
-    {
-      const {G,e}=mkG({c_reaper:1},true);  /* 보스 — ⚑ 새 132종에서는 «보스 포함» 이다(주인 명시) */
-      G.player.evade=100;
-      Math.random=()=>0.0;
-      W.hitPlayer(G,10,true,e);
-      Math.random=rnd;
-      e.hp<=0 ? pass('보스도 사신의 낫에 즉사한다 (⚑ 주인 명시 «보스 포함»)')
-              : fail('보스가 사신의 낫에 안 죽는다 — 주인 명시 «보스 포함» 위반');
-    }
-    {
-      const {G,e}=mkG({c_reaper:1});       /* 회피 실패 → 즉사도 없음 */
-      Math.random=()=>0.0001;               /* evade 0 이라 회피 실패, 즉사 굴림은 성공할 값 */
-      W.hitPlayer(G,10,true,e);
-      Math.random=rnd;
-      e.hp>0 ? pass('회피에 실패하면 사신의 낫은 굴지 않는다')
-             : fail('맞았는데도 회피 즉사가 터졌다');
-    }
+    /* ⚑ T96 — (5)~(7) «회피 즉사» 단언은 ☠️🌾 폐지로 대상이 사라져 함께 지웠다. */
+
     /* (6) PLAN 에 주인 지시 문구가 살아 있는가 */
     /* ⚑ P1(T83) — §3.0 재작성 후 문면. 방어막 무한 조항과 사신의 낫(전용 연출)이 살아 있는지 본다. */
     planHas(/방어막\(ward\) 장수 상한도 없다/) ? pass('PLAN §3.0 에 «방어막 장수 상한 없음» 조항이 있다')
                                              : fail('PLAN §3.0 에서 방어막 무한 조항이 사라졌다');
-    planHas(/사신의 낫/) ? pass('PLAN §3 에 «사신의 낫» 이 있다')
-                        : fail('PLAN §3 에서 «사신의 낫» 이 사라졌다');
+    /* ⚑ T96 — «사신의 낫»(☠️🌾) 문면 검사는 그 특전이 폐지되면서 대상이 사라졌다. */
   }
 }
 
-console.log('\n=== ⑦ 반격 연쇄 — «반드시 두 번 더» (PLAN §3.3 l_counterChain · T69 · ⚑ P3 R04 승인 40번 ⓔ) ===');
-/* T69: sim.js 의 가드가 `depth<2` 였다. 바깥 호출부는 depth 를 안 넘기므로 `undefined<2` = false —
-   즉 전설 특전이 sim 에서 한 번도 안 터졌다(1200판 발동 0회). 게임(index.html)은 `!depth` 라 정상이었다.
-   그래서 여기서는 «상수 대조» 가 아니라 **실제로 몇 번 반격하는지 세어** 본다:
-     - 특전 없음 = 1회 · 특전 있음 = 정확히 2회 (많아도 적어도 안 된다 — 2 미만이면 사장, 초과면 스턴락급 연쇄)
-     - 두 엔진의 가드 형태가 같은가 (한쪽만 고치면 sim↔게임이 다시 벌어진다)
-     - «undefined 와 비교하는» 가드로 되돌아가면 즉시 빨개진다 */
-{
-  const vm=require('vm');
-  const HTML=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const CUT="const mode=process.argv[2]||'all';";
-  const at=SIM.indexOf(CUT);
-  if(at<0) fail('sim.js 에서 CLI 디스패처를 못 찾았다 — 잘림 기준이 바뀌었다');
-  else{
-    const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
-    vm.createContext(ctx);
-    vm.runInContext(SIM.slice(0,at)+'\n;globalThis.__C={doCounter};',ctx);
-    const C=ctx.__C||ctx.globalThis.__C;
-    const rnd=Math.random;
-    /* 반격 횟수 = 적이 받은 데미지 / 1회분. 적 체력을 넉넉히 줘서 «죽어서 끊긴 것» 과 구별한다. */
-    const count=(px)=>{
-      const e={worldX:100,hp:1e12,maxHp:1e12,dead:false,isBoss:false,stun:0};
-      const p={worldX:0,dmg:100,px:Object.assign({},px),nextCrit:false,nextAtk:0,missStk:0,ward:0,repairAmp:0,healAmp:0,
-               atkN:0,evStk:0,evStreak2:0,evStreak3:0,nextX3:false,nextP200:false,
-               comboT:null,comboN:0,rampN:0,lowShieldUsed:false,
-               buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
-               sh:500,maxSh:500,hp:1000,maxHp:1000,steal:0,goldMul:1,level:1,exp:0,
-               critR:0,critF:150,def:0,evade:0,counter:0,atkTimer:1,aspd:1,walkMul:1,killHeal:0};
-      const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
-               t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,autoSumT:2,rampT:3,overBoltCd:0,
-               atkTries:0,miss:0};
-      p.G=G;
-      Math.random=()=>0.99;                 /* 적 회피(10%) 실패 = 반격이 전부 적중 */
-      C.doCounter(G,e);                     /* 바깥 호출부와 똑같이 depth 를 안 넘긴다 */
-      Math.random=rnd;
-      return G.atkTries;                    /* doCounter 진입 1회당 1 */
-    };
-    /* ⚑ P3 R04 — 연쇄 횟수가 주인 승인 40번 ⓔ 로 튜닝 노브(COUNTER_CHAIN_N)가 됐다.
-       그래서 «2회» 를 게이트에 박지 않고 **상수를 두 엔진에서 읽어** 기대값을 만든다.
-       T69 가 잡은 실패(«가드가 undefined 와 비교돼 특전이 통째로 사장») 는 여전히 실행 단언으로 막는다. */
-    const cn=(s)=>{ const m=s.match(/COUNTER_CHAIN_N\s*=\s*(\d+)/); return m?Number(m[1]):null; };
-    const ns=cn(SIM), nh=cn(HTML);
-    (ns!==null&&ns===nh) ? pass(`두 엔진의 COUNTER_CHAIN_N 이 같다 (${ns})`)
-                         : fail(`COUNTER_CHAIN_N 이 두 엔진에서 다르다 — sim ${ns} / index.html ${nh}`);
-    const want=(ns===null?2:ns)+1;    /* 첫 반격 1회 + 연쇄 N회 */
-    const n0=count({}), n1=count({l_counterChain:1});
-    n0===1 ? pass('특전 없으면 반격 1회 (연쇄 없음)')
-           : fail(`특전 없는 반격이 ${n0}회다 — 1회여야 한다`);
-    n1===want ? pass(`l_counterChain 이 있으면 정확히 ${want}회 (반격 + 연쇄 ${want-1}회 = COUNTER_CHAIN_N)`)
-              : fail(`l_counterChain 반격이 ${n1}회다 — 상수 COUNTER_CHAIN_N=${ns} 이면 ${want}회여야 한다`+
-                     (n1===1?' (특전이 사장돼 한 번도 안 터진다 — T69 재발)':''));
-    /* 두 엔진 가드 형태 대조 + «undefined 비교» 가드 금지 */
-    const grab=(s)=>{ const m=s.match(/else if\(px\.l_counterChain&&([^)]*\)?[^)]*)\)\s*doCounter/); return m?m[1].replace(/\s+/g,''):null; };
-    const gs=grab(SIM), gh=grab(HTML);
-    (gs&&gh&&gs===gh) ? pass(`두 엔진의 연쇄 가드가 같다 («${gs}»)`)
-                      : fail(`연쇄 가드가 두 엔진에서 다르다 — sim «${gs}» / index.html «${gh}»`);
-    /* depth 를 숫자와 비교해도 되지만 **반드시 `depth||0` 으로 정규화한 뒤**여야 한다.
-       바깥 호출부는 depth 를 안 넘기므로 날 depth 를 숫자와 비교하면 undefined 비교 = 항상 거짓이다(T69). */
-    [['sim.js',gs],['index.html',gh]].forEach(([f,g])=>{
-      (g&&(!/depth[<>]=?\d/.test(g)||/\(depth\|\|0\)[<>]=?\d/.test(g)))
-        ? pass(`${f} 의 가드가 depth 를 정규화하고 비교한다 (undefined 비교 회귀 차단)`)
-        : fail(`${f} 의 가드 «${g}» 가 날 depth 를 숫자와 비교한다 — 호출부가 depth 를 안 넘기므로 항상 거짓이 된다(T69)`);
-    });
-    /* 호출부 점검 — 바깥 호출은 depth 를 안 넘기고, 재귀 호출은 «1» 또는 «(depth||0)+1» 만 허용한다 */
-    /* 인자에 괄호가 있을 수 있으므로(`(depth||0)+1`) 한 겹까지 허용해서 뜬다 */
-    const outer=(s)=>[...s.matchAll(/(function\s+)?doCounter\(((?:[^()]|\([^()]*\))*)\)/g)]
-                     .filter(m=>!m[1])                       /* 정의부는 제외 — 호출부만 본다 */
-                     .map(m=>m[2].replace(/\s+/g,''))
-                     .filter(a=>!/^(G,)?src,(1|\(depth\|\|0\)\+1)$/.test(a));
-    const so=outer(SIM).filter(a=>a!=='G,src'&&a!==''), ho=outer(HTML).filter(a=>a!=='src'&&a!=='');
-    (so.length===0&&ho.length===0)
-      ? pass('바깥 호출부는 두 엔진 모두 depth 인자를 넘기지 않는다 (재귀 호출만 깊이를 넘긴다)')
-      : fail(`depth 를 넘기는 예상 밖 호출부가 있다 — sim ${JSON.stringify(so)} / index.html ${JSON.stringify(ho)}`);
-    /* PLAN §3.3 문구 ↔ 상수: «두 번» 같은 우리말 수사도 상수에서 만들어 대조한다 */
-    const KO=['','한','두','세','네','다섯'];
-    const wantRow=new RegExp(`\\| l_counterChain \\| 🔂 반격하면 반드시 ${KO[ns]||ns} 번 더 반격 \\|`);
-    planHas(wantRow)
-      ? pass(`PLAN §3.3 의 l_counterChain 행이 «반드시 ${KO[ns]||ns} 번 더 반격» 이다 (상수 ${ns} 와 일치)`)
-      : fail(`PLAN §3.3 의 l_counterChain 행이 상수 COUNTER_CHAIN_N=${ns} 와 다르다 — 표시 텍스트와 엔진이 갈라졌다`);
-  }
-}
-
-/* ---------- ⑧ 킬 회복 축 — 주인 확정 «처치 시 체력 5% 회복» 체급 (T82 · ⚑ P1(T83) 재작성) ---------- */
-/* 주인 원문(2026-09-03): «🍖 c_killHeal2 = 처치 시 체력 5% 회복 — 주인 확정 상수, 튜닝 노브 아님» +
-   «특전 수치를 소수점(0.37%·0.5%·0.55%)으로 깎는 것 금지».
-   ⚑ P1 로 목록이 바뀌어 축의 구성이 이렇게 됐다:
-     🍖 c_killHeal2   처치 시 체력 5%          (확률 없음 — 확정 상수)
-     💉 l_killHeal5   처치 시 40% 확률 체력 10% (전설 = 일반의 2배 체급)
-     🔰 c_killShield3 처치 시 10% 확률 실드 10%
-   (구 l_killShield10 «전설 킬실드» 는 새 목록에서 사라졌다 — 그 자리는 🔧⚡ 오버킬 수리가 맡는다.)
-   상수만 맞고 호출부가 죽어 있던 T69 형 사고를 막으려고 **실행 단언**까지 한다. */
-console.log('\n=== ⑧ 킬 회복 축 — 주인 확정 5% 체급 (PLAN §3 · T82 · P1 재작성) ===');
-{
-  const vm=require('vm');
-  const HTML=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const num=(re,src)=>{ const m=src.match(re); return m?Number(m[1]):null; };
-  /* (1) 확정 상수 — 🍖 는 정확히 5% 이고 두 엔진이 같다 */
-  const kh=[num(/add\('c_killHeal2',0,p=>\{p\.px\.c_killHeal2=1;p\.killHeal\+=([\d.]+);\}\)/,SIM),
-            num(/id:'c_killHeal2'[^}]*p\.killHeal\+=([\d.]+)/,HTML)];
-  (kh[0]===0.05&&kh[1]===0.05)
-    ? pass('🍖 c_killHeal2 = 정확히 5% (주인 확정 상수 · 두 엔진 일치)')
-    : fail(`🍖 c_killHeal2 가 5% 가 아니다 — sim ${kh[0]} · index.html ${kh[1]} (주인 확정 상수라 튜닝 금지)`);
-  /* (2) 축 전체가 5% 배수인가 (소수점 체급으로 되돌아가면 빨개진다) */
-  const coef=[
-    ['🍖 c_killHeal2 회복', kh[0]],
-    ['💉 l_killHeal5 회복', num(/px\.l_killHeal5&&pkk\(p,[\d.]+\)\)heal\(p,p\.maxHp\*([\d.]+)\)/,SIM)],
-    ['💉 l_killHeal5 확률', num(/px\.l_killHeal5&&pkk\(p,([\d.]+)\)/,SIM)],
-    ['🔰 c_killShield3 충전', num(/px\.c_killShield3&&pkk\(p,[\d.]+\)\)repair\(p,p\.maxSh\*([\d.]+)\)/,SIM)],
-    ['🔰 c_killShield3 확률', num(/px\.c_killShield3&&pkk\(p,([\d.]+)\)/,SIM)],
-  ];
-  const missing=coef.filter(([,v])=>v===null).map(([n])=>n);
-  if(missing.length) fail('킬 회복 축 계수를 못 읽었다: '+missing.join(', ')+' — 코드 모양이 바뀌었다. 게이트를 함께 고칠 것');
-  else{
-    const bad5=coef.filter(([,v])=>Math.abs(v*100/5-Math.round(v*100/5))>1e-9);
-    bad5.length===0
-      ? pass('킬 회복 축 5종 계수가 전부 5% 배수다 ('+coef.map(([n,v])=>`${n} ${(v*100).toFixed(0)}%`).join(' · ')+')')
-      : fail('킬 회복 축에 5% 배수가 아닌 값이 있다 (소수점 체급 회귀): '+bad5.map(([n,v])=>`${n} ${(v*100)}%`).join(' · '));
-    /* (3) 전설 > 일반 (주인: «전설은 일반보다 좋게») */
-    const cH=coef[0][1], lH=coef[1][1];
-    lH>cH ? pass(`전설 킬힐 ${(lH*100).toFixed(0)}% > 일반 ${(cH*100).toFixed(0)}% (등급 차등)`)
-          : fail(`전설 킬힐이 일반보다 좋지 않다 — 전설 ${(lH*100)}% vs 일반 ${(cH*100)}%`);
-  }
-  /* (4) 두 엔진 일치 — 같은 확률·같은 계수 */
-  {
-    const pick=src=>[
-      (src.match(/px\.l_killHeal5&&pkk\(p,([\d.]+)\)\)\s*\{?\s*heal\(p,p\.maxHp\*([\d.]+)\)/)||[]).slice(1,3).join('/'),
-      (src.match(/px\.c_killShield3&&pkk\(p,([\d.]+)\)\)\s*\{?\s*repair\(p,p\.maxSh\*([\d.]+)\)/)||[]).slice(1,3).join('/'),
-    ].join(' · ');
-    const a=pick(SIM), b=pick(HTML);
-    (a===b&&a!==' · ') ? pass(`두 엔진의 킬 회복 확률·계수가 같다 (${a})`)
-                       : fail(`두 엔진의 킬 회복 축이 다르다 — sim «${a}» / index.html «${b}»`);
-  }
-  /* (5) PLAN §3 표시 텍스트 ↔ 엔진 */
-  /* ⚑ P3 R04 — 💉 l_killHeal5 의 확률·수치는 튜닝 노브라 게이트에 박으면 회차마다 깨진다(R02·R03 규약).
-     엔진에서 읽은 값으로 기대 행을 만들어 대조한다. 🍖 c_killHeal2 만 주인 확정 상수라 5% 를 그대로 박는다. */
-  const pc=v=>String(Math.round(v*100));
-  [['c_killHeal2', /\| c_killHeal2 \| 🍖 처치 시 체력 5% 회복 \|/],
-   ['l_killHeal5', new RegExp(`\\| l_killHeal5 \\| 💉 처치 시 ${pc(coef[2][1])}% 확률로 체력 ${pc(coef[1][1])}% 회복 \\|`)],
-   ['c_killShield3', new RegExp(`\\| c_killShield3 \\| 🔰 처치 시 ${pc(coef[4][1])}% 확률로 실드 ${pc(coef[3][1])}% 충전 \\|`)]].forEach(([id,re])=>{
-    planHas(re) ? pass(`PLAN §3 의 ${id} 행이 엔진 수치와 같다`)
-                : fail(`PLAN §3 의 ${id} 행이 엔진 수치와 다르다 — 표시 텍스트와 엔진이 갈라졌다`);
-  });
-  /* (6) 실행 단언 — 처치 1회에 실제로 그만큼 채워지는가 */
-  {
-    const CUT="const mode=process.argv[2]||'all';";
-    const at=SIM.indexOf(CUT);
-    if(at<0) fail('sim.js 에서 CLI 디스패처를 못 찾았다');
-    else{
-      const ctx={console:{log(){}},process,Math,JSON,Number,String,Array,Set,Map,Object,Date,parseInt,parseFloat,isFinite,isNaN,require};
-      vm.createContext(ctx);
-      vm.runInContext(SIM.slice(0,at)+'\n;globalThis.__K={onKill,PERKS};',ctx);
-      const K=ctx.__K||ctx.globalThis.__K;
-      const rnd=Math.random;
-      const run=(id)=>{
-        const perk=K.PERKS.find(x=>x.id===id); if(!perk) return null;
-        const e={worldX:100,hp:0,maxHp:1000,dead:false,isBoss:false,stun:0,exp:0};
-        const p={worldX:0,dmg:100,px:{},nextCrit:false,nextAtk:0,missStk:0,ward:0,repairAmp:0,healAmp:0,
-                 atkN:0,evStk:0,evStreak2:0,evStreak3:0,nextX3:false,nextP200:false,
-                 comboT:null,comboN:0,rampN:0,lowShieldUsed:false,
-                 buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
-                 sh:0,maxSh:1000,hp:500,maxHp:1000,steal:0,goldMul:1,level:1,exp:0,
-                 critR:0,critF:150,def:0,evade:0,counter:0,atkTimer:1,aspd:1,walkMul:1,killHeal:0};
-        const G={chapter:1,player:p,nodes:[{enemies:[e]}],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
-                 t:0,taken:[],cleared:false,dead:false,perkChances:0,autoBoltT:2,autoSumT:2,rampT:3,overBoltCd:0,
-                 atkTries:0,miss:0};
-        p.G=G;
-        for(const k of K.PERKS) p.px[k.id]=0;
-        perk.ap(p); G.taken.push(perk);
-        const hp0=p.hp, sh0=p.sh;
-        Math.random=()=>0.0;                 /* 확률형은 전부 발동시킨다 */
-        K.onKill(G,e,0);
-        Math.random=rnd;
-        return {dHp:(p.hp-hp0)/p.maxHp*100, dSh:(p.sh-sh0)/p.maxSh*100};
-      };
-      const near=(a,b)=>Math.abs(a-b)<0.51;
-      [['c_killHeal2','dHp',5,'체력'],['l_killHeal5','dHp',10,'체력'],['c_killShield3','dSh',10,'실드']]
-        .forEach(([id,f,want,nm])=>{
-          const r=run(id);
-          if(!r) return fail(`특전 ${id} 가 PERKS 에 없다`);
-          near(r[f],want) ? pass(`${id}: 처치 1회에 최대 ${nm}의 ${r[f].toFixed(1)}% 가 실제로 채워진다`)
-                          : fail(`${id}: 처치 1회 실측 ${r[f].toFixed(2)}% ≠ 표시 ${want}% — 특전이 사장됐거나 호출부가 끊겼다`);
-        });
-      /* 특전이 없으면 0 이어야 한다 (다른 경로가 몰래 회복시키고 있지 않은가) */
-      const none=run('c_atkPerm');
-      (none&&near(none.dHp,0)&&near(none.dSh,0))
-        ? pass('킬 회복 특전이 없으면 처치로 체력·실드가 늘지 않는다')
-        : fail(`킬 회복 특전이 없는데 처치로 체력 ${none&&none.dHp.toFixed(2)}% · 실드 ${none&&none.dSh.toFixed(2)}% 가 찼다 — 무료 회복 경로가 있다`);
-    }
-  }
-}
+/* ⚑⚑ T96 (2026-09-03) — ⑦ «반격 연쇄»(🔂 l_counterChain · COUNTER_CHAIN_N) 와
+   ⑧ «킬 회복 축»(🍖 c_killHeal2 5% · 💉 l_killHeal5 · 🔰 c_killShield3) 절은 통째로 지웠다.
+   특전 132종이 폐지되면서 세 특전과 상수가 함께 사라져 **잴 대상이 없다**(측정 실패가 아니라 대상 소멸).
+   두 축의 «엔진 동사» 자체는 장비 계열 옵션 쪽에 남아 있다 —
+     · 반격: `doCounter` + 장비 `counterX`·`hitCounter`·`hitCounterS` (연쇄 특전만 사라졌다)
+     · 처치 회복: `onKill` 의 `p.killHeal`·`killShield3`·`killShield10` (전부 장비 pendant/robe/amulet 옵션)
+   그 계수들은 `verifyOptText`(설명문 ↔ 엔진 상수 대조)와 `verifyT2`(두 엔진 대조)가 계속 지킨다.
+   ⚑ 주인 확정 «처치 시 체력 5% 회복» 은 그 특전(🍖)에 붙어 있던 조항이라 함께 소멸했다 —
+   되살리려면 주인이 새 10종 표에 그 축을 넣어야 한다(워커가 임의로 만들지 않는다). */
 
 
 console.log(`\n대조 ${CHECKS.length}항목 · 일치 ${okN}개 · 불일치 ${bad}건 · 미문서화 신규 ${undocNew}건 · 등재된 기존 ${undocKnown}건`);

@@ -84,9 +84,15 @@ console.log('\n[③] sim.js 악마 = 항상 수락 (SIM_DEVIL_POLICY · 승인 3
     /payDevilCost\(p\)/.test(body)
       ? ok('악마 분기가 payDevilCost(p) 한 동사를 거친다')
       : bad('악마 분기가 payDevilCost 를 안 쓴다 — 비용 계산이 다시 흩어졌다');
-    /if\(!G\.noPerk\)\{/.test(body)
-      ? ok('수락 조건은 noPerk 가드 하나뿐 (특전 미획득 측정 제외분)')
-      : bad('«if(!G.noPerk){» 형태의 무조건 수락이 아니다 — 조건부 수락이 되살아났는지 확인할 것');
+    /* ⚑ T96 — 가드가 둘이 됐다: ①noPerk(특전 미획득 측정 제외분) ②줄 특전이 남아 있는가.
+       ②는 «조건부 수락» 이 아니라 «거래 대상이 없으면 거래가 성립하지 않는다» 다(주인 위임 기본값).
+       체력·자원을 보는 조건이 되살아나면 아래 두 검사가 잡는다. */
+    /if\(!G\.noPerk&&G\.taken\.length<PERKS\.length\)\{/.test(body)
+      ? ok('수락 조건은 noPerk 가드 + «줄 특전이 남았나» 둘뿐 (체력 조건 없음)')
+      : bad('«if(!G.noPerk&&G.taken.length<PERKS.length){» 형태가 아니다 — 조건부 수락이 되살아났는지 확인할 것');
+    /grantNextPerk\(G\)/.test(body)
+      ? ok('악마도 레벨업과 같은 지급 동사(grantNextPerk)를 쓴다 — 다음 순번 앞당김')
+      : bad('악마가 grantNextPerk 를 안 쓴다 — «전설 확정» 시절 뽑기가 남아 있는지 확인할 것');
     /p\.hp\s*>\s*p\.maxHp\s*\*\s*0\.65/.test(body)
       ? bad('폐기된 «체력 65% 초과일 때만 수락» 조건이 되돌아왔다 (주인 확정 2026-09-03 위반)')
       : ok('폐기된 «체력 65% 초과» 조건 없음');
@@ -120,9 +126,12 @@ console.log('\n[⑤] index.html = 유저 자유 선택 2택 유지 (시뮬 정�
     /id="dYes"/.test(b) && /id="dNo"/.test(b)
       ? ok('악마 2택(지불 dYes / 지나감 dNo) 유지')
       : bad('악마 선택지가 2택이 아니다 — 시뮬 정책(항상 수락)을 게임에 잘못 이식했는지 확인할 것');
-    /payDevilCost\(p\)/.test(b)
-      ? ok('수락 시 payDevilCost(p) 를 거친다 (sim.js 와 같은 동사)')
+    /payDevilCost\(G\.player\)|payDevilCost\(p\)/.test(b)
+      ? ok('수락 시 payDevilCost 를 거친다 (sim.js 와 같은 동사)')
       : bad('수락 처리가 payDevilCost 를 안 쓴다');
+    /grantNextPerk\(\)/.test(b)
+      ? ok('게임도 같은 지급 동사(grantNextPerk)를 쓴다 — 다음 순번 앞당김')
+      : bad('게임 악마가 grantNextPerk 를 안 쓴다');
     /p\.hp\s*=\s*Math\.max\(\s*1\s*,\s*p\.hp\s*-\s*cost\s*\)/.test(b)
       ? bad('폐기된 «현재체력에서 cost 차감» 이 되살아났다 (주인 확정 위반)')
       : ok('현재체력 직접 차감 없음');

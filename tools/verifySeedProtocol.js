@@ -13,7 +13,7 @@
         (Date.now()·미시드 난수·전역 상태 잔재가 새로 끼면 여기서 즉시 빨개진다.)
      ② 시드 유효성 — 서로 다른 세 시드가 **모두 같은 출력**이면 안 된다.
         (SEED 가 실제로 물리지 않고 «결정적으로 보이기만» 하는 퇴화를 잡는다. ① 만으로는 못 잡는다.)
-     ③ 채점 판수 상수 — `EXP5_SCORE_N`(≥1000) · `EXP2_SCORE_N`(≥12000) 이 선언돼 있고 **기본값 자리에
+     ③ 채점 판수 상수 — `EXP5_SCORE_N`(≥1000) · `EXP1_SCORE_N`(≥1000) 이 선언돼 있고 **기본값 자리에
         그 상수가 실제로 쓰인다**(리터럴 우회 차단 — T80 이 실험2 에 쓴 방식 그대로).
      ④ 러너 — `tools/regress.js` 의 기본 시드가 **3벌 이상**이고, 실험1·2·5 를 파싱하며,
         판수 환경변수를 **지워서** 채점 기본값으로 돌린다(규약 ② 우회 차단).
@@ -60,7 +60,8 @@ console.log('\n② 시드 유효성 — 다른 시드 = 다른 출력');
 console.log('\n③ 채점 판수 상수 (PLAN §7 ↔ sim.js · 리터럴 우회 차단)');
 for (const [name, envName, floor, wire] of [
   ['EXP5_SCORE_N', 'EXP5_N', 1000, /N\s*=\s*parseInt\(process\.env\.EXP5_N\s*\|\|\s*String\(EXP5_SCORE_N\)\s*,\s*10\)/],
-  ['EXP2_SCORE_N', 'EXP2_N', 12000, /N\s*=\s*parseInt\(process\.env\.EXP2_N\s*\|\|\s*String\(EXP2_SCORE_N\)\s*,\s*10\)/],
+  /* ⚑ T96 — 실험2(등급 내 폭)는 폐지됐다. 그 자리를 새 과녁 2점(실험1)이 받는다 — 과녁당 1,000판. */
+  ['EXP1_SCORE_N', 'EXP1_N', 1000, /N\s*=\s*parseInt\(process\.env\.EXP1_N\s*\|\|\s*String\(EXP1_SCORE_N\)\s*,\s*10\)/],
 ]) {
   const m = SIM.match(new RegExp(`const ${name}\\s*=\\s*(\\d+)\\s*;`));
   if (!m) { fail(`sim.js 에 \`const ${name}\` 선언이 없다`); continue; }
@@ -102,7 +103,7 @@ console.log('\n⑤ PLAN §7 규약 문면');
     ? pass('PLAN §7 에 «회귀 측정 규약» 절이 있다')
     : fail('PLAN §7 에서 «회귀 측정 규약» 절이 사라졌다');
   has(/①\s*\*\*고정 시드 3벌 이상\*\*/) ? pass('규약 ① 고정 시드 3벌 이상') : fail('규약 ① 문면이 없다(«① **고정 시드 3벌 이상**»)');
-  has(/②[^\n]*EXP5_SCORE_N[^\n]*EXP2_SCORE_N/) ? pass('규약 ② 채점 판수 상수 2종') : fail('규약 ② 문면이 없다(«② … EXP5_SCORE_N … EXP2_SCORE_N»)');
+  has(/②[^\n]*EXP1_SCORE_N[^\n]*EXP5_SCORE_N/) ? pass('규약 ② 채점 판수 상수 2종') : fail('규약 ② 문면이 없다(«② … EXP1_SCORE_N … EXP5_SCORE_N»)');
   has(/③[^\n]*\*\*원시 출력에서 그대로 복사\*\*/) ? pass('규약 ③ 원시 출력 그대로 복사') : fail('규약 ③ 문면이 없다(«③ … **원시 출력에서 그대로 복사**»)');
 }
 

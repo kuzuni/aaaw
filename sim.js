@@ -300,7 +300,7 @@ const GOPT={
     {d:'피격 시 방어 +3 3초(누적)', ap:p=>p.px.defHitBuff++},
     {d:'방어 +8',               ap:p=>p.def+=8},
     {d:'피격 시 30% 확률 방어 +14 4초', ap:p=>p.px.defBuff2++},
-    {d:'피격 시 방어 +5 4초(최대 2중첩)', ap:p=>p.px.wallBuff++},
+    {d:'피격 시 방어 +5 4초(누적)', ap:p=>p.px.wallBuff++},
     {d:'피격 시 20% 확률 방어 +15 4초', ap:p=>p.px.defBuffL++},
     {d:'실드가 있으면 받는 피해 20% 감소', ap:p=>p.px.guardCrystal=true},
   ],
@@ -707,6 +707,7 @@ function dealDmg(G,e,ratio,fromBasic){
      빗맞아도 그 «공격» 은 일어난 것이라 nextCrit(여기) 과 nextAtk(playerStrike) 가 함께 소모된다 — 위임 기본값.
      여기가 유일한 빗맞음 지점이므로 «빗맞음 트리거» 축도 이 자리에 붙는다. */
   G.atkTries++;
+  if(Math.random()<ENEMY_EVADE){G.miss++;procOnMiss(G,e);return false;}
   let d=effDmg(p)*ratio*(crit?effCritF(p)/100:1)*rand(0.92,1.08);
   /* 가산 보너스 풀 — «+n%» 로 적히는 데미지 보너스는 서로 합연산 (주인 정정 16:3X).
      스택형(빗맞음·회피)은 «적중 1타당 1개» 소모하고, 몇 장이 쌓여 있든 한 타에 한 번만 붙는다. */
