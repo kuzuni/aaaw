@@ -232,6 +232,7 @@ const GEAR = () => { for (const pt of GT.parts) { save.eq[pt] = { part: pt, type
     const todo = PERK.filter(p => detail[p.id] && !detail[p.id].diff);
     if (!todo.length) break;
     console.log(`  [사다리 ${s + 1} · ${st.name} — 챕터 ${st.conf.map(c => c.ch).join('·')} 각 ${st.conf[0].n}판${st.forced ? ' · pkk 강제' : ''}] 대상 ${todo.length}종`);
+    let done = 0;
     for (const p of todo) {
       const a = await runOn(basePage, p.id, st);
       const f = path.join(OUT, `perkeffect.nz.${p.id}.html`);
@@ -249,6 +250,8 @@ const GEAR = () => { for (const pt of GT.parts) { save.eq[pt] = { part: pt, type
         if (d) { detail[p.id].diff = d; detail[p.id].runs = a.length; detail[p.id].stage = s; }
       } catch (e) { bad(`${p.id} — 무력화본 실행 실패: ${e.message}`); }
       finally { if (pg) await pg.close(); try { fs.unlinkSync(f); } catch (e) { /* 임시 파일 */ } }
+      /* 오래 도는 게이트라 진행 표시를 남긴다 — 중간에 끊기면 어디까지 갔는지 알 수 있다 */
+      if (++done % 10 === 0) console.log(`      … ${done}/${todo.length}종 (마지막 ${p.id})`);
     }
     console.log(`    누적 «효과 적용» ${PERK.filter(p => detail[p.id] && detail[p.id].diff).length}/${PERK.length}종`);
   }
