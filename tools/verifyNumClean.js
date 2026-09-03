@@ -161,42 +161,45 @@ console.log('\n[Ⓑ 추상 표현 금지 — 주인 지시 ««대폭 증가» �
 }
 
 /* ---------- Ⓒ~Ⓕ 래칫 축 ---------- */
-/* ⚑⚑ P1(T83) — 특전 132종이 통째로 갈렸다. 동결분에 남아 있던 «구 특전» 항목은 대상이 사라졌으므로
-   그대로 둬도 무해하지만(있으면 «안 걸린 항목» 으로 보고될 뿐), 새 목록에서 규칙을 어기는 것은
-   **주인이 직접 확정한 일반 5종뿐**이라 아래 Ⓕ 에 «주인 확정 예외» 로 따로 묶어 등재했다.
-   일반 44종은 주인 동결 목록이라 워커가 수치를 못 고친다 — 5% 단위로 바꾸면 효과 설계가 통째로 달라진다.
-   ⚑ 아래 네 목록은 **T81 1단계 시점의 기존 위반 동결분**이다. 정리는 T81 2단계 몫.
+/* ⚑ 아래 네 목록은 «규칙을 어기고 있는데 아직 못 고친» id 동결분이다.
+   목록에 없는 id 가 위반하면 = 신규 위반 = 불합격. 새 특전·옵션을 넣을 땐 규칙대로 쓰면 그만이다.
+   해소분(등재됐는데 이제 깨끗함)은 빨개지지 않고 «✎ 목록에서 지울 것» 만 찍는다 — T1/P3 회차가
+   규칙대로 고쳤을 때 그 자가 벌이 되면 안 되기 때문. 대신 **지우는 것이 정리 담당의 일**이다.
+
+   ⚑⚑ T86 (P3 R03 직후 · 워커 D) — 해소·소멸분 42건을 실제로 지웠다. 91 → 39건.
+   왜 지금 지웠나: P1(T83)이 특전 132종을 통째로 갈아 **등재분 중 34건이 «이제 없는 특전»** 이었고
+   (m_* 신화 13종 등), 8건은 P3 R02·R03 의 수치 재분배가 규칙대로 고쳐 이미 깨끗했다.
+   즉 등재분 91건 중 42건이 **실체 없는 면죄부**였고, 그 42개 id 는 P3 회차가 매번 수치를 만지는
+   와중에 «소수점·5% 단위 위반» 을 다시 써 넣어도 게이트가 초록이었다. 지운 뒤로는 곧장 빨개진다.
+   ⚑ 남은 39건의 성격이 갈렸다 — **특전 쪽 잔여는 «주인 확정 예외» 6종뿐이고 나머지 33건은 전부 장비 옵션**이다.
+   달리 말해 **새 132종은 이 6종을 빼면 이미 네 규칙을 전부 지키고 있다**(P1 이 정본대로 이식한 결과).
+   ⓔ 축은 잔여 0건 — 지속시간 0.5초 단위는 이제 전면 강제다.
+   잔여 39건의 «수치 정리» 자체는 여전히 T81 2단계 몫(주인 조건: 밸런스 등가 유지).
+
    ⚑ T82 (주인 확정 «킬힐 5% 기준») — 킬 회복 4종(c_killHeal2 · c_killShield3 · l_killHeal5 · l_killShield10)이
-   5·10% 로 정리돼 **동결분에서 빠졌다**. 이제 이 넷이 다시 소수점으로 깎이면 여기서 곧장 빨개진다.
-   목록에 없는 id 가 위반하면 = 신규 위반 = 불합격. 새 특전·옵션을 넣을 땐 규칙대로 쓰면 그만이다. */
+   5·10% 로 정리돼 **동결분에서 빠졌다**. 이제 이 넷이 다시 소수점으로 깎이면 여기서 곧장 빨개진다. */
 
-/* Ⓒ 소수점 금지 (주인: «0.37% 같은 값 금지») */
-const KNOWN_DECIMAL = ['특전 c_stunHit', '특전 l_overBolt', '특전 l_perkHp', '특전 l_legendOnly', '특전 m_procX2',
-  '특전 m_autoBolt', '특전 m_stunLord', '특전 m_stunKill', '특전 m_stunAura', '장비 greatsword옵7',
-  '장비 hood옵5', '장비 robe옵7', '장비 gauntlet옵7', '장비 greave옵2', '장비 greave옵6',
-  '장비 beads옵4', '장비 beads옵7'];
+/* Ⓒ 소수점 금지 (주인: «0.37% 같은 값 금지») — 잔여 7건 전부 장비 옵션 */
+const KNOWN_DECIMAL = ['장비 greatsword옵7', '장비 robe옵7', '장비 gauntlet옵7', '장비 greave옵2',
+  '장비 greave옵6', '장비 beads옵4', '장비 beads옵7'];
 
-/* Ⓓ 확률 10% 단위(예외 5% 허용) = 5의 배수 */
-const KNOWN_PROB = ['특전 c_wardHit', '특전 r_hitEvade', '특전 r_wardCrit', '특전 l_fullHpCrit', '장비 plate옵4'];
+/* Ⓓ 확률 10% 단위(예외 5% 허용) = 5의 배수 — 잔여 1건 */
+const KNOWN_PROB = ['장비 plate옵4'];
 
-/* Ⓔ 지속시간 0.5초 단위 */
-const KNOWN_DUR = ['특전 l_overBolt', '특전 m_autoBolt', '특전 m_stunKill', '장비 hood옵5'];
+/* Ⓔ 지속시간 0.5초 단위 — 잔여 0건(전면 강제). 여기에 뭐가 추가되면 그건 규칙 위반이다. */
+const KNOWN_DUR = [];
 
-/* Ⓕ 수치 계수 5% 단위 */
+/* Ⓕ 수치 계수 5% 단위 — 잔여 31건 */
 const KNOWN_COEF = [
-  /* ⚑⚑ 주인 확정 예외 (P1 · T83) — 새 132종 «일반» 5종. 주인이 동결한 목록이라 워커 수정 금지.
+  /* ⚑⚑ 주인 확정 예외 (P1 · T83) — 새 132종 «일반» 6종. 주인이 동결한 목록이라 워커 수정 금지.
      🍃 «처치 시 회피 +1%» 와 🃏 수집가 4종의 «보유 특전 1개당 +2%» 는 단위가 «1개당» 이라
-     5% 단위로 올리면 효과가 통째로 달라진다(4종 다 판당 수십 %가 된다). 주인 판단 대기 — PROGRESS 등재. */
+     5% 단위로 올리면 효과가 통째로 달라진다(4종 다 판당 수십 %가 된다). 주인 판단 대기 — PROGRESS 등재.
+     ⚑ 특전 쪽 잔여는 이 6종이 전부다(T86 정리 결과). */
   '특전 c_evadePerm', '특전 c_collAtk', '특전 c_collEvade', '특전 c_collCounter', '특전 c_collDef',
-  '특전 c_atkPerm', '특전 c_defHit',
-  '특전 c_hitHeal', '특전 c_evadeEv', '특전 c_healBoost', '특전 c_healShield', '특전 c_hp12',
-  '특전 c_rangeShield', '특전 r_atkBuffM', '특전 r_critFBuff', '특전 r_critHeal3', '특전 r_killCrit',
-  '특전 r_defBuff2', '특전 r_hitEvade', '특전 r_evadeHeal', '특전 r_counterAtkM', '특전 r_counterCrit',
-  '특전 r_healShield5', '특전 r_healAtk', '특전 r_def6', '특전 r_missAspd', '특전 l_killAspd',
-  '특전 l_evadeAtk', '특전 l_counterHeal', '특전 l_perkHp',
-  '특전 l_legendOnly', '특전 m_revive', '특전 m_clone', '특전 m_guard', '특전 m_time', '특전 m_def20',
-  '특전 m_crit25', '특전 m_giant', '특전 m_lucky', '장비 greatsword옵1', '장비 greatsword옵3',
-  '장비 axe옵1', '장비 bow옵1', '장비 helmet옵7', '장비 plate옵1', '장비 plate옵2', '장비 plate옵5',
+  '특전 c_atkPerm',
+  /* 아래 25건은 전부 장비 옵션 — 특전이 아니다. */
+  '장비 greatsword옵1', '장비 greatsword옵3',
+  '장비 axe옵1', '장비 bow옵1', '장비 plate옵1', '장비 plate옵2', '장비 plate옵5',
   '장비 robe옵4', '장비 gauntlet옵4', '장비 leather옵1', '장비 leather옵5', '장비 leather옵6',
   '장비 handwrap옵3', '장비 handwrap옵4', '장비 handwrap옵5', '장비 sandal옵4', '장비 sandal옵5',
   '장비 boots옵4', '장비 boots옵6', '장비 greave옵1', '장비 greave옵2', '장비 greave옵5',
