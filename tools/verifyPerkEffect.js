@@ -89,7 +89,7 @@ const HAND = {
   /* 🗿 기절한 적은 회피 못 함 — 막지 않게 되돌린다(그 자리에서 회피 굴림이 되살아난다) */
   c_stunNoEvade: ['!(stunned&&px.c_stunNoEvade)&&Math.random()<ENEMY_EVADE', '!(false&&stunned&&px.c_stunNoEvade)&&Math.random()<ENEMY_EVADE'],
   /* 💀⚔️ 치확 0% — 깎지 않게 */
-  l_noCritAtk3: ['p=>p.px.l_noCritAtk3?0:p.critR', 'p=>p.px.l_noCritAtk3?p.critR:p.critR'],
+  l_noCritAtk3: [/l_noCritAtk3\?0:(p\.critR\+bsum\(p,'critR'\))/, "l_noCritAtk3?($1):$1"],
   /* 🃏🔁 특전 1개당 반격 — 증분 0 */
   c_collCounter: ['p.px.c_collCounter?2*perkN(p):0', 'p.px.c_collCounter?0:0'],
   /* 🪓🌪️ 도끼 회전 수 · ⚜️ 반격 피해 배수 · 🥶 적 공속 감속 — 전부 ×1 */
