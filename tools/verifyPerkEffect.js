@@ -41,6 +41,8 @@ const MK = SRC.match(/function mkPerks\(\)[\s\S]*?\n\}/);
 if (!MK) { console.log('mkPerks() 를 찾지 못했다'); process.exit(1); }
 const PERK = [...MK[0].matchAll(/add\('([a-z]_[A-Za-z0-9]+)',(\d)/g)].map(m => ({ id: m[1], r: +m[2] }));
 const RAR = ['일반', '희귀', '전설'];
+/* 진단용 — PERKEFFECT_ONLY=id,id 로 대상을 좁힐 수 있다(게이트 판정에는 영향 없음, 조사용). */
+const ONLY = (process.env.PERKEFFECT_ONLY || '').split(',').map(x => x.trim()).filter(Boolean);
 const IDSET = new Set(PERK.map(p => p.id));
 
 /* ══════════ 2. 무력화기 ══════════ */
@@ -160,6 +162,9 @@ if (BASE.PERKS.length !== PERK.length) bad(`mkPerks 파싱 ${PERK.length}종 ≠
 /* ══════════ 4. 실행 조건 — verifyPerkFire 와 같은 자리 ══════════ */
 const COMPANION = ['c_axeHit', 'r_arrowAtk', 'c_waveAtk', 'c_boltKill', 'l_spear2Atk',
   'c_wardHit', 'c_stunAtk', 'c_killHeal2', 'c_killShield3'];
+/* ⚑ 동반 축소 세트 — 회복·수리·방어막 공급원을 뺀 것 (게임 축 주석 참조).
+   표준 세트의 🍖 처치 회복이 체력을 만피에 붙여 두면 회복형 특전의 효과가 클램프로 사라진다. */
+const LEAN = ['c_axeHit', 'r_arrowAtk', 'c_waveAtk', 'c_boltKill', 'l_spear2Atk', 'c_stunAtk'];
 const build = BASE.mkBuild(1, 0, 0, 0);
 
 /* 발동 사다리 — 위 칸에서 «달라진다» 가 나오면 거기서 끝낸다 (verifyPerkFireHtml 과 같은 취지).
@@ -169,13 +174,16 @@ const LADDER = [
   { name: '표준', forced: false, conf: [{ ch: 30, n: 6 }, { ch: 60, n: 6 }] },
   { name: '확대', forced: false, conf: [{ ch: 20, n: 8 }, { ch: 45, n: 8 }, { ch: 90, n: 8 }] },
   { name: '확률 강제', forced: true, conf: [{ ch: 30, n: 6 }, { ch: 60, n: 6 }, { ch: 90, n: 6 }] },
+  { name: '동반 축소', forced: false, lean: true, conf: [{ ch: 45, n: 6 }, { ch: 70, n: 6 }] },
+  { name: '동반 축소·확률 강제', forced: true, lean: true, conf: [{ ch: 45, n: 6 }, { ch: 70, n: 6 }] },
 ];
 
 /* 결과 지문 — 효과가 전투에 조금이라도 닿으면 이 중 하나는 흔들린다 */
 const fp = r => `${r.clear ? 1 : 0}/${r.time.toFixed(3)}/${r.gold}/${r.level}/${r.atkTries}/${r.miss}`;
 
 function run(M, id, seed0, st) {
-  const hold = [id, ...COMPANION.filter(c => c !== id)];
+  const set = st.lean ? LEAN : COMPANION;
+  const hold = [id, ...set.filter(c => c !== id)];
   const out = [];
   M.force(st.forced);
   try {
@@ -198,7 +206,7 @@ for (const p of PERK) {
   stat[nz.how]++;
   if (nz.shared) sharedIds.push(p.id);
   try { MUT[p.id] = load(nz.out); } catch (e) { errs.push(`${p.id} — 무력화본 적재 실패: ${e.message}`); continue; }
-  detail[p.id] = { diff: 0, n: nz.n, how: nz.how, stage: -1 };
+  if (!ONLY.length || ONLY.includes(p.id)) detail[p.id] = { diff: 0, n: nz.n, how: nz.how, stage: -1 };
 }
 for (let s = 0; s < LADDER.length; s++) {
   const st = LADDER[s];
@@ -257,6 +265,7 @@ for (const [id, what, from, to] of SELF) {
     ? (SRC.match(new RegExp(from.source, from.flags.includes('g') ? from.flags : from.flags + 'g')) || []).length
     : SRC.split(from).length - 1;
   if (n !== 1) { bad(`자가검사 «${id}» 원문이 ${n}번 나온다 (1번이어야 한다)`); continue; }
+  if (ONLY.length && !ONLY.includes(id)) continue;   /* 진단 모드에서 대상 밖은 건너뛴다 */
   if (!detail[id] || !detail[id].diff) { bad(`${id} — 양성 대조에서조차 «효과 없음» 이다 (자가검사가 무의미하다)`); continue; }
   const broken = SRC.replace(from, to);
   /* 망가진 엔진에서 같은 감사를 다시 돌린다 — 이제는 «무력화해도 안 달라진다» 가 나와야 한다 */

@@ -43,6 +43,8 @@ if (!MK) { console.log('sim.js mkPerks() 를 찾지 못했다'); process.exit(1)
 const PERK = [...MK[0].matchAll(/add\('([a-z]_[A-Za-z0-9]+)',(\d)/g)].map(m => ({ id: m[1], r: +m[2] }));
 const IDSET = new Set(PERK.map(p => p.id));
 const RAR = ['일반', '희귀', '전설'];
+/* 진단용 — PERKEFFECT_ONLY=id,id 로 대상을 좁힐 수 있다(게이트 판정에는 영향 없음, 조사용). */
+const ONLY = (process.env.PERKEFFECT_ONLY || '').split(',').map(x => x.trim()).filter(Boolean);
 
 const S0 = HTML.indexOf('<script>'), S1 = HTML.indexOf('</script>');
 if (S0 < 0 || S1 < 0) { console.log('index.html 인라인 스크립트를 찾지 못했다'); process.exit(1); }
@@ -173,11 +175,19 @@ function build(js) {
 /* ══════════ 4. 실행 ══════════ */
 const COMPANION = ['c_axeHit', 'r_arrowAtk', 'c_waveAtk', 'c_boltKill', 'l_spear2Atk',
   'c_wardHit', 'c_stunAtk', 'c_killHeal2', 'c_killShield3'];
+/* ⚑ 동반 축소 세트 — 회복·수리·방어막 공급원을 뺀 것.
+   표준 세트에는 🍖 c_killHeal2(처치 시 체력 5% 회복)가 있어 체력이 만피에 붙어 있고,
+   그러면 «회피 시 5% 회복» 같은 회복형 특전은 **회복이 통째로 클램프돼** 결과에 안 나타난다
+   (T88 2단계에서 c_evadeHealS·r_counterHeal 이 이 이유로 위양성이 났다 — 둘 다 실측하면
+   문면대로 정확히 회복한다). 그래서 «못 찾은 것» 만 이 세트로 한 번 더 본다. */
+const LEAN = ['c_axeHit', 'r_arrowAtk', 'c_waveAtk', 'c_boltKill', 'l_spear2Atk', 'c_stunAtk'];
 const SEED = 20260903;
 const LADDER = [
   { name: '표준', forced: false, conf: [{ ch: 30, n: 3 }, { ch: 60, n: 3 }] },
   { name: '확대', forced: false, conf: [{ ch: 20, n: 4 }, { ch: 45, n: 4 }, { ch: 90, n: 4 }] },
   { name: '확률 강제', forced: true, conf: [{ ch: 30, n: 3 }, { ch: 60, n: 3 }, { ch: 90, n: 3 }] },
+  { name: '동반 축소', forced: false, lean: true, conf: [{ ch: 45, n: 4 }, { ch: 70, n: 4 }] },
+  { name: '동반 축소·확률 강제', forced: true, lean: true, conf: [{ ch: 45, n: 4 }, { ch: 70, n: 4 }] },
 ];
 const GEAR = () => { for (const pt of GT.parts) { save.eq[pt] = { part: pt, type: GT.types[pt][0], rar: 1, plus: 0 }; save.slots[pt] = 0; } };
 
@@ -198,9 +208,9 @@ const GEAR = () => { for (const pt of GT.parts) { save.eq[pt] = { part: pt, type
   ok(`원본 부팅 — PERKS ${boot.perks}종 · 드라이버 준비됨`);
   await basePage.evaluate(GEAR);
 
-  const holdOf = id => [id, ...COMPANION.filter(c => c !== id)];
+  const holdOf = (id, st) => { const set = st.lean ? LEAN : COMPANION; return [id, ...set.filter(c => c !== id)]; };
   const runOn = (pg, id, st) => pg.evaluate(([hold, conf, seed, forced]) =>
-    window.__PE.runAll(hold, conf, seed, forced), [holdOf(id), st.conf, SEED, st.forced]);
+    window.__PE.runAll(hold, conf, seed, forced), [holdOf(id, st), st.conf, SEED, st.forced]);
 
   /* 무력화본을 미리 만들어 둔다 (원문 개수 검사는 여기서 걸린다) */
   const nz = {}, stat = { 자동: 0, 손: 0 }, sharedIds = [];
@@ -215,7 +225,7 @@ const GEAR = () => { for (const pt of GT.parts) { save.eq[pt] = { part: pt, type
 
   console.log('\n[① 효과 무력화 대조 — 게임 엔진]');
   const detail = {};
-  for (const p of PERK) if (nz[p.id]) detail[p.id] = { diff: 0, n: nz[p.id].n, how: nz[p.id].how, stage: -1 };
+  for (const p of PERK) if (nz[p.id] && (!ONLY.length || ONLY.includes(p.id))) detail[p.id] = { diff: 0, n: nz[p.id].n, how: nz[p.id].how, stage: -1 };
 
   for (let s = 0; s < LADDER.length; s++) {
     const st = LADDER[s];
@@ -270,6 +280,7 @@ const GEAR = () => { for (const pt of GT.parts) { save.eq[pt] = { part: pt, type
   ];
   for (const [id, what, from, to] of SELF) {
     if (count(JS0, from) !== 1) { bad(`자가검사 «${id}» 원문이 1번이 아니다`); continue; }
+    if (ONLY.length && !ONLY.includes(id)) continue;   /* 진단 모드에서 대상 밖은 건너뛴다 */
     if (!detail[id] || !detail[id].diff) { bad(`${id} — 양성 대조에서조차 «효과 없음» 이다`); continue; }
     const broken = JS0.replace(from, to);
     const nz2 = HAND[id] && count(broken, HAND[id][0]) === 1 ? broken.replace(HAND[id][0], HAND[id][1])
