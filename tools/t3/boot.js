@@ -43,7 +43,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       chapTxt: document.getElementById('lobbyChapName')?.textContent.trim(),
       saveKey: (() => { try { save.gold = save.gold; persist(); } catch (e) {} return Object.keys(localStorage).join(','); })(),
     }));
-    chk('특전 132종 로드', boot.perks === 132, `PERKS=${boot.perks}`);   /* ⚑ P1(T83) 재설계본 — 일반 44 · 희귀 46 · 전설 42 (개수를 바꾸면 여기도 갱신) */
+    chk('특전 10종 로드', boot.perks === 10, `PERKS=${boot.perks}`);   /* ⚑ T96 — 고정 10종·순서 획득 (등급 폐지. 개수를 바꾸면 여기도 갱신) */
     chk('챕터 상한 300', boot.maxChapter === 300, `maxChapter=${boot.maxChapter}`);
     chk('로비 화면이 켜져 있다', boot.screen === 'lobby', boot.screen);
     chk('START 버튼 렌더', boot.startTxt === 'START', boot.startTxt);

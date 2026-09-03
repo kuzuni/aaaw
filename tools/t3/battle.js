@@ -22,9 +22,9 @@ const OUT = process.env.T3_OUT || require('os').tmpdir();
 const R = [];
 const drain = async (p) => {   /* 전투 중 뜬 레벨업 팝업을 비운다 — 열려 있으면 게임이 멈춰 버프 타이머도 안 흐른다 */
   for (let i = 0; i < 8; i++) {
-    const n = await p.evaluate(() => document.querySelectorAll('.perk-card').length);
+    const n = await p.evaluate(() => document.querySelectorAll('#luOk').length);
     if (!n) break;
-    await p.click('.perk-card'); await p.waitForTimeout(350);
+    await p.click('#luOk'); await p.waitForTimeout(350);
   }
   await p.evaluate(() => { if (document.getElementById('overlay').classList.contains('on')) closeOverlay(); });
   await p.waitForTimeout(250);
@@ -36,13 +36,13 @@ const drainAll = async (p, max = 16) => {
   let n = 0;
   for (let i = 0; i < max; i++) {
     const st = await p.evaluate(() => ({
-      cards: document.querySelectorAll('.perk-card').length,
+      cards: document.querySelectorAll('#luOk').length,
       choice: document.querySelectorAll('#overlay .choice-btn').length,
       exit: !!document.getElementById('clOk') || !!document.getElementById('deOk'),
       on: document.getElementById('overlay').classList.contains('on'),
     }));
     if (st.exit) return n;
-    if (st.cards) { await p.click('.perk-card'); n++; }
+    if (st.cards) { await p.click('#luOk'); n++; }
     else if (st.choice) { await p.click('#overlay .choice-btn'); n++; }
     else if (st.on) { await p.evaluate(() => closeOverlay()); n++; }
     else return n;
@@ -60,7 +60,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   await p.goto(URL); await p.waitForTimeout(600);
 
   /* ---------- 전투 진입 ---------- */
-  console.log('\n=== 전투 진입 · 레벨업 특전 3택 ===');
+  console.log('\n=== 전투 진입 · 레벨업 특전 순서 획득 ===');
   await p.click('#startBtn'); await p.waitForTimeout(500);
   const enter = await p.evaluate(() => ({
     screen: document.querySelector('.screen.on')?.id,
@@ -78,34 +78,23 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   await p.waitForFunction(() => document.querySelectorAll('.perk-card').length > 0, null, { timeout: 30000 });
   const pick = await p.evaluate(() => {
     const cards = [...document.querySelectorAll('.perk-card')];
-    return { n: cards.length, tags: cards.map(c => c.querySelector('.tag')?.textContent), medal: cards.map(c => getComputedStyle(c.querySelector('.ic')).clipPath !== 'none') };
-  });
-  chk('레벨업 특전 3택 노출', pick.n === 3 || pick.n === 4, `카드 ${pick.n}장`);
-  chk('선택지 등급 통일 (주인 지시 06:2X)', new Set(pick.tags).size === 1, pick.tags.join(','));
-  chk('특전 아이콘이 등급 메달리온 (6단계 구도)', pick.medal.every(Boolean));
-
-  /* ⚑ T71 — 고유 특전은 카드에 «(고유)» 가 실제로 찍혀야 한다.
-     정적 게이트(verifyT2 ㊱)는 PLAN 과 문자열을 대조하지만, «그 문자열이 DOM 까지 갔는가» 는 여기서 본다.
-     종전엔 tx 에 손으로 박은 9종만 표기가 떠서 나머지 26종이 화면에서 «중복 획득 불가» 를 못 알렸다. */
-  const uniqTx = await p.evaluate(() => {
-    const box = document.createElement('div');
-    const byId = id => PERKS.find(x => x.id === id);
-    const uniq = PERKS.filter(x => x.u), plain = PERKS.filter(x => !x.u);
-    box.innerHTML = uniq.map((x, i) => perkCardHTML(x, i)).join('') + plain.map((x, i) => perkCardHTML(x, i)).join('');
-    const txt = [...box.querySelectorAll('.perk-card .tx')].map(e => e.textContent);
-    const nU = uniq.length;
     return {
-      uniqN: nU, plainN: plain.length,
-      uniqMissing: uniq.filter((x, i) => !/\(고유\)$/.test(txt[i].trim())).map(x => x.id),
-      plainExtra: plain.filter((x, i) => /\(고유\)/.test(txt[nU + i])).map(x => x.id),
-      sample: txt[uniq.indexOf(byId('m_revive'))],
+      n: cards.length, tags: cards.map(c => c.querySelector('.tag')?.textContent),
+      tx: cards.map(c => c.querySelector('.tx').textContent),
+      medal: cards.map(c => getComputedStyle(c.querySelector('.ic')).clipPath !== 'none'),
+      taken: G.perksTaken.map(x => x.id), first: PERKS[0].id, ok: !!document.getElementById('luOk'),
+      noChoice: document.querySelectorAll('#overlay .perk-card[data-i]:not(.static)').length,
     };
   });
-  chk('⚑ 고유 특전 전종이 카드에 «(고유)» 를 찍는다',
-    uniqTx.uniqMissing.length === 0, `고유 ${uniqTx.uniqN}종 · 누락 [${uniqTx.uniqMissing.join(',')}] · 예: ${uniqTx.sample}`);
-  chk('⚑ 고유가 아닌 특전에는 «(고유)» 가 안 붙는다',
-    uniqTx.plainExtra.length === 0, `일반 ${uniqTx.plainN}종 · 오표기 [${uniqTx.plainExtra.join(',')}]`);
+  /* ⚑⚑ T96 — 3택 선택창은 폐지됐다. 레벨업하면 «다음 순번 하나» 를 그 자리에서 받는다. */
+  chk('레벨업 = 특전 카드 1장 (선택창 폐지)', pick.n === 1 && pick.noChoice === 0, `카드 ${pick.n}장 · 고를 수 있는 카드 ${pick.noChoice}장`);
+  chk('⚑ 첫 특전이 1번(공격력 증가)이다 — 순서 획득', pick.taken.length === 1 && pick.taken[0] === pick.first, `${pick.taken.join(',')} (1번 = ${pick.first})`);
+  chk('카드 태그가 획득 순번 «1/10»', pick.tags[0] === '1/10', pick.tags.join(','));
+  chk('확인 버튼(계속 전진)이 있다 — 고를 것이 없다', pick.ok);
+  chk('특전 아이콘이 메달리온 구도', pick.medal.every(Boolean));
 
+  /* ⚑ T96 — «(고유)» 표기 검사는 폐지. 특전이 10종·순서 획득이라 중복이 구조적으로 불가능하고
+     `u` 플래그 자체가 사라졌다. 대신 «표시 텍스트가 두 엔진·PLAN 과 같은가» 는 정적 게이트가 본다. */
   /* ---------- ⚑ 팝업 열림 중 게임 시간 완전 정지 (T79 · 주인 확정 2026-09-03 불변 규약) ----------
      정적 게이트(verifyT2 ㊴)는 «G.paused 로 update 를 막는가» 를 보지만, «실제로 아무것도 안 흐르는가» 는
      여기서만 확인된다. 지금 레벨업 팝업이 떠 있으므로 그대로 재 두고 상태가 얼어붙는지 본다.
@@ -131,7 +120,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     froze0.atkT === froze1.atkT && froze0.boltT === froze1.boltT, `atkT ${froze0.atkT}→${froze1.atkT} · boltT ${froze0.boltT}→${froze1.boltT}`);
   chk('⚑ 적이 한 걸음도 안 움직인다', froze0.ex === froze1.ex, `적 ${froze0.ex.split(',').length}마리`);
 
-  await p.click('.perk-card'); await p.waitForTimeout(300);
+  await p.click('#luOk'); await p.waitForTimeout(300);
   const resumed = await p.evaluate(async () => {
     const t0 = G.t; await new Promise(r => setTimeout(r, 400)); return { paused: G.paused, moved: G.t > t0, t0, t1: G.t };
   });
@@ -175,13 +164,13 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       perkName: perk ? perk.id : '-', key, pxn: Object.keys(G.pxPerk).length,
       /* 기대 테두리색 = 그 특전의 등급색. 일반 등급색(#9EA3AC)은 «출처 없음» 폴백색과 같은 값이라
          «회색이 아니다» 로는 판정할 수 없다 — 등급에서 기대색을 만들어 비교한다. */
-      wantCC: perk ? RARITY[perk.r].cc : null, wantRar: perk ? RARITY[perk.r].nm : '-',
+      wantCC: perk ? PERK_COLOR : null, wantRar: perk ? '특전' : '-',
     };
   });
   chk('버프 발동 시 아이콘이 뜬다', buffOn.n === 2, `아이콘 ${buffOn.n}개(같은 출처 2중첩은 1칸)`);
   chk('중첩 2 이상이면 개수 뱃지', buffOn.cnt.some(c => +c >= 2), `뱃지 ${buffOn.cnt.join('|')} (같은 출처 중첩 수)`);
   const hex2rgb = h => { const n = parseInt(h.slice(1), 16); return `rgb(${n >> 16 & 255}, ${n >> 8 & 255}, ${n & 255})`; };
-  chk('출처 특전의 등급색 테두리', buffOn.wantCC ? buffOn.border.includes(hex2rgb(buffOn.wantCC)) : false,
+  chk('출처 특전 색 테두리', buffOn.wantCC ? buffOn.border.includes(hex2rgb(buffOn.wantCC)) : false,
     `${buffOn.border.join(' / ')} ← 기대 ${buffOn.wantCC ? hex2rgb(buffOn.wantCC) : '?'} (${buffOn.wantRar} · ${buffOn.perkName})`);
   chk('출처 불명 버프는 스탯 SVG 폴백 (7단계)', buffOn.svgFallback >= 1, `SVG 폴백 ${buffOn.svgFallback}개`);
   chk('버프바가 챕터 표시와 겹치지 않는다', !buffOn.overlap, `chapHud.bottom ${buffOn.hudBottom} ≤ buffBar.top ${buffOn.barTop}`);
@@ -208,12 +197,12 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       return {
         n: mine.length, left: mine.reduce((m, b) => Math.max(m, b.t), 0),
         icons: document.querySelectorAll('#buffBar .buff-ic:not(.ward-ic)').length,
-        cards: document.querySelectorAll('.perk-card').length,
+        cards: document.querySelectorAll('#luOk').length,
         choice: document.querySelectorAll('#overlay .choice-btn').length, paused: !!(G && G.paused) };
     }, buffOn.key);
     if (st.n === 0) { gone = true; tLast = 0; break; }
     tLast = st.left; polls++;
-    if (st.cards) { await p.click('.perk-card'); await p.waitForTimeout(250); continue; }
+    if (st.cards) { await p.click('#luOk'); await p.waitForTimeout(250); continue; }
     /* 쉼터·악마·천사 이벤트 팝업이 뜨면 그것도 게임을 멈춘다 — 아무 선택지나 눌러 진행시킨다 */
     else if (st.choice) { await p.click('#overlay .choice-btn'); await p.waitForTimeout(250); continue; }
     if (st.left < tPrev - 1e-9) { tPrev = st.left; stall = 0; } else if (!st.paused) stall++;
@@ -244,8 +233,12 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     const badge = chips0.map(c => c.querySelector('.cnt')?.textContent).find(t => t === '3');
     /* 넘치게 — ⚑ T52: 이미 가진 특전을 채우면 칩이 새로 늘지 않고 «최신 칩» 도 뒤로 안 간다.
        아직 안 가진 것만 골라야 «접힌 뒤에도 최신 특전이 보인다» 가 결정적이다. */
+    /* ⚑ T96 — PERKS 가 10종뿐이라 «접힘» 을 내려면 합성 획득물이 필요하다.
+       천사의 축복처럼 PERKS 밖의 항목도 미리보기 줄에 그대로 쌓이므로 그 경로로 채운다. */
     const had = new Set(G.perksTaken.map(x => x.id || x.tx));
-    for (const q of PERKS.filter(x => !had.has(x.id || x.tx)).slice(0, 20)) takePerk(q);
+    for (const q of PERKS.filter(x => !had.has(x.id || x.tx))) takePerk(q);
+    for (let i = 0; i < 14; i++) { G.perksTaken.push({ ic: '✨', tx: `합성 획득물 ${i}` }); }
+    renderPerkStrip();
     const chips = [...document.querySelectorAll('#perkStrip .pv-ic')];
     const more = document.querySelector('#perkStrip .pv-more')?.textContent || '';
     const box = document.getElementById('perkStrip').getBoundingClientRect();
@@ -282,33 +275,35 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('좁은 폭(360px)에서도 줄이 안 넘친다', !narrow.over && !narrow.hitInfo, `칩 ${narrow.n}개`);
   await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
 
-  /* ---------- ⚑ T89 특전 선택창 «보유 특전» 버튼 (주인 지시 2026-09-03) ----------
-     정적 게이트(verifyT2 ㊵)는 «코드가 그렇게 생겼나» 를 보지만, 실제로 ①버튼이 오른쪽 하단에 있고
-     ②카드·새로고침과 안 겹치고 ③목록이 열린 동안에도 시간이 멈춰 있고 ④닫으면 **같은 선택지**로
-     돌아오는지는 여기서만 확인된다. 앞 절에서 특전을 잔뜩 얻어 둔 상태라 목록이 비어 있지 않다. */
-  console.log('\n=== ⚑ 특전 선택창 «보유 특전» 버튼 (T89) ===');
+  /* ---------- ⚑ T89 «보유 특전» 버튼 (주인 지시 2026-09-03 · ⚑ T96 에서 레벨업 팝업으로 옮겨졌다) ----------
+     선택창이 폐지돼 «고르기 전에 확인» 이라는 원래 쓰임은 사라졌지만, «지금 내가 뭘 갖고 있나» 는
+     그대로 필요하므로 버튼은 레벨업 팝업에 남는다. 여기서 보는 것은 ①버튼이 오른쪽 하단에 있고
+     ②카드와 안 겹치고 ③목록이 열린 동안에도 시간이 멈춰 있고 ④닫으면 **같은 팝업**으로 돌아오는지다. */
+  console.log('\n=== ⚑ 레벨업 팝업 «보유 특전» 버튼 (T89 · T96 이관) ===');
   await drainAll(p);
   const bk0 = await p.evaluate(() => {
-    openPerkChoice();
+    /* 10개를 다 얻었으면 팝업이 안 뜬다 — 진짜 특전을 9개로 줄여 한 칸 비워 두고 연다
+       (앞 절이 같은 특전을 여러 번 밀어 넣어 뒀으므로 «중복까지 포함해» 9개가 되도록 다시 만든다) */
+    G.perksTaken = [PERKS.slice(0, PERKS.length - 1), G.perksTaken.filter(x => !PERKS.includes(x))].flat();
+    renderPerkStrip();
+    openLevelUp();
     const btn = document.getElementById('perkBookBtn');
     const cards = [...document.querySelectorAll('.perk-card')];
     const inner = document.querySelector('.ov-inner').getBoundingClientRect();
-    const ref = document.getElementById('refBtn').getBoundingClientRect();
     const r = btn && btn.getBoundingClientRect();
     const hit = (a, b) => !(a.right <= b.left + .5 || a.left >= b.right - .5 || a.bottom <= b.top + .5 || a.top >= b.bottom - .5);
     return {
       has: !!btn, txt: btn ? btn.textContent.replace(/\s+/g, ' ').trim() : '', taken: G.perksTaken.length,
-      cards: cards.map(c => c.querySelector('.tx').textContent), refLeft: G.refreshLeft, paused: G.paused,
+      cards: cards.map(c => c.querySelector('.tx').textContent), paused: G.paused,
       right: r ? Math.round(inner.right - r.right) : -1, left: r ? Math.round(r.left - inner.left) : -1,
       below: r && cards.length ? r.top >= cards[cards.length - 1].getBoundingClientRect().bottom - .5 : false,
-      overlapRef: r ? hit(r, ref) : true,
       overlapCard: r ? cards.some(c => hit(r, c.getBoundingClientRect())) : true,
     };
   });
-  chk('선택창에 📘 «보유 특전» 버튼이 뜬다', bk0.has && /보유 특전/.test(bk0.txt), bk0.txt);
+  chk('레벨업 팝업에 📘 «보유 특전» 버튼이 뜬다', bk0.has && /보유 특전/.test(bk0.txt), bk0.txt);
   chk('오른쪽 하단 — 오른쪽 끝에 붙고 카드보다 아래', bk0.has && bk0.right < bk0.left && bk0.below,
     `오른쪽 여백 ${bk0.right}px / 왼쪽 여백 ${bk0.left}px · 카드 아래 ${bk0.below}`);
-  chk('카드·새로고침 버튼과 겹치지 않는다 (주인 지시)', !bk0.overlapCard && !bk0.overlapRef);
+  chk('카드와 겹치지 않는다 (주인 지시)', !bk0.overlapCard);
   chk('버튼이 보유 특전 개수를 함께 보여준다', bk0.txt.includes(String(bk0.taken)), `보유 ${bk0.taken}종`);
   await p.click('#perkBookBtn'); await p.waitForTimeout(260);
   const bk1 = await p.evaluate(async () => {
@@ -317,7 +312,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     return {
       paused: G.paused, on: document.getElementById('overlay').classList.contains('on'),
       list: document.querySelectorAll('.perk-list .perk-card').length, taken: G.perksTaken.length,
-      back: !!document.getElementById('pbBack'), choiceGone: !document.getElementById('refBtn'),
+      back: !!document.getElementById('pbBack'), choiceGone: !document.getElementById('luOk'),
       frozen: G.t === t0 && G.player.hp === hp0, t0, t1: G.t,
     };
   });
@@ -329,14 +324,14 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   await p.click('#pbBack'); await p.waitForTimeout(260);
   const bk2 = await p.evaluate(() => ({
     cards: [...document.querySelectorAll('.perk-card')].map(c => c.querySelector('.tx').textContent),
-    ref: !!document.getElementById('refBtn'), refLeft: G.refreshLeft, paused: G.paused,
+    ok: !!document.getElementById('luOk'), paused: G.paused,
     book: !!document.getElementById('pbBack'), btn: !!document.getElementById('perkBookBtn'),
+    taken: G.perksTaken.length,
   }));
-  chk('닫으면 특전 선택창으로 복귀한다', bk2.ref && bk2.btn && !bk2.book && bk2.paused === true);
-  chk('⚑ 복귀해도 선택지가 그대로다 (다시 굴리지 않는다)',
-    bk2.cards.length === bk0.cards.length && bk2.cards.every((t, i) => t === bk0.cards[i]),
-    `${bk0.cards.length}장 · 첫 카드 ${JSON.stringify((bk0.cards[0] || '').slice(0, 18))}`);
-  chk('무료 새로고침 잔여 횟수도 그대로다', bk2.refLeft === bk0.refLeft, `${bk0.refLeft} → ${bk2.refLeft}`);
+  chk('닫으면 레벨업 팝업으로 복귀한다', bk2.ok && bk2.btn && !bk2.book && bk2.paused === true);
+  chk('⚑ 복귀해도 같은 특전 카드다 (두 번 주지 않는다)',
+    bk2.cards.length === bk0.cards.length && bk2.cards.every((t, i) => t === bk0.cards[i]) && bk2.taken === bk0.taken,
+    `${bk0.cards.length}장 · 보유 ${bk0.taken} → ${bk2.taken} · 카드 ${JSON.stringify((bk0.cards[0] || '').slice(0, 18))}`);
   await p.evaluate(() => closeOverlay()); await p.waitForTimeout(200);
   /* HUD 📘(#infoBtn) 로 연 «평소의 책» 은 종전 그대로 — 탭하면 전투로 돌아간다 (복귀 콜백 없음) */
   await p.click('#infoBtn'); await p.waitForTimeout(260);
@@ -385,13 +380,13 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     const st = await p.evaluate(() => {
       const bn = G.nodes.find(n => n.type === 'boss');
       return {
-        cards: document.querySelectorAll('.perk-card').length,
+        cards: document.querySelectorAll('#luOk').length,
         alive: !!(bn && bn.enemies.some(e => !e.dead && e.hp > 0)),
         cleared: !!(G && G.cleared), ov: document.getElementById('overlay').textContent.slice(0, 40),
       };
     });
     if (st.alive) {
-      if (st.cards) { lateDrain++; await p.click('.perk-card'); await p.waitForTimeout(250); continue; }
+      if (st.cards) { lateDrain++; await p.click('#luOk'); await p.waitForTimeout(250); continue; }
     } else sawCard = Math.max(sawCard, st.cards);
     if (st.cleared && /클리어/.test(st.ov)) break;
     await p.waitForTimeout(250);

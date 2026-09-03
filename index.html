@@ -349,12 +349,6 @@
   .choice-btn.danger{border-color:#A03A56;}
   .choice-btn small{display:block; font-size:12.5px; opacity:.75;}
   .ghost-btn{color:var(--ink-dim); font-size:14.5px; text-decoration:underline; padding:10px;}
-  /* 무료 새로고침 = 주황 버튼 + 아래에 «남은 횟수» 줄 (참고: docs/ref/perks.jpg 의 Refresh Free / Remain : 1) */
-  #refBtn{margin-top:8px; padding:13px 30px; border-radius:15px; font-size:16.5px;
-    background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; box-shadow:0 4px 0 #C77E12;}
-  #refBtn:active{transform:translateY(2px); box-shadow:0 2px 0 #C77E12;}
-  #refLeft{margin-top:7px; font-size:13px; color:var(--ink-dim);}
-  #refLeft b{color:var(--gold);}
   /* ⚑ T89 — 특전 선택창 오른쪽 하단 «보유 특전» 버튼 (주인 지시 2026-09-03).
      흐름(flow) 안의 오른쪽 정렬 줄이라 카드·새로고침 버튼과 «구조적으로» 안 겹친다
      (절대 배치로 띄우면 좁은 화면에서 스크롤된 카드 위에 올라탄다). */
@@ -1645,30 +1639,21 @@ function addBuff(p,k,amt,dur,src){
 }
 function bsum(p,k){ let s=0; for(const b of p.buffs[k]) s+=b.amt; return s; }
 /* 🃏 수집가 4종 — «보유한 특전 1개당». 실효 스탯에서 매번 세므로 나중에 얻는 특전까지 소급된다. */
-function perkN(){ return (G&&G.perksTaken)?G.perksTaken.length:0; }
 function effDmg(p){
   const px=p.px; let m=1+bsum(p,'atk');
   if(px.rage&&p.sh<=0) m*=1.5;                       /* 장비 옵션 */
-  if(px.c_shieldAtk&&p.sh>0) m*=1.20;                /* 🛡️⚔️ */
-  if(px.r_shieldAtkM&&p.sh>0) m*=1.20;               /* 🎇 */
-  if(px.r_noShieldAtk&&p.sh<=0) m*=1.50;             /* 😤👑 */
-  if(px.c_lowAtk&&p.hp<=p.maxHp*0.50) m*=1.15;       /* 🔥🩸 */
-  if(px.c_collAtk) m*=1+0.02*perkN();                /* 🃏⚔️ */
   return p.dmg*m;
 }
-function effAspd(p){ return p.aspd*(1+bsum(p,'aspd'))*(1+ASPD_RAMP_AMT*(p.rampN||0)); }   /* 🎻 */
-function effCritR(p){ return p.px.l_noCritAtk3?0:p.critR+bsum(p,'critR'); }                /* 💀⚔️ */
+function effAspd(p){ return p.aspd*(1+bsum(p,'aspd')); }
+function effCritR(p){ return p.critR+bsum(p,'critR'); }
 function effCritF(p){ return p.critF+bsum(p,'critF'); }
-function effDef(p){ let d=p.def+bsum(p,'def'); if(p.px.c_collDef) d+=2*perkN(); return Math.min(80,d); }
+function effDef(p){ return Math.min(80,p.def+bsum(p,'def')); }
 function effEvade(p){
   const px=p.px; let e=p.evade+bsum(p,'evade');
   if(px.lastStand&&p.hp<=p.maxHp*0.10) e+=40;        /* 장비 옵션 */
-  if(px.c_noShieldEvade&&p.sh<=0) e+=10;             /* 😤 */
-  if(px.c_lowEvade&&p.hp<=p.maxHp*0.50) e+=15;       /* 🕯️ */
-  if(px.c_collEvade) e+=2*perkN();                   /* 🃏💨 */
   return Math.min(90,e);
 }
-function effCounter(p){ return p.counter+(p.px.c_collCounter?2*perkN():0); }                /* 🃏🔁 */
+function effCounter(p){ return p.counter; }
 /* ⚑ 실드 수리 한 곳 — 🔧 «실드 수리 효과 +100%» 가 여기서만 걸린다 (sim.js repair 와 1:1) */
 function repair(p,amt){ if(amt<=0) return; p.sh=Math.min(p.maxSh,p.sh+amt*(1+p.repairAmp)); }
 /* sim.js heal(p,amt,noBoost) 와 1:1 */
@@ -1685,7 +1670,6 @@ function heal(p,amt,noBoost){
     if(px.healShield3&&pkk(p,0.20*px.healShield3)){ repair(p,p.maxSh*0.03); addText('💦','#6CC0F0'); }
     if(px.healShield5&&pkk(p,0.30*px.healShield5)){ repair(p,p.maxSh*0.08); addText('💦','#6CC0F0'); }
     if(px.healAtkBuff) addBuff(p,'atk',0.08,3,'healAtkBuff');
-    if(px.l_healSync){ repair(p,amt); addText('💠','#6CC0F0'); }   /* 💠 회복한 만큼 실드도 수리 */
     if(over>0){
       if(px.overheal) repair(p,over*7);
       if(px.overBolt&&p.G.overBoltCd<=0){ p.G.overBoltCd=0.12; fireBolts(p,1); }
@@ -1693,166 +1677,40 @@ function heal(p,amt,noBoost){
   }
 }
 
-/* ================= 특전 목록 — ⚑ 주인 확정 재설계본 132종 (PLAN §3 · 정본 `docs/perk-redesign.md`) =================
-   일반 44 · 희귀 46 · 전설 42. **신화 등급 폐지.** id·등급·ap 는 sim.js mkPerks() 와 1:1이고,
-   표시 텍스트(tx)는 정본 문서의 문장 그대로다(`<b>` 태그를 걷어내면 글자까지 같아야 한다 — 게이트가 4자 대조).
-   **모든 특전이 고유**라 `(고유)` 표기는 쓰지 않는다(전 특전에 붙으면 정보가 아니다). */
+/* ================= 특전 = 고정 10종 · 순서 획득 (⚑⚑⚑ 주인 확정 2026-09-03 · PLAN §3 · T96) =================
+   132종 체제(등급·선택창·무료 새로고침·전지의 눈)는 통째로 폐지됐다. 레벨업할 때마다 이 배열의
+   **다음 순번을 하나씩 자동으로** 얻고, 10개를 다 얻은 뒤의 레벨업은 특전을 주지 않는다(위임 기본값).
+   id·순서·ap·수치는 `sim.js mkPerks()` 와 1:1이고 표시 텍스트(tx)는 PLAN §3.1 표의 문장 그대로다
+   (게이트가 두 엔진 + PLAN 을 대조한다). 등급이 없으므로 카드 색은 한 가지다. */
+const PERK_ATK_M=1.20, PERK_DEF_M=1.10, PERK_EVADE_A=10, PERK_COUNTER_A=10,
+      PERK_CRITR_A=10, PERK_CRITF_A=50, PERK_STEAL=10, PERK_SUMMON_CH=0.50;
 const PERKS=[
-  /* ---------- 일반 (44종) ---------- */
-  {id:'c_axeHit', r:0, ic:'🪓', tx:'피격 시 <b>20%</b> 확률로 도끼 <b>1개</b> (공격력의 <b>30%</b>)', ap:p=>p.px.c_axeHit=1},
-  {id:'c_arrowMiss', r:0, ic:'🏹', tx:'빗나가면 <b>30%</b> 확률로 화살 <b>1발</b> (공격력의 <b>50%</b>)', ap:p=>p.px.c_arrowMiss=1},
-  {id:'c_boltKill', r:0, ic:'⚡', tx:'처치 시 <b>70%</b> 확률로 번개 <b>1회</b> (공격력의 <b>75%</b>)', ap:p=>p.px.c_boltKill=1},
-  {id:'c_waveAtk', r:0, ic:'🌊', tx:'공격 시 <b>10%</b> 확률로 검기 <b>1개</b> (공격력의 <b>50%</b>)', ap:p=>p.px.c_waveAtk=1},
-  {id:'c_spearEvade', r:0, ic:'🔱', tx:'회피 시 <b>10%</b> 확률로 창 <b>1개</b> (마리당 <b>100%</b>, 최대 <b>8마리</b> 관통)', ap:p=>p.px.c_spearEvade=1},
-  {id:'c_aspdAtk', r:0, ic:'⚡', tx:'공격 시 <b>30%</b> 확률로 <b>7초간</b> 공격속도 <b>+5%</b>', ap:p=>p.px.c_aspdAtk=1},
-  {id:'c_evadeAtkB', r:0, ic:'🛡️', tx:'공격 시 <b>30%</b> 확률로 <b>7초간</b> 회피 <b>+5%</b>', ap:p=>p.px.c_evadeAtkB=1},
-  {id:'c_evadeKill', r:0, ic:'👟', tx:'처치 시 <b>2초간</b> 회피 <b>+40%</b>', ap:p=>p.px.c_evadeKill=1},
-  {id:'c_atkPerm', r:0, ic:'🌱', tx:'처치 시 <b>30%</b> 확률로 공격력 <b>+1%</b> (그 판 동안 계속)', ap:p=>p.px.c_atkPerm=1},
-  {id:'c_evadePerm', r:0, ic:'🍃', tx:'처치 시 <b>30%</b> 확률로 회피 <b>+1%</b> (그 판 동안 계속)', ap:p=>p.px.c_evadePerm=1},
-  {id:'c_critMiss', r:0, ic:'💨', tx:'빗나가면 <b>30%</b> 확률로 <b>7초간</b> 치명타 확률 <b>+5%</b>', ap:p=>p.px.c_critMiss=1},
-  {id:'c_aspdEvade', r:0, ic:'🌀', tx:'회피 시 <b>30%</b> 확률로 <b>7초간</b> 공격속도 <b>+5%</b>', ap:p=>p.px.c_aspdEvade=1},
-  {id:'c_shieldAtk', r:0, ic:'🛡️⚔️', tx:'실드가 남아있는 동안 공격력 <b>+20%</b>', ap:p=>p.px.c_shieldAtk=1},
-  {id:'c_noShieldEvade', r:0, ic:'😤', tx:'실드가 없는 동안 회피 <b>+10%</b>', ap:p=>p.px.c_noShieldEvade=1},
-  {id:'c_killHeal2', r:0, ic:'🍖', tx:'처치 시 체력 <b>5%</b> 회복', ap:p=>{p.px.c_killHeal2=1;p.killHeal+=0.05;}},
-  {id:'c_killShield3', r:0, ic:'🔰', tx:'처치 시 <b>10%</b> 확률로 실드 <b>10%</b> 충전', ap:p=>p.px.c_killShield3=1},
-  {id:'c_hitHeal', r:0, ic:'🩹', tx:'피격 시 <b>20%</b> 확률로 체력 <b>5%</b> 회복', ap:p=>p.px.c_hitHeal=1},
-  {id:'c_shieldHit', r:0, ic:'🔋', tx:'피격 시 <b>10%</b> 확률로 실드 <b>5%</b> 충전', ap:p=>p.px.c_shieldHit=1},
-  {id:'c_evadeHealS', r:0, ic:'🍀', tx:'회피 시 <b>10%</b> 확률로 체력 <b>5%</b> 회복', ap:p=>p.px.c_evadeHealS=1},
-  {id:'c_stunAtk', r:0, ic:'💫', tx:'공격 시 <b>10%</b> 확률로 그 적 <b>3초</b> 기절', ap:p=>p.px.c_stunAtk=1},
-  {id:'c_stunHit', r:0, ic:'💫🛡️', tx:'피격 시 <b>10%</b> 확률로 때린 적 <b>3초</b> 기절', ap:p=>p.px.c_stunHit=1},
-  {id:'c_thornsS', r:0, ic:'🌿', tx:'피격 시 <b>30%</b> 확률로 받은 피해의 <b>50%</b> 반사', ap:p=>p.px.c_thornsS=1},
-  {id:'c_rangeThorns', r:0, ic:'🏹🌵', tx:'화살 피격 시 <b>30%</b> 확률로 받은 피해의 <b>100%</b> 반사', ap:p=>p.px.c_rangeThorns=1},
-  {id:'c_wardHit', r:0, ic:'🔰✨', tx:'피격 시 <b>10%</b> 확률로 방어막 <b>1장</b> (적 공격 <b>1번</b> 완전 방어)', ap:p=>p.px.c_wardHit=1},
-  {id:'c_wardEvade', r:0, ic:'👥✨', tx:'회피 시 <b>10%</b> 확률로 방어막 <b>1장</b>', ap:p=>p.px.c_wardEvade=1},
-  {id:'c_wardKill', r:0, ic:'⚔️✨', tx:'처치 시 <b>10%</b> 확률로 방어막 <b>1장</b>', ap:p=>p.px.c_wardKill=1},
-  {id:'c_firstHit', r:0, ic:'🎯', tx:'체력 가득 찬 적에게 데미지 <b>+100%</b>', ap:p=>p.px.c_firstHit=1},
-  {id:'c_backDmg', r:0, ic:'🔙', tx:'뒤에 있는 적(맨 앞이 아닌 적)에게 데미지 <b>+100%</b>', ap:p=>p.px.c_backDmg=1},
-  {id:'c_reaper', r:0, ic:'☠️🌾', tx:'사신의 낫 — 회피 시 <b>20%</b> 확률로 그 적 즉사 (보스 포함)', ap:p=>p.px.c_reaper=1},
-  {id:'c_rangedDmg', r:0, ic:'🏹💀', tx:'원거리 적에게 데미지 <b>+30%</b>', ap:p=>p.px.c_rangedDmg=1},
-  {id:'c_stunDmg', r:0, ic:'💢', tx:'기절한 적에게 데미지 <b>+30%</b>', ap:p=>p.px.c_stunDmg=1},
-  {id:'c_stunNoEvade', r:0, ic:'🗿', tx:'기절 중인 적은 회피하지 못함', ap:p=>p.px.c_stunNoEvade=1},
-  {id:'c_fourthDmg', r:0, ic:'🔢', tx:'<b>4번째</b> 공격마다 데미지 <b>+100%</b>', ap:p=>p.px.c_fourthDmg=1},
-  {id:'c_evadeStack', r:0, ic:'🌀🗡️', tx:'회피 시 «다음 공격 <b>+50%</b>» 스택 획득 (무제한 적립, 공격 1타당 1스택 소모)', ap:p=>p.px.c_evadeStack=1},
-  {id:'c_stunKillNear', r:0, ic:'💫👟', tx:'처치 시 <b>20%</b> 확률로 가장 가까운 적 <b>3초</b> 기절', ap:p=>p.px.c_stunKillNear=1},
-  {id:'c_fourthCrit', r:0, ic:'🔢🎯', tx:'<b>4번째</b> 공격마다 무조건 치명타', ap:p=>p.px.c_fourthCrit=1},
-  {id:'c_fourthBolt', r:0, ic:'🔢⚡', tx:'<b>4번째</b> 공격마다 번개 <b>1회</b> (공격력의 <b>75%</b>)', ap:p=>p.px.c_fourthBolt=1},
-  {id:'c_lowEvade', r:0, ic:'🕯️', tx:'체력이 <b>50%</b> 이하인 동안 회피 <b>+15%</b>', ap:p=>p.px.c_lowEvade=1},
-  {id:'c_lowAtk', r:0, ic:'🔥🩸', tx:'체력이 <b>50%</b> 이하인 동안 공격력 <b>+15%</b>', ap:p=>p.px.c_lowAtk=1},
-  {id:'c_wardEmpty', r:0, ic:'⛏️', tx:'방어막이 없는 상태에서 맞으면 <b>30%</b> 확률로 방어막 <b>1장</b>', ap:p=>p.px.c_wardEmpty=1},
-  {id:'c_collAtk', r:0, ic:'🃏⚔️', tx:'보유한 특전 <b>1개</b>당 공격력 <b>+2%</b>', ap:p=>p.px.c_collAtk=1},
-  {id:'c_collEvade', r:0, ic:'🃏💨', tx:'보유한 특전 <b>1개</b>당 회피 <b>+2%</b>', ap:p=>p.px.c_collEvade=1},
-  {id:'c_collCounter', r:0, ic:'🃏🔁', tx:'보유한 특전 <b>1개</b>당 반격 확률 <b>+2%</b>', ap:p=>p.px.c_collCounter=1},
-  {id:'c_collDef', r:0, ic:'🃏🛡️', tx:'보유한 특전 <b>1개</b>당 방어력 <b>+2%</b>', ap:p=>p.px.c_collDef=1},
-  /* ---------- 희귀 (46종) ---------- */
-  {id:'r_axeCrit', r:1, ic:'🪓', tx:'치명타 시 <b>30%</b> 확률로 도끼 <b>2개</b>', ap:p=>p.px.r_axeCrit=1},
-  {id:'r_axeEvade', r:1, ic:'🪓', tx:'회피 시 <b>30%</b> 확률로 도끼 <b>2개</b>', ap:p=>p.px.r_axeEvade=1},
-  {id:'r_arrowAtk', r:1, ic:'🏹', tx:'공격 시 <b>15%</b> 확률로 화살 <b>2발</b>', ap:p=>p.px.r_arrowAtk=1},
-  {id:'r_arrowKill', r:1, ic:'🏹', tx:'처치 시 <b>40%</b> 확률로 화살 <b>2발</b>', ap:p=>p.px.r_arrowKill=1},
-  {id:'r_boltEvade', r:1, ic:'⚡', tx:'회피 시 <b>30%</b> 확률로 번개 <b>2회</b>', ap:p=>p.px.r_boltEvade=1},
-  {id:'r_boltMiss', r:1, ic:'⚡', tx:'빗나가면 <b>40%</b> 확률로 번개 <b>2회</b>', ap:p=>p.px.r_boltMiss=1},
-  {id:'r_waveHit', r:1, ic:'🌊', tx:'피격 시 <b>30%</b> 확률로 검기 <b>2개</b>', ap:p=>p.px.r_waveHit=1},
-  {id:'r_waveCrit', r:1, ic:'🌊', tx:'치명타 시 <b>30%</b> 확률로 검기 <b>1개</b>', ap:p=>p.px.r_waveCrit=1},
-  {id:'r_spearKill', r:1, ic:'🔱', tx:'처치 시 <b>50%</b> 확률로 창 <b>1개</b>', ap:p=>p.px.r_spearKill=1},
-  {id:'r_spearCounter', r:1, ic:'🔱', tx:'반격 시 <b>60%</b> 확률로 창 <b>1개</b>', ap:p=>p.px.r_spearCounter=1},
-  {id:'r_axeBounce', r:1, ic:'🪞', tx:'도끼가 적을 맞히면 <b>2번</b> 튕겨서 다른 적을 또 맞힘', ap:p=>p.px.r_axeBounce=1},
-  {id:'r_boltChain', r:1, ic:'🔗', tx:'번개가 <b>30%</b> 확률로 옆 적에게 <b>1번</b> 튐 (연쇄 번개)', ap:p=>p.px.r_boltChain=1},
-  {id:'r_arrowX2', r:1, ic:'🏹²', tx:'화살이 <b>2배</b>로 생성', ap:p=>p.px.r_arrowX2=1},
-  {id:'r_atkBuffM', r:1, ic:'⚔️', tx:'공격 시 <b>60%</b> 확률로 <b>7초간</b> 공격력 <b>+10%</b>', ap:p=>p.px.r_atkBuffM=1},
-  {id:'r_critRBuff', r:1, ic:'💥', tx:'치명타 시 <b>70%</b> 확률로 <b>7초간</b> 치명타 확률 <b>+20%</b>', ap:p=>p.px.r_critRBuff=1},
-  {id:'r_critFBuff', r:1, ic:'🔥', tx:'치명타 시 <b>60%</b> 확률로 <b>7초간</b> 치명타 데미지 <b>+40%</b>', ap:p=>p.px.r_critFBuff=1},
-  {id:'r_defBuff2', r:1, ic:'🛡️', tx:'피격 시 <b>60%</b> 확률로 <b>7초간</b> 방어력 <b>+10%</b>', ap:p=>p.px.r_defBuff2=1},
-  {id:'r_hitEvadeBuff', r:1, ic:'🌫️', tx:'피격 시 <b>60%</b> 확률로 <b>7초간</b> 회피 <b>+10%</b>', ap:p=>p.px.r_hitEvadeBuff=1},
-  {id:'r_aspdKill', r:1, ic:'⚡👑', tx:'처치 시 <b>40%</b> 확률로 <b>7초간</b> 공격속도 <b>+10%</b>', ap:p=>p.px.r_aspdKill=1},
-  {id:'r_counterAtkM', r:1, ic:'🗡️👑', tx:'반격 시 <b>70%</b> 확률로 <b>7초간</b> 공격력 <b>+10%</b>', ap:p=>p.px.r_counterAtkM=1},
-  {id:'r_missAspd', r:1, ic:'💨⚡', tx:'빗나가면 <b>70%</b> 확률로 <b>7초간</b> 공격속도 <b>+20%</b>', ap:p=>p.px.r_missAspd=1},
-  {id:'r_shieldAtkM', r:1, ic:'🎇', tx:'실드가 있으면 공격력 <b>+20%</b>', ap:p=>p.px.r_shieldAtkM=1},
-  {id:'r_noShieldAtk', r:1, ic:'😤👑', tx:'실드가 없는 동안 공격력 <b>+50%</b>', ap:p=>p.px.r_noShieldAtk=1},
-  {id:'r_overheal', r:1, ic:'🩸', tx:'처치 시 초과된 데미지의 <b>10%</b>만큼 체력 회복 (오버킬 힐)', ap:p=>p.px.r_overheal=1},
-  {id:'r_healAmp', r:1, ic:'💞', tx:'체력 회복 효과 <b>+150%</b>', ap:p=>{p.px.r_healAmp=1;p.healAmp+=1.50;}},
-  {id:'r_repairAmp', r:1, ic:'🔧', tx:'실드 수리 효과 <b>+150%</b>', ap:p=>{p.px.r_repairAmp=1;p.repairAmp+=1.50;}},
-  {id:'r_critHeal3', r:1, ic:'❤️‍🔥', tx:'치명타 시 <b>60%</b> 확률로 체력 <b>5%</b> 회복', ap:p=>p.px.r_critHeal3=1},
-  {id:'r_evadeShield', r:1, ic:'🔶', tx:'회피 시 <b>20%</b> 확률로 실드 <b>10%</b> 수리', ap:p=>p.px.r_evadeShield=1},
-  {id:'r_counterHeal', r:1, ic:'💧', tx:'반격 시 <b>60%</b> 확률로 체력 <b>10%</b> 회복', ap:p=>p.px.r_counterHeal=1},
-  {id:'r_lowShield', r:1, ic:'🚑', tx:'체력이 <b>30%</b> 아래로 떨어지면 실드 <b>30%</b> 즉시 충전 (판당 <b>1번</b>)', ap:p=>p.px.r_lowShield=1},
-  {id:'r_wardHeal', r:1, ic:'🛡️❤️', tx:'방어막으로 막을 때마다 체력 <b>10%</b> 회복', ap:p=>p.px.r_wardHeal=1},
-  {id:'r_stunCrit', r:1, ic:'💫', tx:'치명타 시 <b>20%</b> 확률로 그 적 <b>6초</b> 기절', ap:p=>p.px.r_stunCrit=1},
-  {id:'r_stunSlow', r:1, ic:'⛓️', tx:'기절이 끝난 적은 <b>6초간</b> 공격속도 <b>-50%</b>', ap:p=>p.px.r_stunSlow=1},
-  {id:'r_stunDmgM', r:1, ic:'🧲', tx:'기절한 적에게 데미지 <b>+100%</b>', ap:p=>p.px.r_stunDmgM=1},
-  {id:'r_comboDmg', r:1, ic:'🥊', tx:'같은 적을 때릴 때마다 데미지 <b>+10%</b>씩 누적 (다른 적을 때리면 초기화)', ap:p=>p.px.r_comboDmg=1},
-  {id:'r_counterX', r:1, ic:'⚜️', tx:'반격 피해 <b>+150%</b>', ap:p=>p.px.r_counterX=1},
-  {id:'r_critF100', r:1, ic:'🔥', tx:'치명타 데미지 <b>+100%</b>', ap:p=>{p.px.r_critF100=1;p.critF+=100;}},
-  {id:'r_atk50', r:1, ic:'💪', tx:'공격력 <b>+50%</b>', ap:p=>{p.px.r_atk50=1;p.dmg*=1.50;}},
-  {id:'r_wardAtk', r:1, ic:'🛡️✨', tx:'공격 시 <b>10%</b> 확률로 방어막 <b>1장</b>', ap:p=>p.px.r_wardAtk=1},
-  {id:'r_hitCounter', r:1, ic:'💢', tx:'피격 시 <b>60%</b> 확률로 즉시 반격', ap:p=>p.px.r_hitCounter=1},
-  {id:'r_fifthCrit', r:1, ic:'🔨', tx:'공격 <b>5회</b>마다 다음 공격은 무조건 치명타', ap:p=>p.px.r_fifthCrit=1},
-  {id:'r_evade3Dmg', r:1, ic:'💃', tx:'<b>2번</b> 연속 회피에 성공하면 다음 공격 데미지 <b>+300%</b>', ap:p=>p.px.r_evade3Dmg=1},
-  {id:'r_stunEvade', r:1, ic:'🕷️', tx:'회피 시 <b>60%</b> 확률로 그 적 <b>3초</b> 기절', ap:p=>p.px.r_stunEvade=1},
-  {id:'r_eventShield', r:1, ic:'🚪', tx:'이벤트(쉼터/악마/천사)를 지날 때마다 실드 <b>40%</b> 충전', ap:p=>p.px.r_eventShield=1},
-  {id:'r_stunCritR', r:1, ic:'🧊', tx:'기절 중인 적에게 치명타 확률 <b>+60%</b>', ap:p=>p.px.r_stunCritR=1},
-  {id:'r_wardSpear', r:1, ic:'🥅', tx:'방어막으로 화살을 막으면 창을 쏨', ap:p=>p.px.r_wardSpear=1},
-  /* ---------- 전설 (42종) ---------- */
-  {id:'l_autoBolt', r:2, ic:'⚡⏰', tx:'<b>2초</b>마다 자동으로 번개 <b>1회</b>', ap:p=>p.px.l_autoBolt=1},
-  {id:'l_autoAxe', r:2, ic:'🪓⏰', tx:'<b>2초</b>마다 자동으로 도끼 <b>2개</b>', ap:p=>p.px.l_autoAxe=1},
-  {id:'l_autoSpear', r:2, ic:'🔱⏰', tx:'<b>3초</b>마다 자동으로 창 <b>1개</b>', ap:p=>p.px.l_autoSpear=1},
-  {id:'l_spear2Atk', r:2, ic:'🔱⚔️', tx:'공격 <b>3회</b>마다 창 <b>1개</b>', ap:p=>p.px.l_spear2Atk=1},
-  {id:'l_boltAtk', r:2, ic:'⚡', tx:'공격 시 <b>20%</b> 확률로 번개 <b>2회</b>', ap:p=>p.px.l_boltAtk=1},
-  {id:'l_axeAtk', r:2, ic:'🪓', tx:'공격 시 <b>20%</b> 확률로 도끼 <b>2개</b>', ap:p=>p.px.l_axeAtk=1},
-  {id:'l_arrowAtk', r:2, ic:'🏹', tx:'공격 시 <b>20%</b> 확률로 화살 <b>2발</b>', ap:p=>p.px.l_arrowAtk=1},
-  {id:'l_waveAtk', r:2, ic:'🌊', tx:'공격 시 <b>20%</b> 확률로 검기 <b>2개</b>', ap:p=>p.px.l_waveAtk=1},
-  {id:'l_spearCrit', r:2, ic:'🔱', tx:'치명타 시 <b>40%</b> 확률로 창 <b>1개</b>', ap:p=>p.px.l_spearCrit=1},
-  {id:'l_boltHit', r:2, ic:'⚡', tx:'피격 시 <b>60%</b> 확률로 번개 <b>2회</b>', ap:p=>p.px.l_boltHit=1},
-  {id:'l_arrowToSpear', r:2, ic:'🏹→🔱', tx:'내가 쏘는 모든 화살이 창으로 바뀜', ap:p=>p.px.l_arrowToSpear=1},
-  {id:'l_wavePierce', r:2, ic:'🌊🔱', tx:'거대 검기 — 검기가 창처럼 일직선 최대 <b>8마리</b> 관통', ap:p=>p.px.l_wavePierce=1},
-  {id:'l_axeSpin', r:2, ic:'🪓🌪️', tx:'모든 도끼가 적 위치에서 <b>4회전</b>하며 <b>4번</b> 타격', ap:p=>p.px.l_axeSpin=1},
-  {id:'l_boltChainK', r:2, ic:'🔗👑', tx:'번개가 무조건 옆 적으로 <b>1번</b> 튐 (튄 번개도 풀데미지)', ap:p=>p.px.l_boltChainK=1},
-  {id:'l_spearStun', r:2, ic:'🔱💫', tx:'창에 뚫린 적들이 <b>90%</b> 확률로 <b>3초</b> 기절', ap:p=>p.px.l_spearStun=1},
-  {id:'l_noCritAtk3', r:2, ic:'💀⚔️', tx:'치명타 확률이 <b>0%</b>가 되는 대신 공격력 <b>3배</b>', ap:p=>{p.px.l_noCritAtk3=1;p.dmg*=3;}},
-  {id:'l_shieldIgnore', r:2, ic:'💎', tx:'실드가 남아있는 동안 피격 시 <b>70%</b> 확률로 데미지 완전 무시', ap:p=>p.px.l_shieldIgnore=1},
-  {id:'l_slowAura', r:2, ic:'🥶', tx:'위압의 오라 — 모든 적의 공격속도 <b>-50%</b> (상시)', ap:p=>p.px.l_slowAura=1},
-  {id:'l_atkBuffL', r:2, ic:'⚔️', tx:'공격 시 <b>50%</b> 확률로 <b>7초간</b> 공격력 <b>+20%</b>', ap:p=>p.px.l_atkBuffL=1},
-  {id:'l_critFBuffL', r:2, ic:'💥👑', tx:'치명타 시 <b>60%</b> 확률로 <b>7초간</b> 치명타 데미지 <b>+100%</b>', ap:p=>p.px.l_critFBuffL=1},
-  {id:'l_evadeAspdL', r:2, ic:'🌪️', tx:'회피 시 <b>80%</b> 확률로 <b>7초간</b> 공격속도 <b>+20%</b>', ap:p=>p.px.l_evadeAspdL=1},
-  {id:'l_aspdRamp', r:2, ic:'🎻', tx:'전투 중 <b>3초</b>마다 공격속도가 <b>+10%</b>씩 계속 빨라짐 (피격당하면 초기화)', ap:p=>p.px.l_aspdRamp=1},
-  {id:'l_overRepair', r:2, ic:'🔧⚡', tx:'처치 시 초과된 데미지의 <b>10%</b>만큼 실드 수리 (오버킬 수리)', ap:p=>p.px.l_overRepair=1},
-  {id:'l_healSync', r:2, ic:'💠', tx:'체력을 회복할 때 같은 수치만큼 실드도 같이 수리', ap:p=>p.px.l_healSync=1},
-  {id:'l_critHealL', r:2, ic:'❣️', tx:'치명타 시 <b>70%</b> 확률로 체력 <b>5%</b> 회복', ap:p=>p.px.l_critHealL=1},
-  {id:'l_killHeal5', r:2, ic:'💉', tx:'처치 시 <b>30%</b> 확률로 체력 <b>10%</b> 회복', ap:p=>p.px.l_killHeal5=1},
-  {id:'l_wardHealK', r:2, ic:'🛡️❤️👑', tx:'방어막으로 막을 때마다 체력 <b>20%</b> 회복 + 실드 <b>20%</b> 수리', ap:p=>p.px.l_wardHealK=1},
-  {id:'l_stunHit3', r:2, ic:'💫', tx:'피격 시 <b>70%</b> 확률로 때린 적 <b>6초</b> 기절', ap:p=>p.px.l_stunHit3=1},
-  {id:'l_stunExec', r:2, ic:'🕳️', tx:'마무리 일격 — 기절한 적에게 데미지 <b>8배</b>', ap:p=>p.px.l_stunExec=1},
-  {id:'l_dualWield', r:2, ic:'⚔️⚔️', tx:'이도류 — 평타가 항상 2연타 (두 번째 타격은 공격력의 <b>100%</b>)', ap:p=>p.px.l_dualWield=1},
-  {id:'l_cleave', r:2, ic:'🗡️🌀', tx:'평타가 대상과 바로 뒤 적까지 같이 벰', ap:p=>p.px.l_cleave=1},
-  {id:'l_execute', r:2, ic:'🩸', tx:'체력 <b>40%</b> 이하인 적 즉시 처치 (보스 포함)', ap:p=>p.px.l_execute=1},
-  {id:'l_thorns', r:2, ic:'🦔', tx:'피격 시 무조건 받은 피해의 <b>600%</b> 반사', ap:p=>p.px.l_thorns=1},
-  {id:'l_evade2Dmg', r:2, ic:'🎭', tx:'<b>2번</b> 연속 회피 성공 시 다음 공격 데미지 <b>8배</b>', ap:p=>p.px.l_evade2Dmg=1},
-  {id:'l_fullHpDmg', r:2, ic:'🎯👑', tx:'체력 가득 찬 적에게 데미지 <b>+200%</b>', ap:p=>p.px.l_fullHpDmg=1},
-  {id:'l_restWard', r:2, ic:'🏕️🛡️', tx:'쉼터에서 쉴 때마다 방어막 <b>15장</b>', ap:p=>p.px.l_restWard=1},
-  {id:'l_wardEvadeL', r:2, ic:'🔰✨', tx:'회피 시 <b>50%</b> 확률로 방어막 <b>1장</b>', ap:p=>p.px.l_wardEvadeL=1},
-  {id:'l_missCrit', r:2, ic:'🎯💨', tx:'빗나가면 다음 공격 무조건 치명타', ap:p=>p.px.l_missCrit=1},
-  {id:'l_missStack', r:2, ic:'💢', tx:'빗나가면 «데미지 <b>+150%</b>» 스택 (무제한 적립, 적중 1타당 <b>1개</b> 소모)', ap:p=>p.px.l_missStack=1},
-  {id:'l_wardThorns', r:2, ic:'🛡️💥', tx:'방어막으로 막을 때마다 그 적에게 공격력의 <b>900%</b> 반사', ap:p=>p.px.l_wardThorns=1},
-  {id:'l_stunKillNear', r:2, ic:'💫👑', tx:'처치 시 <b>60%</b> 확률로 가장 가까운 적 <b>3초</b> 기절', ap:p=>p.px.l_stunKillNear=1},
-  {id:'l_counterChain', r:2, ic:'🔂', tx:'반격하면 반드시 <b>두 번</b> 더 반격', ap:p=>p.px.l_counterChain=1},
+  {id:'p_atk',     nm:'공격력 증가',      ic:'⚔️',  tx:'공격력 <b>+20%</b>',                  ap:p=>{p.px.p_atk=1; p.dmg*=PERK_ATK_M;}},
+  {id:'p_evade',   nm:'회피율 증가',      ic:'💨',  tx:'회피율 <b>+10</b>',                   ap:p=>{p.px.p_evade=1; p.evade+=PERK_EVADE_A;}},
+  {id:'p_counter', nm:'반격률 증가',      ic:'🔁',  tx:'반격률 <b>+10</b>',                   ap:p=>{p.px.p_counter=1; p.counter+=PERK_COUNTER_A;}},
+  {id:'p_critR',   nm:'치명타 확률 증가', ic:'🎯',  tx:'치명타 확률 <b>+10</b>',              ap:p=>{p.px.p_critR=1; p.critR+=PERK_CRITR_A;}},
+  {id:'p_critF',   nm:'치명타 피해 증가', ic:'💥',  tx:'치명타 피해 <b>+50</b>',              ap:p=>{p.px.p_critF=1; p.critF+=PERK_CRITF_A;}},
+  {id:'p_def',     nm:'방어력 증가',      ic:'🛡️',  tx:'방어력 <b>+10%</b>',                  ap:p=>{p.px.p_def=1; p.def*=PERK_DEF_M;}},
+  {id:'p_steal',   nm:'생명 흡수',        ic:'🩸',  tx:'준 피해의 <b>10%</b> 회복',           ap:p=>{p.px.p_steal=1; p.steal+=PERK_STEAL;}},
+  {id:'p_axeHit',  nm:'피격 시 도끼',     ic:'🪓',  tx:'피격 시 <b>50%</b> 확률로 도끼 <b>1개</b>',   ap:p=>p.px.p_axeHit=1},
+  {id:'p_arrowEv', nm:'회피 시 화살',     ic:'🏹',  tx:'회피 시 <b>50%</b> 확률로 화살 <b>1개</b>',   ap:p=>p.px.p_arrowEv=1},
+  {id:'p_spearCt', nm:'반격 시 창',       ic:'🔱',  tx:'반격 시 <b>50%</b> 확률로 창 <b>1개</b>',     ap:p=>p.px.p_spearCt=1},
 ];
-const RARITY=[{nm:'일반',cc:'#9EA3AC'},{nm:'희귀',cc:'#4FA3E8'},{nm:'전설',cc:'#FFB92E'}];
-/* ⚑ 등급 3단 (신화 폐지): 일반 45 / 희귀 35 / 전설 20 (sim.js rollRarity 와 1:1) */
-function rollRarity(){
-  const r=Math.random();
-  return r<RARITY_P[2]?2 : r<RARITY_P[2]+RARITY_P[1]?1 : 0;
-}
-/* ⚑ 주인 확정 «획득 중복 금지» — 모든 특전이 고유다. 이미 가진 것은 풀에서 통째로 빠진다. */
-function perkPool(rar){ return PERKS.filter(p=>p.r===rar && !G.perksTaken.includes(p)); }
-/* 주인 지시(2026-09-02 06:2X): 등급은 선택지당 딱 1번만 굴리고 전부 그 등급에서만 나온다 (섞기 금지) */
-function rollPerks(n){
-  const rar=rollRarity();
-  const pool=perkPool(rar);
-  const out=[], used=new Set();
-  while(out.length<n && out.length<pool.length){
-    const perk=pick(pool);
-    if(used.has(perk)) continue;
-    used.add(perk); out.push(perk);
-  }
-  return out;
+/* 등급이 폐지돼 카드 색·태그가 하나다. 천사의 축복처럼 «특전이 아닌 획득물» 도 같은 카드를 쓴다. */
+const PERK_COLOR='#FFB92E';
+/* 다음 순번 특전 1개를 지급한다 — 지급했으면 그 특전을, 남은 게 없으면 null.
+   레벨업과 악마의 거래가 **같은 동사**를 거친다(sim.js grantNextPerk 와 1:1). */
+/* ⚑ 순번은 «획득 목록의 길이» 가 아니라 «그중 진짜 특전의 수» 다 — 천사의 축복처럼 PERKS 밖의 항목도
+   같은 목록에 쌓이므로(미리보기 줄·책이 함께 보여 준다) 길이로 세면 축복 한 번에 특전 하나를 건너뛴다.
+   sim.js 는 `G.taken` 에 특전만 넣으므로 그쪽은 길이로 세도 같은 결과다. */
+function perkOrderN(){ let n=0; for(const q of G.perksTaken) if(PERKS.includes(q)) n++; return n; }
+function nextPerk(){ const n=perkOrderN(); return n<PERKS.length?PERKS[n]:null; }
+function grantNextPerk(){
+  G.perkChances++;
+  const perk=nextPerk();
+  if(!perk) return null;
+  takePerk(perk);
+  return perk;
 }
 function takePerk(perk){
   const before=Object.assign({},G.player.px);
@@ -1874,13 +1732,11 @@ function playerBase(){
   const build=curBuild(), pw=buildPower(build);
   const maxHp=pw.hp;
   const p={
-    worldX:0, walking:false, atkTimer:0, strikeT:0, hitT:0, nextAtk:0, missStk:0, ward:0,
+    worldX:0, walking:false, atkTimer:0, strikeT:0, hitT:0, nextAtk:0, ward:0,
     dmg:pw.atk, aspd:TUNE.pAspd0,
     critR:TUNE.pCrit0, critF:TUNE.pCritF0,
     def:TUNE.pDef0, counter:TUNE.pCounter0, evade:TUNE.pEvade0, steal:0, killHeal:0, misfire:0,
     goldMul:1, walkMul:1, healAmp:0, repairAmp:0, nextCrit:false,
-    atkN:0, evStk:0, evStreak2:0, evStreak3:0, nextX3:false, nextP200:false,
-    comboT:null, comboN:0, rampN:0, lowShieldUsed:false,
     maxHp:maxHp, hp:maxHp, maxSh:pw.sh, sh:pw.sh,   /* ⚑ T35: 실드 독립 스탯 (`maxHp*0.8` 파생 폐기) */
     level:1, exp:0,
     buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]},
@@ -1906,7 +1762,7 @@ function playerBase(){
       wardAtk:0,wardHit:0,wardEvade:0,wardCrit:0,
     },
   };
-  /* 신 132종의 px 키 = 특전 id 그대로 (sim.js basePx 와 같은 방식) — 위 짧은 키는 장비 옵션 전용이다. */
+  /* 새 10종의 px 키 = 특전 id 그대로 (sim.js basePx 와 같은 방식) — 위 짧은 키는 장비 옵션 전용이다. */
   for(const k of PERKS) p.px[k.id]=0;
   /* 장비 계열 옵션 적용 (PLAN §11.1 — 상위 등급은 하위 옵션을 전부 포함) */
   for(const pt of GT.parts){
@@ -1996,7 +1852,7 @@ function payDevilCost(p){
 /* ⚑ 주인 확정 제약 (PLAN §2.4, 2026-09-02 14:2X) — 전 300 챕터 공통:
    ① 적 총 수 ≤ 100 (보스 제외 웨이브 적 합) ② 쉼터 1~4 ③ 악마 정확히 1 ④ 천사 정확히 1.
    가중치(45/30/25) 배치는 폐기 — 악마1·천사1 을 먼저 깔고 남는 슬롯을 전부 쉼터로 채운 뒤 순서만 시드 셔플한다. */
-const LAYOUT_MAXENEMY=100;
+const LAYOUT_MAXENEMY=50;   /* ⚑⚑ T96 주인 확정 — 100 → 50 (챕터 1~300 재생성 · 실측 40~50마리) */
 /* ⚑ 쉼터 보상 (PLAN §2.4 · 주인 확정 2026-09-02 17:1X · T49) — «❤️ 체력 260 회복(고정값)» vs «🌟 경험치 +26».
    고정값이라 최대체력 비율로 되돌리지 말 것. sim.js 와 이름·값이 같아야 한다(게이트 verifyRestPolicy). */
 const REST_HEAL=260, REST_EXP=26;
@@ -2010,11 +1866,8 @@ const STUN_BOSS_MUL=1/3;
 /* ⚑ 주인 확정 소환 데미지 상수 (PLAN §3.0) — 튜닝으로 계수 변경 금지. sim.js 와 같은 값. */
 const R_AXE=0.30, R_ARROW=0.50, R_WAVE=0.50, R_BOLT=0.75, R_SPEAR=1.00;
 const WAVE_PIERCE=2, WAVE_PIERCE_BIG=8, SPEAR_PIERCE=8;
-const AUTO_SUMMON_T=2.0, ASPD_RAMP_T=3.0, ASPD_RAMP_AMT=0.10, REAPER_CH=0.20;
-/* ⚑⚑ P3 R04 (주인 승인 40번 ⓐ+ⓔ) — sim.js 와 1:1. 오버킬 회복 계수 · 반격 연쇄 횟수 · 자동 창 주기 */
-const OVERKILL_HEAL_C=0.10, OVERKILL_REPAIR_C=0.10, COUNTER_CHAIN_N=2, AUTO_SPEAR_T=3.0;
-/* ⚑ 등급 등장 확률 — 신화 폐지에 따른 3단 재정의 (일반 45 / 희귀 35 / 전설 20) */
-const RARITY_P=[0.45,0.35,0.20];
+/* ⚑ T96 — 주기 소환·공속 램프·오버킬 회복·반격 연쇄·등급 확률 상수는 특전 132종과 함께 폐지됐다.
+   장비 옵션이 쓰는 `autoBolt`(3초 주기)만 남는다. sim.js 와 1:1. */
 /* ⚑ 방어막(ward)은 장수 상한이 없다(주인 확정 «무한»). */
 function chapterLayout(c){
   const rnd=mulberry(c*1013904223+77);
@@ -2077,7 +1930,7 @@ function startChapter(c){
     player:playerBase(), nodes, arrows:[], texts:[], parts:[], reaps:[],
     pprojs:[], bolts:[], procN:0,
     paused:false, over:false, cleared:false, pendingLevels:0, perksTaken:[], shake:0, bossWarned:false,
-    perkChances:0, refreshBonus:0, overBoltCd:0, autoBoltT:3, autoSumT:AUTO_SUMMON_T, autoSpearT:AUTO_SPEAR_T, rampT:ASPD_RAMP_T,
+    perkChances:0, overBoltCd:0, autoBoltT:3,
     miss:0,   /* 적 회피 10% 로 빗나간 횟수 (PLAN §2.3) */
     pxPerk:{},   /* px 키 → 그 키를 올린 특전 (발동 중 버프 아이콘이 «해당 특전» 을 찾는 용도) */
   };
@@ -2114,54 +1967,43 @@ function openOverlay(html,opts){
 }
 function closeOverlay(){ ov.classList.remove('on'); ov.innerHTML=''; ov.onclick=null; if(G) G.paused=false; }
 
-/* ⚑ T71 — 화면에 뜨는 특전 문구는 **여기 한 곳**에서만 만든다.
-   PLAN §3.1~3.4 «표시 텍스트» 열이 확정 스펙이고, 그 열은 고유 특전 35종에 «(고유)» 를 달고 있다.
-   종전엔 그 표기를 tx 문자열에 손으로 박아 뒀는데 T48 신규 9종에만 박혀서, 나머지 26종
-   (m_revive·m_clone·m_procX2·l_rage·r_lastStand …)은 «중복 획득 불가» 가 화면에 아예 안 떴다.
-   `u:1` 이 유일성의 유일한 근거이므로 표기도 거기서 파생시킨다 — 특전을 새로 넣을 때 손으로
-   덧붙일 것이 없어지고, 게이트(`verifyT2` ㊱)가 PLAN §3 표와 특전 전수를 1:1 로 대조한다.
-   T3 `battle.js` 는 그 문자열이 실제 DOM 까지 갔는지를 따로 본다. */
-const perkText=p=>p.tx;   /* ⚑ 모든 특전이 고유라 «(고유)» 표기는 정보가 아니다 — 삭제 */
+/* ⚑ 화면에 뜨는 특전 문구는 **여기 한 곳**에서만 만든다 — PLAN §3.1 «효과» 열이 확정 스펙이고
+   `tx` 가 그 문장이다(`<b>` 태그를 걷어내면 글자까지 같아야 한다 — 게이트가 두 엔진 + PLAN 을 대조).
+   ⚑ T96 — 등급이 폐지돼 카드에 등급 태그·등급색이 없다. 대신 **획득 순번**(1/10)을 태그로 보여준다:
+   순서 획득 체제에서 유저에게 의미 있는 정보는 «몇 번째를 받았고 몇 개 남았나» 이기 때문이다. */
+const perkText=p=>p.tx;
 function perkCardHTML(p,i,extra){
-  const r=RARITY[p.r];
-  return `<button class="perk-card ${extra||''} ${p.r===3?'myth':''}" data-i="${i}" style="--pc:${r.cc}">
-    <span class="tag">${r.nm}</span><span class="ic">${p.ic}</span><span class="tx">${perkText(p)}</span></button>`;
+  const n=PERKS.indexOf(p);
+  const tag=n>=0?`${n+1}/${PERKS.length}`:'축복';
+  return `<button class="perk-card ${extra||''}" data-i="${i}" style="--pc:${PERK_COLOR}">
+    <span class="tag">${tag}</span><span class="ic">${p.ic}</span><span class="tx">${perkText(p)}</span></button>`;
 }
-/* ⚑ T89 — 주인 지시(2026-09-03): 선택창 오른쪽 하단 📘 버튼으로 «고르기 전에 내가 뭘 갖고 있는지» 를 본다.
-   그리기(paint)와 굴리기(roll)를 나눈 것이 이 기능의 핵심이다 — 책을 닫고 돌아올 때 다시 굴리면
-   선택지가 바뀌어 «보고 나서 고른다» 가 성립하지 않는다. 굴림(rollPerks)은 roll() 안에서만 일어나고,
-   새로고침 잔여 횟수도 paint 가 상태를 그대로 다시 그리므로 책을 드나들어도 소모되지 않는다. */
-function openPerkChoice(){
-  G.perkChances++;
-  G.refreshLeft=1+G.refreshBonus;
+/* ⚑⚑ T96 — 레벨업 «3택 선택창» 은 폐지됐다. 레벨업하면 **다음 순번 특전을 그 자리에서 받는다**.
+   선택도 새로고침도 없으므로 이 팝업이 하는 일은 «무엇을 받았는지 보여주고 확인받는» 것뿐이다.
+   📘 보유 특전 버튼은 T89 주인 지시대로 남긴다 — 고를 것은 없어졌지만 «지금 내가 뭘 갖고 있나» 는
+   그대로 필요하고, 책은 `openOverlay` 로 내용만 갈아끼우므로 T79 «팝업 중 시간 완전 정지» 가 유지된다.
+   10개를 다 얻은 뒤의 레벨업은 팝업조차 뜨지 않는다(줄 것이 없다 — 게임 시간을 멈출 이유가 없다). */
+function openLevelUp(){
+  if(!nextPerk()){ G.perkChances++; afterPerk(); return; }   /* 10개를 다 얻었다 — 팝업 없이 그냥 진행 */
   AU.play('levelup');
-  let cur=null;
+  const perk=grantNextPerk();
+  renderStatsGrid(); updateBars();
   const paint=()=>{
     openOverlay(`<div class="ov-banner">🎉 레벨 업!</div>
-      <div class="ov-sub">새로운 특전을 선택하세요</div>
-      ${cur.map((p,i)=>perkCardHTML(p,i)).join('')}
-      <button id="refBtn">🔄 무료 새로고침</button>
-      <div id="refLeft">남은 횟수: <b>${G.refreshLeft}</b></div>
+      <div class="ov-sub">특전을 획득했습니다</div>
+      ${perkCardHTML(perk,0,'static')}
+      <button class="choice-btn gold" id="luOk">계속 전진</button>
       <div class="ov-foot"><button id="perkBookBtn">📘 보유 특전 <b>${G.perksTaken.length}</b></button></div>`,{rays:true});
-    ov.querySelectorAll('.perk-card').forEach(el=>{
-      el.onclick=()=>{ takePerk(cur[+el.dataset.i]); afterPerk(); };
-    });
-    const rb=$('refBtn');
-    if(G.refreshLeft<=0){ rb.style.display='none'; $('refLeft').style.display='none'; }
-    rb.onclick=()=>{ if(G.refreshLeft>0){ AU.play('click'); G.refreshLeft--; roll(); } };
-    /* 책은 openOverlay 로 «내용만» 갈아끼운다 — closeOverlay 를 안 거치므로 G.paused 가 한 프레임도 안 풀린다
-       (T79 «팝업 중 게임 시간 완전 정지» 불변 규약). 돌아오는 길은 paint 자신이다.
-       ⚑ stopPropagation 이 필수다 — 이 클릭은 핸들러가 끝난 «뒤» 오버레이까지 거품처럼 올라가는데,
-       그때는 이미 책이 깔아 둔 ov.onclick(= 복귀) 이 붙어 있어 열자마자 선택창으로 되돌아간다
-       (T3 실측으로 잡은 버그다 — 목록이 0.0초 만에 닫혔다). */
+    $('luOk').onclick=()=>{ AU.play('click'); afterPerk(); };
+    /* ⚑ stopPropagation 필수 — 이 클릭이 오버레이까지 거품처럼 올라가면 책이 깔아 둔 ov.onclick(=복귀)에
+       걸려 열자마자 되돌아간다(T89 가 T3 실측으로 잡은 버그). */
     $('perkBookBtn').onclick=e=>{ e.stopPropagation(); openPerkBook(paint); };
   };
-  const roll=()=>{ cur=rollPerks(3); paint(); };   /* ⚑ 선택지 3개 고정 (🔮 전지의 눈 삭제 — PLAN §3.0) */
-  roll();
+  paint();
 }
 function afterPerk(){
   renderStatsGrid(); updateBars();
-  if(G.pendingLevels>0){ G.pendingLevels--; openPerkChoice(); }
+  if(G.pendingLevels>0){ G.pendingLevels--; openLevelUp(); }
   else closeOverlay();
 }
 /* back 이 함수면 «특전 선택창에서 열린 책» 이다 — 닫으면 게임으로 나가는 게 아니라 선택창으로 돌아간다.
@@ -2201,27 +2043,26 @@ function openRest(){
   $('rExp').onclick=()=>{ closeOverlay(); addText('EXP +'+REST_EXP,'#FFD54A'); gainExp(REST_EXP); };
 }
 function openDevil(){
+  /* ⚑⚑ T96 — 악마가 주는 것 = **다음 순번 특전을 하나 앞당겨 준다** (주인 위임 기본값. 순서가 고정이라
+     «전설 확정» 이 의미를 잃었다). 줄 특전이 남아 있지 않으면 거래 자체가 성립하지 않으므로
+     비용도 안 받고 그냥 지나간다(위임). 비용(최대체력 30% 차감)은 T90 그대로다. */
+  const perk=nextPerk();
+  if(!perk){ closeOverlay(); return; }
   AU.play('devil');
   const cost=Math.round(G.player.maxHp*DEVIL_COST);   /* ⚑ T90 — 최대치에서 깎일 양 (현재체력 차감 아님) */
-  /* ⚑ 주인 확정: 악마 이벤트 = **전설 확정** (신화 폐지로 «15% 확률로 신화» 조항 삭제) */
-  let pool=perkPool(2);
-  if(!pool.length) pool=perkPool(1);   /* 전설 풀이 비면 희귀로 (sim.js 와 같은 폴백) */
-  if(!pool.length){ closeOverlay(); return; }
-  const perk=pick(pool);
   openOverlay(`<div class="big-emoji">😈</div>
     <div class="ov-banner" style="color:#E87AA0">악마의 거래</div>
     <div class="ov-sub">"네 생명을 바치면... 이 힘을 주지"</div>
     <div style="width:100%; margin-bottom:4px">${perkCardHTML(perk,0,'static')}</div>
-    <button class="choice-btn danger" id="dYes">🩸 최대 체력의 30% 지불 (-${fmt(cost)})<small>최대 체력이 줄어든 채 진행 · 위 특전 획득</small></button>
+    <button class="choice-btn danger" id="dYes">🩸 최대 체력의 30% 지불 (-${fmt(cost)})<small>최대 체력이 줄어든 채 진행 · 다음 특전을 앞당겨 획득</small></button>
     <button class="choice-btn" id="dNo">🚶 조용히 지나간다<small>아무 일도 일어나지 않습니다</small></button>`);
   $('dYes').onclick=()=>{
-    const p=G.player;
-    payDevilCost(p);   /* ⚑ T90 — 최대치에서 30% 차감 + 현재체력 클램프 (sim.js 와 같은 동사) */
+    payDevilCost(G.player);   /* ⚑ T90 — 최대치에서 30% 차감 + 현재체력 클램프 (sim.js 와 같은 동사) */
     AU.play('hurt');
-    G.perkChances++;
-    takePerk(perk); renderStatsGrid(); updateBars();
+    grantNextPerk();          /* 레벨업과 같은 동사 — 순번이 하나 앞당겨진다 */
+    renderStatsGrid(); updateBars();
     openOverlay(`<div class="big-emoji">${perk.ic}</div>
-      <div class="ov-banner" style="color:${RARITY[perk.r].cc}">${RARITY[perk.r].nm} 특전 획득!</div>
+      <div class="ov-banner" style="color:${PERK_COLOR}">특전 획득!</div>
       <div class="ov-sub" style="font-size:16px">${perkText(perk)}</div>
       <button class="choice-btn gold" id="dOk">계속 전진</button>`,{rays:true});
     $('dOk').onclick=()=>{ AU.play('click'); closeOverlay(); };
@@ -2237,7 +2078,7 @@ function openAngel(){
     <button class="choice-btn gold" id="aAd">📺 광고 보고 공격력 +15%<small>더 강한 축복</small></button>`);
   const bless=mult=>{
     G.player.dmg*=mult;
-    G.perksTaken.push({r:1,ic:'😇',tx:`천사의 축복 — 공격력 <b>+${Math.round((mult-1)*100)}%</b>`});
+    G.perksTaken.push({ic:'😇',tx:`천사의 축복 — 공격력 <b>+${Math.round((mult-1)*100)}%</b>`});   /* 특전이 아니라 «축복» — PERKS 에 없으므로 카드 태그가 «축복» 으로 뜬다 */
     renderStatsGrid(); renderPerkStrip();
   };
   $('aFree').onclick=()=>{ AU.play('perk'); bless(1.05); closeOverlay(); };
@@ -2332,17 +2173,8 @@ function shake(m){ if(G) G.shake=Math.max(G.shake,m); }
    «낫이 베어 죽이는» 것이 보여야 하고 일반 처치 연기(poof)와 구별돼야 한다:
    ① 큰 낫이 호를 그리며 한 번 훑고(reaps 가 그린다) ② 베인 자리에 붉은 참격선 ③ 검은 재가 흩어진다.
    poof 는 부르지 않는다 — 여기서 죽은 적은 «연기» 가 아니라 «재» 로 사라진다. */
-function reapFx(wx){
-  if(!G) return;
-  G.reaps.push({x:wx,t:0});
-  AU.play('crit'); shake(7);
-  addText('☠️ 사신의 낫','#C8A2FF',wx,-124,true);
-  for(let i=0;i<12;i++){
-    const a=rand(0,Math.PI*2), v=rand(30,120);
-    G.parts.push({x:wx,y:-40,vx:Math.cos(a)*v,vy:Math.sin(a)*v-40,life:rand(0.4,0.8),t:0,color:'rgba(40,36,50,',size:rand(4,9),puff:true});
-  }
-  sparks(wx,-46,'#B388FF',8,180);
-}
+/* ⚑ T96 — ☠️ 사신의 낫 연출(reapFx)은 그 특전이 폐지되면서 호출부가 사라져 함께 지웠다.
+   `G.reaps` 배열과 그 그리기 루프는 남겨 둔다(항상 비어 있고, 다시 쓸 연출이 생기면 그 자리다). */
 /* 방어막이 «막을 때» 의 전용 이펙트 (주인 17:2X) — 육각 방벽이 번쩍하고 튕겨낸다. */
 function wardFx(){
   if(!G) return;
@@ -2388,32 +2220,16 @@ function pushProj(pr){
     for(const e of list.slice(0,pr.pierce)) projHit(pr,e);
   }else if(pr.tgt&&pr.tgt.hp>0) projHit(pr,pr.tgt);
 }
-/* 소환 적중 한 곳 — 소환 개조 특전(🪓🌪️ 3회전 · 🪞 튕김 · 🔱💫 관통 기절)이 여기서만 갈린다.
-   sim.js projHit 과 1:1 (투사체 해석 지점이 여러 곳이라 동사를 하나로 모았다). */
+/* 소환 적중 한 곳 — sim.js projHit 과 1:1 (투사체 해석 지점이 여러 곳이라 동사를 하나로 모았다).
+   ⚑ T96 — 소환 개조 특전(회전·튕김·관통 기절)은 새 10종 체제에 없다. 도끼·화살·창 모두 «1개 = 1발». */
 function projHit(pr,e){
-  const p=G.player, px=p.px;
-  if(pr.type==='axe'){
-    const times=px.l_axeSpin?4:1;                              /* 🪓🌪️ 4회전 4타 */
-    for(let i=0;i<times;i++){ if(e.hp<=0) break; summonHit(e,R_AXE,'🪓'); }
-    if(px.r_axeBounce){                                        /* 🪞 2번 튕겨 다른 적 */
-      const o=aliveEnemies().filter(x=>x!==e);
-      for(let i=0;i<2&&o.length;i++){ const t=pick(o); addText('🪞','#BFE3FF',t.worldX,-96); summonHit(t,R_AXE,'🪓'); }
-    }
-    return;
-  }
-  summonHit(e,pr.ratio,pr.type==='spear'?'🔱':(pr.type==='wave'?'🌊':'🏹'));
-  if(pr.type==='spear'&&px.l_spearStun&&pkk(p,0.90)) applyStun(e,3);   /* 🔱💫 */
+  summonHit(e,pr.type==='axe'?R_AXE:pr.ratio,pr.type==='spear'?'🔱':(pr.type==='wave'?'🌊':(pr.type==='axe'?'🪓':'🏹')));
 }
 function castBolt(t){
   const p=G.player, px=p.px;
   G.bolts.push({x:t.worldX,t:0,seed:Math.random()*10});
   AU.play('bolt');
   summonHit(t,R_BOLT,'⚡');
-  /* 🔗 / 🔗👑 연쇄 번개 — 맞은 적의 «옆 적» 하나로 1번만 튄다. 튄 번개도 풀데미지. */
-  if(px.l_boltChainK||(px.r_boltChain&&pkk(p,0.30))){
-    const o=nearestTo(t.worldX,t);
-    if(o){ G.bolts.push({x:o.worldX,t:0,seed:Math.random()*10}); addText('🔗','#BFE3FF',o.worldX,-96); summonHit(o,R_BOLT,'⚡'); }
-  }
 }
 /* «가장 가까운 적» — 💫👟·💫👑·연쇄 번개가 쓴다 (sim.js nearestTo 와 1:1) */
 function nearestTo(ref,except){
@@ -2442,8 +2258,6 @@ function fireAxe(p,n){
 }
 function fireArrows(p,n){
   const px=p.px; n=n||2;
-  if(px.l_arrowToSpear) return fireSpear(p,n);      /* 🏹→🔱 내가 쏘는 모든 화살이 창으로 */
-  if(px.r_arrowX2) n*=2;                            /* 🏹² 화살이 2배로 생성 */
   if(px.arrowCount) n=Math.round(n*1.5);            /* 장비 «화살 3발로 증가» (기본 2발 → 3발) */
   volley(n,()=>{ const t=randTarget(); if(!t)return; AU.play('arrow');
     pushProj({type:'parrow',x:p.worldX+14,tgt:t,ratio:R_ARROW,spd:560}); });
@@ -2454,7 +2268,7 @@ function fireBolts(p,n){
 }
 function fireWave(p,n){
   const px=p.px; n=n||1;
-  const big=px.l_wavePierce;                        /* 🌊🔱 거대 검기 — 창처럼 8마리 관통 */
+  const big=false;                                  /* 거대 검기 개조 특전은 새 10종에 없다 */
   const pierce=big?WAVE_PIERCE_BIG:(px.waveKing?20:WAVE_PIERCE);
   const reach=big?88*SPEAR_PIERCE:(px.waveKing?1400:340);
   volley(n,()=>{ AU.play('throw');
@@ -2474,7 +2288,7 @@ function gainExp(n){
   /* 주인 지시(2026-09-02 06:3X): 챕터를 끝내는 보스 처치로 레벨업해도 특전 선택지·레벨업 팝업 없이 클리어로 */
   if(lev>0 && !G.over && !G.cleared){
     G.pendingLevels+=lev-1;
-    openPerkChoice();
+    openLevelUp();
   }
 }
 /* over = 이 처치에서 «초과된 데미지»(오버킬). 🩸 오버킬 힐 · 🔧⚡ 오버킬 수리가 이 값을 쓴다. */
@@ -2498,21 +2312,6 @@ function onKill(e,over){
   if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff)) addBuff(p,'critR',14,4,'killCritBuff');
   if(px.killDefBuff) addBuff(p,'def',10*px.killDefBuff,3,'killDefBuff');
   if(px.killAspd){ p.aspd*=1.01; renderStatsGrid(); }
-  /* ===== 새 132종 «처치 시» 축 (sim.js onKill 과 같은 순서) ===== */
-  if(px.c_killShield3&&pkk(p,0.10)){ repair(p,p.maxSh*0.10); addText('🔰','#6CC0F0'); }
-  if(px.l_killHeal5&&pkk(p,0.30)){ heal(p,p.maxHp*0.10); addText('💉','#7ED957'); }
-  if(px.c_evadeKill) addBuff(p,'evade',40,2,'c_evadeKill');
-  if(px.c_atkPerm&&pkk(p,0.30)){ p.dmg*=1.01; addText('🌱','#7ED957',p.worldX,-104); renderStatsGrid(); }
-  if(px.c_evadePerm&&pkk(p,0.30)){ p.evade+=1; addText('🍃','#7ED957',p.worldX,-104); renderStatsGrid(); }
-  if(px.r_aspdKill&&pkk(p,0.40)) addBuff(p,'aspd',0.10,7,'r_aspdKill');
-  if(px.c_boltKill&&pkk(p,0.70)) fireBolts(p,1);
-  if(px.r_arrowKill&&pkk(p,0.40)) fireArrows(p,2);
-  if(px.r_spearKill&&pkk(p,0.50)) fireSpear(p,1);
-  if(px.c_wardKill&&pkk(p,0.10)){ p.ward++; addText('⚔️✨ x'+p.ward,'#9CD2FF'); renderBuffBar(); }
-  if(over>0&&px.r_overheal){ const v=over*OVERKILL_HEAL_C; heal(p,v); addText('🩸 +'+fmt(v),'#7ED957'); }
-  if(over>0&&px.l_overRepair){ const v=over*OVERKILL_REPAIR_C; repair(p,v); addText('🔧⚡ +'+fmt(v),'#6CC0F0'); }
-  if(px.c_stunKillNear&&pkk(p,0.20)){ const t=nearestTo(e.worldX,e); if(t) applyStun(t,3); }
-  if(px.l_stunKillNear&&pkk(p,0.60)){ const t=nearestTo(e.worldX,e); if(t) applyStun(t,3); }
   if(e.wave.enemies.every(x=>x.hp<=0)){
     e.wave.done=true;
     /* 웨이브 전멸 실드 무료충전 폐지 (주인 지시 2026-09-02 06:5X·08:5X) — 실드 충전은 특전으로만 */
@@ -2553,13 +2352,6 @@ function procOnMiss(e){
   if(px.missReset&&pkk(p,0.30*px.missReset)) p.atkTimer=0;
   if(px.missRush){ p.atkTimer=0; p.nextAtk=Math.min(1.5,Math.max(p.nextAtk,1.0)); addText('💨 즉시 재공격!','#9CD2FF'); }
   if(px.missSpear&&pkk(p,0.20*px.missSpear)) fireSpear(p,1);
-  /* ===== 새 132종 «빗나가면» 축 ===== */
-  if(px.c_arrowMiss&&pkk(p,0.30)) fireArrows(p,1);
-  if(px.r_boltMiss&&pkk(p,0.40)) fireBolts(p,2);
-  if(px.c_critMiss&&pkk(p,0.30)) addBuff(p,'critR',5,7,'c_critMiss');
-  if(px.r_missAspd&&pkk(p,0.70)) addBuff(p,'aspd',0.20,7,'r_missAspd');
-  if(px.l_missCrit){ p.nextCrit=true; addText('🎯 확정 치명타!','#FFB92E'); }
-  if(px.l_missStack){ p.missStk++; addText('💢 x'+p.missStk,'#FF8A80'); }   /* 무제한 적립 */
 }
 /* ⚑ T48 3단계 — 횟수형 방어막 (주인 17:2X). sim.js wardCap/gainWard 와 1:1.
    막을 때의 전용 이펙트와 남은 장수 뱃지는 아래 hitPlayer·renderBuffBar 가 맡는다. */
@@ -2579,7 +2371,6 @@ function procOnRanged(src,dmg){
   if(px.rangeThorns&&src&&src.hp>0&&pkk(p,0.30*px.rangeThorns)) reflect(src,effDmg(p)*0.8,'🏹🌵');
   if(px.rangeBolt&&pkk(p,0.30*px.rangeBolt)) fireBolts(p,1);
   if(px.rangeSpear&&pkk(p,0.10*px.rangeSpear)) fireSpear(p,1);
-  if(px.c_rangeThorns&&src&&src.hp>0&&pkk(p,0.30)) reflect(src,dmg*1.00,'🏹🌵');
 }
 /* 반사 한 곳 (sim.js reflect 와 1:1) — 반사는 «플레이어가 겨눈 타격» 이 아니라 적 회피를 타지 않는다. */
 function reflect(src,amt,icon){
@@ -2595,15 +2386,12 @@ function dealPlayerDamage(e,ratio,icon){
   const full=e.hp>=e.maxHp-0.5, stunned=e.stun>0;
   let cr=effCritR(p);
   if(px.fullHpCrit&&full) cr=Math.max(cr,62);                 /* 장비 옵션 */
-  if(px.r_stunCritR&&stunned) cr+=60;                         /* 🧊 */
-  if(basic&&px.c_fourthCrit&&p.atkN%4===0) cr=100;            /* 🔢🎯 */
   if(basic&&p.nextCrit) cr=100;
   const crit=Math.random()*100<cr;
   if(basic&&p.nextCrit) p.nextCrit=false;
   /* ⚑ 적 회피 10% (PLAN §2.3 주인 확정) — sim.js dealDmg 와 같은 자리(치명타 굴림 뒤).
-     빗맞아도 nextCrit·nextAtk 는 소모된다(위임 기본값). «MISS» 팝 표시.
-     🗿 c_stunNoEvade — «기절 중인 적은 회피하지 못함»: 굴림 자체를 건너뛴다. */
-  if(!(stunned&&px.c_stunNoEvade)&&Math.random()<ENEMY_EVADE){
+     빗맞아도 nextCrit·nextAtk 는 소모된다(위임 기본값). «MISS» 팝 표시. */
+  if(Math.random()<ENEMY_EVADE){
     G.miss++;
     AU.play('evade');
     addText('MISS','#9FB0C0',e.worldX,-84);
@@ -2615,35 +2403,21 @@ function dealPlayerDamage(e,ratio,icon){
      빗맞음 스택은 적중 1타당 1개 소모하고, 몇 장이 쌓여 있든 한 타에는 +100% 한 번만. */
   let addBonus=0;
   if(full&&px.firstHit) addBonus+=0.20*px.firstHit;            /* 장비 옵션 */
-  if(full&&px.c_firstHit) addBonus+=1.00;                      /* 🎯 */
-  if(full&&px.l_fullHpDmg) addBonus+=2.00;                     /* 🎯👑 */
-  if(px.c_rangedDmg&&e.ranged) addBonus+=0.30;                 /* 🏹💀 */
-  if(stunned&&px.c_stunDmg) addBonus+=0.30;                    /* 💢 */
-  if(stunned&&px.r_stunDmgM) addBonus+=1.00;                   /* 🧲 */
-  if(px.c_backDmg||px.backDmg){
+  if(px.backDmg){                                             /* 장비 옵션 (순수 배수) */
     let front=null;
     for(const en of aliveEnemies()) if(!front||en.worldX<front.worldX) front=en;
-    if(front&&e!==front){ if(px.c_backDmg) addBonus+=1.00;     /* 🔙 */
-                          if(px.backDmg) d*=3.2; }             /* 장비 옵션 (순수 배수) */
+    if(front&&e!==front) d*=3.2;
   }
-  if(basic&&px.c_fourthDmg&&p.atkN%4===0) addBonus+=1.00;      /* 🔢 */
-  if(px.l_missStack&&p.missStk>0){ p.missStk--; addBonus+=1.50; }/* 💢 빗맞음 스택 */
-  if(px.c_evadeStack&&p.evStk>0){ p.evStk--; addBonus+=0.50; } /* 🌀🗡️ 회피 스택 */
-  if(px.r_comboDmg){                                           /* 🥊 같은 적 연타 */
-    if(p.comboT===e) p.comboN++; else { p.comboT=e; p.comboN=0; }
-    addBonus+=0.10*p.comboN;
-  }
-  if(basic&&px.r_evade3Dmg&&p.nextP200){ p.nextP200=false; addBonus+=3.00; }   /* 💃 */
   if(addBonus) d*=1+addBonus;
-  if(stunned&&px.l_stunExec) d*=8;                             /* 🕳️ */
   if(px.execute&&e.hp<=e.maxHp*0.5) d*=2.2;                    /* 장비 옵션 */
-  if(basic&&px.l_evade2Dmg&&p.nextX3){ p.nextX3=false; d*=8; } /* 🎭 */
   e.hp-=d; e.hitT=0.15;
   AU.play(crit?'crit':'hit');
   sparks(e.worldX-10,-40,crit?'#FFB92E':'#FFF3CF',crit?9:5,crit?190:130);
   if(crit) shake(3);
   addText((icon||'')+(crit?'💥':'')+fmt(d), crit?'#FFB92E':(icon?'#BFE3FF':'#FFFFFF'), e.worldX,-84,crit);
-  if(p.steal>0) heal(p,d*p.steal/100);
+  /* ⑦ 생명 흡수 — «준 피해의 10% 회복». noBoost=true (sim.js 와 1:1):
+     주인 문면이 «준 피해의 10%» 라 회복 증폭을 안 타고, «실드는 안 채움» 조항대로 오버킬 수리도 안 탄다. */
+  if(p.steal>0) heal(p,d*p.steal/100,true);
   if(crit){
     if(px.critChain) addBuff(p,'critR',5*px.critChain,3,'critChain');
     if(px.critFsmall) addBuff(p,'critF',20*px.critFsmall,3,'critFsmall');   /* ⚑ T1 R01 등급 내 재분배: +10 → +20 */
@@ -2656,24 +2430,10 @@ function dealPlayerDamage(e,ratio,icon){
     if(px.stunCritM&&pkk(p,0.15*px.stunCritM)) applyStun(e,3);
     if(px.stunCritL&&pkk(p,0.35*px.stunCritL)) applyStun(e,3);
     gainWard(p,0.12*px.wardCrit);
-    /* ===== 새 132종 «치명타 시» 축 (sim.js dealDmg 와 같은 순서) ===== */
-    if(px.r_axeCrit&&pkk(p,0.30)) fireAxe(p,2);
-    if(px.r_waveCrit&&pkk(p,0.30)) fireWave(p,1);
-    if(px.l_spearCrit&&pkk(p,0.40)) fireSpear(p,1);
-    if(px.r_critRBuff&&pkk(p,0.70)) addBuff(p,'critR',20,7,'r_critRBuff');
-    if(px.r_critFBuff&&pkk(p,0.60)) addBuff(p,'critF',40,7,'r_critFBuff');
-    if(px.l_critFBuffL&&pkk(p,0.60)) addBuff(p,'critF',100,7,'l_critFBuffL');
-    if(px.r_critHeal3&&pkk(p,0.60)){ heal(p,p.maxHp*0.05); addText('❤️‍🔥','#7ED957'); }
-    if(px.l_critHealL&&pkk(p,0.70)){ heal(p,p.maxHp*0.05); addText('❣️','#7ED957'); }
-    if(px.r_stunCrit&&pkk(p,0.20)) applyStun(e,6);
   }
   if(px.execKill&&!e.isBoss&&e.hp>0&&e.hp<=e.maxHp*0.25){       /* 장비 옵션 */
     e.hp=0;
     addText('🧨 처형!','#FF6B6B',e.worldX,-104,true);
-  }
-  if(px.l_execute&&e.hp>0&&e.hp<=e.maxHp*0.40){                 /* 🩸 체력 40% 이하 즉시 처치 (보스 포함) */
-    e.hp=0;
-    addText('🩸 처형!','#FF6B6B',e.worldX,-104,true);
   }
   if(e.hp<=0) onKill(e,-e.hp);
   return crit;
@@ -2694,19 +2454,6 @@ function procOnAttack(e){
   if(px.bolt&&pkk(p,0.05*px.bolt)) fireBolts(p,1);
   if(px.arsenal&&pkk(p,0.05*px.arsenal)) pick([fireAxe,fireArrows,fireBolts,fireWave,fireSpear])(p,1);
   gainWard(p,0.10*px.wardAtk);
-  /* ===== 새 132종 «공격 시» 축 (sim.js procOnAttack 과 같은 순서) ===== */
-  if(px.c_waveAtk&&pkk(p,0.10)) fireWave(p,1);
-  if(px.r_arrowAtk&&pkk(p,0.15)) fireArrows(p,2);
-  if(px.l_boltAtk&&pkk(p,0.20)) fireBolts(p,2);
-  if(px.l_axeAtk&&pkk(p,0.20)) fireAxe(p,2);
-  if(px.l_arrowAtk&&pkk(p,0.20)) fireArrows(p,2);
-  if(px.l_waveAtk&&pkk(p,0.20)) fireWave(p,2);
-  if(px.c_aspdAtk&&pkk(p,0.30)) addBuff(p,'aspd',0.05,7,'c_aspdAtk');
-  if(px.c_evadeAtkB&&pkk(p,0.30)) addBuff(p,'evade',5,7,'c_evadeAtkB');
-  if(px.r_atkBuffM&&pkk(p,0.60)) addBuff(p,'atk',0.10,7,'r_atkBuffM');
-  if(px.l_atkBuffL&&pkk(p,0.50)) addBuff(p,'atk',0.20,7,'l_atkBuffL');
-  if(px.r_wardAtk&&pkk(p,0.10)){ p.ward++; addText('🛡️✨ x'+p.ward,'#9CD2FF'); renderBuffBar(); }
-  if(px.c_stunAtk&&e&&e.hp>0&&pkk(p,0.10)) applyStun(e,3);
 }
 function doCounter(src,depth){
   const p=G.player, px=p.px;
@@ -2719,7 +2466,7 @@ function doCounter(src,depth){
     procOnMiss(src);
     return;
   }
-  const cd=effDmg(p)*0.7*(1+px.counterX)*(px.r_counterX?2.5:1);   /* ⚜️ 반격 피해 +150% */
+  const cd=effDmg(p)*0.7*(1+px.counterX);                        /* counterX = 장비 옵션 */
   src.hp-=cd; src.hitT=0.15;
   addText('반격 '+fmt(cd),'#FFD54F',src.worldX,-80);
   sparks(src.worldX,-40,'#FFD54F',5,130);
@@ -2729,41 +2476,26 @@ function doCounter(src,depth){
   if(px.counterCrit) addBuff(p,'critR',14,3,'counterCrit');
   if(px.counterHeal) heal(p,p.maxHp*0.04*px.counterHeal);
   if(px.counterWave&&pkk(p,1.0*px.counterWave)) fireWave(p,1);
-  /* ===== 새 132종 «반격 시» 축 ===== */
-  if(px.r_spearCounter&&pkk(p,0.60)) fireSpear(p,1);
-  if(px.r_counterAtkM&&pkk(p,0.70)) addBuff(p,'atk',0.10,7,'r_counterAtkM');
-  if(px.r_counterHeal&&pkk(p,0.60)){ heal(p,p.maxHp*0.10); addText('💧','#7ED957'); }
+  /* ⑩ 반격 시 창 — 반격 1회당 50% 확률로 창 1개 (sim.js doCounter 와 1:1) */
+  if(px.p_spearCt&&pkk(p,PERK_SUMMON_CH)) fireSpear(p,1);
   if(src.hp<=0) onKill(src,-src.hp);
   /* 🔂 반격하면 반드시 두 번 더 반격 — 연쇄 상한 3회 (무한 연쇄 금지는 유지) */
   else if(px.counterChain&&!depth) doCounter(src,1);
-  else if(px.l_counterChain&&(depth||0)<COUNTER_CHAIN_N) doCounter(src,(depth||0)+1);
 }
 function playerStrike(e){
   const p=G.player, px=p.px;
   p.strikeT=0.16;
-  p.atkN++;                                   /* 평타 카운터 — 🔢 4번째 · 🔨 5회마다 · 🔱⚔️ 2회마다 */
   let ratio=1;
   if(p.nextAtk>0){ ratio*=1+p.nextAtk; p.nextAtk=0; }
   const crit=dealPlayerDamage(e,ratio);
   if(px.clone&&e.hp>0) dealPlayerDamage(e,0.25,'👻');                  /* 장비 옵션 */
-  if(px.l_dualWield&&e.hp>0) dealPlayerDamage(e,1.00,'⚔️⚔️');          /* ⚔️⚔️ 이도류 */
-  if(px.l_cleave){                                                     /* 🗡️🌀 대상과 바로 뒤 적까지 */
-    const b=nearestTo(e.worldX,e);
-    if(b&&b.hp>0&&b.worldX>=e.worldX) dealPlayerDamage(b,ratio,'🗡️🌀');
-  }
   if(crit&&px.extraHit&&pkk(p,0.75*px.extraHit)&&e.hp>0) dealPlayerDamage(e,2.3,'🗡️');   /* 장비 옵션 */
-  if(px.c_fourthBolt&&p.atkN%4===0) fireBolts(p,1);                    /* 🔢⚡ */
-  if(px.l_spear2Atk&&p.atkN%3===0) fireSpear(p,1);                     /* 🔱⚔️ */
-  if(px.r_fifthCrit&&p.atkN%5===0){ p.nextCrit=true; addText('🔨','#FFB92E'); }   /* 🔨 */
   procOnAttack(e);
 }
 function hitPlayer(dmg,isMelee,src){
   const p=G.player, px=p.px;
   if(Math.random()*100<effEvade(p)){
     AU.play('evade'); addText('회피!','#CFCFD8');
-    p.evStreak2++; p.evStreak3++;
-    if(px.l_evade2Dmg&&p.evStreak2>=2){ p.evStreak2=0; p.nextX3=true; addText('🎭 다음 공격 8배!','#FFB92E'); }
-    if(px.r_evade3Dmg&&p.evStreak3>=2){ p.evStreak3=0; p.nextP200=true; addText('💃 다음 공격 강화!','#FFB92E'); }
     if(px.evadeEvBuff) addBuff(p,'evade',8*px.evadeEvBuff,3,'evadeEvBuff');
     if(px.evadeAspd) addBuff(p,'aspd',0.10,2,'evadeAspd');   /* ⚑ T1 R01 등급 내 재분배: +5% → +10% */
     if(px.evadeDef) addBuff(p,'def',10*px.evadeDef,3,'evadeDef');
@@ -2775,47 +2507,22 @@ function hitPlayer(dmg,isMelee,src){
     if(px.evadeCounter&&pkk(p,1.0*px.evadeCounter)) doCounter(src);
     if(px.evadeAxe&&pkk(p,0.10*px.evadeAxe)) fireAxe(p,1);
     gainWard(p,0.10*px.wardEvade);
-    /* ===== 새 132종 «회피 시» 축 (sim.js hitPlayer 회피 분기와 같은 순서) ===== */
-    if(px.c_spearEvade&&pkk(p,0.10)) fireSpear(p,1);
-    if(px.r_axeEvade&&pkk(p,0.30)) fireAxe(p,2);
-    if(px.r_boltEvade&&pkk(p,0.30)) fireBolts(p,2);
-    if(px.c_aspdEvade&&pkk(p,0.30)) addBuff(p,'aspd',0.05,7,'c_aspdEvade');
-    if(px.l_evadeAspdL&&pkk(p,0.80)) addBuff(p,'aspd',0.20,7,'l_evadeAspdL');
-    if(px.c_evadeHealS&&pkk(p,0.10)){ heal(p,p.maxHp*0.05); addText('🍀','#7ED957'); }
-    if(px.r_evadeShield&&pkk(p,0.20)){ repair(p,p.maxSh*0.10); addText('🔶 실드 수리','#6CC0F0'); }
-    if(px.c_wardEvade&&pkk(p,0.10)){ p.ward++; addText('👥✨ x'+p.ward,'#9CD2FF'); renderBuffBar(); }
-    if(px.l_wardEvadeL&&pkk(p,0.50)){ p.ward++; addText('🔰✨ x'+p.ward,'#9CD2FF'); renderBuffBar(); }
-    if(px.c_evadeStack){ p.evStk++; addText('🌀🗡️ x'+p.evStk,'#9CD2FF'); }
-    if(px.r_stunEvade&&src&&pkk(p,0.60)) applyStun(src,3);
-    /* ☠️🌾 사신의 낫 — 회피 시 20% 확률로 그 적 즉사. **보스 포함**(주인 명시).
-       주인 지시대로 일반 처치 연기와 구별되는 전용 연출(낫이 베어 죽인다)을 붙인다. */
-    if(px.c_reaper&&src&&src.hp>0&&pkk(p,REAPER_CH)){
-      reapFx(src.worldX);
-      src.hp=0; onKill(src,0);
-    }
+    /* ⑨ 회피 시 화살 — 회피 1회당 50% 확률로 화살 1발 (sim.js 와 1:1) */
+    if(px.p_arrowEv&&pkk(p,PERK_SUMMON_CH)) fireArrows(p,1);
     return;
   }
   /* ===== 맞았다 ===== */
-  p.evStreak2=0; p.evStreak3=0;
-  if(px.l_aspdRamp&&p.rampN>0){ p.rampN=0; renderStatsGrid(); }   /* 🎻 피격당하면 초기화 */
   /* 횟수형 방어막 — 이 타격 «1회» 를 통째로 무효화하고 1장 소모한다 (수치형 실드보다 먼저).
      데미지만 완전 무효이고 «맞은 사건» 은 일어난 것이라 아래 피격 트리거들은 그대로 굴린다.
      sim.js hitPlayer 와 같은 순서·같은 조건. */
-  /* 💎 실드가 남아있는 동안 피격 시 50% 확률로 데미지 완전 무시 (방어막보다 앞 — 방어막을 아끼는 쪽이 유리) */
-  const ignored=px.l_shieldIgnore&&p.sh>0&&pkk(p,0.70);
-  if(ignored){ AU.play('shield'); addText('💎 무시!','#9CD2FF'); sparks(p.worldX,-40,'#9CD2FF',6,140); }
-  const warded=!ignored&&p.ward>0;
+  const warded=p.ward>0;
   if(warded){
     p.ward--;
     wardFx();
     /* ===== 방어막 방어 트리거 ===== */
-    if(px.r_wardHeal){ heal(p,p.maxHp*0.10); addText('🛡️❤️','#7ED957'); }
-    if(px.l_wardHealK){ heal(p,p.maxHp*0.20); repair(p,p.maxSh*0.20); addText('🛡️❤️👑','#7ED957'); }
-    if(px.l_wardThorns) reflect(src,effDmg(p)*9,'🛡️💥');
-    if(px.r_wardSpear&&!isMelee) fireSpear(p,1);              /* 🥅 화살을 막으면 창을 쏨 */
     renderBuffBar();
   }
-  const nulled=ignored||warded;
+  const nulled=warded;
   let d=nulled?0:dmg*(1-effDef(p)/100);
   if(!nulled&&px.guardCrystal&&p.sh>0) d*=0.80;
   p.hitT=0.15;
@@ -2848,7 +2555,6 @@ function hitPlayer(dmg,isMelee,src){
   if(px.hitEvadeBuff&&pkk(p,0.22*px.hitEvadeBuff)) addBuff(p,'evade',14,3,'hitEvadeBuff');
   if(px.evadeHitBuff&&pkk(p,0.30*px.evadeHitBuff)) addBuff(p,'evade',15,3,'evadeHitBuff');
   /* 🚑 체력이 30% 아래로 떨어지면 실드 30% 즉시 충전 (판당 1번) */
-  if(px.r_lowShield&&!p.lowShieldUsed&&p.hp<=p.maxHp*0.30){ p.lowShieldUsed=true; repair(p,p.maxSh*0.30); addText('🚑 실드 충전!','#6CC0F0'); }
   if(px.shieldOnHit&&pkk(p,0.05*px.shieldOnHit)){ repair(p,p.maxSh*0.05); addText('🔋','#6CC0F0'); }
   if(px.hitHeal&&pkk(p,0.15*px.hitHeal)){ heal(p,p.maxHp*0.02); addText('🩹','#7ED957'); }
   /* 피격 시 스턴 — 주인 필수 예시 «피격 시 (n% 확률로) 공격한 적 3초 스턴» (전설 l_stunHit3) */
@@ -2858,26 +2564,13 @@ function hitPlayer(dmg,isMelee,src){
   if(px.thornsS&&pkk(p,0.30*px.thornsS)) reflect(src,dmg*0.70,'🌿');
   if(px.thorns&&pkk(p,0.60*px.thorns)) reflect(src,dmg*1.5,'🌵');
   if(px.thornsKing) reflect(src,dmg*1.5,'🌵👑');
-  /* ===== 새 132종 «피격 시» 축 (sim.js hitPlayer 와 같은 순서) ===== */
-  if(px.c_axeHit&&pkk(p,0.20)) fireAxe(p,1);
-  if(px.r_waveHit&&pkk(p,0.30)) fireWave(p,2);
-  if(px.l_boltHit&&pkk(p,0.60)) fireBolts(p,2);
-  if(px.c_hitHeal&&pkk(p,0.20)){ heal(p,p.maxHp*0.05); addText('🩹','#7ED957'); }
-  if(px.c_shieldHit&&pkk(p,0.10)){ repair(p,p.maxSh*0.05); addText('🔋','#6CC0F0'); }
-  if(px.r_defBuff2&&pkk(p,0.60)) addBuff(p,'def',10,7,'r_defBuff2');
-  if(px.r_hitEvadeBuff&&pkk(p,0.60)) addBuff(p,'evade',10,7,'r_hitEvadeBuff');
-  if(px.c_stunHit&&src&&pkk(p,0.10)) applyStun(src,3);
-  if(px.l_stunHit3&&src&&pkk(p,0.70)) applyStun(src,6);
-  if(px.c_thornsS&&pkk(p,0.30)) reflect(src,dmg*0.50,'🌿');
-  if(px.l_thorns) reflect(src,dmg*6.00,'🦔');
-  if(px.c_wardHit&&pkk(p,0.10)){ p.ward++; addText('🔰✨ x'+p.ward,'#9CD2FF'); renderBuffBar(); }
-  if(px.c_wardEmpty&&!warded&&p.ward===0&&pkk(p,0.30)){ p.ward++; addText('⛏️ x'+p.ward,'#9CD2FF'); renderBuffBar(); }
+  /* ⑧ 피격 시 도끼 — 피격 1회당 50% 확률로 도끼 1개 (sim.js 와 1:1) */
+  if(px.p_axeHit&&pkk(p,PERK_SUMMON_CH)) fireAxe(p,1);
   /* 원거리 피격 축 — 위 «피격 시» 트리거를 전부 굴린 «뒤» 에 추가로 굴린다 (별개 축, 주인 16:1X) */
   if(!isMelee) procOnRanged(src,dmg);
   if(isMelee&&src&&src.hp>0){
     const cc=Math.random()*100<effCounter(p);
-    const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.20*px.hitCounterS))
-            ||(px.r_hitCounter&&pkk(p,0.60));                 /* 💢 피격 시 60% 확률로 즉시 반격 */
+    const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.20*px.hitCounterS));
     if(cc||pc) doCounter(src);
   }
 }
@@ -2924,8 +2617,6 @@ function update(dt){
   for(const n of G.nodes){
     if(!n.done && (n.type==='rest'||n.type==='devil'||n.type==='angel') && p.worldX>n.x-95){
       n.done=true;
-      if(p.px.r_eventShield){ repair(p,p.maxSh*0.40); addText('🚪 실드 충전','#6CC0F0'); }        /* 🚪 */
-      if(n.type==='rest'&&p.px.l_restWard){ p.ward+=15; addText('🏕️🛡️ x'+p.ward,'#9CD2FF'); renderBuffBar(); }  /* 🏕️🛡️ */
       if(n.type==='rest') openRest();
       else if(n.type==='devil') openDevil();
       else openAngel();
@@ -2958,25 +2649,8 @@ function update(dt){
       volley(p.px.autoBolt,()=>{ const t2=randTarget(); if(t2) castBolt(t2); });
     }
   }
-  /* ⏰ 자동 소환 3종 (주기형 «공격» — 허용축. 주기형 «회복» 은 금지축이라 여기 없다).
-     ⚑ P3 R04: 창만 주기가 따로다(3초) — 관통 8마리라 같은 2초에서 전설 1위를 독점했다 */
-  if(p.px.l_autoBolt||p.px.l_autoAxe){
-    G.autoSumT-=dt;
-    if(G.autoSumT<=0){
-      G.autoSumT=AUTO_SUMMON_T;
-      if(p.px.l_autoBolt) fireBolts(p,1);      /* ⚡⏰ */
-      if(p.px.l_autoAxe) fireAxe(p,2);         /* 🪓⏰ */
-    }
-  }
-  if(p.px.l_autoSpear){
-    G.autoSpearT-=dt;
-    if(G.autoSpearT<=0){ G.autoSpearT=AUTO_SPEAR_T; fireSpear(p,1); }   /* 🔱⏰ */
-  }
-  /* 🎻 전투 중 3초마다 공격속도가 +5%씩 계속 빨라진다 (피격당하면 초기화 — hitPlayer) */
-  if(p.px.l_aspdRamp){
-    G.rampT-=dt;
-    if(G.rampT<=0){ G.rampT=ASPD_RAMP_T; p.rampN++; renderStatsGrid(); }
-  }
+  /* ⚑ T96 — 주기형 자동 소환(⏰ 3종)·공속 램프(🎻)는 특전과 함께 폐지됐다.
+     주기형 «공격» 축에 남는 것은 장비 옵션 `autoBolt`(위 3초) 하나뿐이다. */
 
   /* 적 (제자리 고정) */
   for(const e of alive){
@@ -2986,13 +2660,11 @@ function update(dt){
        공격 타이머는 흐르지 않는다(풀리자마자 밀린 공격이 몰아치지 않게 — 위임 기본값). */
     if(e.stun>0){
       e.stun-=dt; e.aggro=false;
-      if(e.stun<=0&&p.px.r_stunSlow) e.slow=6;      /* ⛓️ 기절이 끝난 적은 6초간 공격속도 -50% */
       continue;
     }
     if(e.slow>0) e.slow-=dt;
     const d=e.worldX-p.worldX;
-    /* 🥶 위압의 오라 — 모든 적의 공격속도 -30% (상시). ⛓️ 둔화와 곱해진다. */
-    const ivm=(p.px.l_slowAura?1/0.50:1)*(e.slow>0?2:1);
+    const ivm=(e.slow>0?2:1);                    /* 둔화 — 적 상태 축만 남는다 */
     if(!e.ranged){
       e.aggro = d<290;
       if(d<105){
@@ -3124,7 +2796,7 @@ function renderBuffBar(){
     else groups.set(id,{n:1, q:b.q||0, k, perk:b.src?G.pxPerk[b.src]:null});
   }
   let html=[...groups.values()].sort((a,b)=>a.q-b.q).map(g=>{
-    const cc = g.perk ? RARITY[g.perk.r].cc : '#9EA3AC';
+    const cc = g.perk ? PERK_COLOR : '#9EA3AC';   /* ⚑ T96 — 등급이 없어 특전 버프는 한 색이다 */
     const ic = g.perk ? g.perk.ic : uiIcon(BUFF_STAT_IC[g.k]||'spark');
     return `<div class="buff-ic" style="--bc:${cc};--bg:${cc}55">${ic}`+
       (g.n>1?`<span class="cnt">${g.n}</span>`:'')+`</div>`;
@@ -3132,7 +2804,7 @@ function renderBuffBar(){
   /* ⚑ 횟수형 방어막 (T48) — 시간제 버프가 아니라 «장수» 라 buffs 에 안 들어간다.
      주인 지시(17:2X)대로 버프 아이콘 줄 맨 앞에 남은 장수 뱃지를 달아 따로 보여준다. */
   if(p.ward>0){
-    const cc=RARITY[1].cc;   /* 기본 획득처가 희귀 🛡️✨(r_ward) 라 희귀색 */
+    const cc='#4FA3E8';   /* 방어막은 장비 옵션 축이라 특전색과 구분되는 파란색 */
     html=`<div class="buff-ic ward-ic" style="--bc:${cc};--bg:${cc}55">🛡️<span class="cnt">${p.ward}</span></div>`+html;
   }
   if(box.innerHTML!==html) box.innerHTML=html;
@@ -3152,7 +2824,7 @@ function renderPerkStrip(){
   let list=order, more=0;
   if(order.length>cap){ more=order.length-(cap-1); list=order.slice(order.length-(cap-1)); }
   const html=(more?`<div class="pv-more">+${more}</div>`:'')+list.map(o=>{
-    const c=cnt.get(o.id), cc=RARITY[o.pk.r].cc;
+    const c=cnt.get(o.id), cc=PERK_COLOR;
     return `<div class="pv-ic" style="--bc:${cc}">${o.pk.ic}`+(c>1?`<span class="cnt">${c}</span>`:'')+`</div>`;
   }).join('');
   if(box.innerHTML!==html) box.innerHTML=html;
