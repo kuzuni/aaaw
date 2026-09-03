@@ -1,4 +1,4 @@
-/* T3 동작 검증 — ⚑다연발 순차 연사·이벤트 3종(쉼터·악마·천사)·사망 화면·챕터 600 진입(⚑ T104)
+/* T3 동작 검증 — ⚑다연발 순차 연사·이벤트 3종(쉼터·악마·천사)·사망 화면·챕터 420 진입(⚑ T103)
  *
  * 사용: node tools/t3/fx.js          (exit 0 = 통과, 1 = 불합격)
  * 전제: playwright-core 가 있어야 한다. **리포에 커밋하지 말 것**(ROUTINE §1 대용량 바이너리 금지) —
@@ -140,16 +140,16 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   await p.evaluate(() => { const b = document.getElementById('deOk'); if (b) b.click(); }); await p.waitForTimeout(600);
   chk('로비로 복귀', await p.evaluate(() => document.querySelector('.screen.on')?.id) === 'lobby');
 
-  /* ---------- 챕터 600 진입 (⚑ T104 — 최종 벽·최종 챕터) ---------- */
-  console.log('\n=== 챕터 600 진입·클리어 ===');
+  /* ---------- 챕터 420 진입 (⚑ T103 — 최종 챕터) ---------- */
+  console.log('\n=== 챕터 420 진입·클리어 ===');
   const c300 = await p.evaluate(() => {
-    save.maxChapter = 600; save.selChapter = 600; renderLobby(); persist();
-    startChapter(600);
+    save.maxChapter = 420; save.selChapter = 420; renderLobby(); persist();
+    startChapter(420);
     const bn = G.nodes.find(n => n.type === 'boss');
     return { screen: document.querySelector('.screen.on')?.id, nodes: G.nodes.length, total: G.totalEnemies, bossHp: bn ? bn.enemies[0].hp : -1, hud: document.getElementById('chapHudName').textContent.trim() };
   });
-  chk('챕터 600 진입', c300.screen === 'game' && /600/.test(c300.hud), `${c300.hud} · 노드 ${c300.nodes} · 적 ${c300.total}`);
-  chk('챕터 600 보스 HP 가 유한하다', Number.isFinite(c300.bossHp) && c300.bossHp > 0, `보스 HP ${c300.bossHp.toExponential(2)}`);
+  chk('챕터 420 진입', c300.screen === 'game' && /420/.test(c300.hud), `${c300.hud} · 노드 ${c300.nodes} · 적 ${c300.total}`);
+  chk('챕터 420 보스 HP 가 유한하다', Number.isFinite(c300.bossHp) && c300.bossHp > 0, `보스 HP ${c300.bossHp.toExponential(2)}`);
   const clear300 = await p.evaluate(async () => {
     G.player.dmg = Infinity;
     for (const n of G.nodes) { n.enemies.forEach(e => { e.dead = true; e.hp = 0; }); n.done = true; }
@@ -157,7 +157,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     await new Promise(r => setTimeout(r, 500));
     return { ov: document.getElementById('overlay').textContent.replace(/\s+/g, ' '), mx: save.maxChapter };
   });
-  chk('챕터 600 클리어 시 상한 유지 + 완주 문구', clear300.mx === 600 && /모든 챕터를 클리어했습니다/.test(clear300.ov), clear300.ov.trim().slice(0, 80));
+  chk('챕터 420 클리어 시 상한 유지 + 완주 문구', clear300.mx === 420 && /모든 챕터를 클리어했습니다/.test(clear300.ov), clear300.ov.trim().slice(0, 80));
 
   chk('pageerror 0', errs.length === 0, errs.slice(0, 3).join(' | '));
   await b.close();

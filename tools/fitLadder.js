@@ -29,7 +29,7 @@ if (at < 0) throw new Error(`sim.js 에서 CLI 디스패처(«${CUT}») 를 못 
 const ctx = { console: { log() {} }, process, Math, JSON, Number, String, Array, Set, Map, Object, Date,
               parseInt, parseFloat, isFinite, isNaN, require };
 vm.createContext(ctx);
-vm.runInContext(SRC.slice(0, at) + '\n;globalThis.__X={mkBuild,buildPower,runChapter,LADDER,TUNE,GT};', ctx);
+vm.runInContext(SRC.slice(0, at) + '\n;globalThis.__X={mkBuild,buildPower,runChapter,LADDER,EXP1_TARGETS,TUNE,GT};', ctx);
 const X = ctx.__X || ctx.globalThis.__X;
 
 const N = parseInt(process.env.N || '120', 10);
@@ -39,9 +39,12 @@ const rate = (c, b) => { let w = 0; for (let i = 0; i < N; i++) if (X.runChapter
 console.log(`=== 사다리 역측정 (각 등급이 클리어율 5% 가 되는 챕터 · ${N}판/평가 · 탐색 상한 ${HI}) ===\n`);
 console.log('| 상태 | 확정 과녁 | 실측 5% 챕터 | 차 |');
 console.log('|---|---|---|---|');
+/* ⚑ T103 — 사다리 칸이 **슬롯 레벨까지** 포함하도록 주인이 확정했다(희귀+5 · 영웅+10 … 9강+100).
+   종전엔 `mkBuild(rar, plus, 0)` 으로 슬롯을 0 으로 눌러 재고 있었으니 «확정 과녁 대비 몇 챕터»
+   라는 이 도구의 결론이 통째로 딴 빌드의 것이었다. 이제 `EXP1_TARGETS` 의 슬롯을 그대로 쓴다. */
 const out = [];
-for (const L of X.LADDER) {
-  const b = X.mkBuild(L.rar, L.plus, 0);
+for (const L of X.EXP1_TARGETS) {
+  const b = X.mkBuild(L.rar, L.plus, L.slot);
   if (rate(1, b) < 5) { console.log(`| ${L.id} | ${L.at} | <1 | — |`); out.push([L.id, L.at, 0, true]); continue; }
   let lo = 1, hi = HI;
   while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (rate(mid, b) >= 5) lo = mid; else hi = mid - 1; }

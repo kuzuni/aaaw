@@ -286,10 +286,16 @@ else {
   diff.length ? bad(`TUNE 값 불일치 ${diff.length}건: ${diff.join(' / ')}`) : ok(`TUNE 값 ${MUST.length}개 전수 일치 (보스 ×${TS.bossHp}·×${TS.bossDmg}, 챕터 ${TS.maxChapter})`);
   if (TS.bossHp === 8 && TS.bossDmg === 1.8) ok('보스 = HP ×8 · DMG ×1.8 (주인 확정 상수, 07:3X)');
   else bad(`보스 배수가 주인 확정값이 아니다 — HP ×${TS.bossHp} · DMG ×${TS.bossDmg} (확정: ×8 · ×1.8)`);
-  /* ⚑⚑⚑ T104 — 주인 확정으로 500 → 600. 최종 벽도 같은 지시로 600 으로 옮겼다(10·15 는 위치 고정 · 90 은 T103 이 재배치). */
-  if (TS.maxChapter === 600) ok('챕터 상한 600 (PLAN §2.4 · ⚑ T104)'); else bad(`챕터 상한이 ${TS.maxChapter} (확정: 600)`);
-  if (TS.wall4At === 600) ok('최종 벽 = 챕터 600 (⚑ T104 — 주인 «사다리 8점 · 신화9강+슬롯100 = 챕터 600»)');
-  else bad(`최종 벽 위치가 ${TS.wall4At} (확정: 600)`);
+  /* ⚑⚑⚑ T103 — 주인 정정으로 600 → **420** (사다리 8점 맨 아랫줄 «신화9강+슬롯100 = 420»).
+     최종 벽 위치도 같은 값이다. ⚠ 배수(`wall4Hp/Dmg`)는 T103 재적합에서 **1.0(꺼짐)** 이 됐다 —
+     380→420 을 «150→380 률을 그대로 이어» 채우면 잔차가 1 아래라, 주인 지시 ④ 의
+     «잔차가 1 아래면 벽을 끄고 률만으로 잇는다» 규정을 그대로 이행한 결과다. 아래 ⑧이 그 상태를 못박는다. */
+  if (TS.maxChapter === 420) ok('챕터 상한 420 (PLAN §2.4 · ⚑ T103 주인 정정)'); else bad(`챕터 상한이 ${TS.maxChapter} (확정: 420)`);
+  if (TS.wall4At === 420) ok('최종 벽 위치 = 챕터 420 (⚑ T103 — 주인 «사다리 8점 · 신화9강+슬롯100 = 챕터 420»)');
+  else bad(`최종 벽 위치가 ${TS.wall4At} (확정: 420)`);
+  if (TS.wall4Hp === 1 && TS.wall4Dmg === 1)
+    ok('최종 벽 배수 = ×1.0 (T103 재적합 — 잔차 <1 이라 주인 지시 ④대로 껐다. 되살리려면 380→420 구간률을 함께 내릴 것)');
+  else bad(`최종 벽 배수가 ×${TS.wall4Hp}/×${TS.wall4Dmg} — T103 재적합값은 ×1.0/×1.0 이다`);
   /* 최종 벽이 마지막 챕터 «위» 로 새면 벽이 영영 안 걸린다 — 위치와 상한을 함께 본다 */
   if (TS.wall4At <= TS.maxChapter) ok(`최종 벽이 콘텐츠 안에 있다 (${TS.wall4At} ≤ ${TS.maxChapter})`);
   else bad(`최종 벽 ${TS.wall4At} 이 챕터 상한 ${TS.maxChapter} 을 넘어 영영 안 걸린다`);
@@ -339,7 +345,7 @@ if (!LS || !LH) bad(`chapterLayout 추출 실패 (${!LS ? 'sim.js' : ''}${!LS &&
 else {
   const key = L => L.map(n => n.t === 'wave' ? 'w' + n.size : n.t[0]).join('>');
   let mism = [], viol = [], maxE = 0, minE = 1e9;
-  for (let c = 1; c <= 600; c++) {   /* ⚑ T104 — 챕터 상한 500 → 600 */
+  for (let c = 1; c <= 420; c++) {   /* ⚑ T103 — 챕터 상한 600 → 420 */
     const A = LS(c), B = LH(c);
     if (key(A) !== key(B)) { if (mism.length < 3) mism.push(`ch${c}: sim=${key(A)} html=${key(B)}`); else mism.push(''); }
     const cnt = t => A.filter(n => n.t === t).length;
@@ -355,7 +361,7 @@ else {
     else if (why.length) viol.push('');
   }
   const nm = mism.filter(Boolean);
-  mism.length ? bad(`두 파일 레이아웃 불일치 ${mism.length}챕터: ${nm.join(' / ')}`) : ok('챕터 1~600 레이아웃 전수 동일 (sim.js ↔ index.html · ⚑ T104)');
+  mism.length ? bad(`두 파일 레이아웃 불일치 ${mism.length}챕터: ${nm.join(' / ')}`) : ok('챕터 1~420 레이아웃 전수 동일 (sim.js ↔ index.html · ⚑ T103)');
   const nv = viol.filter(Boolean);
   viol.length ? bad(`주인 확정 제약 위반 ${viol.length}챕터: ${nv.join(' / ')}`) : ok(`제약 4종 전수 만족 — 적 총수 ${minE}~${maxE}(≤100) · 쉼터 1~4 · 악마 1 · 천사 1`);
   /* 가중치 배치 폐기 흔적: 45/30/25 잔재가 남아 있으면 안 된다 */

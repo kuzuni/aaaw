@@ -9,7 +9,7 @@
  *      (11레벨은 341 이 필요해 구조적으로 불가능).
  *
  * 보는 것 넷:
- *   ⓐ 적 총 수 ≤ LAYOUT_MAXENEMY(80)  ⓑ 챕터 1~600 구성이 전부 같다(⚑ T104 로 상한 500 → 600)  ⓒ **완주 = 특전 10개 실측**
+ *   ⓐ 적 총 수 ≤ LAYOUT_MAXENEMY(80)  ⓑ 챕터 1~420 구성이 전부 같다(⚑ T103 으로 상한 600 → 420)  ⓒ **완주 = 특전 10개 실측**
  *   ⓓ 두 엔진(sim.js · index.html)이 같은 상수·같은 구조
  *
  * 사용: node tools/verifyChapterFixed.js        (exit 0 = 통과, 1 = 불합격)
@@ -39,7 +39,7 @@ function run(simSrc, htmSrc) {
   const S = loadSim(simSrc);
 
   /* ===== ⓐⓑ 챕터 전수 구성 =====
-     ⚑ T104 — 상한을 `TUNE.maxChapter` 에서 읽는다. 리터럴 500 을 박아 두면 챕터가 600 으로 늘어난 뒤에도
+     ⚑ T104 — 상한을 `TUNE.maxChapter` 에서 읽는다. 리터럴을 박아 두면 챕터 상한이 바뀐 뒤에도
      게이트는 500 까지만 보고 초록을 내준다(«늘어난 100 챕터는 아무도 안 본다»). */
   const MAXC = S.TUNE.maxChapter;
   console.log(`\n=== ⓐⓑ 챕터 1~${MAXC} 구성 — 상한 이내 · 전 챕터 동일 ===`);
