@@ -1783,33 +1783,33 @@ const PERKS=[
   {id:'l_wavePierce', r:2, ic:'🌊🔱', tx:'거대 검기 — 검기가 창처럼 일직선 최대 <b>8마리</b> 관통', ap:p=>p.px.l_wavePierce=1},
   {id:'l_axeSpin', r:2, ic:'🪓🌪️', tx:'모든 도끼가 적 위치에서 <b>3회전</b>하며 <b>3번</b> 타격', ap:p=>p.px.l_axeSpin=1},
   {id:'l_boltChainK', r:2, ic:'🔗👑', tx:'번개가 무조건 옆 적으로 <b>1번</b> 튐 (튄 번개도 풀데미지)', ap:p=>p.px.l_boltChainK=1},
-  {id:'l_spearStun', r:2, ic:'🔱💫', tx:'창에 뚫린 적들이 <b>30%</b> 확률로 <b>3초</b> 기절', ap:p=>p.px.l_spearStun=1},
+  {id:'l_spearStun', r:2, ic:'🔱💫', tx:'창에 뚫린 적들이 <b>60%</b> 확률로 <b>3초</b> 기절', ap:p=>p.px.l_spearStun=1},
   {id:'l_noCritAtk3', r:2, ic:'💀⚔️', tx:'치명타 확률이 <b>0%</b>가 되는 대신 공격력 <b>3배</b>', ap:p=>{p.px.l_noCritAtk3=1;p.dmg*=3;}},
-  {id:'l_shieldIgnore', r:2, ic:'💎', tx:'실드가 남아있는 동안 피격 시 <b>50%</b> 확률로 데미지 완전 무시', ap:p=>p.px.l_shieldIgnore=1},
-  {id:'l_slowAura', r:2, ic:'🥶', tx:'위압의 오라 — 모든 적의 공격속도 <b>-30%</b> (상시)', ap:p=>p.px.l_slowAura=1},
-  {id:'l_atkBuffL', r:2, ic:'⚔️', tx:'공격 시 <b>30%</b> 확률로 <b>7초간</b> 공격력 <b>+20%</b>', ap:p=>p.px.l_atkBuffL=1},
-  {id:'l_critFBuffL', r:2, ic:'💥👑', tx:'치명타 시 <b>60%</b> 확률로 <b>7초간</b> 치명타 데미지 <b>+50%</b>', ap:p=>p.px.l_critFBuffL=1},
-  {id:'l_evadeAspdL', r:2, ic:'🌪️', tx:'회피 시 <b>40%</b> 확률로 <b>7초간</b> 공격속도 <b>+20%</b>', ap:p=>p.px.l_evadeAspdL=1},
-  {id:'l_aspdRamp', r:2, ic:'🎻', tx:'전투 중 <b>3초</b>마다 공격속도가 <b>+5%</b>씩 계속 빨라짐 (피격당하면 초기화)', ap:p=>p.px.l_aspdRamp=1},
+  {id:'l_shieldIgnore', r:2, ic:'💎', tx:'실드가 남아있는 동안 피격 시 <b>70%</b> 확률로 데미지 완전 무시', ap:p=>p.px.l_shieldIgnore=1},
+  {id:'l_slowAura', r:2, ic:'🥶', tx:'위압의 오라 — 모든 적의 공격속도 <b>-50%</b> (상시)', ap:p=>p.px.l_slowAura=1},
+  {id:'l_atkBuffL', r:2, ic:'⚔️', tx:'공격 시 <b>50%</b> 확률로 <b>7초간</b> 공격력 <b>+20%</b>', ap:p=>p.px.l_atkBuffL=1},
+  {id:'l_critFBuffL', r:2, ic:'💥👑', tx:'치명타 시 <b>60%</b> 확률로 <b>7초간</b> 치명타 데미지 <b>+100%</b>', ap:p=>p.px.l_critFBuffL=1},
+  {id:'l_evadeAspdL', r:2, ic:'🌪️', tx:'회피 시 <b>60%</b> 확률로 <b>7초간</b> 공격속도 <b>+20%</b>', ap:p=>p.px.l_evadeAspdL=1},
+  {id:'l_aspdRamp', r:2, ic:'🎻', tx:'전투 중 <b>3초</b>마다 공격속도가 <b>+10%</b>씩 계속 빨라짐 (피격당하면 초기화)', ap:p=>p.px.l_aspdRamp=1},
   {id:'l_overRepair', r:2, ic:'🔧⚡', tx:'처치 시 초과된 데미지만큼 실드 수리 (오버킬 수리)', ap:p=>p.px.l_overRepair=1},
   {id:'l_healSync', r:2, ic:'💠', tx:'체력을 회복할 때 같은 수치만큼 실드도 같이 수리', ap:p=>p.px.l_healSync=1},
-  {id:'l_critHealL', r:2, ic:'❣️', tx:'치명타 시 <b>30%</b> 확률로 체력 <b>5%</b> 회복', ap:p=>p.px.l_critHealL=1},
+  {id:'l_critHealL', r:2, ic:'❣️', tx:'치명타 시 <b>50%</b> 확률로 체력 <b>5%</b> 회복', ap:p=>p.px.l_critHealL=1},
   {id:'l_killHeal5', r:2, ic:'💉', tx:'처치 시 <b>40%</b> 확률로 체력 <b>10%</b> 회복', ap:p=>p.px.l_killHeal5=1},
-  {id:'l_wardHealK', r:2, ic:'🛡️❤️👑', tx:'방어막으로 막을 때마다 체력 <b>10%</b> 회복 + 실드 <b>10%</b> 수리', ap:p=>p.px.l_wardHealK=1},
-  {id:'l_stunHit3', r:2, ic:'💫', tx:'피격 시 <b>30%</b> 확률로 때린 적 <b>6초</b> 기절', ap:p=>p.px.l_stunHit3=1},
-  {id:'l_stunExec', r:2, ic:'🕳️', tx:'마무리 일격 — 기절한 적에게 데미지 <b>3배</b>', ap:p=>p.px.l_stunExec=1},
-  {id:'l_dualWield', r:2, ic:'⚔️⚔️', tx:'이도류 — 평타가 항상 2연타 (두 번째 타격은 공격력의 <b>50%</b>)', ap:p=>p.px.l_dualWield=1},
+  {id:'l_wardHealK', r:2, ic:'🛡️❤️👑', tx:'방어막으로 막을 때마다 체력 <b>20%</b> 회복 + 실드 <b>20%</b> 수리', ap:p=>p.px.l_wardHealK=1},
+  {id:'l_stunHit3', r:2, ic:'💫', tx:'피격 시 <b>50%</b> 확률로 때린 적 <b>6초</b> 기절', ap:p=>p.px.l_stunHit3=1},
+  {id:'l_stunExec', r:2, ic:'🕳️', tx:'마무리 일격 — 기절한 적에게 데미지 <b>5배</b>', ap:p=>p.px.l_stunExec=1},
+  {id:'l_dualWield', r:2, ic:'⚔️⚔️', tx:'이도류 — 평타가 항상 2연타 (두 번째 타격은 공격력의 <b>100%</b>)', ap:p=>p.px.l_dualWield=1},
   {id:'l_cleave', r:2, ic:'🗡️🌀', tx:'평타가 대상과 바로 뒤 적까지 같이 벰', ap:p=>p.px.l_cleave=1},
-  {id:'l_execute', r:2, ic:'🩸', tx:'체력 <b>30%</b> 이하인 적 즉시 처치 (보스 포함)', ap:p=>p.px.l_execute=1},
-  {id:'l_thorns', r:2, ic:'🦔', tx:'피격 시 무조건 받은 피해의 <b>200%</b> 반사', ap:p=>p.px.l_thorns=1},
-  {id:'l_evade2Dmg', r:2, ic:'🎭', tx:'<b>2번</b> 연속 회피 성공 시 다음 공격 데미지 <b>3배</b>', ap:p=>p.px.l_evade2Dmg=1},
+  {id:'l_execute', r:2, ic:'🩸', tx:'체력 <b>40%</b> 이하인 적 즉시 처치 (보스 포함)', ap:p=>p.px.l_execute=1},
+  {id:'l_thorns', r:2, ic:'🦔', tx:'피격 시 무조건 받은 피해의 <b>400%</b> 반사', ap:p=>p.px.l_thorns=1},
+  {id:'l_evade2Dmg', r:2, ic:'🎭', tx:'<b>2번</b> 연속 회피 성공 시 다음 공격 데미지 <b>5배</b>', ap:p=>p.px.l_evade2Dmg=1},
   {id:'l_fullHpDmg', r:2, ic:'🎯👑', tx:'체력 가득 찬 적에게 데미지 <b>+150%</b>', ap:p=>p.px.l_fullHpDmg=1},
-  {id:'l_restWard', r:2, ic:'🏕️🛡️', tx:'쉼터에서 쉴 때마다 방어막 <b>5장</b>', ap:p=>p.px.l_restWard=1},
-  {id:'l_wardEvadeL', r:2, ic:'🔰✨', tx:'회피 시 <b>30%</b> 확률로 방어막 <b>1장</b>', ap:p=>p.px.l_wardEvadeL=1},
+  {id:'l_restWard', r:2, ic:'🏕️🛡️', tx:'쉼터에서 쉴 때마다 방어막 <b>10장</b>', ap:p=>p.px.l_restWard=1},
+  {id:'l_wardEvadeL', r:2, ic:'🔰✨', tx:'회피 시 <b>50%</b> 확률로 방어막 <b>1장</b>', ap:p=>p.px.l_wardEvadeL=1},
   {id:'l_missCrit', r:2, ic:'🎯💨', tx:'빗나가면 다음 공격 무조건 치명타', ap:p=>p.px.l_missCrit=1},
-  {id:'l_missStack', r:2, ic:'💢', tx:'빗나가면 «데미지 <b>+100%</b>» 스택 (무제한 적립, 적중 1타당 <b>1개</b> 소모)', ap:p=>p.px.l_missStack=1},
-  {id:'l_wardThorns', r:2, ic:'🛡️💥', tx:'방어막으로 막을 때마다 그 적에게 공격력의 <b>300%</b> 반사', ap:p=>p.px.l_wardThorns=1},
-  {id:'l_stunKillNear', r:2, ic:'💫👑', tx:'처치 시 <b>40%</b> 확률로 가장 가까운 적 <b>3초</b> 기절', ap:p=>p.px.l_stunKillNear=1},
+  {id:'l_missStack', r:2, ic:'💢', tx:'빗나가면 «데미지 <b>+150%</b>» 스택 (무제한 적립, 적중 1타당 <b>1개</b> 소모)', ap:p=>p.px.l_missStack=1},
+  {id:'l_wardThorns', r:2, ic:'🛡️💥', tx:'방어막으로 막을 때마다 그 적에게 공격력의 <b>600%</b> 반사', ap:p=>p.px.l_wardThorns=1},
+  {id:'l_stunKillNear', r:2, ic:'💫👑', tx:'처치 시 <b>60%</b> 확률로 가장 가까운 적 <b>3초</b> 기절', ap:p=>p.px.l_stunKillNear=1},
   {id:'l_counterChain', r:2, ic:'🔂', tx:'반격하면 반드시 한 번 더 반격', ap:p=>p.px.l_counterChain=1},
 ];
 const RARITY=[{nm:'일반',cc:'#9EA3AC'},{nm:'희귀',cc:'#4FA3E8'},{nm:'전설',cc:'#FFB92E'}];
@@ -1977,7 +1977,7 @@ const STUN_BOSS_MUL=1/3;
 /* ⚑ 주인 확정 소환 데미지 상수 (PLAN §3.0) — 튜닝으로 계수 변경 금지. sim.js 와 같은 값. */
 const R_AXE=0.30, R_ARROW=0.50, R_WAVE=0.50, R_BOLT=0.75, R_SPEAR=1.00;
 const WAVE_PIERCE=2, WAVE_PIERCE_BIG=8, SPEAR_PIERCE=8;
-const AUTO_SUMMON_T=2.0, ASPD_RAMP_T=3.0, ASPD_RAMP_AMT=0.05, REAPER_CH=0.20;
+const AUTO_SUMMON_T=2.0, ASPD_RAMP_T=3.0, ASPD_RAMP_AMT=0.10, REAPER_CH=0.20;
 /* ⚑ 등급 등장 확률 — 신화 폐지에 따른 3단 재정의 (일반 45 / 희귀 35 / 전설 20) */
 const RARITY_P=[0.45,0.35,0.20];
 /* ⚑ 방어막(ward)은 장수 상한이 없다(주인 확정 «무한»). */
@@ -2349,7 +2349,7 @@ function projHit(pr,e){
     return;
   }
   summonHit(e,pr.ratio,pr.type==='spear'?'🔱':(pr.type==='wave'?'🌊':'🏹'));
-  if(pr.type==='spear'&&px.l_spearStun&&pkk(p,0.30)) applyStun(e,3);   /* 🔱💫 */
+  if(pr.type==='spear'&&px.l_spearStun&&pkk(p,0.60)) applyStun(e,3);   /* 🔱💫 */
 }
 function castBolt(t){
   const p=G.player, px=p.px;
@@ -2459,7 +2459,7 @@ function onKill(e,over){
   if(over>0&&px.r_overheal){ heal(p,over); addText('🩸 +'+fmt(over),'#7ED957'); }
   if(over>0&&px.l_overRepair){ repair(p,over); addText('🔧⚡ +'+fmt(over),'#6CC0F0'); }
   if(px.c_stunKillNear&&pkk(p,0.20)){ const t=nearestTo(e.worldX,e); if(t) applyStun(t,3); }
-  if(px.l_stunKillNear&&pkk(p,0.40)){ const t=nearestTo(e.worldX,e); if(t) applyStun(t,3); }
+  if(px.l_stunKillNear&&pkk(p,0.60)){ const t=nearestTo(e.worldX,e); if(t) applyStun(t,3); }
   if(e.wave.enemies.every(x=>x.hp<=0)){
     e.wave.done=true;
     /* 웨이브 전멸 실드 무료충전 폐지 (주인 지시 2026-09-02 06:5X·08:5X) — 실드 충전은 특전으로만 */
@@ -2574,7 +2574,7 @@ function dealPlayerDamage(e,ratio,icon){
                           if(px.backDmg) d*=3.2; }             /* 장비 옵션 (순수 배수) */
   }
   if(basic&&px.c_fourthDmg&&p.atkN%4===0) addBonus+=1.00;      /* 🔢 */
-  if(px.l_missStack&&p.missStk>0){ p.missStk--; addBonus+=1.00; }/* 💢 빗맞음 스택 */
+  if(px.l_missStack&&p.missStk>0){ p.missStk--; addBonus+=1.50; }/* 💢 빗맞음 스택 */
   if(px.c_evadeStack&&p.evStk>0){ p.evStk--; addBonus+=0.50; } /* 🌀🗡️ 회피 스택 */
   if(px.r_comboDmg){                                           /* 🥊 같은 적 연타 */
     if(p.comboT===e) p.comboN++; else { p.comboT=e; p.comboN=0; }
@@ -2582,9 +2582,9 @@ function dealPlayerDamage(e,ratio,icon){
   }
   if(basic&&px.r_evade3Dmg&&p.nextP200){ p.nextP200=false; addBonus+=2.00; }   /* 💃 */
   if(addBonus) d*=1+addBonus;
-  if(stunned&&px.l_stunExec) d*=3;                             /* 🕳️ */
+  if(stunned&&px.l_stunExec) d*=5;                             /* 🕳️ */
   if(px.execute&&e.hp<=e.maxHp*0.5) d*=2.2;                    /* 장비 옵션 */
-  if(basic&&px.l_evade2Dmg&&p.nextX3){ p.nextX3=false; d*=3; } /* 🎭 */
+  if(basic&&px.l_evade2Dmg&&p.nextX3){ p.nextX3=false; d*=5; } /* 🎭 */
   e.hp-=d; e.hitT=0.15;
   AU.play(crit?'crit':'hit');
   sparks(e.worldX-10,-40,crit?'#FFB92E':'#FFF3CF',crit?9:5,crit?190:130);
@@ -2609,16 +2609,16 @@ function dealPlayerDamage(e,ratio,icon){
     if(px.l_spearCrit&&pkk(p,0.40)) fireSpear(p,1);
     if(px.r_critRBuff&&pkk(p,0.40)) addBuff(p,'critR',10,7,'r_critRBuff');
     if(px.r_critFBuff&&pkk(p,0.30)) addBuff(p,'critF',20,7,'r_critFBuff');
-    if(px.l_critFBuffL&&pkk(p,0.60)) addBuff(p,'critF',50,7,'l_critFBuffL');
+    if(px.l_critFBuffL&&pkk(p,0.60)) addBuff(p,'critF',100,7,'l_critFBuffL');
     if(px.r_critHeal3&&pkk(p,0.30)){ heal(p,p.maxHp*0.05); addText('❤️‍🔥','#7ED957'); }
-    if(px.l_critHealL&&pkk(p,0.30)){ heal(p,p.maxHp*0.05); addText('❣️','#7ED957'); }
+    if(px.l_critHealL&&pkk(p,0.50)){ heal(p,p.maxHp*0.05); addText('❣️','#7ED957'); }
     if(px.r_stunCrit&&pkk(p,0.20)) applyStun(e,6);
   }
   if(px.execKill&&!e.isBoss&&e.hp>0&&e.hp<=e.maxHp*0.25){       /* 장비 옵션 */
     e.hp=0;
     addText('🧨 처형!','#FF6B6B',e.worldX,-104,true);
   }
-  if(px.l_execute&&e.hp>0&&e.hp<=e.maxHp*0.30){                 /* 🩸 체력 30% 이하 즉시 처치 (보스 포함) */
+  if(px.l_execute&&e.hp>0&&e.hp<=e.maxHp*0.40){                 /* 🩸 체력 40% 이하 즉시 처치 (보스 포함) */
     e.hp=0;
     addText('🩸 처형!','#FF6B6B',e.worldX,-104,true);
   }
@@ -2651,7 +2651,7 @@ function procOnAttack(e){
   if(px.c_aspdAtk&&pkk(p,0.30)) addBuff(p,'aspd',0.05,7,'c_aspdAtk');
   if(px.c_evadeAtkB&&pkk(p,0.30)) addBuff(p,'evade',5,7,'c_evadeAtkB');
   if(px.r_atkBuffM&&pkk(p,0.30)) addBuff(p,'atk',0.10,7,'r_atkBuffM');
-  if(px.l_atkBuffL&&pkk(p,0.30)) addBuff(p,'atk',0.20,7,'l_atkBuffL');
+  if(px.l_atkBuffL&&pkk(p,0.50)) addBuff(p,'atk',0.20,7,'l_atkBuffL');
   if(px.r_wardAtk&&pkk(p,0.10)){ p.ward++; addText('🛡️✨ x'+p.ward,'#9CD2FF'); renderBuffBar(); }
   if(px.c_stunAtk&&e&&e.hp>0&&pkk(p,0.10)) applyStun(e,3);
 }
@@ -2692,7 +2692,7 @@ function playerStrike(e){
   if(p.nextAtk>0){ ratio*=1+p.nextAtk; p.nextAtk=0; }
   const crit=dealPlayerDamage(e,ratio);
   if(px.clone&&e.hp>0) dealPlayerDamage(e,0.25,'👻');                  /* 장비 옵션 */
-  if(px.l_dualWield&&e.hp>0) dealPlayerDamage(e,0.50,'⚔️⚔️');          /* ⚔️⚔️ 이도류 */
+  if(px.l_dualWield&&e.hp>0) dealPlayerDamage(e,1.00,'⚔️⚔️');          /* ⚔️⚔️ 이도류 */
   if(px.l_cleave){                                                     /* 🗡️🌀 대상과 바로 뒤 적까지 */
     const b=nearestTo(e.worldX,e);
     if(b&&b.hp>0&&b.worldX>=e.worldX) dealPlayerDamage(b,ratio,'🗡️🌀');
@@ -2708,7 +2708,7 @@ function hitPlayer(dmg,isMelee,src){
   if(Math.random()*100<effEvade(p)){
     AU.play('evade'); addText('회피!','#CFCFD8');
     p.evStreak2++; p.evStreak3++;
-    if(px.l_evade2Dmg&&p.evStreak2>=2){ p.evStreak2=0; p.nextX3=true; addText('🎭 다음 공격 3배!','#FFB92E'); }
+    if(px.l_evade2Dmg&&p.evStreak2>=2){ p.evStreak2=0; p.nextX3=true; addText('🎭 다음 공격 5배!','#FFB92E'); }
     if(px.r_evade3Dmg&&p.evStreak3>=3){ p.evStreak3=0; p.nextP200=true; addText('💃 다음 공격 강화!','#FFB92E'); }
     if(px.evadeEvBuff) addBuff(p,'evade',8*px.evadeEvBuff,3,'evadeEvBuff');
     if(px.evadeAspd) addBuff(p,'aspd',0.10,2,'evadeAspd');   /* ⚑ T1 R01 등급 내 재분배: +5% → +10% */
@@ -2726,11 +2726,11 @@ function hitPlayer(dmg,isMelee,src){
     if(px.r_axeEvade&&pkk(p,0.30)) fireAxe(p,2);
     if(px.r_boltEvade&&pkk(p,0.30)) fireBolts(p,2);
     if(px.c_aspdEvade&&pkk(p,0.30)) addBuff(p,'aspd',0.05,7,'c_aspdEvade');
-    if(px.l_evadeAspdL&&pkk(p,0.40)) addBuff(p,'aspd',0.20,7,'l_evadeAspdL');
+    if(px.l_evadeAspdL&&pkk(p,0.60)) addBuff(p,'aspd',0.20,7,'l_evadeAspdL');
     if(px.c_evadeHealS&&pkk(p,0.10)){ heal(p,p.maxHp*0.05); addText('🍀','#7ED957'); }
     if(px.r_evadeShield&&pkk(p,0.20)){ repair(p,p.maxSh*0.15); addText('🔶 실드 수리','#6CC0F0'); }
     if(px.c_wardEvade&&pkk(p,0.10)){ p.ward++; addText('👥✨ x'+p.ward,'#9CD2FF'); renderBuffBar(); }
-    if(px.l_wardEvadeL&&pkk(p,0.30)){ p.ward++; addText('🔰✨ x'+p.ward,'#9CD2FF'); renderBuffBar(); }
+    if(px.l_wardEvadeL&&pkk(p,0.50)){ p.ward++; addText('🔰✨ x'+p.ward,'#9CD2FF'); renderBuffBar(); }
     if(px.c_evadeStack){ p.evStk++; addText('🌀🗡️ x'+p.evStk,'#9CD2FF'); }
     if(px.r_stunEvade&&src&&pkk(p,0.30)) applyStun(src,3);
     /* ☠️🌾 사신의 낫 — 회피 시 20% 확률로 그 적 즉사. **보스 포함**(주인 명시).
@@ -2748,7 +2748,7 @@ function hitPlayer(dmg,isMelee,src){
      데미지만 완전 무효이고 «맞은 사건» 은 일어난 것이라 아래 피격 트리거들은 그대로 굴린다.
      sim.js hitPlayer 와 같은 순서·같은 조건. */
   /* 💎 실드가 남아있는 동안 피격 시 50% 확률로 데미지 완전 무시 (방어막보다 앞 — 방어막을 아끼는 쪽이 유리) */
-  const ignored=px.l_shieldIgnore&&p.sh>0&&pkk(p,0.50);
+  const ignored=px.l_shieldIgnore&&p.sh>0&&pkk(p,0.70);
   if(ignored){ AU.play('shield'); addText('💎 무시!','#9CD2FF'); sparks(p.worldX,-40,'#9CD2FF',6,140); }
   const warded=!ignored&&p.ward>0;
   if(warded){
@@ -2756,8 +2756,8 @@ function hitPlayer(dmg,isMelee,src){
     wardFx();
     /* ===== 방어막 방어 트리거 ===== */
     if(px.r_wardHeal){ heal(p,p.maxHp*0.05); addText('🛡️❤️','#7ED957'); }
-    if(px.l_wardHealK){ heal(p,p.maxHp*0.10); repair(p,p.maxSh*0.10); addText('🛡️❤️👑','#7ED957'); }
-    if(px.l_wardThorns) reflect(src,effDmg(p)*3,'🛡️💥');
+    if(px.l_wardHealK){ heal(p,p.maxHp*0.20); repair(p,p.maxSh*0.20); addText('🛡️❤️👑','#7ED957'); }
+    if(px.l_wardThorns) reflect(src,effDmg(p)*6,'🛡️💥');
     if(px.r_wardSpear&&!isMelee) fireSpear(p,1);              /* 🥅 화살을 막으면 창을 쏨 */
     renderBuffBar();
   }
@@ -2813,9 +2813,9 @@ function hitPlayer(dmg,isMelee,src){
   if(px.r_defBuff2&&pkk(p,0.30)) addBuff(p,'def',10,7,'r_defBuff2');
   if(px.r_hitEvadeBuff&&pkk(p,0.30)) addBuff(p,'evade',10,7,'r_hitEvadeBuff');
   if(px.c_stunHit&&src&&pkk(p,0.10)) applyStun(src,3);
-  if(px.l_stunHit3&&src&&pkk(p,0.30)) applyStun(src,6);
+  if(px.l_stunHit3&&src&&pkk(p,0.50)) applyStun(src,6);
   if(px.c_thornsS&&pkk(p,0.30)) reflect(src,dmg*0.50,'🌿');
-  if(px.l_thorns) reflect(src,dmg*2.00,'🦔');
+  if(px.l_thorns) reflect(src,dmg*4.00,'🦔');
   if(px.c_wardHit&&pkk(p,0.10)){ p.ward++; addText('🔰✨ x'+p.ward,'#9CD2FF'); renderBuffBar(); }
   if(px.c_wardEmpty&&!warded&&p.ward===0&&pkk(p,0.30)){ p.ward++; addText('⛏️ x'+p.ward,'#9CD2FF'); renderBuffBar(); }
   /* 원거리 피격 축 — 위 «피격 시» 트리거를 전부 굴린 «뒤» 에 추가로 굴린다 (별개 축, 주인 16:1X) */
@@ -2871,7 +2871,7 @@ function update(dt){
     if(!n.done && (n.type==='rest'||n.type==='devil'||n.type==='angel') && p.worldX>n.x-95){
       n.done=true;
       if(p.px.r_eventShield){ repair(p,p.maxSh*0.20); addText('🚪 실드 충전','#6CC0F0'); }        /* 🚪 */
-      if(n.type==='rest'&&p.px.l_restWard){ p.ward+=5; addText('🏕️🛡️ x'+p.ward,'#9CD2FF'); renderBuffBar(); }  /* 🏕️🛡️ */
+      if(n.type==='rest'&&p.px.l_restWard){ p.ward+=10; addText('🏕️🛡️ x'+p.ward,'#9CD2FF'); renderBuffBar(); }  /* 🏕️🛡️ */
       if(n.type==='rest') openRest();
       else if(n.type==='devil') openDevil();
       else openAngel();
@@ -2934,7 +2934,7 @@ function update(dt){
     if(e.slow>0) e.slow-=dt;
     const d=e.worldX-p.worldX;
     /* 🥶 위압의 오라 — 모든 적의 공격속도 -30% (상시). ⛓️ 둔화와 곱해진다. */
-    const ivm=(p.px.l_slowAura?1/0.70:1)*(e.slow>0?2:1);
+    const ivm=(p.px.l_slowAura?1/0.50:1)*(e.slow>0?2:1);
     if(!e.ranged){
       e.aggro = d<290;
       if(d<105){

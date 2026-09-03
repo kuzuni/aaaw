@@ -257,33 +257,33 @@
 | l_wavePierce | 🌊🔱 거대 검기 — 검기가 창처럼 일직선 최대 8마리 관통 | 검기 pierce 2 → 8 |
 | l_axeSpin | 🪓🌪️ 모든 도끼가 적 위치에서 3회전하며 3번 타격 | 도끼 적중 시 3타 |
 | l_boltChainK | 🔗👑 번개가 무조건 옆 적으로 1번 튐 (튄 번개도 풀데미지) | 확률 100% · 계수 그대로 |
-| l_spearStun | 🔱💫 창에 뚫린 적들이 30% 확률로 3초 기절 | 창 적중마다 applyStun 3 |
+| l_spearStun | 🔱💫 창에 뚫린 적들이 60% 확률로 3초 기절 | 창 적중마다 applyStun 3 |
 | l_noCritAtk3 | 💀⚔️ 치명타 확률이 0%가 되는 대신 공격력 3배 | effCritR = 0 · p.dmg ×3 |
-| l_shieldIgnore | 💎 실드가 남아있는 동안 피격 시 50% 확률로 데미지 완전 무시 | hitPlayer (`sh>0`) |
-| l_slowAura | 🥶 위압의 오라 — 모든 적의 공격속도 -30% (상시) | 적 공격 타이머 ÷0.70 |
-| l_atkBuffL | ⚔️ 공격 시 30% 확률로 7초간 공격력 +20% | addBuff atk 0.20 / 7초 |
-| l_critFBuffL | 💥👑 치명타 시 60% 확률로 7초간 치명타 데미지 +50% | addBuff critF 50 / 7초 |
-| l_evadeAspdL | 🌪️ 회피 시 40% 확률로 7초간 공격속도 +20% | addBuff aspd 0.20 / 7초 |
-| l_aspdRamp | 🎻 전투 중 3초마다 공격속도가 +5%씩 계속 빨라짐 (피격당하면 초기화) | 주기 3.0초 · 피격 시 스택 0 (주기형 «버프» — 허용축) |
+| l_shieldIgnore | 💎 실드가 남아있는 동안 피격 시 70% 확률로 데미지 완전 무시 | hitPlayer (`sh>0`) |
+| l_slowAura | 🥶 위압의 오라 — 모든 적의 공격속도 -50% (상시) | 적 공격 타이머 ÷0.50 |
+| l_atkBuffL | ⚔️ 공격 시 50% 확률로 7초간 공격력 +20% | addBuff atk 0.20 / 7초 |
+| l_critFBuffL | 💥👑 치명타 시 60% 확률로 7초간 치명타 데미지 +100% | addBuff critF 100 / 7초 |
+| l_evadeAspdL | 🌪️ 회피 시 60% 확률로 7초간 공격속도 +20% | addBuff aspd 0.20 / 7초 |
+| l_aspdRamp | 🎻 전투 중 3초마다 공격속도가 +10%씩 계속 빨라짐 (피격당하면 초기화) | 주기 3.0초 · 피격 시 스택 0 (주기형 «버프» — 허용축) |
 | l_overRepair | 🔧⚡ 처치 시 초과된 데미지만큼 실드 수리 (오버킬 수리) | onKill(초과 피해량) → repair |
 | l_healSync | 💠 체력을 회복할 때 같은 수치만큼 실드도 같이 수리 | heal 안에서 동량 repair |
-| l_critHealL | ❣️ 치명타 시 30% 확률로 체력 5% 회복 | 치명타 분기 |
+| l_critHealL | ❣️ 치명타 시 50% 확률로 체력 5% 회복 | 치명타 분기 |
 | l_killHeal5 | 💉 처치 시 40% 확률로 체력 10% 회복 | onKill |
-| l_wardHealK | 🛡️❤️👑 방어막으로 막을 때마다 체력 10% 회복 + 실드 10% 수리 | ward 소모 분기 |
-| l_stunHit3 | 💫 피격 시 30% 확률로 때린 적 6초 기절 | applyStun 6 |
-| l_stunExec | 🕳️ 마무리 일격 — 기절한 적에게 데미지 3배 | 배수 ×3 (`e.stun>0`) |
-| l_dualWield | ⚔️⚔️ 이도류 — 평타가 항상 2연타 (두 번째 타격은 공격력의 50%) | playerStrike 2타차 |
+| l_wardHealK | 🛡️❤️👑 방어막으로 막을 때마다 체력 20% 회복 + 실드 20% 수리 | ward 소모 분기 |
+| l_stunHit3 | 💫 피격 시 50% 확률로 때린 적 6초 기절 | applyStun 6 |
+| l_stunExec | 🕳️ 마무리 일격 — 기절한 적에게 데미지 5배 | 배수 ×5 (`e.stun>0`) |
+| l_dualWield | ⚔️⚔️ 이도류 — 평타가 항상 2연타 (두 번째 타격은 공격력의 100%) | playerStrike 2타차 |
 | l_cleave | 🗡️🌀 평타가 대상과 바로 뒤 적까지 같이 벰 | playerStrike 광역 2인 |
-| l_execute | 🩸 체력 30% 이하인 적 즉시 처치 (보스 포함) | dealDmg 후 판정 |
-| l_thorns | 🦔 피격 시 무조건 받은 피해의 200% 반사 | 확률 없음 |
-| l_evade2Dmg | 🎭 2번 연속 회피 성공 시 다음 공격 데미지 3배 | 연속 회피 카운터 → 배수 ×3 |
+| l_execute | 🩸 체력 40% 이하인 적 즉시 처치 (보스 포함) | dealDmg 후 판정 |
+| l_thorns | 🦔 피격 시 무조건 받은 피해의 400% 반사 | 확률 없음 |
+| l_evade2Dmg | 🎭 2번 연속 회피 성공 시 다음 공격 데미지 5배 | 연속 회피 카운터 → 배수 ×5 |
 | l_fullHpDmg | 🎯👑 체력 가득 찬 적에게 데미지 +150% | 가산 풀 +1.50 |
-| l_restWard | 🏕️🛡️ 쉼터에서 쉴 때마다 방어막 5장 | 쉼터 노드 통과 시 ward += 5 |
-| l_wardEvadeL | 🔰✨ 회피 시 30% 확률로 방어막 1장 | gainWard |
+| l_restWard | 🏕️🛡️ 쉼터에서 쉴 때마다 방어막 10장 | 쉼터 노드 통과 시 ward += 10 |
+| l_wardEvadeL | 🔰✨ 회피 시 50% 확률로 방어막 1장 | gainWard |
 | l_missCrit | 🎯💨 빗나가면 다음 공격 무조건 치명타 | procOnMiss → nextCrit |
-| l_missStack | 💢 빗나가면 «데미지 +100%» 스택 (무제한 적립, 적중 1타당 1개 소모) | 가산 +1.00 (한 타에 한 장) |
-| l_wardThorns | 🛡️💥 방어막으로 막을 때마다 그 적에게 공격력의 300% 반사 | ward 소모 분기 |
-| l_stunKillNear | 💫👑 처치 시 40% 확률로 가장 가까운 적 3초 기절 | onKill → 최근접 적 |
+| l_missStack | 💢 빗나가면 «데미지 +150%» 스택 (무제한 적립, 적중 1타당 1개 소모) | 가산 +1.50 (한 타에 한 장) |
+| l_wardThorns | 🛡️💥 방어막으로 막을 때마다 그 적에게 공격력의 600% 반사 | ward 소모 분기 |
+| l_stunKillNear | 💫👑 처치 시 60% 확률로 가장 가까운 적 3초 기절 | onKill → 최근접 적 |
 | l_counterChain | 🔂 반격하면 반드시 한 번 더 반격 | doCounter 연쇄 1회 |
 
 ### 3.4 신화 — **폐지** (⚑ 주인 확정 2026-09-03)

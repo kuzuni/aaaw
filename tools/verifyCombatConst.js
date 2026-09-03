@@ -311,12 +311,20 @@ console.log('\n=== ④ 스턴 · 빗맞음 축 (PLAN §3.0·§4 주인 지시 15
       };
       const base=hit({},0), stack=hit({l_missStack:1},1), both=hit({l_missStack:1,firstHit:1},1);
       Math.random=rnd;
+      /* ⚑ P3 R02 — 기대 수치를 상수로 박지 않고 **PLAN §3.3 l_missStack 행에서 읽는다.**
+         스택 계수는 P3 ②단계(«희귀 20·전설 80 을 특전 수치로»)가 움직이는 튜닝 노브라
+         100% 를 박아 두면 정당한 회차마다 게이트가 빨개진다. 이 항목이 지켜야 할 것은
+         «수치가 100%» 가 아니라 ① PLAN 문면 ↔ 엔진 일치 ② 다른 보너스와 **합연산**이다. */
+      const mrow=PLAN.match(/\|\s*l_missStack\s*\|[^|]*?데미지\s*\+(\d+)%/);
+      const want=mrow?Number(mrow[1])/100:1.00;
       /* rand(0.92,1.08) 이 Math.random 고정으로 상수가 되므로 배수 비교가 성립한다 */
-      const okStack=Math.abs(stack/base-2.0)<1e-6;
-      const okBoth=Math.abs(both/base-2.2)<1e-6;      /* 합 = 1 + 1.00 + 0.20 (곱이면 2.4) */
-      okStack ? pass('빗맞음 스택 1장이 데미지 +100% 를 준다')
-              : fail(`빗맞음 스택 배수가 ${(stack/base).toFixed(3)} 배다 (2.000 이어야 함)`);
-      okBoth ? pass('풀피 보너스와 «합연산» 이다 (1+1.00+0.20 = 2.2배 — 곱이면 2.4배)')
+      const okStack=Math.abs(stack/base-(1+want))<1e-6;
+      const okBoth=Math.abs(both/base-(1+want+0.20))<1e-6;   /* 합 = 1 + 스택 + 0.20 (곱이면 (1+스택)×1.2) */
+      mrow ? pass(`PLAN §3.3 에서 빗맞음 스택 계수를 읽었다 (+${(want*100).toFixed(0)}%)`)
+           : fail('PLAN §3.3 에 l_missStack «데미지 +N%» 행이 없다 — 기대 수치를 못 읽는다');
+      okStack ? pass(`빗맞음 스택 1장이 데미지 +${(want*100).toFixed(0)}% 를 준다 (PLAN 문면과 일치)`)
+              : fail(`빗맞음 스택 배수가 ${(stack/base).toFixed(3)} 배다 (PLAN 문면상 ${(1+want).toFixed(3)} 이어야 함)`);
+      okBoth ? pass(`풀피 보너스와 «합연산» 이다 (1+${want.toFixed(2)}+0.20 = ${(1+want+0.20).toFixed(2)}배 — 곱이면 ${((1+want)*1.2).toFixed(2)}배)`)
              : fail(`스택+풀피가 ${(both/base).toFixed(3)} 배다 — 주인 정정(«가산, 다른 보너스와 합») 위반`);
     }
     /* (6) PLAN 에 주인 지시 문구가 살아 있는가 */

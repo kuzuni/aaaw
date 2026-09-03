@@ -88,7 +88,12 @@ function instrumentIfs(src, idSet, ifSkip, lineBase) {
 function applyPatches(src, patches, idSet) {
   const errs = [], sites = [];
   for (const [tag, from, to] of patches) {
-    const n = src.split(from).length - 1;
+    /* ⚑ P3 R02: from 이 정규식이어도 «정확히 1곳» 을 셀 수 있게 했다.
+       튜닝 노브(확률·계수)가 박힌 자리는 문자열 패치가 회차마다 깨지므로 `[\d.]+` 로 받아야 한다.
+       split 은 캡처 그룹을 결과에 끼워 넣어 개수를 부풀리므로 정규식 쪽은 match 로 센다. */
+    const n = from instanceof RegExp
+      ? (src.match(new RegExp(from.source, from.flags.includes('g') ? from.flags : from.flags + 'g')) || []).length
+      : src.split(from).length - 1;
     if (n !== 1) { errs.push(`패치표 «${tag}» 원문이 소스에 ${n}번 나온다 (1번이어야 한다) — 엔진이 바뀌었다면 패치표를 고칠 것`); continue; }
     src = src.replace(from, to);
     for (const id of tag.split('|')) if (!idSet || idSet.has(id)) sites.push({ id, site: 'M' });

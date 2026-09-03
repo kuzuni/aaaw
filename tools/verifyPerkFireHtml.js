@@ -77,10 +77,11 @@ const PATCH = [
   ['l_axeSpin', 'const times=px.l_axeSpin?3:1;', 'const times=px.l_axeSpin?(__F("M_axeSpin",{l_axeSpin:1}),3):1;'],
   ['r_counterX', '*(px.r_counterX?2:1);', '*(px.r_counterX?(__F("M_counterX",{r_counterX:1}),2):1);'],
   ['l_wavePierce', 'const big=px.l_wavePierce;', 'const big=px.l_wavePierce;if(big)__F("M_wavePierce",{l_wavePierce:1});'],
-  ['l_shieldIgnore', 'const ignored=px.l_shieldIgnore&&p.sh>0&&pkk(p,0.50);',
-    'const ignored=px.l_shieldIgnore&&p.sh>0&&pkk(p,0.50);if(ignored)__F("M_shieldIgnore",{l_shieldIgnore:1});'],
+  /* ⚑ P3 R02: 확률·계수는 튜닝 노브라 패치 원문에 박지 않는다 (`[\d.]+` 로 받는다 — verifyPerkFire 와 같은 처리) */
+  ['l_shieldIgnore', /const ignored=px\.l_shieldIgnore&&p\.sh>0&&pkk\(p,[\d.]+\);/,
+    '$&if(ignored)__F("M_shieldIgnore",{l_shieldIgnore:1});'],
   ['r_hitCounter', '||(px.r_hitCounter&&pkk(p,0.30));', '||(px.r_hitCounter&&pkk(p,0.30)&&(__F("M_hitCounter",{r_hitCounter:1}),true));'],
-  ['l_slowAura', '(p.px.l_slowAura?1/0.70:1)', '(p.px.l_slowAura?(__F("M_slowAura",{l_slowAura:1}),1/0.70):1)'],
+  ['l_slowAura', /\(p\.px\.l_slowAura\?1\/([\d.]+):1\)/, '(p.px.l_slowAura?(__F("M_slowAura",{l_slowAura:1}),1/$1):1)'],
   /* 스탯 직변형 5종 — 그 스탯이 실제로 쓰인 자리에서 센다 (표식 `p.__amp` 는 아래 STATPERK 가 심는다) */
   ['c_killHeal2', '  if(p.killHeal>0) heal(p,p.maxHp*p.killHeal);',
     '  if(p.killHeal>0){ if(p.__amp&&p.__amp.c_killHeal2)__F("M_killHeal",{c_killHeal2:1}); heal(p,p.maxHp*p.killHeal); }'],

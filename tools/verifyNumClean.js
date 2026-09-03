@@ -98,8 +98,23 @@ if (!perks || !gopt || !goptHtml) { console.log('  ✗ PERKS/GOPT 를 파싱하�
 const ITEMS = [...perks, ...gopt];
 const ALL_TEXT = [...perks, ...gopt, ...goptHtml];
 
-/* PLAN 의 «표 행» — §3 특전표·§11.6 옵션표가 전부 `|` 로 시작한다. 산문 줄은 대상이 아니다. */
-const PLAN_ROWS = PLAN.split('\n').filter(l => /^\s*\|/.test(l));
+/* PLAN 의 «표 행» — 대상은 **표시 텍스트 표**뿐이다: §3 특전표 · §11.6 계열 옵션표.
+   ⚑ P3 R02 사정거리 수리: 종전엔 PLAN 의 *모든* `|` 행을 훑어서, R01 이 §7 에 등재한 채점표
+   («실험1 등급 과녁 … 각 ±5%p» · «최상−최하 < 25%p»)가 Ⓐ 에 걸려 게이트가 빨개졌다.
+   이 파일 머리말(§«%p» 의 사정거리)이 이미 «주인 본인이 과녁 허용 오차를 ±5%p 로 주셨으므로
+   그 축까지 금지일 수 없다» 고 못박았고, Ⓐ 의 통과 메시지도 스스로 «§3 특전표 · §11.6 옵션표» 라고
+   적고 있었다 — 구현만 그 범위를 안 지키고 있었다. 판정 기준·분석 산문은 대상이 아니고,
+   플레이어에게 뜨는 표시 텍스트 표는 종전과 똑같이 전부 검사한다. */
+const PLAN_ROWS = (() => {
+  const rows = [], lines = PLAN.split('\n');
+  let inScope = false;
+  for (const l of lines) {
+    const h = l.match(/^#{2,3}\s+([\d.]+[\w-]*)/);
+    if (h) inScope = /^3(\.|$)/.test(h[1]) || /^11\.6/.test(h[1]);
+    if (inScope && /^\s*\|/.test(l)) rows.push(l);
+  }
+  return rows;
+})();
 
 console.log('\n=== 숫자 청결 게이트 (주인 확정 «깔끔한 숫자 규칙») ===');
 console.log(`  대상: 특전 ${perks.length}종 tx · 장비 옵션 ${gopt.length}칸 d (두 파일) · PLAN 표 ${PLAN_ROWS.length}행`);

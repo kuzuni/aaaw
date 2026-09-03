@@ -167,7 +167,10 @@ const FORMULAS = [
   ['수호의 결정 감쇄', /guardCrystal&&p\.sh>0\)d\*=([\d.]+)/, v => new RegExp(`guardCrystal&&p\\.sh>0\\)\\s*d\\*=${numRe(v)}`)],
   ['부활 회복률', /revive--;p\.hp=p\.maxHp\*([\d.]+);p\.sh=p\.maxSh\*([\d.]+)/, (a,b) => new RegExp(`revive--;[\\s\\S]{0,40}p\\.hp=p\\.maxHp\\*${numRe(a)};\\s*p\\.sh=p\\.maxSh\\*${numRe(b)}`)],
   ['가시(thorns) 확률·계수', /px\.thorns&&pkk\(p,0\.60\*px\.thorns\)\)reflect\(G?,?\s*src,dmg\*1\.5/, /px\.thorns&&pkk\(p,0\.60\*px\.thorns\)\)\s*reflect\(src,dmg\*1\.5/],
-  ['🦔 l_thorns 무조건 200% 반사', /px\.l_thorns\)reflect\(G,src,dmg\*2\.00\)/, /px\.l_thorns\)\s*reflect\(src,dmg\*2\.00/],
+  /* ⚑ P3 R02: 계수를 박지 않고 sim 에서 뽑아 html 과 대조하는 «값 추출형» 으로 바꿨다 —
+     전설 반사 계수는 P3 ②단계가 움직이는 튜닝 노브라 200% 를 박으면 정당한 회차마다 빨개진다.
+     이 항목이 지킬 것은 «두 엔진이 같은 계수를 쓴다 + 확률 없이 무조건» 이다. */
+  ['🦔 l_thorns 무조건 반사 계수', /px\.l_thorns\)reflect\(G,src,dmg\*([\d.]+)\)/, v => new RegExp(`px\\.l_thorns\\)\\s*reflect\\(src,dmg\\*${numRe(v)}`)],
   ['반격 피해 계수', /effDmg\(p\)\*0\.7\*\(1\+px\.counterX\)/, /effDmg\(p\)\*0\.7\*\(1\+px\.counterX\)/],
   ['추가타(extraHit) 확률·배수', /extraHit&&pkk\(p,0\.75\*px\.extraHit\)&&e\.hp>0\)dealDmg\(G,e,2\.3\)/, /extraHit&&pkk\(p,0\.75\*px\.extraHit\)&&e\.hp>0\)\s*dealPlayerDamage\(e,2\.3/],
   ['분신(clone) 계수', /clone&&e\.hp>0\)dealDmg\(G,e,([\d.]+)\)/, v => new RegExp(`clone&&e\\.hp>0\\)\\s*dealPlayerDamage\\(e,${numRe(v)}`)],
@@ -1221,16 +1224,26 @@ console.log('\n[㉒ 스턴 · 빗맞음 축 (PLAN §3.0·§4, T48 1단계)]');
                       : bad(`${who}: 적 회피 분기 안의 procOnMiss 가 ${evadeBlocks}곳 — 적중에도 굴러가면 축이 무너진다`);
   }
   /* (5) 빗맞음 데미지 스택은 «가산» 이어야 한다 (주인 정정) — 배수 대입 금지, 적중 1타당 1장 소모 */
+  const missStackAmt = [];
   for (const [src, who] of [[SIM, 'sim.js'], [HTML, 'index.html']]) {
     const body = src.replace(/\/\*[\s\S]*?\*\//g, '');
-    /p\.missStk--;\s*addBonus\s*\+=\s*1\.00;/.test(body)
-      ? ok(`${who}: 스택 소모가 «적중 1타당 1장 · 가산 +100%» 이다`)
+    /* ⚑ P3 R02: 계수(+100%)를 박지 않는다 — P3 ②단계가 움직이는 노브다.
+       구조(«가산 풀 addBonus 에 더한다 · 적중 1타당 1장 소모»)만 강제하고, 계수 자체는
+       PLAN §3.3 ↔ 엔진 대조를 `verifyCombatConst` ④ 가 본다. 두 엔진 값이 갈리면 아래 (5-b) 가 잡는다. */
+    const mstk = body.match(/p\.missStk--;\s*addBonus\s*\+=\s*([\d.]+);/);
+    mstk
+      ? ok(`${who}: 스택 소모가 «적중 1타당 1장 · 가산 +${(Number(mstk[1]) * 100).toFixed(0)}%» 이다`)
       : bad(`${who}: 빗맞음 스택이 가산 풀(addBonus)로 들어가지 않는다 — 주인 정정(«×2 배수 아님») 위반`);
+    missStackAmt.push(mstk ? mstk[1] : null);
     /* ⚑ 주인 확정 «무제한 적립» — 상한 대입이 되살아나면 빨개진다 */
     !/MISS_STACK_CAP/.test(body) && /p\.missStk\+\+/.test(body)
       ? ok(`${who}: 스택 적립에 상한이 없다 (주인 확정 «무제한 적립»)`)
       : bad(`${who}: 빗맞음 스택에 상한이 되살아났다 — 주인 확정 «무제한 적립» 위반`);
   }
+  /* (5-b) ⚑ P3 R02: 계수를 값 추출형으로 바꾼 대가로, 두 엔진이 갈리는 것은 여기서 잡는다 */
+  (missStackAmt[0] !== null && missStackAmt[0] === missStackAmt[1])
+    ? ok(`두 엔진의 빗맞음 스택 계수가 같다 (+${(Number(missStackAmt[0]) * 100).toFixed(0)}%)`)
+    : bad(`두 엔진의 빗맞음 스택 계수가 다르다 — sim ${missStackAmt[0]} / html ${missStackAmt[1]}`);
   /* (6) 주인이 원문으로 명시한 필수 4종이 실제로 존재해야 한다 */
   /* ⚑ P1(T83) — 구 l_stunCrit3 는 새 목록에서 희귀 💫 r_stunCrit(치명타 6초 기절)로 옮겨졌다 */
   for (const id of ['l_stunHit3', 'r_stunCrit', 'l_missCrit', 'l_missStack'])

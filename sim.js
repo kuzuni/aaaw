@@ -108,7 +108,7 @@ const STUN_BOSS_MUL=1/3;
 const R_AXE=0.30, R_ARROW=0.50, R_WAVE=0.50, R_BOLT=0.75, R_SPEAR=1.00;
 const WAVE_PIERCE=2, WAVE_PIERCE_BIG=8, SPEAR_PIERCE=8;
 /* 새 132종 전용 상수 — 주기 소환 2초(⏰ 3종) · 공속 램프 3초마다 +5%(🎻) · 사신의 낫 20%(☠️🌾, 보스 포함) */
-const AUTO_SUMMON_T=2.0, ASPD_RAMP_T=3.0, ASPD_RAMP_AMT=0.05, REAPER_CH=0.20;
+const AUTO_SUMMON_T=2.0, ASPD_RAMP_T=3.0, ASPD_RAMP_AMT=0.10, REAPER_CH=0.20;
 /* ⚑ 등급 등장 확률 — 신화 폐지에 따른 3단 재정의 (일반 45 / 희귀 35 / 전설 20 · PLAN §3.0) */
 const RARITY_P=[0.45,0.35,0.20];
 /* ⚑ 주인 확정 — 방어막(ward)은 장수 상한이 없다(무한). 수치형 실드와 별개 축으로, 실드는 데미지를
@@ -614,7 +614,7 @@ const effDmg=p=>{const px=p.px;let m=1+bsum(p,'atk');
   if(px.c_lowAtk&&p.hp<=p.maxHp*0.50)m*=1.15;              /* 🔥🩸 체력 50% 이하 공격력 +15% */
   if(px.c_collAtk)m*=1+0.02*perkN(p);                      /* 🃏⚔️ 특전 1개당 공격력 +2% */
   return p.dmg*m;};
-const effAspd=p=>p.aspd*(1+bsum(p,'aspd'))*(1+ASPD_RAMP_AMT*(p.rampN||0));   /* 🎻 3초마다 +5% */
+const effAspd=p=>p.aspd*(1+bsum(p,'aspd'))*(1+ASPD_RAMP_AMT*(p.rampN||0));   /* 🎻 3초마다 +10% */
 const effCritR=p=>p.px.l_noCritAtk3?0:p.critR+bsum(p,'critR');               /* 💀⚔️ 치확 0% */
 const effCritF=p=>p.critF+bsum(p,'critF');
 const effDef=p=>{let d=p.def+bsum(p,'def');if(p.px.c_collDef)d+=2*perkN(p);return Math.min(80,d);};
@@ -694,7 +694,7 @@ function onKill(G,e,over){
   if(over>0&&px.r_overheal)heal(p,over);                          /* 🩸 오버킬 힐 */
   if(over>0&&px.l_overRepair)repair(p,over);                      /* 🔧⚡ 오버킬 수리 */
   if(px.c_stunKillNear&&pkk(p,0.20)){const t=nearestTo(G,e.worldX,e);if(t)applyStun(G,t,3);}   /* 💫👟 */
-  if(px.l_stunKillNear&&pkk(p,0.40)){const t=nearestTo(G,e.worldX,e);if(t)applyStun(G,t,3);}   /* 💫👑 */
+  if(px.l_stunKillNear&&pkk(p,0.60)){const t=nearestTo(G,e.worldX,e);if(t)applyStun(G,t,3);}   /* 💫👑 */
   /* 웨이브 전멸 실드 충전 폐지 (PLAN §2.3 주인 지시) — 실드 충전은 특전으로만 */
   if(e.isBoss)G.cleared=true;   /* 클리어 확정을 먼저 — 보스 경험치로 레벨업해도 특전 3택 없음 (PLAN §2.4 주인 지시) */
   gainExp(G,(e.isBoss?TUNE.expBoss:TUNE.expKill)+(px.sage?1:0));
@@ -786,7 +786,7 @@ function dealDmg(G,e,ratio,fromBasic){
                           if(px.backDmg)d*=3.2; }            /* 장비 옵션 (순수 배수) */
   }
   if(fromBasic&&px.c_fourthDmg&&p.atkN%4===0)addBonus+=1.00; /* 🔢 4번째 공격마다 +100% */
-  if(px.l_missStack&&p.missStk>0){p.missStk--;addBonus+=1.00;} /* 💢 빗맞음 스택 */
+  if(px.l_missStack&&p.missStk>0){p.missStk--;addBonus+=1.50;} /* 💢 빗맞음 스택 +150% */
   if(px.c_evadeStack&&p.evStk>0){p.evStk--;addBonus+=0.50;}  /* 🌀🗡️ 회피 스택 */
   if(px.r_comboDmg){                                          /* 🥊 같은 적 연타 +10%씩 누적 */
     if(p.comboT===e)p.comboN++;else{p.comboT=e;p.comboN=0;}
@@ -794,9 +794,9 @@ function dealDmg(G,e,ratio,fromBasic){
   }
   if(fromBasic&&px.r_evade3Dmg&&p.nextP200){p.nextP200=false;addBonus+=2.00;}   /* 💃 3연속 회피 */
   if(addBonus)d*=1+addBonus;
-  if(stunned&&px.l_stunExec)d*=3;                            /* 🕳️ 기절한 적에게 데미지 3배 */
+  if(stunned&&px.l_stunExec)d*=5;                            /* 🕳️ 기절한 적에게 데미지 5배 */
   if(px.execute&&e.hp<=e.maxHp*0.5)d*=2.2;                   /* 장비 옵션 */
-  if(fromBasic&&px.l_evade2Dmg&&p.nextX3){p.nextX3=false;d*=3;}                 /* 🎭 2연속 회피 */
+  if(fromBasic&&px.l_evade2Dmg&&p.nextX3){p.nextX3=false;d*=5;}                 /* 🎭 2연속 회피 */
   e.hp-=d;
   if(p.steal>0)heal(p,d*p.steal/100);
   if(crit){
@@ -817,14 +817,14 @@ function dealDmg(G,e,ratio,fromBasic){
     if(px.l_spearCrit&&pkk(p,0.40))fireSpear(p,1);           /* 🔱 40% 확률로 창 1개 */
     if(px.r_critRBuff&&pkk(p,0.40))addBuff(p,'critR',10,7);  /* 💥 40% 확률로 7초간 치확 +10% */
     if(px.r_critFBuff&&pkk(p,0.30))addBuff(p,'critF',20,7);  /* 🔥 30% 확률로 7초간 치배 +20% */
-    if(px.l_critFBuffL&&pkk(p,0.60))addBuff(p,'critF',50,7); /* 💥👑 60% 확률로 7초간 치배 +50% */
+    if(px.l_critFBuffL&&pkk(p,0.60))addBuff(p,'critF',100,7);/* 💥👑 60% 확률로 7초간 치배 +100% */
     if(px.r_critHeal3&&pkk(p,0.30))heal(p,p.maxHp*0.05);     /* ❤️‍🔥 30% 확률로 체력 5% 회복 */
-    if(px.l_critHealL&&pkk(p,0.30))heal(p,p.maxHp*0.05);     /* ❣️ 30% 확률로 체력 5% 회복 */
+    if(px.l_critHealL&&pkk(p,0.50))heal(p,p.maxHp*0.05);     /* ❣️ 50% 확률로 체력 5% 회복 */
     if(px.r_stunCrit&&pkk(p,0.20))applyStun(G,e,6);          /* 💫 20% 확률로 그 적 6초 기절 */
     gainWard(p,0.12*px.wardCrit);                            /* 장비 옵션 */
   }
   if(px.execKill&&!e.isBoss&&e.hp>0&&e.hp<=e.maxHp*0.25)e.hp=0;                 /* 장비 옵션 */
-  if(px.l_execute&&e.hp>0&&e.hp<=e.maxHp*0.30)e.hp=0;        /* 🩸 체력 30% 이하 즉시 처치 (보스 포함) */
+  if(px.l_execute&&e.hp>0&&e.hp<=e.maxHp*0.40)e.hp=0;        /* 🩸 체력 40% 이하 즉시 처치 (보스 포함) */
   if(e.hp<=0)onKill(G,e,-e.hp);
   return crit;
 }
@@ -856,7 +856,7 @@ function projHit(G,pr,e){
     return;
   }
   summonHit(G,e,pr.ratio);
-  if(pr.type==='spear'&&px.l_spearStun&&pkk(p,0.30))applyStun(G,e,3);   /* 🔱💫 창에 뚫린 적 30% 3초 기절 */
+  if(pr.type==='spear'&&px.l_spearStun&&pkk(p,0.60))applyStun(G,e,3);   /* 🔱💫 창에 뚫린 적 60% 3초 기절 */
 }
 function pushProj(G,pr){
   if(G.pprojs.length<PROJ_CAP){G.pprojs.push(pr);return;}
@@ -920,7 +920,7 @@ function procOnAttack(G,e){
   if(px.c_aspdAtk&&pkk(p,0.30))addBuff(p,'aspd',0.05,7);   /* ⚡ 30% 확률로 7초간 공속 +5% */
   if(px.c_evadeAtkB&&pkk(p,0.30))addBuff(p,'evade',5,7);   /* 🛡️ 30% 확률로 7초간 회피 +5% */
   if(px.r_atkBuffM&&pkk(p,0.30))addBuff(p,'atk',0.10,7);   /* ⚔️ 30% 확률로 7초간 공격력 +10% */
-  if(px.l_atkBuffL&&pkk(p,0.30))addBuff(p,'atk',0.20,7);   /* ⚔️ 30% 확률로 7초간 공격력 +20% */
+  if(px.l_atkBuffL&&pkk(p,0.50))addBuff(p,'atk',0.20,7);   /* ⚔️ 50% 확률로 7초간 공격력 +20% */
   if(px.r_wardAtk&&pkk(p,0.10))p.ward++;                   /* 🛡️✨ 10% 확률로 방어막 1장 */
   if(px.c_stunAtk&&e&&e.hp>0&&pkk(p,0.10))applyStun(G,e,3);/* 💫 10% 확률로 그 적 3초 기절 */
 }
@@ -972,11 +972,11 @@ function hitPlayer(G,dmg,isMelee,src){
     if(px.r_axeEvade&&pkk(p,0.30))fireAxe(p,2);                /* 🪓 30% 확률로 도끼 2개 */
     if(px.r_boltEvade&&pkk(p,0.30))fireBolts(p,2);             /* ⚡ 30% 확률로 번개 2회 */
     if(px.c_aspdEvade&&pkk(p,0.30))addBuff(p,'aspd',0.05,7);   /* 🌀 30% 확률로 7초간 공속 +5% */
-    if(px.l_evadeAspdL&&pkk(p,0.40))addBuff(p,'aspd',0.20,7);  /* 🌪️ 40% 확률로 7초간 공속 +20% */
+    if(px.l_evadeAspdL&&pkk(p,0.60))addBuff(p,'aspd',0.20,7);  /* 🌪️ 60% 확률로 7초간 공속 +20% */
     if(px.c_evadeHealS&&pkk(p,0.10))heal(p,p.maxHp*0.05);      /* 🍀 10% 확률로 체력 5% 회복 */
     if(px.r_evadeShield&&pkk(p,0.20))repair(p,p.maxSh*0.15);   /* 🔶 20% 확률로 실드 15% 수리 */
     if(px.c_wardEvade&&pkk(p,0.10))p.ward++;                   /* 👥✨ 10% 확률로 방어막 1장 */
-    if(px.l_wardEvadeL&&pkk(p,0.30))p.ward++;                  /* 🔰✨ 30% 확률로 방어막 1장 */
+    if(px.l_wardEvadeL&&pkk(p,0.50))p.ward++;                  /* 🔰✨ 50% 확률로 방어막 1장 */
     if(px.c_evadeStack)p.evStk++;                              /* 🌀🗡️ «다음 공격 +50%» 스택 */
     if(px.r_stunEvade&&src&&pkk(p,0.30))applyStun(G,src,3);    /* 🕷️ 30% 확률로 그 적 3초 기절 */
     /* ☠️🌾 사신의 낫 — 회피 시 20% 확률로 그 적 즉사. **보스 포함**(주인 명시).
@@ -988,7 +988,7 @@ function hitPlayer(G,dmg,isMelee,src){
   p.evStreak2=0;p.evStreak3=0;
   if(px.l_aspdRamp)p.rampN=0;                                  /* 🎻 피격당하면 초기화 */
   /* 💎 실드가 남아있는 동안 피격 시 50% 확률로 데미지 완전 무시 (방어막보다 앞 — 방어막을 아끼는 쪽이 유리) */
-  const ignored=px.l_shieldIgnore&&p.sh>0&&pkk(p,0.50);
+  const ignored=px.l_shieldIgnore&&p.sh>0&&pkk(p,0.70);
   /* 횟수형 방어막 — 이 타격 «1회» 를 통째로 무효화하고 1장 소모한다 (수치형 실드보다 먼저).
      «데미지 완전 무효» 라 방어력·실드·체력을 아예 건드리지 않지만, «맞은 사건» 자체는 일어난 것이라
      아래 피격 트리거들은 그대로 굴린다(주인 원문이 «그 타격 데미지 완전 무효» 이므로 — 위임 판단). */
@@ -997,8 +997,8 @@ function hitPlayer(G,dmg,isMelee,src){
     p.ward--;
     /* ===== 방어막 방어 트리거 ===== */
     if(px.r_wardHeal)heal(p,p.maxHp*0.05);                                   /* 🛡️❤️ 체력 5% 회복 */
-    if(px.l_wardHealK){heal(p,p.maxHp*0.10);repair(p,p.maxSh*0.10);}         /* 🛡️❤️👑 체력10%+실드10% */
-    if(px.l_wardThorns)reflect(G,src,effDmg(p)*3);                           /* 🛡️💥 공격력의 300% 반사 */
+    if(px.l_wardHealK){heal(p,p.maxHp*0.20);repair(p,p.maxSh*0.20);}         /* 🛡️❤️👑 체력20%+실드20% */
+    if(px.l_wardThorns)reflect(G,src,effDmg(p)*6);                           /* 🛡️💥 공격력의 600% 반사 */
     if(px.r_wardSpear&&!isMelee)fireSpear(p,1);                              /* 🥅 화살을 막으면 창을 쏨 */
   }
   const nulled=ignored||warded;
@@ -1039,9 +1039,9 @@ function hitPlayer(G,dmg,isMelee,src){
   if(px.r_defBuff2&&pkk(p,0.30))addBuff(p,'def',10,7);         /* 🛡️ 30% 확률로 7초간 방어력 +10% */
   if(px.r_hitEvadeBuff&&pkk(p,0.30))addBuff(p,'evade',10,7);   /* 🌫️ 30% 확률로 7초간 회피 +10% */
   if(px.c_stunHit&&src&&pkk(p,0.10))applyStun(G,src,3);        /* 💫🛡️ 10% 확률로 때린 적 3초 기절 */
-  if(px.l_stunHit3&&src&&pkk(p,0.30))applyStun(G,src,6);       /* 💫 30% 확률로 때린 적 6초 기절 */
+  if(px.l_stunHit3&&src&&pkk(p,0.50))applyStun(G,src,6);       /* 💫 50% 확률로 때린 적 6초 기절 */
   if(px.c_thornsS&&pkk(p,0.30))reflect(G,src,dmg*0.50);        /* 🌿 30% 확률로 받은 피해의 50% 반사 */
-  if(px.l_thorns)reflect(G,src,dmg*2.00);                      /* 🦔 무조건 받은 피해의 200% 반사 */
+  if(px.l_thorns)reflect(G,src,dmg*4.00);                      /* 🦔 무조건 받은 피해의 400% 반사 */
   if(px.c_wardHit&&pkk(p,0.10))p.ward++;                       /* 🔰✨ 10% 확률로 방어막 1장 */
   if(px.c_wardEmpty&&!warded&&p.ward===0&&pkk(p,0.30))p.ward++;/* ⛏️ 방어막이 없는 상태에서 맞으면 30% */
   /* 원거리 피격 축 — 위 «피격 시» 트리거를 전부 굴린 «뒤» 에 추가로 굴린다 (별개 축, 주인 16:1X) */
@@ -1061,7 +1061,7 @@ function playerStrike(G,e){
   if(p.nextAtk>0){ratio*=1+p.nextAtk;p.nextAtk=0;}
   const crit=dealDmg(G,e,ratio,true);
   if(px.clone&&e.hp>0)dealDmg(G,e,0.25);                       /* 장비 옵션 */
-  if(px.l_dualWield&&e.hp>0)dealDmg(G,e,0.50);                 /* ⚔️⚔️ 이도류 — 2타는 공격력의 50% */
+  if(px.l_dualWield&&e.hp>0)dealDmg(G,e,1.00);                 /* ⚔️⚔️ 이도류 — 2타는 공격력의 100% */
   if(px.l_cleave){                                             /* 🗡️🌀 대상과 바로 뒤 적까지 */
     const b=nearestTo(G,e.worldX,e);
     if(b&&b.hp>0&&b.worldX>=e.worldX)dealDmg(G,b,ratio);
@@ -1158,7 +1158,7 @@ function runChapter(chapter,build,opts){
       if(!n.done&&(n.type==='rest'||n.type==='devil'||n.type==='angel')&&p.worldX>n.x-95){
         n.done=true;ev=true;
         if(p.px.r_eventShield)repair(p,p.maxSh*0.20);        /* 🚪 이벤트를 지날 때마다 실드 20% 충전 */
-        if(n.type==='rest'&&p.px.l_restWard)p.ward+=5;       /* 🏕️🛡️ 쉼터에서 쉴 때마다 방어막 5장 */
+        if(n.type==='rest'&&p.px.l_restWard)p.ward+=10;      /* 🏕️🛡️ 쉼터에서 쉴 때마다 방어막 10장 */
         if(n.type==='rest'){
           /* ⚑ 주인 확정(2026-09-02 16:4X · PLAN §7): 가상 플레이어는 쉼터에서 «항상 🌟 경험치» 를 고른다.
              체력 회복 분기는 시뮬에서 금지 — 전 실험(1~5·사다리·하니스) 공통 측정 조건.
@@ -1216,7 +1216,7 @@ function runChapter(chapter,build,opts){
       if(e.slow>0)e.slow-=dt;
       const d=e.worldX-p.worldX;
       /* 🥶 위압의 오라 — 모든 적의 공격속도 -30% (상시). ⛓️ 둔화와 곱해진다. */
-      const ivm=(p.px.l_slowAura?1/0.70:1)*(e.slow>0?2:1);
+      const ivm=(p.px.l_slowAura?1/0.50:1)*(e.slow>0?2:1);
       if(!e.ranged){
         if(d<105){
           e.atkTimer-=dt;

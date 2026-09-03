@@ -81,12 +81,13 @@ const PATCH = [
   /* 🌊🔱 거대 검기 (대입) */
   ['l_wavePierce', 'const big=px.l_wavePierce;', 'const big=px.l_wavePierce;if(big)__F("M_wavePierce",{l_wavePierce:1});'],
   /* 💎 실드 있으면 50% 데미지 무시 (대입 — 실제로 무시했을 때만) */
-  ['l_shieldIgnore', 'const ignored=px.l_shieldIgnore&&p.sh>0&&pkk(p,0.50);',
-    'const ignored=px.l_shieldIgnore&&p.sh>0&&pkk(p,0.50);if(ignored)__F("M_shieldIgnore",{l_shieldIgnore:1});'],
+  /* ⚑ P3 R02: 확률·계수는 튜닝 노브라 패치 원문에 박지 않는다 (`[\d.]+` 로 받는다) */
+  ['l_shieldIgnore', /const ignored=px\.l_shieldIgnore&&p\.sh>0&&pkk\(p,[\d.]+\);/,
+    '$&if(ignored)__F("M_shieldIgnore",{l_shieldIgnore:1});'],
   /* 💢 피격 시 즉시 반격 (|| 꼬리) */
   ['r_hitCounter', '||(px.r_hitCounter&&pkk(p,0.30));', '||(px.r_hitCounter&&pkk(p,0.30)&&(__F("M_hitCounter",{r_hitCounter:1}),true));'],
   /* 🥶 위압의 오라 (삼항) */
-  ['l_slowAura', '(p.px.l_slowAura?1/0.70:1)', '(p.px.l_slowAura?(__F("M_slowAura",{l_slowAura:1}),1/0.70):1)'],
+  ['l_slowAura', /\(p\.px\.l_slowAura\?1\/([\d.]+):1\)/, '(p.px.l_slowAura?(__F("M_slowAura",{l_slowAura:1}),1/$1):1)'],
   /* ── px 키를 안 읽고 스탯을 직접 바꾸는 5종 — «그 스탯이 실제로 쓰인 자리» 에서 센다 ──
      `p.__amp.<id>` 는 아래 STATPERK 가 심는 표식으로, **획득 시 그 스탯이 실제로 변했을 때만** 참이다.
      px 키만 보면 «수치를 0 으로 지워도 발동으로 잡히는» 헛계측이 된다(자가검사 ⑤가 이것을 잡는다). */
