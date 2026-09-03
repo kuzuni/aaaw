@@ -189,8 +189,8 @@ function mkPerks(){
   add('r_aspdKill',1); add('r_counterAtkM',1); add('r_missAspd',1); add('r_shieldAtkM',1); add('r_noShieldAtk',1);
   /* 회복 8 */
   add('r_overheal',1);
-  add('r_healAmp',1,p=>{p.px.r_healAmp=1;p.healAmp+=1.00;});      /* 💞 체력 회복 효과 +100% */
-  add('r_repairAmp',1,p=>{p.px.r_repairAmp=1;p.repairAmp+=1.00;}); /* 🔧 실드 수리 효과 +100% */
+  add('r_healAmp',1,p=>{p.px.r_healAmp=1;p.healAmp+=1.50;});      /* 💞 체력 회복 효과 +150% */
+  add('r_repairAmp',1,p=>{p.px.r_repairAmp=1;p.repairAmp+=1.50;}); /* 🔧 실드 수리 효과 +150% */
   add('r_critHeal3',1); add('r_evadeShield',1); add('r_counterHeal',1); add('r_lowShield',1); add('r_wardHeal',1);
   /* 기타 15 */
   add('r_stunCrit',1); add('r_stunSlow',1); add('r_stunDmgM',1); add('r_comboDmg',1); add('r_counterX',1);
@@ -689,7 +689,7 @@ function onKill(G,e,over){
   if(px.r_aspdKill&&pkk(p,0.40))addBuff(p,'aspd',0.10,7);         /* ⚡👑 40% 확률로 7초간 공속 +10% */
   if(px.c_boltKill&&pkk(p,0.70))fireBolts(p,1);                   /* ⚡ 70% 확률로 번개 1회 */
   if(px.r_arrowKill&&pkk(p,0.40))fireArrows(p,2);                 /* 🏹 40% 확률로 화살 2발 */
-  if(px.r_spearKill&&pkk(p,0.70))fireSpear(p,1);                  /* 🔱 70% 확률로 창 1개 */
+  if(px.r_spearKill&&pkk(p,0.60))fireSpear(p,1);                  /* 🔱 60% 확률로 창 1개 */
   if(px.c_wardKill&&pkk(p,0.10))p.ward++;                         /* ⚔️✨ 10% 확률로 방어막 1장 */
   if(over>0&&px.r_overheal)heal(p,over);                          /* 🩸 오버킬 힐 */
   if(over>0&&px.l_overRepair)repair(p,over);                      /* 🔧⚡ 오버킬 수리 */
@@ -732,7 +732,7 @@ function procOnMiss(G,e){
   if(px.c_arrowMiss&&pkk(p,0.30))fireArrows(p,1);           /* 🏹 30% 확률로 화살 1발 */
   if(px.r_boltMiss&&pkk(p,0.40))fireBolts(p,2);             /* ⚡ 40% 확률로 번개 2회 */
   if(px.c_critMiss&&pkk(p,0.30))addBuff(p,'critR',5,7);     /* 💨 30% 확률로 7초간 치확 +5% */
-  if(px.r_missAspd&&pkk(p,0.40))addBuff(p,'aspd',0.10,7);   /* 💨⚡ 40% 확률로 7초간 공속 +10% */
+  if(px.r_missAspd&&pkk(p,0.70))addBuff(p,'aspd',0.20,7);   /* 💨⚡ 70% 확률로 7초간 공속 +20% */
   if(px.l_missCrit)p.nextCrit=true;                         /* 🎯💨 다음 공격 무조건 치명타 */
   if(px.l_missStack)p.missStk++;                            /* 💢 «데미지 +100%» 스택 — 무제한 적립 */
 }
@@ -759,7 +759,7 @@ function dealDmg(G,e,ratio,fromBasic){
   const full=e.hp>=e.maxHp-0.5, stunned=e.stun>0;
   let cr=effCritR(p);
   if(px.fullHpCrit&&full)cr=Math.max(cr,62);                 /* 장비 옵션 */
-  if(px.r_stunCritR&&stunned)cr+=30;                         /* 🧊 기절 중인 적에게 치확 +30% */
+  if(px.r_stunCritR&&stunned)cr+=60;                         /* 🧊 기절 중인 적에게 치확 +60% */
   if(fromBasic&&px.c_fourthCrit&&p.atkN%4===0)cr=100;        /* 🔢🎯 4번째 공격마다 무조건 치명타 */
   if(fromBasic&&p.nextCrit)cr=100;
   const crit=Math.random()*100<cr;
@@ -792,7 +792,7 @@ function dealDmg(G,e,ratio,fromBasic){
     if(p.comboT===e)p.comboN++;else{p.comboT=e;p.comboN=0;}
     addBonus+=0.10*p.comboN;
   }
-  if(fromBasic&&px.r_evade3Dmg&&p.nextP200){p.nextP200=false;addBonus+=2.00;}   /* 💃 3연속 회피 */
+  if(fromBasic&&px.r_evade3Dmg&&p.nextP200){p.nextP200=false;addBonus+=3.00;}   /* 💃 3연속 회피 */
   if(addBonus)d*=1+addBonus;
   if(stunned&&px.l_stunExec)d*=5;                            /* 🕳️ 기절한 적에게 데미지 5배 */
   if(px.execute&&e.hp<=e.maxHp*0.5)d*=2.2;                   /* 장비 옵션 */
@@ -815,8 +815,8 @@ function dealDmg(G,e,ratio,fromBasic){
     if(px.r_axeCrit&&pkk(p,0.30))fireAxe(p,2);               /* 🪓 30% 확률로 도끼 2개 */
     if(px.r_waveCrit&&pkk(p,0.30))fireWave(p,1);             /* 🌊 30% 확률로 검기 1개 */
     if(px.l_spearCrit&&pkk(p,0.40))fireSpear(p,1);           /* 🔱 40% 확률로 창 1개 */
-    if(px.r_critRBuff&&pkk(p,0.40))addBuff(p,'critR',10,7);  /* 💥 40% 확률로 7초간 치확 +10% */
-    if(px.r_critFBuff&&pkk(p,0.30))addBuff(p,'critF',20,7);  /* 🔥 30% 확률로 7초간 치배 +20% */
+    if(px.r_critRBuff&&pkk(p,0.70))addBuff(p,'critR',20,7);  /* 💥 70% 확률로 7초간 치확 +20% */
+    if(px.r_critFBuff&&pkk(p,0.60))addBuff(p,'critF',40,7);  /* 🔥 60% 확률로 7초간 치배 +40% */
     if(px.l_critFBuffL&&pkk(p,0.60))addBuff(p,'critF',100,7);/* 💥👑 60% 확률로 7초간 치배 +100% */
     if(px.r_critHeal3&&pkk(p,0.30))heal(p,p.maxHp*0.05);     /* ❤️‍🔥 30% 확률로 체력 5% 회복 */
     if(px.l_critHealL&&pkk(p,0.50))heal(p,p.maxHp*0.05);     /* ❣️ 50% 확률로 체력 5% 회복 */
@@ -931,7 +931,7 @@ function doCounter(G,src,depth){
      빗맞으면 반격 연쇄(counterChain)도 끊긴다 — 위임 기본값. */
   G.atkTries++;
   if(Math.random()<ENEMY_EVADE){G.miss++;procOnMiss(G,src);return;}
-  const cd=effDmg(p)*0.7*(1+px.counterX)*(px.r_counterX?2:1);   /* ⚜️ 반격 피해 +100% */
+  const cd=effDmg(p)*0.7*(1+px.counterX)*(px.r_counterX?2.5:1);   /* ⚜️ 반격 피해 +150% */
   src.hp-=cd;
   /* 장비 옵션 축 (구 키) */
   if(px.counterAtkS)addBuff(p,'atk',0.05*px.counterAtkS,3);
@@ -943,7 +943,7 @@ function doCounter(G,src,depth){
   /* ===== 새 132종 «반격 시» 축 ===== */
   if(px.r_spearCounter&&pkk(p,0.30))fireSpear(p,1);         /* 🔱 30% 확률로 창 1개 */
   if(px.r_counterAtkM&&pkk(p,0.40))addBuff(p,'atk',0.10,7); /* 🗡️👑 40% 확률로 7초간 공격력 +10% */
-  if(px.r_counterHeal&&pkk(p,0.30))heal(p,p.maxHp*0.05);    /* 💧 30% 확률로 체력 5% 회복 */
+  if(px.r_counterHeal&&pkk(p,0.60))heal(p,p.maxHp*0.10);    /* 💧 60% 확률로 체력 10% 회복 */
   if(src.hp<=0)onKill(G,src,-src.hp);
   /* 🔂 반격하면 반드시 한 번 더 반격 — 첫 반격(depth 미지정)에서만 (연쇄 2회 제한, T69) */
   else if((px.counterChain||px.l_counterChain)&&!depth)doCounter(G,src,1);
@@ -954,7 +954,7 @@ function hitPlayer(G,dmg,isMelee,src){
     /* ===== 회피 시 ===== */
     p.evStreak2++;p.evStreak3++;
     if(px.l_evade2Dmg&&p.evStreak2>=2){p.evStreak2=0;p.nextX3=true;}     /* 🎭 2연속 회피 → 다음 공격 3배 */
-    if(px.r_evade3Dmg&&p.evStreak3>=3){p.evStreak3=0;p.nextP200=true;}   /* 💃 3연속 회피 → 다음 공격 +200% */
+    if(px.r_evade3Dmg&&p.evStreak3>=3){p.evStreak3=0;p.nextP200=true;}   /* 💃 3연속 회피 → 다음 공격 +300% */
     /* 장비 옵션 축 (구 키) */
     if(px.evadeEvBuff)addBuff(p,'evade',8*px.evadeEvBuff,3);
     if(px.evadeAspd)addBuff(p,'aspd',0.10,2);
@@ -974,7 +974,7 @@ function hitPlayer(G,dmg,isMelee,src){
     if(px.c_aspdEvade&&pkk(p,0.30))addBuff(p,'aspd',0.05,7);   /* 🌀 30% 확률로 7초간 공속 +5% */
     if(px.l_evadeAspdL&&pkk(p,0.60))addBuff(p,'aspd',0.20,7);  /* 🌪️ 60% 확률로 7초간 공속 +20% */
     if(px.c_evadeHealS&&pkk(p,0.10))heal(p,p.maxHp*0.05);      /* 🍀 10% 확률로 체력 5% 회복 */
-    if(px.r_evadeShield&&pkk(p,0.20))repair(p,p.maxSh*0.15);   /* 🔶 20% 확률로 실드 15% 수리 */
+    if(px.r_evadeShield&&pkk(p,0.20))repair(p,p.maxSh*0.10);   /* 🔶 20% 확률로 실드 10% 수리 */
     if(px.c_wardEvade&&pkk(p,0.10))p.ward++;                   /* 👥✨ 10% 확률로 방어막 1장 */
     if(px.l_wardEvadeL&&pkk(p,0.50))p.ward++;                  /* 🔰✨ 50% 확률로 방어막 1장 */
     if(px.c_evadeStack)p.evStk++;                              /* 🌀🗡️ «다음 공격 +50%» 스택 */
@@ -996,7 +996,7 @@ function hitPlayer(G,dmg,isMelee,src){
   if(warded){
     p.ward--;
     /* ===== 방어막 방어 트리거 ===== */
-    if(px.r_wardHeal)heal(p,p.maxHp*0.05);                                   /* 🛡️❤️ 체력 5% 회복 */
+    if(px.r_wardHeal)heal(p,p.maxHp*0.10);                                   /* 🛡️❤️ 체력 10% 회복 */
     if(px.l_wardHealK){heal(p,p.maxHp*0.20);repair(p,p.maxSh*0.20);}         /* 🛡️❤️👑 체력20%+실드20% */
     if(px.l_wardThorns)reflect(G,src,effDmg(p)*6);                           /* 🛡️💥 공격력의 600% 반사 */
     if(px.r_wardSpear&&!isMelee)fireSpear(p,1);                              /* 🥅 화살을 막으면 창을 쏨 */
@@ -1049,7 +1049,7 @@ function hitPlayer(G,dmg,isMelee,src){
   if(isMelee&&src&&src.hp>0){
     const cc=Math.random()*100<effCounter(p);
     const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.20*px.hitCounterS))
-            ||(px.r_hitCounter&&pkk(p,0.30));                  /* 💢 피격 시 30% 확률로 즉시 반격 */
+            ||(px.r_hitCounter&&pkk(p,0.60));                  /* 💢 피격 시 60% 확률로 즉시 반격 */
     if(cc||pc)doCounter(G,src);
   }
   void taken;
@@ -1210,7 +1210,7 @@ function runChapter(chapter,build,opts){
       if(e.stun>0){
         e.stun-=dt;
         /* ⛓️ 기절이 끝난 적은 3초간 공격속도 -50% */
-        if(e.stun<=0&&p.px.r_stunSlow)e.slow=3;
+        if(e.stun<=0&&p.px.r_stunSlow)e.slow=6;
         continue;
       }
       if(e.slow>0)e.slow-=dt;

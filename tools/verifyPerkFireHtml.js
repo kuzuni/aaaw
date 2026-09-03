@@ -75,12 +75,13 @@ const PATCH = [
   ['l_noCritAtk3', 'return p.px.l_noCritAtk3?0:p.critR', 'return p.px.l_noCritAtk3?(__F("M_noCrit",{l_noCritAtk3:1}),0):p.critR'],
   ['c_collCounter', 'p.px.c_collCounter?2*perkN():0', 'p.px.c_collCounter?(__F("M_collCounter",{c_collCounter:1}),2*perkN()):0'],
   ['l_axeSpin', 'const times=px.l_axeSpin?3:1;', 'const times=px.l_axeSpin?(__F("M_axeSpin",{l_axeSpin:1}),3):1;'],
-  ['r_counterX', '*(px.r_counterX?2:1);', '*(px.r_counterX?(__F("M_counterX",{r_counterX:1}),2):1);'],
+  /* ⚑ P3 R03: 반격 계수는 튜닝 노브라 값을 정규식으로 받는다(R02 의 정규식 패치 규약). */
+  ['r_counterX', /\*\(px\.r_counterX\?([\d.]+):1\);/, '*(px.r_counterX?(((($1)>1)?__F("M_counterX",{r_counterX:1}):0),$1):1);'],
   ['l_wavePierce', 'const big=px.l_wavePierce;', 'const big=px.l_wavePierce;if(big)__F("M_wavePierce",{l_wavePierce:1});'],
   /* ⚑ P3 R02: 확률·계수는 튜닝 노브라 패치 원문에 박지 않는다 (`[\d.]+` 로 받는다 — verifyPerkFire 와 같은 처리) */
   ['l_shieldIgnore', /const ignored=px\.l_shieldIgnore&&p\.sh>0&&pkk\(p,[\d.]+\);/,
     '$&if(ignored)__F("M_shieldIgnore",{l_shieldIgnore:1});'],
-  ['r_hitCounter', '||(px.r_hitCounter&&pkk(p,0.30));', '||(px.r_hitCounter&&pkk(p,0.30)&&(__F("M_hitCounter",{r_hitCounter:1}),true));'],
+  ['r_hitCounter', /\|\|\(px\.r_hitCounter&&pkk\(p,([\d.]+)\)\);/, '||(px.r_hitCounter&&pkk(p,$1)&&(__F("M_hitCounter",{r_hitCounter:1}),true));'],
   ['l_slowAura', /\(p\.px\.l_slowAura\?1\/([\d.]+):1\)/, '(p.px.l_slowAura?(__F("M_slowAura",{l_slowAura:1}),1/$1):1)'],
   /* 스탯 직변형 5종 — 그 스탯이 실제로 쓰인 자리에서 센다 (표식 `p.__amp` 는 아래 STATPERK 가 심는다) */
   ['c_killHeal2', '  if(p.killHeal>0) heal(p,p.maxHp*p.killHeal);',
@@ -94,13 +95,15 @@ const PATCH = [
 ];
 const STATPERK = [
   ['c_killHeal2', 'killHeal', 'p=>{p.px.c_killHeal2=1;p.killHeal+=0.05;}'],
-  ['r_healAmp', 'healAmp', 'p=>{p.px.r_healAmp=1;p.healAmp+=1.00;}'],
-  ['r_repairAmp', 'repairAmp', 'p=>{p.px.r_repairAmp=1;p.repairAmp+=1.00;}'],
+  ['r_healAmp', 'healAmp', /p=>\{p\.px\.r_healAmp=1;p\.healAmp\+=[\d.]+;\}/],
+  ['r_repairAmp', 'repairAmp', /p=>\{p\.px\.r_repairAmp=1;p\.repairAmp\+=[\d.]+;\}/],
   ['r_critF100', 'critF', 'p=>{p.px.r_critF100=1;p.critF+=100;}'],
   ['r_atk50', 'dmg', 'p=>{p.px.r_atk50=1;p.dmg*=1.50;}'],
 ];
-for (const [id, fld, ap] of STATPERK) PATCH.push([id + ':ap', ap,
-  `p=>{const __b=p.${fld};(${ap})(p);(p.__amp||(p.__amp={})).${id}=(p.${fld}!==__b);}`]);
+/* ⚑ P3 R03: ap 원문이 정규식일 수도 있으므로(수치가 튜닝 노브인 2종) 치환문에 원문을 `$&` 로 되꽂는다.
+   문자열 원문에서도 `$&` 는 «일치한 그 문자열» 이라 동작이 같다. */
+for (const [id, fld] of STATPERK) PATCH.push([id + ':ap', STATPERK.find(s => s[0] === id)[2],
+  `p=>{const __b=p.${fld};($&)(p);(p.__amp||(p.__amp={})).${id}=(p.${fld}!==__b);}`]);
 
 {
   const r = core.applyPatches(JS, PATCH, IDSET);

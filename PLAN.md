@@ -200,43 +200,43 @@
 | r_boltMiss | ⚡ 빗나가면 40% 확률로 번개 2회 | procOnMiss |
 | r_waveHit | 🌊 피격 시 30% 확률로 검기 2개 | hitPlayer |
 | r_waveCrit | 🌊 치명타 시 30% 확률로 검기 1개 | 치명타 분기 |
-| r_spearKill | 🔱 처치 시 70% 확률로 창 1개 | onKill |
+| r_spearKill | 🔱 처치 시 60% 확률로 창 1개 | onKill |
 | r_spearCounter | 🔱 반격 시 30% 확률로 창 1개 | doCounter |
 | r_axeBounce | 🪞 도끼가 적을 맞히면 1번 튕겨서 다른 적을 또 맞힘 | 도끼 적중 후 다른 적 1회 재타격 |
 | r_boltChain | 🔗 번개가 30% 확률로 옆 적에게 1번 튐 (연쇄 번개) | 번개 적중 후 인접 적 1회 |
 | r_arrowX2 | 🏹² 화살이 2배로 생성 | fireArrows 발수 ×2 |
 | r_atkBuffM | ⚔️ 공격 시 30% 확률로 7초간 공격력 +10% | addBuff atk 0.10 / 7초 |
-| r_critRBuff | 💥 치명타 시 40% 확률로 7초간 치명타 확률 +10% | addBuff critR 10 / 7초 |
-| r_critFBuff | 🔥 치명타 시 30% 확률로 7초간 치명타 데미지 +20% | addBuff critF 20 / 7초 |
+| r_critRBuff | 💥 치명타 시 70% 확률로 7초간 치명타 확률 +20% | addBuff critR 20 / 7초 |
+| r_critFBuff | 🔥 치명타 시 60% 확률로 7초간 치명타 데미지 +40% | addBuff critF 40 / 7초 |
 | r_defBuff2 | 🛡️ 피격 시 30% 확률로 7초간 방어력 +10% | addBuff def 10 / 7초 |
 | r_hitEvadeBuff | 🌫️ 피격 시 30% 확률로 7초간 회피 +10% | addBuff evade 10 / 7초 |
 | r_aspdKill | ⚡👑 처치 시 40% 확률로 7초간 공격속도 +10% | addBuff aspd 0.10 / 7초 |
 | r_counterAtkM | 🗡️👑 반격 시 40% 확률로 7초간 공격력 +10% | addBuff atk 0.10 / 7초 |
-| r_missAspd | 💨⚡ 빗나가면 40% 확률로 7초간 공격속도 +10% | addBuff aspd 0.10 / 7초 |
+| r_missAspd | 💨⚡ 빗나가면 70% 확률로 7초간 공격속도 +20% | addBuff aspd 0.20 / 7초 |
 | r_shieldAtkM | 🎇 실드가 있으면 공격력 +20% | effDmg: `sh>0` 이면 ×1.20 (일반 c_shieldAtk 와 동일 효과 — §3.0 주인 검토) |
 | r_noShieldAtk | 😤👑 실드가 없는 동안 공격력 +50% | effDmg: `sh<=0` 이면 ×1.50 |
 | r_overheal | 🩸 처치 시 초과된 데미지만큼 체력 회복 (오버킬 힐) | onKill(초과 피해량 전달) → heal |
-| r_healAmp | 💞 체력 회복 효과 +100% | healAmp += 1.00 |
-| r_repairAmp | 🔧 실드 수리 효과 +100% | repairAmp += 1.00 |
+| r_healAmp | 💞 체력 회복 효과 +150% | healAmp += 1.50 |
+| r_repairAmp | 🔧 실드 수리 효과 +150% | repairAmp += 1.50 |
 | r_critHeal3 | ❤️‍🔥 치명타 시 30% 확률로 체력 5% 회복 | 치명타 분기 |
-| r_evadeShield | 🔶 회피 시 20% 확률로 실드 15% 수리 | 회피 분기 |
-| r_counterHeal | 💧 반격 시 30% 확률로 체력 5% 회복 | doCounter |
+| r_evadeShield | 🔶 회피 시 20% 확률로 실드 10% 수리 | 회피 분기 |
+| r_counterHeal | 💧 반격 시 60% 확률로 체력 10% 회복 | doCounter |
 | r_lowShield | 🚑 체력이 30% 아래로 떨어지면 실드 30% 즉시 충전 (판당 1번) | 1회성 플래그 `lowShieldUsed` |
-| r_wardHeal | 🛡️❤️ 방어막으로 막을 때마다 체력 5% 회복 | ward 소모 분기 |
+| r_wardHeal | 🛡️❤️ 방어막으로 막을 때마다 체력 10% 회복 | ward 소모 분기 |
 | r_stunCrit | 💫 치명타 시 20% 확률로 그 적 6초 기절 | applyStun 6 |
-| r_stunSlow | ⛓️ 기절이 끝난 적은 3초간 공격속도 -50% | 적 `slowT` 3초 · 공격 타이머 ×2 |
+| r_stunSlow | ⛓️ 기절이 끝난 적은 6초간 공격속도 -50% | 적 `slowT` 6초 · 공격 타이머 ×2 |
 | r_stunDmgM | 🧲 기절한 적에게 데미지 +100% | 가산 풀 +1.00 |
 | r_comboDmg | 🥊 같은 적을 때릴 때마다 데미지 +10%씩 누적 (다른 적을 때리면 초기화) | `comboTgt`/`comboN` → 가산 +0.10×n |
-| r_counterX | ⚜️ 반격 피해 +100% | 반격 계수 ×2 |
+| r_counterX | ⚜️ 반격 피해 +150% | 반격 계수 ×2.5 |
 | r_critF100 | 🔥 치명타 데미지 +100% | critF += 100 |
 | r_atk50 | 💪 공격력 +50% | p.dmg ×1.50 |
 | r_wardAtk | 🛡️✨ 공격 시 10% 확률로 방어막 1장 | gainWard |
-| r_hitCounter | 💢 피격 시 30% 확률로 즉시 반격 | doCounter |
+| r_hitCounter | 💢 피격 시 60% 확률로 즉시 반격 | doCounter |
 | r_fifthCrit | 🔨 공격 5회마다 다음 공격은 무조건 치명타 | 평타 카운터 `%5===0` |
-| r_evade3Dmg | 💃 3번 연속 회피에 성공하면 다음 공격 데미지 +200% | 연속 회피 카운터 → 가산 +2.00 |
+| r_evade3Dmg | 💃 3번 연속 회피에 성공하면 다음 공격 데미지 +300% | 연속 회피 카운터 → 가산 +3.00 |
 | r_stunEvade | 🕷️ 회피 시 30% 확률로 그 적 3초 기절 | applyStun 3 |
 | r_eventShield | 🚪 이벤트(쉼터/악마/천사)를 지날 때마다 실드 20% 충전 | 이벤트 노드 통과 시 (주기형 아님) |
-| r_stunCritR | 🧊 기절 중인 적에게 치명타 확률 +30% | dealDmg: `e.stun>0` 이면 cr +30 |
+| r_stunCritR | 🧊 기절 중인 적에게 치명타 확률 +60% | dealDmg: `e.stun>0` 이면 cr +60 |
 | r_wardSpear | 🥅 방어막으로 화살을 막으면 창을 쏨 | ward 소모 + `!isMelee` → fireSpear |
 
 ### 3.3 전설 — 42종

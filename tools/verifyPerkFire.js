@@ -77,7 +77,8 @@ const PATCH = [
   /* 🪓🌪️ 도끼 3회전 (삼항) */
   ['l_axeSpin', 'const times=px.l_axeSpin?3:1;', 'const times=px.l_axeSpin?(__F("M_axeSpin",{l_axeSpin:1}),3):1;'],
   /* ⚜️ 반격 피해 +100% (삼항) */
-  ['r_counterX', '*(px.r_counterX?2:1);', '*(px.r_counterX?(__F("M_counterX",{r_counterX:1}),2):1);'],
+  /* ⚑ P3 R03: 반격 계수는 튜닝 노브라 값을 정규식으로 받는다(R02 의 정규식 패치 규약). */
+  ['r_counterX', /\*\(px\.r_counterX\?([\d.]+):1\);/, '*(px.r_counterX?(((($1)>1)?__F("M_counterX",{r_counterX:1}):0),$1):1);'],
   /* 🌊🔱 거대 검기 (대입) */
   ['l_wavePierce', 'const big=px.l_wavePierce;', 'const big=px.l_wavePierce;if(big)__F("M_wavePierce",{l_wavePierce:1});'],
   /* 💎 실드 있으면 50% 데미지 무시 (대입 — 실제로 무시했을 때만) */
@@ -85,7 +86,7 @@ const PATCH = [
   ['l_shieldIgnore', /const ignored=px\.l_shieldIgnore&&p\.sh>0&&pkk\(p,[\d.]+\);/,
     '$&if(ignored)__F("M_shieldIgnore",{l_shieldIgnore:1});'],
   /* 💢 피격 시 즉시 반격 (|| 꼬리) */
-  ['r_hitCounter', '||(px.r_hitCounter&&pkk(p,0.30));', '||(px.r_hitCounter&&pkk(p,0.30)&&(__F("M_hitCounter",{r_hitCounter:1}),true));'],
+  ['r_hitCounter', /\|\|\(px\.r_hitCounter&&pkk\(p,([\d.]+)\)\);/, '||(px.r_hitCounter&&pkk(p,$1)&&(__F("M_hitCounter",{r_hitCounter:1}),true));'],
   /* 🥶 위압의 오라 (삼항) */
   ['l_slowAura', /\(p\.px\.l_slowAura\?1\/([\d.]+):1\)/, '(p.px.l_slowAura?(__F("M_slowAura",{l_slowAura:1}),1/$1):1)'],
   /* ── px 키를 안 읽고 스탯을 직접 바꾸는 5종 — «그 스탯이 실제로 쓰인 자리» 에서 센다 ──
@@ -107,13 +108,15 @@ const PATCH = [
 /* 스탯 직변형 5종 — 획득 함수를 감싸 «그 스탯이 실제로 변했는가» 를 표식으로 남긴다. */
 const STATPERK = [
   ['c_killHeal2', 'killHeal', 'p=>{p.px.c_killHeal2=1;p.killHeal+=0.05;}'],
-  ['r_healAmp', 'healAmp', 'p=>{p.px.r_healAmp=1;p.healAmp+=1.00;}'],
-  ['r_repairAmp', 'repairAmp', 'p=>{p.px.r_repairAmp=1;p.repairAmp+=1.00;}'],
+  ['r_healAmp', 'healAmp', /p=>\{p\.px\.r_healAmp=1;p\.healAmp\+=[\d.]+;\}/],
+  ['r_repairAmp', 'repairAmp', /p=>\{p\.px\.r_repairAmp=1;p\.repairAmp\+=[\d.]+;\}/],
   ['r_critF100', 'critF', 'p=>{p.px.r_critF100=1;p.critF+=100;}'],
   ['r_atk50', 'dmg', 'p=>{p.px.r_atk50=1;p.dmg*=1.50;}'],
 ];
-for (const [id, fld, ap] of STATPERK) PATCH.push([id + ':ap', ap,
-  `p=>{const __b=p.${fld};(${ap})(p);(p.__amp||(p.__amp={})).${id}=(p.${fld}!==__b);}`]);
+/* ⚑ P3 R03: ap 원문이 정규식일 수도 있으므로(수치가 튜닝 노브인 2종) 치환문에 원문을 `$&` 로 되꽂는다.
+   문자열 원문에서도 `$&` 는 «일치한 그 문자열» 이라 동작이 같다. */
+for (const [id, fld] of STATPERK) PATCH.push([id + ':ap', STATPERK.find(s => s[0] === id)[2],
+  `p=>{const __b=p.${fld};($&)(p);(p.__amp||(p.__amp={})).${id}=(p.${fld}!==__b);}`]);
 {
   const r = core.applyPatches(INS, PATCH, IDSET);
   INS = r.out; r.errs.forEach(bad); SITES.push(...r.sites);
@@ -251,10 +254,10 @@ const SELF = [
   ['r_wardHeal', 'if(px.r_wardHeal)', 'if(false&&px.r_wardHeal)'],
   /* 손 패치표 자리(삼항·|| 꼬리)도 같이 본다 */
   ['l_axeSpin', 'const times=px.l_axeSpin?', 'const times=false&&px.l_axeSpin?'],
-  ['r_hitCounter', '||(px.r_hitCounter&&pkk(p,0.30)', '||(false&&px.r_hitCounter&&pkk(p,0.30)'],
+  ['r_hitCounter', /\|\|\(px\.r_hitCounter&&pkk\(p,([\d.]+)\)/, '||(false&&px.r_hitCounter&&pkk(p,$1)'],
   /* 스탯 직변형 — 수치만 0 으로 지워도 잡혀야 한다 (px 키는 그대로 남는다) */
   ['c_killHeal2', 'p.killHeal+=0.05;', 'p.killHeal+=0;'],
-  ['r_repairAmp', 'p.repairAmp+=1.00;', 'p.repairAmp+=0;'],
+  ['r_repairAmp', /p\.repairAmp\+=[\d.]+;/, 'p.repairAmp+=0;'],
   ['r_atk50', 'p.dmg*=1.50;', 'p.dmg*=1;'],
 ];
 const selfCount = (M, id) => {
