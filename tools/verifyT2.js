@@ -1293,6 +1293,28 @@ console.log('\n[㉓ 레벨업 필요 경험치 = 4+4*Lv (PLAN §2.4, T47)]');
     ? ok('index.html 경험치 바·숫자 표시가 expNeed() 기준')
     : bad('index.html 경험치 HUD 가 expNeed() 를 안 쓴다 — 표시와 실제 레벨업 조건이 어긋난다');
 
+  /* (3-b) ⚑ 주인 지시(2026-09-03) — 경험치 바에 «레벨» 을 쓰지 않는다.
+     참고 스크린샷(docs/ref/메인 게임화면.jpg)의 캡 표기는 «EXP» 다. 레벨 자체(필요 경험치·특전 3택)는 그대로 산다. */
+  {
+    const barRe = /<div class="bar" id="expBar">[\s\S]*?<\/div>\s*<div class="bar" id="hpBar"/;
+    const bar = HTML.match(barRe);
+    if (!bar) bad('경험치 바 마크업을 못 찾았다 — 코드 모양이 바뀌었나 (게이트를 갱신할 것)');
+    else {
+      /<span class="cap cap-exp">EXP<\/span>/.test(bar[0])
+        ? ok('경험치 바 캡 = «EXP» (참고 스크린샷 표기)')
+        : bad('경험치 바 캡이 «EXP» 가 아니다 — 주인 지시(2026-09-03) 위반');
+      /Lv/.test(bar[0])
+        ? bad('경험치 바 마크업에 «Lv» 가 남아 있다 — 주인 지시(2026-09-03)로 레벨 표기 금지')
+        : ok('경험치 바 마크업에 «Lv» 표기 없음');
+    }
+    /lvCap/.test(HTML)
+      ? bad('«lvCap»(경험치 바 레벨 표기) 잔재가 있다 — 주인 지시(2026-09-03)로 폐지됐다')
+      : ok('«lvCap» 잔재 없음');
+    /textContent\s*=\s*['"`]Lv['"`]\s*\+\s*p\.level/.test(HTMLC)
+      ? bad('HUD 가 «Lv»+p.level 을 다시 그린다 — 주인 지시(2026-09-03) 위반')
+      : ok('HUD 에 «Lv»+레벨 그리는 자리 없음');
+  }
+
   /* (4) PLAN 잔재 — 확정 이전 식(4+2*Lv)이 «취소선» 밖에 남아 있으면 T2 이식자가 옛 값을 가져간다(T9 실패 모드). */
   const PLAN = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
   const stale = PLAN.split('\n')

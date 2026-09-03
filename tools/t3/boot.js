@@ -186,6 +186,30 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
         chk(`[프레임 ${fw}] 인게임 골드 «${r.gold}» — ☰ 가 프레임 안 + 수치 온전`,
           r.over <= 0.6 && r.cut.length === 0, `☰ 프레임 대비 ${r.over}px · tf=${r.tf}${r.cut.length ? ' 잘림:' + r.cut : ''}`);
       }
+      /* ④ 경험치 바 — ⚑ 주인 지시(2026-09-03) «레벨 쓰지 마». 캡은 «EXP»(참고 스크린샷)고,
+         레벨이 사라진 대신 캡이 넓어졌으니 3자리 레벨 최악값(«395/400»)에서도 겹침·잘림이 없어야 한다. */
+      {
+        const e = await p.evaluate(() => {
+          const P = G.player;
+          P.level = 99; P.exp = 395; P.maxHp = 39990; P.hp = 39990; P.maxSh = 63700; P.sh = 63700;
+          updateBars();
+          const bar = document.getElementById('expBar');
+          const cap = bar.querySelector('.cap'), txt = bar.querySelector('.txt');
+          const cut = ['expBar', 'hpBar', 'shBar'].filter(i => {
+            const t = document.getElementById(i).querySelector('.txt');
+            return t.scrollWidth > t.clientWidth + 1;
+          });
+          const cb = cap.getBoundingClientRect(), tb = txt.getBoundingClientRect();
+          return { cap: cap.textContent, txt: txt.textContent, cut,
+                   overlap: +(cb.right - tb.left).toFixed(1),
+                   inFrame: bar.getBoundingClientRect().left >= document.getElementById('frame').getBoundingClientRect().left - 0.6 };
+        });
+        chk(`[프레임 ${fw}] 경험치 바 캡 «EXP» — 레벨 표기 없음`,
+          e.cap === 'EXP' && !/Lv/.test(e.cap + e.txt), `cap=«${e.cap}» txt=«${e.txt}»`);
+        chk(`[프레임 ${fw}] 경험치 바 — 캡·숫자 겹침 0 · 세 바 숫자 잘림 0`,
+          e.overlap <= 0.6 && e.cut.length === 0 && e.inFrame,
+          `겹침 ${e.overlap}px${e.cut.length ? ' · 잘림:' + e.cut : ''}`);
+      }
       chk(`[프레임 ${fw}] pageerror 0`, errs.length === 0, errs.slice(0, 2).join(' | '));
       await ctx.close();
     }

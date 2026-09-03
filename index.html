@@ -266,10 +266,21 @@
   .bar{position:relative; flex:1; height:24px; background:#141418; border-radius:99px; overflow:hidden;}
   .bar .fill{position:absolute; inset:0; width:100%; border-radius:99px; transition:width .15s;}
   .bar .txt{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12.5px; text-shadow:0 1px 2px rgba(0,0,0,.6); font-variant-numeric:tabular-nums;}
-  #expBar{flex:.62;} #expBar .fill{background:var(--exp);}
+  /* ⚑ 경험치 바 (주인 지시 2026-09-03 — 캡은 «레벨» 이 아니라 «EXP»). 캡이 ❤️·🛡️ 한 글자보다 넓어서
+     «절대배치 캡 + 바 전체 가운데 숫자» 로는 둘이 겹친다 — 이 바만 가로 flex(캡 → 남은 폭 가운데 숫자)로 깐다.
+     글자는 T54 선례대로 프레임 폭에 연동해 좁은 기기에서 줄이고, 캡·숫자에 z-index 를 줘
+     absolute 인 채움 막대(.fill) 위로 올린다(안 그러면 숫자가 막대에 먹힌다). */
+  #expBar{flex:.62; display:flex; align-items:center; gap:2px; padding:0 5px;}
+  #expBar .fill{background:var(--exp);}
+  #expBar .cap{position:relative; inset:auto; transform:none; flex:none; z-index:1;
+    font-size:clamp(8px, min(100vw,100vh*9/19)*.027, 11px);}
+  #expBar .txt{position:relative; inset:auto; flex:1 1 auto; min-width:0; overflow:hidden; z-index:1;
+    font-size:clamp(8px, min(100vw,100vh*9/19)*.032, 12.5px);}
   #hpBar .fill{background:linear-gradient(#F2766E,var(--hp));}
   #shBar .fill{background:linear-gradient(#6CC0F0,var(--shield));}
   .bar .cap{position:absolute; left:7px; top:50%; transform:translateY(-50%); font-size:11px; z-index:1; text-shadow:0 1px 2px rgba(0,0,0,.7);}
+  /* 참고 스크린샷(docs/ref/메인 게임화면.jpg)의 «EXP» 뱃지 글꼴 — 크기는 위 #expBar .cap 이 프레임에 연동한다. */
+  .bar .cap-exp{font-weight:800; letter-spacing:.6px; color:#fff;}
   #stats{display:grid; grid-template-columns:1fr 1fr; gap:7px;}
   .st{display:flex; align-items:center; gap:9px; background:var(--panel2); border-radius:12px; padding:6px 11px;}
   /* 스탯 아이콘 — 인라인 SVG(UI_SVG). 크기 노브는 이 font-size 하나뿐이다(.gicon 이 1em). T2 7단계 */
@@ -469,7 +480,7 @@
     </div>
     <div id="hud">
       <div class="bars">
-        <div class="bar" id="expBar"><div class="fill"></div><span class="cap" id="lvCap">Lv1</span><span class="txt" id="expTxt">0/6</span></div>
+        <div class="bar" id="expBar"><div class="fill"></div><span class="cap cap-exp">EXP</span><span class="txt" id="expTxt">0/6</span></div>
         <div class="bar" id="hpBar"><div class="fill"></div><span class="cap">❤️</span><span class="txt" id="hpTxt"></span></div>
         <div class="bar" id="shBar"><div class="fill"></div><span class="cap">🛡️</span><span class="txt" id="shTxt"></span></div>
       </div>
@@ -3153,7 +3164,6 @@ function updateBars(){
   const key=[p.exp,p.level,Math.round(p.hp),Math.round(p.sh),Math.round(p.maxHp),Math.round(p.maxSh)].join(',');
   if(key===lastBars) return;
   lastBars=key;
-  $('lvCap').textContent='Lv'+p.level;
   $('expTxt').textContent=`${p.exp}/${expNeed(p.level)}`;
   document.querySelector('#expBar .fill').style.width=(p.exp/expNeed(p.level)*100)+'%';
   $('hpTxt').textContent=`${fmt(p.hp)}/${fmt(p.maxHp)}`;
