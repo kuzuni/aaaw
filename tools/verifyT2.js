@@ -2247,6 +2247,94 @@ console.log('\n[㊴ 이벤트/팝업 중 게임 시간 정지 — 불변 규약 
   }
 }
 
+/* ---------- ㊵ 특전 선택창 «보유 특전» 버튼 (T89 · 주인 지시 2026-09-03) ----------
+   ⚑ 주인 지시: 레벨업 선택창 **오른쪽 하단**에 📘 버튼 — 누르면 이번 런에서 얻은 특전 목록을 보여주고,
+   닫으면 **선택창으로 복귀**한다(«선택지를 고르기 전에 내가 뭘 갖고 있는지 확인»).
+   이 기능이 조용히 망가지는 길은 셋이고 전부 여기서 막는다:
+   ① 책을 닫을 때 closeOverlay 를 부르면 → 레벨업 특전 선택이 통째로 날아간다
+   ② 복귀가 roll() 이면 → 선택지가 다시 굴려져 «보고 나서 고른다» 가 성립하지 않는다(새로고침 무료 무한)
+   ③ 버튼을 절대 배치로 띄우면 → 좁은 화면에서 카드·새로고침 위에 올라탄다(주인 «겹치지 않는 위치»)
+   덧붙여 이 작업은 UI 전용이라 sim.js 에 흔적이 없어야 한다(밸런스 영향 0). */
+console.log('\n[㊵ 특전 선택창 «보유 특전» 버튼 (T89 · 주인 지시 2026-09-03)]');
+{
+  /* 함수 본문을 중괄호를 세어 정확히 뜬다 (문자열 안의 괄호에 속지 않게 따옴표·백틱을 건너뛴다) */
+  const fnBody = (src, name) => {
+    const m = new RegExp('function\\s+' + name + '\\s*\\([^)]*\\)\\s*\\{').exec(src);
+    if (!m) return null;
+    let i = m.index + m[0].length, d = 1, q = null, out = '';
+    for (; i < src.length && d > 0; i++) {
+      const ch = src[i], pv = src[i - 1];
+      if (q) { out += ch; if (ch === q && pv !== '\\') q = null; continue; }
+      if (ch === "'" || ch === '"' || ch === '`') { q = ch; out += ch; continue; }
+      if (ch === '{') d++;
+      if (ch === '}') { d--; if (d === 0) break; }
+      out += ch;
+    }
+    return out;
+  };
+  const choice = fnBody(HTML, 'openPerkChoice');
+  const book = fnBody(HTML, 'openPerkBook');
+  if (!choice || !book) bad('① openPerkChoice / openPerkBook 을 못 찾았다 (T89 대상 함수가 사라졌다)');
+  else {
+    /* ① 버튼 존재 + 오른쪽 하단 줄(.ov-foot) 안 */
+    const inFoot = /<div class="ov-foot"><button id="perkBookBtn">/.test(choice.replace(/\s+/g, ' '));
+    inFoot ? ok('① 선택창에 #perkBookBtn 이 있고 오른쪽 정렬 줄(.ov-foot) 안에 있다')
+      : bad('① 선택창의 #perkBookBtn 이 없거나 .ov-foot 줄 밖으로 나갔다 (주인 지시: 오른쪽 하단)');
+    /* ② 버튼이 보유 특전 개수를 함께 보여준다 */
+    /<button id="perkBookBtn">[^<]*<b>\$\{G\.perksTaken\.length\}<\/b>/.test(choice)
+      ? ok('② 버튼이 보유 특전 개수(G.perksTaken.length)를 표시한다')
+      : bad('② 버튼에 보유 특전 개수 표시가 없다');
+    /* ③ 눌렀을 때 openPerkBook 에 «복귀 콜백» 을 넘긴다 — 그 콜백이 paint(다시 그리기)여야 한다 */
+    /\$\('perkBookBtn'\)\.onclick\s*=\s*e\s*=>\s*\{\s*e\.stopPropagation\(\);\s*openPerkBook\(\s*paint\s*\);?\s*\}/.test(choice)
+      ? ok('③ 📘 버튼이 stopPropagation 후 openPerkBook(paint) — 복귀 콜백을 넘긴다')
+      : bad('③ 📘 버튼이 복귀 콜백(paint)을 안 넘기거나 stopPropagation 이 빠졌다 — 책이 열리자마자 되돌아가거나 복귀가 끊긴다');
+    /* ④ ⚑ 핵심: 굴림(rollPerks)은 roll() 에서만. paint 안에 있으면 책을 드나들 때마다 선택지가 바뀐다 */
+    const rollN = (choice.match(/rollPerks\s*\(/g) || []).length;
+    const paintM = /const paint\s*=\s*\(\)\s*=>\s*\{/.exec(choice);
+    let paintBody = '';
+    if (paintM) {
+      let i = paintM.index + paintM[0].length, d = 1, q = null;
+      for (; i < choice.length && d > 0; i++) {
+        const ch = choice[i], pv = choice[i - 1];
+        if (q) { paintBody += ch; if (ch === q && pv !== '\\') q = null; continue; }
+        if (ch === "'" || ch === '"' || ch === '`') { q = ch; paintBody += ch; continue; }
+        if (ch === '{') d++;
+        if (ch === '}') { d--; if (d === 0) break; }
+        paintBody += ch;
+      }
+    }
+    if (!paintM) bad('④ openPerkChoice 안에 paint(다시 그리기) 가 없다 — 복귀가 곧 재굴림이 된다');
+    else if (rollN !== 1) bad(`④ openPerkChoice 안의 rollPerks 호출이 ${rollN}곳 (1곳이어야 한다)`);
+    else if (/rollPerks\s*\(/.test(paintBody)) bad('④ paint 가 rollPerks 를 부른다 — 책을 닫고 돌아오면 선택지가 바뀐다(무료 무한 새로고침)');
+    else ok('④ 굴림은 roll() 한 곳뿐 — 책을 드나들어도 선택지·새로고침 잔여가 그대로다');
+    /* ⑤ ⚑ 복귀 모드에서는 closeOverlay 를 부르지 않는다 (부르면 레벨업 특전이 통째로 날아간다) */
+    const closeCalls = [...book.matchAll(/closeOverlay\s*\(\s*\)/g)];
+    const guarded = closeCalls.every(m => /ret\s*\?\s*ret\(\)\s*:\s*$/.test(book.slice(Math.max(0, m.index - 24), m.index)));
+    (closeCalls.length === 1 && guarded)
+      ? ok('⑤ 책의 closeOverlay 는 «복귀 콜백이 없을 때만» 불린다 (선택창에서 열면 특전을 안 날린다)')
+      : bad(`⑤ openPerkBook 의 closeOverlay 호출 ${closeCalls.length}건이 복귀 콜백 가드 밖에 있다 — 선택창에서 책을 닫으면 레벨업이 날아간다`);
+    /* ⑥ 복귀 모드 판별은 «함수인가» 로 한다 — HUD 버튼이 클릭 이벤트를 넘겨도 오작동하지 않게 */
+    /typeof\s+back\s*===\s*'function'/.test(book)
+      ? ok("⑥ 복귀 모드 판별이 typeof back === 'function' (클릭 이벤트가 들어와도 안전)")
+      : bad('⑥ 복귀 모드 판별이 없다 — HUD 📘 버튼이 이벤트를 넘기면 오작동한다');
+    /* ⑦ 책이 열려 있는 동안에도 시간 정지 유지 — 책은 openOverlay 로 «내용만» 갈아끼운다.
+       (ov.classList.add('on') 이 openOverlay 한 곳뿐인 것은 ㊴③ 이 전역으로 본다) */
+    /openOverlay\s*\(/.test(book) && !/closeOverlay\s*\(\s*\)\s*;\s*openOverlay/.test(book.replace(/\s+/g, ' '))
+      ? ok('⑦ 책은 openOverlay 로 내용만 교체한다 — G.paused 가 한 프레임도 안 풀린다 (T79 규약)')
+      : bad('⑦ 책이 closeOverlay → openOverlay 로 다시 여는 경로다 — 정지가 풀리는 틈이 생긴다');
+  }
+  /* ⑧ 겹침 방지의 근거 = 흐름(flow) 배치. .ov-foot 가 절대·고정 배치면 좁은 화면에서 카드 위에 올라탄다 */
+  const foot = /\.ov-foot\s*\{([^}]*)\}/.exec(HTML);
+  if (!foot) bad('⑧ .ov-foot CSS 규칙이 없다');
+  else if (/position\s*:\s*(absolute|fixed)/.test(foot[1])) bad('⑧ .ov-foot 가 절대·고정 배치다 — 카드·새로고침과 겹칠 수 있다 (주인 «겹치지 않는 위치»)');
+  else if (!/justify-content\s*:\s*flex-end/.test(foot[1])) bad('⑧ .ov-foot 가 오른쪽 정렬이 아니다 (주인 지시: 오른쪽 하단)');
+  else ok('⑧ .ov-foot = 흐름 배치 + 오른쪽 정렬 — 카드·새로고침과 구조적으로 안 겹친다');
+  /* ⑨ UI 전용 = sim.js 무관 (밸런스 영향 0) */
+  /(openPerkBook|perkBookBtn|ov-foot)/.test(SIM)
+    ? bad('⑨ sim.js 에 T89 UI 흔적이 있다 — UI 전용 작업이라 시뮬은 무수정이어야 한다')
+    : ok('⑨ sim.js 에 T89 흔적 0 — UI 전용, 밸런스 영향 0');
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');

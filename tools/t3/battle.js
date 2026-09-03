@@ -282,6 +282,74 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('좁은 폭(360px)에서도 줄이 안 넘친다', !narrow.over && !narrow.hitInfo, `칩 ${narrow.n}개`);
   await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
 
+  /* ---------- ⚑ T89 특전 선택창 «보유 특전» 버튼 (주인 지시 2026-09-03) ----------
+     정적 게이트(verifyT2 ㊵)는 «코드가 그렇게 생겼나» 를 보지만, 실제로 ①버튼이 오른쪽 하단에 있고
+     ②카드·새로고침과 안 겹치고 ③목록이 열린 동안에도 시간이 멈춰 있고 ④닫으면 **같은 선택지**로
+     돌아오는지는 여기서만 확인된다. 앞 절에서 특전을 잔뜩 얻어 둔 상태라 목록이 비어 있지 않다. */
+  console.log('\n=== ⚑ 특전 선택창 «보유 특전» 버튼 (T89) ===');
+  await drainAll(p);
+  const bk0 = await p.evaluate(() => {
+    openPerkChoice();
+    const btn = document.getElementById('perkBookBtn');
+    const cards = [...document.querySelectorAll('.perk-card')];
+    const inner = document.querySelector('.ov-inner').getBoundingClientRect();
+    const ref = document.getElementById('refBtn').getBoundingClientRect();
+    const r = btn && btn.getBoundingClientRect();
+    const hit = (a, b) => !(a.right <= b.left + .5 || a.left >= b.right - .5 || a.bottom <= b.top + .5 || a.top >= b.bottom - .5);
+    return {
+      has: !!btn, txt: btn ? btn.textContent.replace(/\s+/g, ' ').trim() : '', taken: G.perksTaken.length,
+      cards: cards.map(c => c.querySelector('.tx').textContent), refLeft: G.refreshLeft, paused: G.paused,
+      right: r ? Math.round(inner.right - r.right) : -1, left: r ? Math.round(r.left - inner.left) : -1,
+      below: r && cards.length ? r.top >= cards[cards.length - 1].getBoundingClientRect().bottom - .5 : false,
+      overlapRef: r ? hit(r, ref) : true,
+      overlapCard: r ? cards.some(c => hit(r, c.getBoundingClientRect())) : true,
+    };
+  });
+  chk('선택창에 📘 «보유 특전» 버튼이 뜬다', bk0.has && /보유 특전/.test(bk0.txt), bk0.txt);
+  chk('오른쪽 하단 — 오른쪽 끝에 붙고 카드보다 아래', bk0.has && bk0.right < bk0.left && bk0.below,
+    `오른쪽 여백 ${bk0.right}px / 왼쪽 여백 ${bk0.left}px · 카드 아래 ${bk0.below}`);
+  chk('카드·새로고침 버튼과 겹치지 않는다 (주인 지시)', !bk0.overlapCard && !bk0.overlapRef);
+  chk('버튼이 보유 특전 개수를 함께 보여준다', bk0.txt.includes(String(bk0.taken)), `보유 ${bk0.taken}종`);
+  await p.click('#perkBookBtn'); await p.waitForTimeout(260);
+  const bk1 = await p.evaluate(async () => {
+    const t0 = G.t, hp0 = G.player.hp;
+    await new Promise(r => setTimeout(r, 420));
+    return {
+      paused: G.paused, on: document.getElementById('overlay').classList.contains('on'),
+      list: document.querySelectorAll('.perk-list .perk-card').length, taken: G.perksTaken.length,
+      back: !!document.getElementById('pbBack'), choiceGone: !document.getElementById('refBtn'),
+      frozen: G.t === t0 && G.player.hp === hp0, t0, t1: G.t,
+    };
+  });
+  chk('누르면 보유 특전 목록이 뜬다', bk1.on && bk1.list === bk1.taken && bk1.choiceGone,
+    `목록 ${bk1.list}장 / 보유 ${bk1.taken}종`);
+  chk('돌아가기 버튼이 있다 (탭으로 닫혀 특전을 날리지 않는다)', bk1.back);
+  chk('⚑ 목록이 열린 동안에도 시간 정지 유지 (T79 규약)', bk1.paused === true && bk1.frozen,
+    `paused=${bk1.paused} · t ${bk1.t0.toFixed(3)}→${bk1.t1.toFixed(3)}`);
+  await p.click('#pbBack'); await p.waitForTimeout(260);
+  const bk2 = await p.evaluate(() => ({
+    cards: [...document.querySelectorAll('.perk-card')].map(c => c.querySelector('.tx').textContent),
+    ref: !!document.getElementById('refBtn'), refLeft: G.refreshLeft, paused: G.paused,
+    book: !!document.getElementById('pbBack'), btn: !!document.getElementById('perkBookBtn'),
+  }));
+  chk('닫으면 특전 선택창으로 복귀한다', bk2.ref && bk2.btn && !bk2.book && bk2.paused === true);
+  chk('⚑ 복귀해도 선택지가 그대로다 (다시 굴리지 않는다)',
+    bk2.cards.length === bk0.cards.length && bk2.cards.every((t, i) => t === bk0.cards[i]),
+    `${bk0.cards.length}장 · 첫 카드 ${JSON.stringify((bk0.cards[0] || '').slice(0, 18))}`);
+  chk('무료 새로고침 잔여 횟수도 그대로다', bk2.refLeft === bk0.refLeft, `${bk0.refLeft} → ${bk2.refLeft}`);
+  await p.evaluate(() => closeOverlay()); await p.waitForTimeout(200);
+  /* HUD 📘(#infoBtn) 로 연 «평소의 책» 은 종전 그대로 — 탭하면 전투로 돌아간다 (복귀 콜백 없음) */
+  await p.click('#infoBtn'); await p.waitForTimeout(260);
+  const hud = await p.evaluate(() => ({
+    list: document.querySelectorAll('.perk-list .perk-card').length, back: !!document.getElementById('pbBack'),
+    tap: !!document.querySelector('.tap-close'), paused: G.paused,
+  }));
+  await p.click('#overlay'); await p.waitForTimeout(260);
+  const hud2 = await p.evaluate(() => ({ on: document.getElementById('overlay').classList.contains('on'), paused: G.paused }));
+  chk('HUD 📘 로 연 책은 종전대로 «탭하면 닫힘»', hud.list > 0 && !hud.back && hud.tap && hud.paused === true,
+    `목록 ${hud.list}장 · 돌아가기 버튼 ${hud.back}`);
+  chk('그 책은 탭하면 닫히고 시간이 다시 흐른다', !hud2.on && hud2.paused === false);
+
   /* ---------- 보스 킬 = 특전 스킵 (주인 지시 06:3X) ---------- */
   console.log('\n=== 챕터 종료 보스 킬 = 특전 스킵 · 클리어 ===');
   /* ⚑ T52 수리 — 순서를 «팝업 비우기 → 과녁 세팅» 에서 «적 정리 → 비우기 → 과녁 세팅» 으로 바꿨다.
