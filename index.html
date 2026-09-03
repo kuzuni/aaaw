@@ -3023,7 +3023,10 @@ const STAT_DEFS=[
   {k:'dmg',    lb:'공격력',    v:p=>fmt(effDmg(p)),           cur:p=>effDmg(p),    base:()=>statBase().dmg},
   {k:'def',    lb:'방어력',    v:p=>effDef(p).toFixed(1)+'%', cur:p=>effDef(p),    base:()=>statBase().def},
   {k:'aspd',   lb:'공격속도',  v:p=>effAspd(p).toFixed(2)+'/s',cur:p=>effAspd(p),  base:()=>statBase().aspd},
-  {k:'counter',lb:'반격 확률',  v:p=>p.counter.toFixed(1)+'%', cur:p=>p.counter,    base:()=>statBase().counter},
+  /* ⚑ T88 — 여기만 실효치가 아니라 기본치(p.counter)를 읽고 있었다. 🃏🔁 «보유 특전 1개당 반격 확률 +2%»
+     는 effCounter 안에서만 더해지므로 반격 굴림은 제대로 올라가는데 HUD 숫자만 20.0% 에 얼어 있었다
+     (주인 버그 보고 «적용 안 되는 느낌» 의 정체 — 엔진은 정상, 표시가 거짓말을 했다). 나머지 6행과 같이 eff* 로 통일. */
+  {k:'counter',lb:'반격 확률',  v:p=>effCounter(p).toFixed(1)+'%', cur:p=>effCounter(p), base:()=>statBase().counter},
   {k:'critR',  lb:'치명타 확률',v:p=>effCritR(p).toFixed(0)+'%',cur:p=>effCritR(p), base:()=>statBase().critR},
   {k:'evade',  lb:'회피',      v:p=>effEvade(p).toFixed(1)+'%',cur:p=>effEvade(p), base:()=>statBase().evade},
   {k:'critF',  lb:'치명타 배율',v:p=>effCritF(p).toFixed(0)+'%',cur:p=>effCritF(p), base:()=>statBase().critF},
