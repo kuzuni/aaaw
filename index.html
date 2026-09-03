@@ -1971,6 +1971,17 @@ function enemyStats(c,w){
 
 /* ================= 챕터 레이아웃 (결정적 · sim.js 와 1:1) ================= */
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+/* ⚑ 악마의 거래 비용 (PLAN §2.4 · 주인 확정 2026-09-03 · T90) — «최대체력의 30% 를 **최대치에서** 깎는다».
+   현재체력에서 깎던 종전 구현은 폐기 — 그 판 동안 최대체력 자체가 줄어든 채 진행한다.
+   현재체력이 새 최대치를 넘으면 최대치로 클램프(위임 — 풀충전이 아니라 내림 클램프다).
+   sim.js 와 같은 이름·같은 값이어야 한다
+   (게이트 tools/verifyDevilPolicy.js 가 두 엔진을 대조하고 실측으로도 단언한다). */
+const DEVIL_COST=0.30;
+function payDevilCost(p){
+  p.maxHp=Math.max(1,p.maxHp-p.maxHp*DEVIL_COST);
+  p.hp=Math.min(p.hp,p.maxHp);
+  return p.maxHp;
+}
 /* ⚑ 주인 확정 제약 (PLAN §2.4, 2026-09-02 14:2X) — 전 300 챕터 공통:
    ① 적 총 수 ≤ 100 (보스 제외 웨이브 적 합) ② 쉼터 1~4 ③ 악마 정확히 1 ④ 천사 정확히 1.
    가중치(45/30/25) 배치는 폐기 — 악마1·천사1 을 먼저 깔고 남는 슬롯을 전부 쉼터로 채운 뒤 순서만 시드 셔플한다. */
@@ -2180,7 +2191,7 @@ function openRest(){
 }
 function openDevil(){
   AU.play('devil');
-  const cost=Math.round(G.player.maxHp*0.30);
+  const cost=Math.round(G.player.maxHp*DEVIL_COST);   /* ⚑ T90 — 최대치에서 깎일 양 (현재체력 차감 아님) */
   /* ⚑ 주인 확정: 악마 이벤트 = **전설 확정** (신화 폐지로 «15% 확률로 신화» 조항 삭제) */
   let pool=perkPool(2);
   if(!pool.length) pool=perkPool(1);   /* 전설 풀이 비면 희귀로 (sim.js 와 같은 폴백) */
@@ -2190,11 +2201,11 @@ function openDevil(){
     <div class="ov-banner" style="color:#E87AA0">악마의 거래</div>
     <div class="ov-sub">"네 생명을 바치면... 이 힘을 주지"</div>
     <div style="width:100%; margin-bottom:4px">${perkCardHTML(perk,0,'static')}</div>
-    <button class="choice-btn danger" id="dYes">🩸 최대 체력의 30% 지불 (-${fmt(cost)})<small>위 특전을 획득합니다</small></button>
+    <button class="choice-btn danger" id="dYes">🩸 최대 체력의 30% 지불 (-${fmt(cost)})<small>최대 체력이 줄어든 채 진행 · 위 특전 획득</small></button>
     <button class="choice-btn" id="dNo">🚶 조용히 지나간다<small>아무 일도 일어나지 않습니다</small></button>`);
   $('dYes').onclick=()=>{
     const p=G.player;
-    p.hp=Math.max(1,p.hp-cost);
+    payDevilCost(p);   /* ⚑ T90 — 최대치에서 30% 차감 + 현재체력 클램프 (sim.js 와 같은 동사) */
     AU.play('hurt');
     G.perkChances++;
     takePerk(perk); renderStatsGrid(); updateBars();

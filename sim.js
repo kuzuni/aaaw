@@ -86,6 +86,17 @@ function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a
 let RNG_GACHA=null;
 function setSeed(s){ const m=mulberry(s|0); Math.random=()=>m(); RNG_GACHA=mulberry((s^0x9E3779B9)|0); }
 const grand=()=>(RNG_GACHA||Math.random)();
+/* ⚑ 악마의 거래 비용 (PLAN §2.4 · 주인 확정 2026-09-03 · T90) — «최대체력의 30% 를 **최대치에서** 깎는다».
+   현재체력에서 깎던 종전 구현은 폐기 — 그 판 동안 최대체력 자체가 줄어든 채 진행한다.
+   현재체력이 새 최대치를 넘으면 최대치로 클램프(위임 — 풀충전이 아니라 내림 클램프다).
+   index.html 과 같은 이름·같은 값이어야 한다
+   (게이트 tools/verifyDevilPolicy.js 가 두 엔진을 대조하고 실측으로도 단언한다). */
+const DEVIL_COST=0.30;
+function payDevilCost(p){
+  p.maxHp=Math.max(1,p.maxHp-p.maxHp*DEVIL_COST);
+  p.hp=Math.min(p.hp,p.maxHp);
+  return p.maxHp;
+}
 /* ⚑ 주인 확정 제약 (PLAN §2.4, 2026-09-02 14:2X) — 전 300 챕터 공통:
    ① 적 총 수 ≤ 100 (보스 제외 웨이브 적 합) ② 쉼터 1~4 ③ 악마 정확히 1 ④ 천사 정확히 1.
    가중치(45/30/25) 배치는 폐기 — 악마1·천사1 을 먼저 깔고 남는 슬롯을 전부 쉼터로 채운 뒤 순서만 시드 셔플한다. */
@@ -1178,10 +1189,11 @@ function runChapter(chapter,build,opts){
              ⚑ 주인 확정(17:1X · PLAN §2.4 · T49): 보상이 «체력 260 회복(고정값) vs 경험치 +26» 으로 개정됐다. */
           gainExp(G,REST_EXP);        /* SIM_REST_POLICY: 항상 경험치 (게이트 tools/verifyRestPolicy.js 가 감시) */
         }else if(n.type==='devil'){
-          /* SIM_DEVIL_POLICY: 가상 플레이어는 체력이 65% 를 넘을 때만 «최대 체력 30% 지불» 을 수락한다
-             (실제 게임은 유저 자유 선택 — 쉼터와 같은 구조의 시뮬 전용 정책. 문서화는 PROGRESS T70 참조). */
-          if(!G.noPerk&&p.hp>p.maxHp*0.65){   /* noPerk = 특전 미획득 측정 — 악마 거래도 특전이라 건너뛴다 */
-            p.hp=Math.max(1,p.hp-p.maxHp*0.30);
+          /* SIM_DEVIL_POLICY: ⚑ 주인 확정(2026-09-03 · PLAN §2.4 · T90) — 가상 플레이어는 악마 거래를 **항상 수락**한다
+             (승인 대기 32번 종결. 쉼터 «항상 경험치» 와 같은 축의 측정 조건 통일 — 체력 조건부 수락은 폐기).
+             실제 게임(index.html)은 유저 자유 선택이므로 두 선택지를 그대로 둔다. */
+          if(!G.noPerk){   /* noPerk = 특전 미획득 측정 — 악마 거래도 특전이라 건너뛴다 */
+            payDevilCost(p);   /* 비용 = 최대체력의 30% 를 «최대치에서» 차감 (현재체력 차감 아님) */
             /* ⚑ 주인 확정: 악마 이벤트 = **전설 확정** (신화 폐지로 «15% 확률로 신화» 조항 삭제) */
             let pool=perkPool(G,2);
             if(!pool.length)pool=perkPool(G,1);   /* 게임과 같은 폴백: 전설 풀이 비면 희귀로 */
@@ -1190,7 +1202,11 @@ function runChapter(chapter,build,opts){
               const perk=pick(pool);perk.ap(p);G.taken.push(perk);
             }
           }
-        }else{p.dmg*=1.05;}
+        }else{
+          /* SIM_ANGEL_POLICY: ⚑ 주인 확정(2026-09-03 · PLAN §2.4 · T90) — 가상 플레이어는 천사에서
+             **항상 왼쪽(무료 공격력 +5%)** 을 고른다. 광고 분기(+15%)는 시뮬에 존재 금지(측정 조건 통일). */
+          p.dmg*=1.05;
+        }
         break;
       }
     }

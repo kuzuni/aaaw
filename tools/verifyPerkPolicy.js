@@ -103,10 +103,13 @@ const uniqSim = /x\.r===rar&&!G\.taken\.includes\(x\)/.test(poolBody) && !/x\.u/
 const uniqHtml = /p\.r===rar && !G\.perksTaken\.includes\(p\)/.test(HTML) && !/\bp\.u&&/.test(HTML);
 cmp.push({ nm: '획득 중복 금지(전 특전 고유)', planV: '전부 제외', simV: (uniqSim && uniqHtml) ? '전부 제외' : '일부만', unit: '', ok: uniqSim && uniqHtml, txt: true });
 
-/* ── ⑤ 😈 악마 이벤트 — ⚑ 전설 확정 ───────────────── */
-const dvHp = grab(/p\.hp=Math\.max\(1,p\.hp-p\.maxHp\*([\d.]+)\);/, '악마 이벤트의 체력 지불');
+/* ── ⑤ 😈 악마 이벤트 — ⚑ 전설 확정 ─────────────────
+   ⚑ 주인 확정(2026-09-03 · T90): 비용은 «현재체력 차감» 이 아니라 «최대체력의 30% 를 최대치에서» 깎는 것이고,
+   그 값은 두 엔진 공통 상수 `DEVIL_COST` 로 산다(옛 리터럴 `p.hp=Math.max(1,p.hp-p.maxHp*0.30)` 는 폐기).
+   여기서는 PLAN 문면 ↔ 상수만 대조하고, «최대치에서 깎는가·항상 수락인가» 는 tools/verifyDevilPolicy.js 가 본다. */
+const dvHp = grab(/const DEVIL_COST=([\d.]+);/, '악마 거래 비용 상수 DEVIL_COST');
 const dvLine = planLine('악마 😈', '§2.4 악마 이벤트');
-check('악마 체력 지불', +(dvLine.match(/최대 체력의 (\d+)% 지불/)[1]), +dvHp[1] * 100, '%');
+check('악마 최대체력 지불', +(dvLine.match(/최대 체력의 (\d+)% 지불/)[1]), +dvHp[1] * 100, '%');
 {
   const simLeg = /let pool=perkPool\(G,2\);/.test(SIM);
   const htmlLeg = /let pool=perkPool\(2\);/.test(HTML);
@@ -133,7 +136,9 @@ check('쉼터 보상 sim ↔ index.html (회복)', +rsC[1], +rsHtml[1], '');
 check('쉼터 보상 sim ↔ index.html (경험치)', +rsC[2], +rsHtml[2], '');
 
 /* ── ⑦ 😇 천사 이벤트 (무료분) ────────────────────── */
-const ag = grab(/\}else\{p\.dmg\*=([\d.]+);\}/, '천사 이벤트의 공격력 배수');
+/* ⚑ T90 — 천사 분기에 시뮬 정책 주석(SIM_ANGEL_POLICY «항상 왼쪽 무료 +5%»)이 붙으면서 한 줄이 아니게 됐다.
+   «이벤트 루프를 빠져나가기 직전의 p.dmg 배수» 라는 자리로 잡는다. */
+const ag = grab(/p\.dmg\*=([\d.]+);\s*\}\s*break;/, '천사 이벤트의 공격력 배수');
 const agLine = planLine('천사 😇', '§2.4 천사 이벤트');
 check('천사 무료 공격력', +(agLine.match(/공격력 \+(\d+)% \(무료\)/)[1]), (+ag[1] - 1) * 100, '%');
 
