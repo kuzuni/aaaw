@@ -7,7 +7,17 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
 /* ---------- 튜닝 파라미터 (여기 숫자를 게임에 이식) ---------- */
 const TUNE={
-  eBaseHp:26.82, eBaseDmg:4.986,
+  /* ⚑⚑⚑ P3 R01 «일반 영점» (T85 · 2026-09-03 / 워커 C) — 주인 확정 P3 ①단계.
+     «일반 특전만 뜨는 기준 플레이어(희귀 풀셋·챕터 30)가 10%» 를 **적 난이도 노브로만** 맞춘 값이다.
+     구간별 성장률 표(§11.7)·벽 배수는 한 칸도 안 건드렸다 — 기저 배수 하나(×1.4925)로만 움직였으므로
+     챕터 간 상대 난이도(사다리 모양·벽 예산 항등식)가 통째로 보존된다.
+     26.82/4.986 → **40.0/7.44** (HP:DMG 비 5.379 유지). 8시드×300판 실측 —
+     일반 78.3 → **8.4±1.3%**(과녁 10±5 ✓) · 희귀 72.7 → **20.7±2.1%**(과녁 20 ✓) ·
+     전설 98.3 → **70.3±4.5%**(과녁 80, −9.7%p — ②단계 «전설 특전 수치» 몫).
+     ⚑ 주인 «적 ×10 을 첫 시도값으로» 조항: ×10(268/49.9)은 **크게 지나친다** — ×1.5 에서 이미 일반이
+       78 → 8% 다. 실측 적합값은 **×1.49**. 주인 원문대로 «10배는 출발점, 사다리가 성립하는 값으로 자유 조정».
+     ⚠ ②③단계는 이 두 값을 **동결**한다(노브 교차 금지). 근거 `docs/balance/T85/raw.md`. */
+  eBaseHp:40.0, eBaseDmg:7.44,
   /* ⚑ T35: 단일 성장률 `eHpG 1.185`·`eDmgG 1.08` 폐기 → PLAN §11.7 «구간별 성장률» 표.
      적 HP 는 플레이어 «공격력» 축, 적 DMG 는 «체력+실드» 축에서 주인 확정 스탯 사다리로부터 역산된 값이다.
      [하한, 성장률] — 챕터 c 에서 c+1 로 갈 때 적용할 배수를 c 로 찾는다.
@@ -1091,6 +1101,7 @@ function grantPerkChance(G){
 }
 function perkChoice(G){
   grantPerkChance(G);   /* 레벨업 = 특전 기회 1번 (PLAN §4) */
+  if(G.noPerk)return;   /* ⚑ P3(T85) 자(尺) 수리 — 실험5 사다리는 «특전 미획득» 이 정본이다 (PLAN §7·§11.7) */
   const p=G.player;
   let opts;
   if(G.rarityLockOn){ /* 등급 고정 실험 */
@@ -1110,7 +1121,7 @@ function runChapter(chapter,build,opts){
   const G={chapter,player:null,nodes:[],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
     perkChances:0,taken:[],refreshBonus:0,overBoltCd:0,autoBoltT:3,autoSumT:AUTO_SUMMON_T,rampT:ASPD_RAMP_T,stuns:0,misses:0,
     dead:false,cleared:false,t:0,atkTries:0,miss:0,   /* 적 회피 10% 실측용 (PLAN §2.3) */
-    rarityLockOn:opts.rarityLock!==undefined,rarityLock:opts.rarityLock};
+    rarityLockOn:opts.rarityLock!==undefined,rarityLock:opts.rarityLock,noPerk:!!opts.noPerk};
   const p=mkPlayer(build,G);G.player=p;p.G=G;
   const layout=chapterLayout(chapter);
   let x=560,wi=0;
@@ -1157,7 +1168,7 @@ function runChapter(chapter,build,opts){
         }else if(n.type==='devil'){
           /* SIM_DEVIL_POLICY: 가상 플레이어는 체력이 65% 를 넘을 때만 «최대 체력 30% 지불» 을 수락한다
              (실제 게임은 유저 자유 선택 — 쉼터와 같은 구조의 시뮬 전용 정책. 문서화는 PROGRESS T70 참조). */
-          if(p.hp>p.maxHp*0.65){
+          if(!G.noPerk&&p.hp>p.maxHp*0.65){   /* noPerk = 특전 미획득 측정 — 악마 거래도 특전이라 건너뛴다 */
             p.hp=Math.max(1,p.hp-p.maxHp*0.30);
             /* ⚑ 주인 확정: 악마 이벤트 = **전설 확정** (신화 폐지로 «15% 확률로 신화» 조항 삭제) */
             let pool=perkPool(G,2);
@@ -1398,7 +1409,19 @@ function exp1_rarityLadder(){
   console.log(`  과녁 합격 ${pass}/${EXP1_TARGET.length}`);
 }
 function exp2_perkWinrate(){
-  const h=harness('EXP2_GEAR',1,0,5), CH=hCh('EXP2_CH',30);
+  const h=harness('EXP2_GEAR',1,0,15), CH=hCh('EXP2_CH',30);
+  /* ⚑⚑⚑ P3 R01 재선정 (T85 · 2026-09-03 · 정본 ②④ — 난이도 영점 회차라 재보정 의무가 걸린다).
+     «일반 영점»(적 기저 26.82/4.986 → 40.0/7.44)으로 종전 «챕터 30 · 슬롯 5» 가 90.3% → 36.7% 로
+     목표 밴드(60~70%) **아래**로 빠졌다. 표준 장비는 주인 확정 «희귀 풀셋» 이라 조절 축은 슬롯뿐이다.
+     챕터 30 · 희귀 풀셋 실측(시드 3~4벌 × 200~300판): 슬롯0 22.8 · 5 36.7 · 10 49.2 · 15 58.3 ·
+     16 60.6 · 17 60.6 · 18 63.1 · 19 67.5 · 20 73.7 · 25 80.0.
+     게이트(`verifyHarness` 시드 12벌 × 300판, 이쪽이 판정 기준)로 좁힌 재측정:
+     **슬롯 14 55.0 · 15 63.0 · 16 62.0 · 18 68.7**  → 밴드(60~70%) 정중앙이자 균등보너스 계단(5의 배수)인
+     **챕터 30 · 희귀 풀셋 · 슬롯 15 채택**.
+     ⚠ 같은 시드·판수라도 게이트 수치가 본 스윕과 몇 %p 다르다 — 게이트는 «도달시점 계정 채집» 을 먼저 돌려
+       난수 스트림이 앞서 소모되기 때문이다. 하니스 채택은 반드시 게이트 수치로 할 것.
+     ⚠ 실경제에서 챕터 30 도달 시점의 슬롯 중앙값은 9렙 언저리라 이 하니스는 «대표성» 이 아니라
+       변별력을 위한 측정 픽스처다(정본 ⑤ — 괴리는 위반이 아니라 참고 지표). */
   /* ⚑⚑ T72 재선정 (2026-09-03 · 정본 ②④) — 실험1 과 같은 사유(표준 장비 «희귀 풀셋» 확정 + 기본 스탯 개편).
      종전 «챕터 11·일반+4» 는 64.7% → 99.3% 로 천장 포화했다.
      장비가 고정되어 강화 축이 사라졌으므로 **슬롯(레벨당 공/체/실 +1%)이 유일한 미세 축**이다.
