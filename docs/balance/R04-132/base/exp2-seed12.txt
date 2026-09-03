@@ -1,0 +1,34 @@
+
+=== 실험2: 특전별 기여도 (챕터30, 하니스 희귀 6부위 · 슬롯 15렙, 12000판) ===
+전체 클리어율: 66.4%
+-- 상위 12 --
+  l_overRepair(전) 100% (737판)
+  r_overheal(희) 99% (771판)
+  l_autoSpear(전) 97% (756판)
+  c_killHeal2(일) 96% (1026판)
+  l_killHeal5(전) 92% (732판)
+  l_spear2Atk(전) 91% (739판)
+  r_spearKill(희) 91% (817판)
+  l_noCritAtk3(전) 89% (745판)
+  c_evadeKill(일) 84% (1063판)
+  l_fullHpDmg(전) 84% (708판)
+  r_eventShield(희) 83% (788판)
+  l_waveAtk(전) 83% (749판)
+-- 하위 12 --
+  c_collCounter(일) 61% (1059판)
+  c_aspdEvade(일) 61% (1073판)
+  l_wavePierce(전) 60% (693판)
+  r_arrowX2(희) 60% (805판)
+  c_thornsS(일) 60% (1064판)
+  l_wardThorns(전) 60% (695판)
+  c_lowAtk(일) 59% (1044판)
+  r_stunCritR(희) 59% (760판)
+  c_stunDmg(일) 59% (1074판)
+  r_counterAtkM(희) 59% (849판)
+  r_evade3Dmg(희) 59% (837판)
+  r_stunSlow(희) 58% (817판)
+-- 등급별 스프레드 (표본 25판 이상만 · ⚑ 채점은 희귀·전설 각 1/2점, 일반은 참고 — 승인 39번 ⓐ) --
+  일반: 최상 c_killHeal2 96.1% / 최하 c_stunDmg 58.9% → 폭 37.2%p 초과  ← 참고(채점 제외 · 일반 44종 동결)
+  희귀: 최상 r_overheal 98.8% / 최하 r_stunSlow 58.3% → 폭 40.6%p 초과
+  전설: 최상 l_overRepair 99.7% / 최하 l_wardThorns 60.0% → 폭 39.7%p 초과
+  채점 합격 0/2 (희귀·전설 각 1/2점 — 승인 39번 ⓐ)

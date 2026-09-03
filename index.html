@@ -2580,7 +2580,7 @@ function dealPlayerDamage(e,ratio,icon){
     if(p.comboT===e) p.comboN++; else { p.comboT=e; p.comboN=0; }
     addBonus+=0.10*p.comboN;
   }
-  if(basic&&px.r_evade3Dmg&&p.nextP200){ p.nextP200=false; addBonus+=2.00; }   /* 💃 */
+  if(basic&&px.r_evade3Dmg&&p.nextP200){ p.nextP200=false; addBonus+=3.00; }   /* 💃 */
   if(addBonus) d*=1+addBonus;
   if(stunned&&px.l_stunExec) d*=5;                             /* 🕳️ */
   if(px.execute&&e.hp<=e.maxHp*0.5) d*=2.2;                    /* 장비 옵션 */
@@ -2607,8 +2607,8 @@ function dealPlayerDamage(e,ratio,icon){
     if(px.r_axeCrit&&pkk(p,0.30)) fireAxe(p,2);
     if(px.r_waveCrit&&pkk(p,0.30)) fireWave(p,1);
     if(px.l_spearCrit&&pkk(p,0.40)) fireSpear(p,1);
-    if(px.r_critRBuff&&pkk(p,0.40)) addBuff(p,'critR',10,7,'r_critRBuff');
-    if(px.r_critFBuff&&pkk(p,0.30)) addBuff(p,'critF',20,7,'r_critFBuff');
+    if(px.r_critRBuff&&pkk(p,0.70)) addBuff(p,'critR',20,7,'r_critRBuff');
+    if(px.r_critFBuff&&pkk(p,0.60)) addBuff(p,'critF',40,7,'r_critFBuff');
     if(px.l_critFBuffL&&pkk(p,0.60)) addBuff(p,'critF',100,7,'l_critFBuffL');
     if(px.r_critHeal3&&pkk(p,0.30)){ heal(p,p.maxHp*0.05); addText('❤️‍🔥','#7ED957'); }
     if(px.l_critHealL&&pkk(p,0.50)){ heal(p,p.maxHp*0.05); addText('❣️','#7ED957'); }
@@ -2666,7 +2666,7 @@ function doCounter(src,depth){
     procOnMiss(src);
     return;
   }
-  const cd=effDmg(p)*0.7*(1+px.counterX)*(px.r_counterX?2:1);   /* ⚜️ 반격 피해 +100% */
+  const cd=effDmg(p)*0.7*(1+px.counterX)*(px.r_counterX?2.5:1);   /* ⚜️ 반격 피해 +150% */
   src.hp-=cd; src.hitT=0.15;
   addText('반격 '+fmt(cd),'#FFD54F',src.worldX,-80);
   sparks(src.worldX,-40,'#FFD54F',5,130);
@@ -2755,7 +2755,7 @@ function hitPlayer(dmg,isMelee,src){
     p.ward--;
     wardFx();
     /* ===== 방어막 방어 트리거 ===== */
-    if(px.r_wardHeal){ heal(p,p.maxHp*0.05); addText('🛡️❤️','#7ED957'); }
+    if(px.r_wardHeal){ heal(p,p.maxHp*0.10); addText('🛡️❤️','#7ED957'); }
     if(px.l_wardHealK){ heal(p,p.maxHp*0.20); repair(p,p.maxSh*0.20); addText('🛡️❤️👑','#7ED957'); }
     if(px.l_wardThorns) reflect(src,effDmg(p)*6,'🛡️💥');
     if(px.r_wardSpear&&!isMelee) fireSpear(p,1);              /* 🥅 화살을 막으면 창을 쏨 */
@@ -2928,7 +2928,7 @@ function update(dt){
        공격 타이머는 흐르지 않는다(풀리자마자 밀린 공격이 몰아치지 않게 — 위임 기본값). */
     if(e.stun>0){
       e.stun-=dt; e.aggro=false;
-      if(e.stun<=0&&p.px.r_stunSlow) e.slow=3;      /* ⛓️ 기절이 끝난 적은 3초간 공격속도 -50% */
+      if(e.stun<=0&&p.px.r_stunSlow) e.slow=6;      /* ⛓️ 기절이 끝난 적은 6초간 공격속도 -50% */
       continue;
     }
     if(e.slow>0) e.slow-=dt;
