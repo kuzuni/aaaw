@@ -1700,19 +1700,19 @@ function heal(p,amt,noBoost){
    id·순서·ap·수치는 `sim.js mkPerks()` 와 1:1이고 표시 텍스트(tx)는 PLAN §3.1 표의 문장 그대로다
    (게이트가 두 엔진 + PLAN 을 대조한다). 등급이 없으므로 카드 색은 한 가지다. */
 const PERK_ATK_M=1.20, PERK_DEF_M=1.10, PERK_EVADE_A=10, PERK_COUNTER_A=10,
-      PERK_CRITR_A=10, PERK_CRITF_A=50, PERK_EVHEAL_CH=0.10, PERK_EVHEAL_F=0.06, PERK_SUMMON_CH=0.50;
+      PERK_CRITR_A=10, PERK_CRITF_A=50, PERK_EVHEAL_CH=0.10, PERK_EVHEAL_F=0.06, PERK_SUMMON_CH=1.00;
 /* ⚑⚑⚑ T104 (주인 확정 2026-09-03) — 순서 재정렬 + 1번 특전 효과 교체.
    1번 «생명 흡수(준 피해 10% 회복)» → «회피 시 회복(10% 확률로 최대 체력 6% 회복)» 으로 바꾸고 순서를
    회피회복→반격→반격창→회피화살→피격도끼→공격력→회피→치확→치배→방어 로 재정렬. 나머지 9종의 효과·수치는
    한 글자도 안 바뀐다. sim.js mkPerks() 와 1:1(게이트가 두 엔진 + PLAN 을 대조). */
 const PERKS=[
   {id:'p_evadeHeal',nm:'회피 시 회복',    ic:'🍀',  tx:'회피 시 <b>10%</b> 확률로 최대 체력 <b>6%</b> 회복', ap:p=>p.px.p_evadeHeal=1},
-  {id:'p_counter', nm:'반격률 증가',      ic:'🔁',  tx:'반격률 <b>+10</b>',                   ap:p=>{p.px.p_counter=1; p.counter+=PERK_COUNTER_A;}},
-  {id:'p_spearCt', nm:'반격 시 창',       ic:'🔱',  tx:'반격 시 <b>50%</b> 확률로 창 <b>1개</b>',     ap:p=>p.px.p_spearCt=1},
-  {id:'p_arrowEv', nm:'회피 시 화살',     ic:'🏹',  tx:'회피 시 <b>50%</b> 확률로 화살 <b>1개</b>',   ap:p=>p.px.p_arrowEv=1},
-  {id:'p_axeHit',  nm:'피격 시 도끼',     ic:'🪓',  tx:'피격 시 <b>50%</b> 확률로 도끼 <b>1개</b>',   ap:p=>p.px.p_axeHit=1},
   {id:'p_atk',     nm:'공격력 증가',      ic:'⚔️',  tx:'공격력 <b>+20%</b>',                  ap:p=>{p.px.p_atk=1; p.dmg*=PERK_ATK_M;}},
   {id:'p_evade',   nm:'회피율 증가',      ic:'💨',  tx:'회피율 <b>+10</b>',                   ap:p=>{p.px.p_evade=1; p.evade+=PERK_EVADE_A;}},
+  {id:'p_arrowEv', nm:'회피 시 화살',     ic:'🏹',  tx:'회피 시 화살 <b>1개</b>',             ap:p=>p.px.p_arrowEv=1},
+  {id:'p_axeHit',  nm:'피격 시 도끼',     ic:'🪓',  tx:'피격 시 도끼 <b>1개</b>',             ap:p=>p.px.p_axeHit=1},
+  {id:'p_counter', nm:'반격률 증가',      ic:'🔁',  tx:'반격률 <b>+10</b>',                   ap:p=>{p.px.p_counter=1; p.counter+=PERK_COUNTER_A;}},
+  {id:'p_spearCt', nm:'반격 시 창',       ic:'🔱',  tx:'반격 시 창 <b>1개</b>',               ap:p=>p.px.p_spearCt=1},
   {id:'p_critR',   nm:'치명타 확률 증가', ic:'🎯',  tx:'치명타 확률 <b>+10</b>',              ap:p=>{p.px.p_critR=1; p.critR+=PERK_CRITR_A;}},
   {id:'p_critF',   nm:'치명타 피해 증가', ic:'💥',  tx:'치명타 피해 <b>+50</b>',              ap:p=>{p.px.p_critF=1; p.critF+=PERK_CRITF_A;}},
   {id:'p_def',     nm:'방어력 증가',      ic:'🛡️',  tx:'방어력 <b>+10%</b>',                  ap:p=>{p.px.p_def=1; p.def*=PERK_DEF_M;}},
@@ -2561,7 +2561,7 @@ function doCounter(src,depth){
   if(px.counterCrit) addBuff(p,'critR',14,3,'counterCrit');
   if(px.counterHeal) heal(p,p.maxHp*0.04*px.counterHeal);
   if(px.counterWave&&pkk(p,1.0*px.counterWave)) fireWave(p,1);
-  /* ⑩ 반격 시 창 — 반격 1회당 50% 확률로 창 1개 (sim.js doCounter 와 1:1) */
+  /* ⑦ 반격 시 창 — 반격 1회당 창 1개, 확정 발동 (sim.js doCounter 와 1:1 · ⚑ T108 로 50% → 100% · T109 로 순번 3 → 7) */
   if(px.p_spearCt&&pkk(p,PERK_SUMMON_CH)) fireSpear(p,1);
   if(src.hp<=0) onKill(src,-src.hp);
   /* 🔂 반격하면 반드시 두 번 더 반격 — 연쇄 상한 3회 (무한 연쇄 금지는 유지) */
@@ -2595,7 +2595,7 @@ function hitPlayer(dmg,isMelee,src){
     /* ⚑⚑⚑ T104 — 1번 특전 «회피 시 회복»: 회피 성공마다 10% 굴려서 최대 체력 6% 회복.
        heal(...,true) 로 회복 증폭·오버킬 수리 분기를 안 타므로 실드는 안 채운다(위임 기본값 · sim.js 와 1:1). */
     if(px.p_evadeHeal&&pkk(p,PERK_EVHEAL_CH)){ heal(p,p.maxHp*PERK_EVHEAL_F,true); addText('🍀 +'+fmt(p.maxHp*PERK_EVHEAL_F),'#7ED957'); }
-    /* ④ 회피 시 화살 — 회피 1회당 50% 확률로 화살 1발 (sim.js 와 1:1 · T104 로 순번 9 → 4) */
+    /* ④ 회피 시 화살 — 회피 1회당 화살 1발, 확정 발동 (sim.js 와 1:1 · ⚑ T108 로 50% → 100%) */
     if(px.p_arrowEv&&pkk(p,PERK_SUMMON_CH)) fireArrows(p,1);
     return;
   }
@@ -2652,7 +2652,7 @@ function hitPlayer(dmg,isMelee,src){
   if(px.thornsS&&pkk(p,0.30*px.thornsS)) reflect(src,dmg*0.70,'🌿');
   if(px.thorns&&pkk(p,0.60*px.thorns)) reflect(src,dmg*1.5,'🌵');
   if(px.thornsKing) reflect(src,dmg*1.5,'🌵👑');
-  /* ⑧ 피격 시 도끼 — 피격 1회당 50% 확률로 도끼 1개 (sim.js 와 1:1) */
+  /* ⑤ 피격 시 도끼 — 피격 1회당 도끼 1개, 확정 발동 (sim.js 와 1:1 · ⚑ T108 로 50% → 100%) */
   if(px.p_axeHit&&pkk(p,PERK_SUMMON_CH)) fireAxe(p,1);
   /* 원거리 피격 축 — 위 «피격 시» 트리거를 전부 굴린 «뒤» 에 추가로 굴린다 (별개 축, 주인 16:1X) */
   if(!isMelee) procOnRanged(src,dmg);

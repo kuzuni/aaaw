@@ -22,22 +22,26 @@ const R = [];
 const chk = (n, c, d) => { R.push({ n, c }); console.log(`  ${c ? '✓' : '✗'} ${n}${d ? ' — ' + d : ''}`); return c; };
 
 /* ---------- 주인 확정표 (ROUTINE ⑦ · PLAN §3.1) — 이 배열이 이 게이트의 기준이다.
-   ⚑⚑⚑ T104 (주인 확정 2026-09-03) — 순서 재정렬 + 1번 특전 «생명 흡수» → «회피 시 회복» 으로 교체 ---------- */
+   ⚑⚑⚑ T104 (주인 확정 2026-09-03) — 순서 재정렬 + 1번 특전 «생명 흡수» → «회피 시 회복» 으로 교체.
+   ⚑⚑⚑ T109 (주인 확정 2026-09-03 18:5X) — **2·3번 ↔ 6·7번 교체**. 주인 원문 «2번 3번을 6번 7번과 위치를 교체».
+     효과·수치·id 는 한 글자도 안 바뀌고 순서만 바뀐다: 반격률·반격 시 창이 6·7 로 내려가고 공격력·회피율이 2·3 으로 올라온다.
+   ⚑⚑⚑ T108 (주인 확정 2026-09-03 18:4X) — 소환 3종(창·화살·도끼)이 **확정 발동**이 됐다(`PERK_SUMMON_CH` 0.50 → 1.00).
+     그래서 표시 문면에서 «50% 확률로» 를 걷어냈다 — «반격 시 창 1개» 식. 소환 데미지·발수·트리거 자리는 그대로. ---------- */
 const WANT = [
   { id: 'p_evadeHeal', nm: '회피 시 회복', tx: '회피 시 10% 확률로 최대 체력 6% 회복' },
-  { id: 'p_counter', nm: '반격률 증가', tx: '반격률 +10' },
-  { id: 'p_spearCt', nm: '반격 시 창', tx: '반격 시 50% 확률로 창 1개' },
-  { id: 'p_arrowEv', nm: '회피 시 화살', tx: '회피 시 50% 확률로 화살 1개' },
-  { id: 'p_axeHit', nm: '피격 시 도끼', tx: '피격 시 50% 확률로 도끼 1개' },
   { id: 'p_atk', nm: '공격력 증가', tx: '공격력 +20%' },
   { id: 'p_evade', nm: '회피율 증가', tx: '회피율 +10' },
+  { id: 'p_arrowEv', nm: '회피 시 화살', tx: '회피 시 화살 1개' },
+  { id: 'p_axeHit', nm: '피격 시 도끼', tx: '피격 시 도끼 1개' },
+  { id: 'p_counter', nm: '반격률 증가', tx: '반격률 +10' },
+  { id: 'p_spearCt', nm: '반격 시 창', tx: '반격 시 창 1개' },
   { id: 'p_critR', nm: '치명타 확률 증가', tx: '치명타 확률 +10' },
   { id: 'p_critF', nm: '치명타 피해 증가', tx: '치명타 피해 +50' },
   { id: 'p_def', nm: '방어력 증가', tx: '방어력 +10%' },
 ];
 /* ⚑ T104 — `PERK_STEAL` 은 폐기됐다(특전에서 흡혈 축이 사라졌다). 자리에 `PERK_EVHEAL_CH`·`PERK_EVHEAL_F` 신설. */
 const CONST = { PERK_ATK_M: '1.20', PERK_DEF_M: '1.10', PERK_EVADE_A: '10', PERK_COUNTER_A: '10',
-  PERK_CRITR_A: '10', PERK_CRITF_A: '50', PERK_EVHEAL_CH: '0.10', PERK_EVHEAL_F: '0.06', PERK_SUMMON_CH: '0.50' };
+  PERK_CRITR_A: '10', PERK_CRITF_A: '50', PERK_EVHEAL_CH: '0.10', PERK_EVHEAL_F: '0.06', PERK_SUMMON_CH: '1.00' };   /* ⚑ T108 — 소환 3종 확정 발동 */
 
 function run(simSrc, htmSrc, planSrc) {
   R.length = 0;
@@ -199,6 +203,15 @@ if (process.argv.includes('--self')) {
   const cases = [
     ['sim 순서를 뒤집으면', s => s.replace("{id:'p_evade'", "{id:'zz_evade'"), null, null],
     ['sim 공격력 배수를 1.30 으로', s => s.replace('PERK_ATK_M=1.20', 'PERK_ATK_M=1.30'), null, null],
+    /* ⚑ T108 신설 — 소환 3종이 다시 «50% 확률» 로 돌아가는 세 갈래 (상수 · 두 엔진 불일치 · 문면 잔재) */
+    ['⚑ T108 소환 확률을 50% 로 되돌리면', s => s.replace('PERK_SUMMON_CH=1.00', 'PERK_SUMMON_CH=0.50'), null, null],
+    ['⚑ T108 게임만 소환 확률이 다르면', null, s => s.replace('PERK_SUMMON_CH=1.00', 'PERK_SUMMON_CH=0.50'), null],
+    ['⚑ T108 표시 문면에 «50% 확률로» 가 되살아나면', null, s => s.replace('tx:\'반격 시 창 <b>1개</b>\'', 'tx:\'반격 시 <b>50%</b> 확률로 창 <b>1개</b>\''), null],
+    /* ⚑ T109 신설 — 순서를 T104 것으로 되돌리는 경우(2·3 ↔ 6·7 교체 취소) */
+    ['⚑ T109 순서를 T104 것으로 되돌리면 (2·3 ↔ 6·7)',
+      s => s.replace("{id:'p_atk',     nm:'공격력 증가'", "{id:'p_ATKTMP',  nm:'공격력 증가'")
+             .replace("{id:'p_counter', nm:'반격률 증가'", "{id:'p_atk',     nm:'반격률 증가'")
+             .replace("{id:'p_ATKTMP',  nm:'공격력 증가'", "{id:'p_counter', nm:'공격력 증가'"), null, null],
     ['game 치명타 피해를 +40 으로', null, s => s.replace('PERK_CRITF_A=50', 'PERK_CRITF_A=40'), null],
     ['game 표시 텍스트를 바꾸면', null, s => s.replace('회피율 <b>+10</b>', '회피율 <b>+20</b>'), null],
     ['PLAN 표의 효과를 바꾸면', null, null, s => s.replace('| 공격력 **+20%** |', '| 공격력 **+30%** |')],

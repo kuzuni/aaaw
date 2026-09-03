@@ -152,12 +152,12 @@
 | # | sim id | 특전 | 효과 | 구현 |
 |---|---|---|---|---|
 | 1 | p_evadeHeal | 회피 시 회복 | 회피 시 **10%** 확률로 최대 체력 **6%** 회복 | `hitPlayer`(회피 분기) → `pkk(0.10)` 시 `heal(p, p.maxHp*0.06, true)` |
-| 2 | p_counter | 반격률 증가 | 반격률 **+10** | 획득 시 `p.counter += 10` (기본 20 → 30) |
-| 3 | p_spearCt | 반격 시 창 | 반격 시 **50%** 확률로 창 **1개** | `doCounter` → `fireSpear(p,1)` |
-| 4 | p_arrowEv | 회피 시 화살 | 회피 시 **50%** 확률로 화살 **1개** | `hitPlayer`(회피 분기) → `fireArrows(p,1)` |
-| 5 | p_axeHit | 피격 시 도끼 | 피격 시 **50%** 확률로 도끼 **1개** | `hitPlayer` → `fireAxe(p,1)` |
-| 6 | p_atk | 공격력 증가 | 공격력 **+20%** | 획득 시 `p.dmg *= 1.20` (장비 합산 뒤 곱연산) |
-| 7 | p_evade | 회피율 증가 | 회피율 **+10** | 획득 시 `p.evade += 10` (기본 20 → 30) |
+| 2 | p_atk | 공격력 증가 | 공격력 **+20%** | 획득 시 `p.dmg *= 1.20` (장비 합산 뒤 곱연산) |
+| 3 | p_evade | 회피율 증가 | 회피율 **+10** | 획득 시 `p.evade += 10` (기본 20 → 30) |
+| 4 | p_arrowEv | 회피 시 화살 | 회피 시 화살 **1개** | `hitPlayer`(회피 분기) → `fireArrows(p,1)` (⚑ T108 — 확정 발동) |
+| 5 | p_axeHit | 피격 시 도끼 | 피격 시 도끼 **1개** | `hitPlayer` → `fireAxe(p,1)` (⚑ T108 — 확정 발동) |
+| 6 | p_counter | 반격률 증가 | 반격률 **+10** | 획득 시 `p.counter += 10` (기본 20 → 30) |
+| 7 | p_spearCt | 반격 시 창 | 반격 시 창 **1개** | `doCounter` → `fireSpear(p,1)` (⚑ T108 — 확정 발동) |
 | 8 | p_critR | 치명타 확률 증가 | 치명타 확률 **+10** | 획득 시 `p.critR += 10` (기본 20 → 30) |
 | 9 | p_critF | 치명타 피해 증가 | 치명타 피해 **+50** | 획득 시 `p.critF += 50` (기본 150 → 200) |
 | 10 | p_def | 방어력 증가 | 방어력 **+10%** | 획득 시 `p.def *= 1.10` (장비 합산 뒤 곱연산) |
@@ -172,7 +172,7 @@
 - 3·4·5 의 소환은 기존 도끼·화살·창 소환 엔진 그대로(1개 = 1발, 쿨다운 없음).
 
 **엔진 상수** — `PERK_ATK_M 1.20 · PERK_DEF_M 1.10 · PERK_EVADE_A 10 · PERK_COUNTER_A 10 ·
-`PERK_CRITR_A 10 · PERK_CRITF_A 50 · PERK_EVHEAL_CH 0.10 · PERK_EVHEAL_F 0.06 · PERK_SUMMON_CH 0.50` (두 엔진 같은 이름·같은 값 · ⚑ T104 로 `PERK_STEAL` 폐기 + `PERK_EVHEAL_CH`·`PERK_EVHEAL_F` 신설).
+`PERK_CRITR_A 10 · PERK_CRITF_A 50 · PERK_EVHEAL_CH 0.10 · PERK_EVHEAL_F 0.06 · PERK_SUMMON_CH 1.00` (두 엔진 같은 이름·같은 값 · ⚑ T104 로 `PERK_STEAL` 폐기 + `PERK_EVHEAL_CH`·`PERK_EVHEAL_F` 신설).
 
 
 ## 4. 엔진 구현 세부 (sim.js와 동일하게)

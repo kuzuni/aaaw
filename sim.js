@@ -271,19 +271,19 @@ function enemyStats(c,w){
    금지축(경제·이속·최대체력/최대실드 증가·적중률·부활·분신·주기형 회복)은 그대로다.
    **적중률 금지는 유효**(흡혈 금지는 T96 에서 폐기됐고, T104 로 흡혈 축 자체가 특전에서 사라졌다). ---------- */
 const PERK_ATK_M=1.20, PERK_DEF_M=1.10, PERK_EVADE_A=10, PERK_COUNTER_A=10,
-      PERK_CRITR_A=10, PERK_CRITF_A=50, PERK_EVHEAL_CH=0.10, PERK_EVHEAL_F=0.06, PERK_SUMMON_CH=0.50;
+      PERK_CRITR_A=10, PERK_CRITF_A=50, PERK_EVHEAL_CH=0.10, PERK_EVHEAL_F=0.06, PERK_SUMMON_CH=1.00;
 /* 순서 고정 — 이 배열의 순서가 곧 획득 순서다(주인 표 1~10번). 게이트가 순서·수치를 대조한다.
    ⚑⚑⚑ T104 — 새 순서: 회피 시 회복 → 반격률 → 반격 시 창 → 회피 시 화살 → 피격 시 도끼 →
                           공격력 → 회피율 → 치확 → 치배 → 방어력 (주인 확정 2026-09-03). */
 function mkPerks(){
   return [
     {id:'p_evadeHeal',nm:'회피 시 회복',      d:'회피 시 10% 확률로 최대 체력 6% 회복', ap:p=>p.px.p_evadeHeal=1},
-    {id:'p_counter', nm:'반격률 증가',        d:'반격률 +10',                      ap:p=>{p.px.p_counter=1;p.counter+=PERK_COUNTER_A;}},
-    {id:'p_spearCt', nm:'반격 시 창',         d:'반격 시 50% 확률로 창 1개',       ap:p=>p.px.p_spearCt=1},
-    {id:'p_arrowEv', nm:'회피 시 화살',       d:'회피 시 50% 확률로 화살 1개',     ap:p=>p.px.p_arrowEv=1},
-    {id:'p_axeHit',  nm:'피격 시 도끼',       d:'피격 시 50% 확률로 도끼 1개',     ap:p=>p.px.p_axeHit=1},
     {id:'p_atk',     nm:'공격력 증가',        d:'공격력 +20%',                     ap:p=>{p.px.p_atk=1;p.dmg*=PERK_ATK_M;}},
     {id:'p_evade',   nm:'회피율 증가',        d:'회피율 +10',                      ap:p=>{p.px.p_evade=1;p.evade+=PERK_EVADE_A;}},
+    {id:'p_arrowEv', nm:'회피 시 화살',       d:'회피 시 화살 1개',                ap:p=>p.px.p_arrowEv=1},
+    {id:'p_axeHit',  nm:'피격 시 도끼',       d:'피격 시 도끼 1개',                ap:p=>p.px.p_axeHit=1},
+    {id:'p_counter', nm:'반격률 증가',        d:'반격률 +10',                      ap:p=>{p.px.p_counter=1;p.counter+=PERK_COUNTER_A;}},
+    {id:'p_spearCt', nm:'반격 시 창',         d:'반격 시 창 1개',                  ap:p=>p.px.p_spearCt=1},
     {id:'p_critR',   nm:'치명타 확률 증가',   d:'치명타 확률 +10',                 ap:p=>{p.px.p_critR=1;p.critR+=PERK_CRITR_A;}},
     {id:'p_critF',   nm:'치명타 피해 증가',   d:'치명타 피해 +50',                 ap:p=>{p.px.p_critF=1;p.critF+=PERK_CRITF_A;}},
     {id:'p_def',     nm:'방어력 증가',        d:'방어력 +10%',                     ap:p=>{p.px.p_def=1;p.def*=PERK_DEF_M;}},
@@ -936,7 +936,7 @@ function doCounter(G,src,depth){
   if(px.counterCrit)addBuff(p,'critR',14,3);
   if(px.counterHeal)heal(p,p.maxHp*0.04*px.counterHeal);
   if(px.counterWave&&pkk(p,1.0*px.counterWave))fireWave(p,1);
-  /* ⑩ 반격 시 창 — 반격 1회당 50% 확률로 창 1개 (쿨다운 없음) */
+  /* ⑦ 반격 시 창 — 반격 1회당 창 1개, 확정 발동 (쿨다운 없음 · ⚑ T108 로 50% → 100% · T109 로 순번 3 → 7) */
   if(px.p_spearCt&&pkk(p,PERK_SUMMON_CH))fireSpear(p,1);
   if(src.hp<=0)onKill(G,src,-src.hp);
   /* 🔂 반격하면 반드시 두 번 더 반격 — 연쇄 상한 3회(T69 의 «무한 연쇄 금지» 는 유지) */
@@ -961,7 +961,7 @@ function hitPlayer(G,dmg,isMelee,src){
     /* ⚑⚑⚑ T104 (주인 확정) — 1번 특전 «회피 시 회복»: 회피 성공마다 10% 굴려서 최대 체력 6% 회복.
        `heal(...,true)` 로 회복 증폭/오버킬 수리 분기를 타지 않는다 → 실드는 안 채운다(위임 기본값). */
     if(px.p_evadeHeal&&pkk(p,PERK_EVHEAL_CH))heal(p,p.maxHp*PERK_EVHEAL_F,true);
-    /* ④ 회피 시 화살 — 회피 1회당 50% 확률로 화살 1발 (T104 로 순번 9 → 4) */
+    /* ④ 회피 시 화살 — 회피 1회당 화살 1발, 확정 발동 (⚑ T108 로 50% → 100% · T104 로 순번 9 → 4) */
     if(px.p_arrowEv&&pkk(p,PERK_SUMMON_CH))fireArrows(p,1);
     /* ☠️🌾 사신의 낫 — 회피 시 20% 확률로 그 적 즉사. **보스 포함**(주인 명시).
        게임에는 낫이 베는 전용 연출이 붙는다(일반 처치 연기와 구별). */
@@ -1004,7 +1004,7 @@ function hitPlayer(G,dmg,isMelee,src){
   gainWard(p,0.08*px.wardHit);
   if(px.stunHitS&&src&&pkk(p,0.20*px.stunHitS))applyStun(G,src,3);
   if(px.stunHitL&&src&&pkk(p,0.55*px.stunHitL))applyStun(G,src,3);
-  /* ⑧ 피격 시 도끼 — 피격 1회당 50% 확률로 도끼 1개 */
+  /* ⑤ 피격 시 도끼 — 피격 1회당 도끼 1개, 확정 발동 (⚑ T108 로 50% → 100%) */
   if(px.p_axeHit&&pkk(p,PERK_SUMMON_CH))fireAxe(p,1);
   /* 원거리 피격 축 — 위 «피격 시» 트리거를 전부 굴린 «뒤» 에 추가로 굴린다 (별개 축, 주인 16:1X) */
   if(!isMelee)procOnRanged(G,src,dmg);
