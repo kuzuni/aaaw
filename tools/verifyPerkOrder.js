@@ -21,21 +21,23 @@ const ROOT = path.join(__dirname, '..');
 const R = [];
 const chk = (n, c, d) => { R.push({ n, c }); console.log(`  ${c ? '✓' : '✗'} ${n}${d ? ' — ' + d : ''}`); return c; };
 
-/* ---------- 주인 확정표 (ROUTINE ⑦ · PLAN §3.1) — 이 배열이 이 게이트의 기준이다 ---------- */
+/* ---------- 주인 확정표 (ROUTINE ⑦ · PLAN §3.1) — 이 배열이 이 게이트의 기준이다.
+   ⚑⚑⚑ T104 (주인 확정 2026-09-03) — 순서 재정렬 + 1번 특전 «생명 흡수» → «회피 시 회복» 으로 교체 ---------- */
 const WANT = [
+  { id: 'p_evadeHeal', nm: '회피 시 회복', tx: '회피 시 10% 확률로 최대 체력 6% 회복' },
+  { id: 'p_counter', nm: '반격률 증가', tx: '반격률 +10' },
+  { id: 'p_spearCt', nm: '반격 시 창', tx: '반격 시 50% 확률로 창 1개' },
+  { id: 'p_arrowEv', nm: '회피 시 화살', tx: '회피 시 50% 확률로 화살 1개' },
+  { id: 'p_axeHit', nm: '피격 시 도끼', tx: '피격 시 50% 확률로 도끼 1개' },
   { id: 'p_atk', nm: '공격력 증가', tx: '공격력 +20%' },
   { id: 'p_evade', nm: '회피율 증가', tx: '회피율 +10' },
-  { id: 'p_counter', nm: '반격률 증가', tx: '반격률 +10' },
   { id: 'p_critR', nm: '치명타 확률 증가', tx: '치명타 확률 +10' },
   { id: 'p_critF', nm: '치명타 피해 증가', tx: '치명타 피해 +50' },
   { id: 'p_def', nm: '방어력 증가', tx: '방어력 +10%' },
-  { id: 'p_steal', nm: '생명 흡수', tx: '준 피해의 10% 회복' },
-  { id: 'p_axeHit', nm: '피격 시 도끼', tx: '피격 시 50% 확률로 도끼 1개' },
-  { id: 'p_arrowEv', nm: '회피 시 화살', tx: '회피 시 50% 확률로 화살 1개' },
-  { id: 'p_spearCt', nm: '반격 시 창', tx: '반격 시 50% 확률로 창 1개' },
 ];
+/* ⚑ T104 — `PERK_STEAL` 은 폐기됐다(특전에서 흡혈 축이 사라졌다). 자리에 `PERK_EVHEAL_CH`·`PERK_EVHEAL_F` 신설. */
 const CONST = { PERK_ATK_M: '1.20', PERK_DEF_M: '1.10', PERK_EVADE_A: '10', PERK_COUNTER_A: '10',
-  PERK_CRITR_A: '10', PERK_CRITF_A: '50', PERK_STEAL: '10', PERK_SUMMON_CH: '0.50' };
+  PERK_CRITR_A: '10', PERK_CRITF_A: '50', PERK_EVHEAL_CH: '0.10', PERK_EVHEAL_F: '0.06', PERK_SUMMON_CH: '0.50' };
 
 function run(simSrc, htmSrc, planSrc) {
   R.length = 0;
@@ -116,7 +118,8 @@ function run(simSrc, htmSrc, planSrc) {
      T100 산수(보스 전 공급 277 로 9레벨 + 악마 1 = 10)를 여기서도 못 박아, 둘이 갈라지면 빨개진다. */
   chk('⚑ PERK_PICKS 가 챕터 «완주 = 특전 N개» 의 N(=10)과 같다', S.PERK_PICKS === 10,
     `PERK_PICKS=${S.PERK_PICKS} · T100 완주 획득수 10`);
-  /* 수치 — 획득 순서대로 하나씩 붙이며 실효 스탯 변화를 잰다 */
+  /* 수치 — 획득 순서대로 하나씩 붙이며 실효 스탯 변화를 잰다.
+     ⚑ T104 — 순서가 바뀌었고, 1번 특전은 스탯을 안 건드리는 트리거형(회피 시 회복)이라 스탯 델타 0 이다. */
   const G0 = { taken: [], player: null, perkChances: 0 };
   const p = S.mkPlayer(S.mkBuild(-1, 0, 0), G0); G0.player = p; p.G = G0;
   const before = { dmg: p.dmg, evade: p.evade, counter: p.counter, critR: p.critR, critF: p.critF, def: p.def, steal: p.steal };
@@ -127,19 +130,24 @@ function run(simSrc, htmSrc, planSrc) {
     deltas.push({ id: perk.id, d: Object.fromEntries(Object.entries(a).map(([k, v]) => [k, +(p[k] - v).toFixed(6)])) });
   }
   const dOf = id => deltas.find(x => x.id === id).d;
-  chk('① 공격력 +20% 가 기본치에 곱연산이다', Math.abs(dOf('p_atk').dmg - before.dmg * 0.20) < 1e-6, `+${dOf('p_atk').dmg.toFixed(3)} (기본 ${before.dmg})`);
-  chk('② 회피율 +10', dOf('p_evade').evade === 10);
-  chk('③ 반격률 +10', dOf('p_counter').counter === 10);
-  chk('④ 치명타 확률 +10', dOf('p_critR').critR === 10);
-  chk('⑤ 치명타 피해 +50', dOf('p_critF').critF === 50);
-  chk('⑥ 방어력 +10% 가 기본치에 곱연산이다', Math.abs(dOf('p_def').def - before.def * 0.10) < 1e-6, `+${dOf('p_def').def.toFixed(3)} (기본 ${before.def})`);
-  chk('⑦ 생명 흡수 = 준 피해의 10%', dOf('p_steal').steal === 10);
-  chk('⑧⑨⑩ 소환 3종은 스탯을 안 건드린다 (트리거형)',
-    ['p_axeHit', 'p_arrowEv', 'p_spearCt'].every(id => Object.values(dOf(id)).every(v => v === 0)));
-  /* 흡혈은 «실드를 안 채운다» — heal 의 noBoost 경로를 실제로 타는지 본다 */
-  chk('⑦ 흡혈이 실드를 안 채운다 (noBoost 경로)',
-    /if\(p\.steal>0\)heal\(p,d\*p\.steal\/100,true\);/.test(simSrc.replace(/\s+/g, '')) ||
-    /if\(p\.steal>0\)\s*heal\(p,\s*d\*p\.steal\/100,\s*true\)/.test(simSrc));
+  chk('① 회피 시 회복은 스탯을 안 건드린다 (트리거형 · px.p_evadeHeal 만 세운다)',
+    Object.values(dOf('p_evadeHeal')).every(v => v === 0));
+  chk('② 반격률 +10', dOf('p_counter').counter === 10);
+  chk('③④⑤ 소환 3종은 스탯을 안 건드린다 (트리거형)',
+    ['p_spearCt', 'p_arrowEv', 'p_axeHit'].every(id => Object.values(dOf(id)).every(v => v === 0)));
+  chk('⑥ 공격력 +20% 가 기본치에 곱연산이다', Math.abs(dOf('p_atk').dmg - before.dmg * 0.20) < 1e-6, `+${dOf('p_atk').dmg.toFixed(3)} (기본 ${before.dmg})`);
+  chk('⑦ 회피율 +10', dOf('p_evade').evade === 10);
+  chk('⑧ 치명타 확률 +10', dOf('p_critR').critR === 10);
+  chk('⑨ 치명타 피해 +50', dOf('p_critF').critF === 50);
+  chk('⑩ 방어력 +10% 가 기본치에 곱연산이다', Math.abs(dOf('p_def').def - before.def * 0.10) < 1e-6, `+${dOf('p_def').def.toFixed(3)} (기본 ${before.def})`);
+  /* ⚑ T104 — 특전에서 흡혈 축이 사라졌다: 어느 특전도 `p.steal` 을 안 건드린다 (엔진의 steal 스탯은 남는다). */
+  chk('⚑ T104 — 특전이 p.steal 을 건드리지 않는다 (특전에서 흡혈 축 폐기)',
+    S.PERKS.every(pk => dOf(pk.id).steal === 0));
+  /* 회피 시 회복은 «실드를 안 채운다» — heal 의 noBoost 경로(true)를 실제로 타는지 본다.
+     `if(px.p_evadeHeal&&pkk(p,...))heal(p,p.maxHp*...,true);` 형태를 두 엔진에서 찾아 확인한다. */
+  const evHealRe = /if\(px\.p_evadeHeal\s*&&\s*pkk\(p\s*,\s*(?:PERK_EVHEAL_CH|0?\.10)\s*\)\)\s*(?:\{[^}]*)?heal\(p\s*,\s*p\.maxHp\s*\*\s*(?:PERK_EVHEAL_F|0?\.06)\s*,\s*true\s*\)/;
+  chk('⚑ T104 ① 회피 시 회복이 회피 분기에서 noBoost=true 로 회복한다 (sim.js)', evHealRe.test(simSrc));
+  chk('⚑ T104 ① 회피 시 회복이 회피 분기에서 noBoost=true 로 회복한다 (index.html)', evHealRe.test(htmSrc));
 
   /* ===== ③ 폐지분 + 소환 연쇄 ===== */
   console.log('\n=== ③ 폐지분 (등급·선택창·새로고침) · 소환 연쇄 B ===');
@@ -196,7 +204,8 @@ if (process.argv.includes('--self')) {
     ['PLAN 표의 효과를 바꾸면', null, null, s => s.replace('| 공격력 **+20%** |', '| 공격력 **+30%** |')],
     ['등급 굴림을 되살리면', s => s + '\nfunction rollRarity(){return 0;}\n', null, null],
     ['새로고침을 되살리면', null, s => s.replace('function takePerk(perk){', 'function takePerk(perk){ G.refreshLeft=1;'), null],
-    ['흡혈이 회복 증폭을 타게 하면', s => s.replace('heal(p,d*p.steal/100,true)', 'heal(p,d*p.steal/100)'), null, null],
+    ['⚑ T104 회피 시 회복이 회복 증폭을 타게 하면 (noBoost=true 제거)',
+      s => s.replace('heal(p,p.maxHp*PERK_EVHEAL_F,true)', 'heal(p,p.maxHp*PERK_EVHEAL_F)'), null, null],
     ['«공격 시» 축에 특전 소환을 달면', s => s.replace('  if(px.c_waveAtk', '  if(px.p_axeHit&&pkk(p,0.5))fireAxe(p,1);\n  if(px.c_waveAtk')
       .replace('function procOnAttack(G,e){\n  const p=G.player,px=p.px;', 'function procOnAttack(G,e){\n  const p=G.player,px=p.px;\n  if(px.p_axeHit&&pkk(p,0.5))fireAxe(p,1);'), null, null],
     ['특전을 11종으로 늘리면', s => s.replace("  ];\n}\nconst PERKS=mkPerks();", "    {id:'p_zzz', nm:'x', d:'x', ap:p=>p.px.p_zzz=1},\n  ];\n}\nconst PERKS=mkPerks();"), null, null],

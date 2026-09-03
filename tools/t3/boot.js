@@ -44,7 +44,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       saveKey: (() => { try { save.gold = save.gold; persist(); } catch (e) {} return Object.keys(localStorage).join(','); })(),
     }));
     chk('특전 10종 로드', boot.perks === 10, `PERKS=${boot.perks}`);   /* ⚑ T96 — 고정 10종·순서 획득 (등급 폐지. 개수를 바꾸면 여기도 갱신) */
-    chk('챕터 상한 500', boot.maxChapter === 500, `maxChapter=${boot.maxChapter}`);   /* ⚑ T102 — 300 → 500 */
+    chk('챕터 상한 600', boot.maxChapter === 600, `maxChapter=${boot.maxChapter}`);   /* ⚑ T104 — 500 → 600 */
     chk('로비 화면이 켜져 있다', boot.screen === 'lobby', boot.screen);
     chk('START 버튼 렌더', boot.startTxt === 'START', boot.startTxt);
     chk('로비 챕터 제목 렌더', /^CHAPTER \d+$/.test(boot.chapTxt), boot.chapTxt);
@@ -89,8 +89,8 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
 
     /* --- ⚑ 대형 수치 표기 (T54) — 실제 렌더로 «후반 챕터 골드가 줄을 밀어내지 않는가» ---
        정적 게이트 verifyT2 ㉖ 은 포맷터와 CSS 값을 보고, 실제로 줄이 프레임 안에 드는지는 여기서 본다.
-       구 구현(콤마 전체 표기)은 후반 챕터 골드가 수십 자라 줄이 부풀어 🔊 가 화면 밖으로 나갔다. ⚑ T102 로 상한이 500 이 됐으니 최대 챕터로 본다. */
-    for (const c of [40, 90, 500]) {
+       구 구현(콤마 전체 표기)은 후반 챕터 골드가 수십 자라 줄이 부풀어 🔊 가 화면 밖으로 나갔다. ⚑ T104 로 상한이 600 이 됐으니 최대 챕터로 본다. */
+    for (const c of [40, 90, 600]) {
       const t54 = await p.evaluate(c => {
         const keep = save.gold, keepGem = save.gem;
         let cum = 0; for (let i = 1; i <= c; i++) cum += TUNE.goldClear(i) * 6;
@@ -172,7 +172,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
         `left ${gear.left} · right ${gear.right} · 글자잘림 ${gear.cut} · tf=${gear.tf}`);
 
       /* ③ 인게임 줄 — ☰ 가 프레임 안에 있어야 «일시정지·포기» 를 누를 수 있다 */
-      await p.evaluate(() => { save.maxChapter = 500; save.selChapter = 500; startChapter(500); });   /* ⚑ T102 */
+      await p.evaluate(() => { save.maxChapter = 600; save.selChapter = 600; startChapter(600); });   /* ⚑ T104 */
       await p.waitForTimeout(400);
       for (const gold of [1e4, 5.97e28, 1.2e35]) {
         const r = await p.evaluate(g => {

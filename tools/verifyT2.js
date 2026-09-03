@@ -208,11 +208,16 @@ const DIRECTIVES = [
     const m = HTML.match(/function gainExp\(n\)\{[\s\S]*?\n\}/);
     return !!m && !/maxHp|maxSh|p\.hp=|p\.sh=/.test(m[0]);
   }],
-  /* ⚑ T96 — «흡혈 증가 금지»(2026-09-02 07:1X)는 주인 확정 ⑥ 으로 **폐기**됐다. 7번 «생명 흡수» 가
-     최신 확정이라 흡혈은 이제 정상 축이다. 다만 **적중률(명중) 금지는 그대로 유효**하며 ⑳ 이 지킨다.
-     여기서는 «흡혈이 그 특전 하나에만 붙어 있는가»(장비·다른 경로로 새지 않는가)를 본다. */
-  ['생명 흡수는 p_steal 하나뿐 (다른 경로로 안 샌다)',
-    () => (HTML.match(/p\.steal\s*\+=/g) || []).length === 1 && (SIM.match(/p\.steal\s*\+=/g) || []).length === 1],
+  /* ⚑⚑⚑ T104 — 1번 특전이 «생명 흡수» → «회피 시 회복» 으로 바뀌었다.
+     특전에서 흡혈(steal) 축이 완전히 사라졌으므로 어느 특전도 `p.steal +=` 를 안 한다(엔진의 steal 스탯은 남는다 —
+     장비 옵션이 필요하면 쓸 수 있다). 대신 두 엔진에 «회피 시 회복» 이 정확히 한 번 들어가 있는지 본다. */
+  ['⚑ T104 — 특전이 p.steal 을 안 건드린다 (특전에서 흡혈 축 폐기)',
+    () => (HTML.match(/p\.steal\s*\+=/g) || []).length === 0 && (SIM.match(/p\.steal\s*\+=/g) || []).length === 0],
+  ['⚑ T104 — 회피 시 회복(p_evadeHeal)이 두 엔진에 하나씩 있고 회피 분기에서 heal(...,true) 로 처리된다',
+    () => {
+      const re = /if\(px\.p_evadeHeal\s*&&\s*pkk\(p\s*,\s*(?:PERK_EVHEAL_CH|0?\.10)\s*\)\)[\s\S]{0,80}?heal\(p\s*,\s*p\.maxHp\s*\*\s*(?:PERK_EVHEAL_F|0?\.06)\s*,\s*true\s*\)/;
+      return re.test(SIM) && re.test(HTML);
+    }],
   ['스탯 그리드에서 흡혈 행 제거 — 7종 (07:1X)', () => {
     const m = HTML.match(/const STAT_DEFS=\[[\s\S]*?\n\];/) || HTML.match(/\n\/\* =+ 스탯[\s\S]*?\n\];/);
     return !/\{ic:'🩸',lb:'흡혈'/.test(HTML);
@@ -281,10 +286,10 @@ else {
   diff.length ? bad(`TUNE 값 불일치 ${diff.length}건: ${diff.join(' / ')}`) : ok(`TUNE 값 ${MUST.length}개 전수 일치 (보스 ×${TS.bossHp}·×${TS.bossDmg}, 챕터 ${TS.maxChapter})`);
   if (TS.bossHp === 8 && TS.bossDmg === 1.8) ok('보스 = HP ×8 · DMG ×1.8 (주인 확정 상수, 07:3X)');
   else bad(`보스 배수가 주인 확정값이 아니다 — HP ×${TS.bossHp} · DMG ×${TS.bossDmg} (확정: ×8 · ×1.8)`);
-  /* ⚑⚑⚑ T102 — 주인 확정으로 300 → 500. 최종 벽도 같은 지시로 500 으로 옮겼다(10·15·90 은 위치 고정). */
-  if (TS.maxChapter === 500) ok('챕터 상한 500 (PLAN §2.4 · ⚑ T102)'); else bad(`챕터 상한이 ${TS.maxChapter} (확정: 500)`);
-  if (TS.wall4At === 500) ok('최종 벽 = 챕터 500 (⚑ T102 — 주인 «신화9강 부분만 벽 위치 변경»)');
-  else bad(`최종 벽 위치가 ${TS.wall4At} (확정: 500)`);
+  /* ⚑⚑⚑ T104 — 주인 확정으로 500 → 600. 최종 벽도 같은 지시로 600 으로 옮겼다(10·15 는 위치 고정 · 90 은 T103 이 재배치). */
+  if (TS.maxChapter === 600) ok('챕터 상한 600 (PLAN §2.4 · ⚑ T104)'); else bad(`챕터 상한이 ${TS.maxChapter} (확정: 600)`);
+  if (TS.wall4At === 600) ok('최종 벽 = 챕터 600 (⚑ T104 — 주인 «사다리 8점 · 신화9강+슬롯100 = 챕터 600»)');
+  else bad(`최종 벽 위치가 ${TS.wall4At} (확정: 600)`);
   /* 최종 벽이 마지막 챕터 «위» 로 새면 벽이 영영 안 걸린다 — 위치와 상한을 함께 본다 */
   if (TS.wall4At <= TS.maxChapter) ok(`최종 벽이 콘텐츠 안에 있다 (${TS.wall4At} ≤ ${TS.maxChapter})`);
   else bad(`최종 벽 ${TS.wall4At} 이 챕터 상한 ${TS.maxChapter} 을 넘어 영영 안 걸린다`);
@@ -294,7 +299,7 @@ else {
   {
     const m = HTML.match(/save\.maxChapter\s*=\s*Math\.max\(1,\s*Math\.min\(save\.maxChapter\|0\|\|1,\s*(\d+)\)\)/);
     if (!m) bad('index.html 세이브 정규화의 챕터 상한 리터럴을 못 찾았다 — 게이트를 갱신할 것');
-    else if (Number(m[1]) === TH.maxChapter) ok(`세이브 정규화 상한 ${m[1]} = TUNE.maxChapter (⚑ T102)`);
+    else if (Number(m[1]) === TH.maxChapter) ok(`세이브 정규화 상한 ${m[1]} = TUNE.maxChapter (⚑ T104)`);
     else bad(`세이브 정규화 상한 ${m[1]} ≠ TUNE.maxChapter ${TH.maxChapter} — 로비 해금과 전투 곡선이 갈라진다`);
   }
   if (TH.pAtk0 === 25 && TH.pHp0 === 150 && TH.pSh0 === 250) ok('노템 기본치 공 25 · 체 150 · 실드 250 (주인 확정, PLAN §11.5-a)');
@@ -334,7 +339,7 @@ if (!LS || !LH) bad(`chapterLayout 추출 실패 (${!LS ? 'sim.js' : ''}${!LS &&
 else {
   const key = L => L.map(n => n.t === 'wave' ? 'w' + n.size : n.t[0]).join('>');
   let mism = [], viol = [], maxE = 0, minE = 1e9;
-  for (let c = 1; c <= 500; c++) {   /* ⚑ T102 — 챕터 상한 300 → 500 */
+  for (let c = 1; c <= 600; c++) {   /* ⚑ T104 — 챕터 상한 500 → 600 */
     const A = LS(c), B = LH(c);
     if (key(A) !== key(B)) { if (mism.length < 3) mism.push(`ch${c}: sim=${key(A)} html=${key(B)}`); else mism.push(''); }
     const cnt = t => A.filter(n => n.t === t).length;
@@ -350,7 +355,7 @@ else {
     else if (why.length) viol.push('');
   }
   const nm = mism.filter(Boolean);
-  mism.length ? bad(`두 파일 레이아웃 불일치 ${mism.length}챕터: ${nm.join(' / ')}`) : ok('챕터 1~500 레이아웃 전수 동일 (sim.js ↔ index.html · ⚑ T102)');
+  mism.length ? bad(`두 파일 레이아웃 불일치 ${mism.length}챕터: ${nm.join(' / ')}`) : ok('챕터 1~600 레이아웃 전수 동일 (sim.js ↔ index.html · ⚑ T104)');
   const nv = viol.filter(Boolean);
   viol.length ? bad(`주인 확정 제약 위반 ${viol.length}챕터: ${nv.join(' / ')}`) : ok(`제약 4종 전수 만족 — 적 총수 ${minE}~${maxE}(≤100) · 쉼터 1~4 · 악마 1 · 천사 1`);
   /* 가중치 배치 폐기 흔적: 45/30/25 잔재가 남아 있으면 안 된다 */

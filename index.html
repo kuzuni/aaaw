@@ -1045,7 +1045,7 @@ try{
    ⚠ `TUNE.maxChapter` 를 못 쓴다 — TUNE 은 이 줄보다 «아래»에서 `const` 로 선언돼 여기선 TDZ 다.
    그래서 리터럴이 하나 남고, 두 값이 어긋나면 로비 해금과 전투 곡선이 갈라진다.
    게이트 `verifyT2` ⑦ 이 이 리터럴 ↔ `TUNE.maxChapter` 를 대조한다 — 한쪽만 고치면 빨개진다. */
-save.maxChapter=Math.max(1,Math.min(save.maxChapter|0||1,500));   /* 챕터 상한 500 (PLAN §2.4) */
+save.maxChapter=Math.max(1,Math.min(save.maxChapter|0||1,600));   /* 챕터 상한 600 (PLAN §2.4 · ⚑ T104) */
 save.selChapter=Math.max(1,Math.min(save.selChapter|0||1,save.maxChapter));
 save.gold=Math.max(0,+save.gold||0); save.gem=Math.max(0,+save.gem||0);
 if(!Array.isArray(save.inv)) save.inv=[];
@@ -1700,18 +1700,22 @@ function heal(p,amt,noBoost){
    id·순서·ap·수치는 `sim.js mkPerks()` 와 1:1이고 표시 텍스트(tx)는 PLAN §3.1 표의 문장 그대로다
    (게이트가 두 엔진 + PLAN 을 대조한다). 등급이 없으므로 카드 색은 한 가지다. */
 const PERK_ATK_M=1.20, PERK_DEF_M=1.10, PERK_EVADE_A=10, PERK_COUNTER_A=10,
-      PERK_CRITR_A=10, PERK_CRITF_A=50, PERK_STEAL=10, PERK_SUMMON_CH=0.50;
+      PERK_CRITR_A=10, PERK_CRITF_A=50, PERK_EVHEAL_CH=0.10, PERK_EVHEAL_F=0.06, PERK_SUMMON_CH=0.50;
+/* ⚑⚑⚑ T104 (주인 확정 2026-09-03) — 순서 재정렬 + 1번 특전 효과 교체.
+   1번 «생명 흡수(준 피해 10% 회복)» → «회피 시 회복(10% 확률로 최대 체력 6% 회복)» 으로 바꾸고 순서를
+   회피회복→반격→반격창→회피화살→피격도끼→공격력→회피→치확→치배→방어 로 재정렬. 나머지 9종의 효과·수치는
+   한 글자도 안 바뀐다. sim.js mkPerks() 와 1:1(게이트가 두 엔진 + PLAN 을 대조). */
 const PERKS=[
+  {id:'p_evadeHeal',nm:'회피 시 회복',    ic:'🍀',  tx:'회피 시 <b>10%</b> 확률로 최대 체력 <b>6%</b> 회복', ap:p=>p.px.p_evadeHeal=1},
+  {id:'p_counter', nm:'반격률 증가',      ic:'🔁',  tx:'반격률 <b>+10</b>',                   ap:p=>{p.px.p_counter=1; p.counter+=PERK_COUNTER_A;}},
+  {id:'p_spearCt', nm:'반격 시 창',       ic:'🔱',  tx:'반격 시 <b>50%</b> 확률로 창 <b>1개</b>',     ap:p=>p.px.p_spearCt=1},
+  {id:'p_arrowEv', nm:'회피 시 화살',     ic:'🏹',  tx:'회피 시 <b>50%</b> 확률로 화살 <b>1개</b>',   ap:p=>p.px.p_arrowEv=1},
+  {id:'p_axeHit',  nm:'피격 시 도끼',     ic:'🪓',  tx:'피격 시 <b>50%</b> 확률로 도끼 <b>1개</b>',   ap:p=>p.px.p_axeHit=1},
   {id:'p_atk',     nm:'공격력 증가',      ic:'⚔️',  tx:'공격력 <b>+20%</b>',                  ap:p=>{p.px.p_atk=1; p.dmg*=PERK_ATK_M;}},
   {id:'p_evade',   nm:'회피율 증가',      ic:'💨',  tx:'회피율 <b>+10</b>',                   ap:p=>{p.px.p_evade=1; p.evade+=PERK_EVADE_A;}},
-  {id:'p_counter', nm:'반격률 증가',      ic:'🔁',  tx:'반격률 <b>+10</b>',                   ap:p=>{p.px.p_counter=1; p.counter+=PERK_COUNTER_A;}},
   {id:'p_critR',   nm:'치명타 확률 증가', ic:'🎯',  tx:'치명타 확률 <b>+10</b>',              ap:p=>{p.px.p_critR=1; p.critR+=PERK_CRITR_A;}},
   {id:'p_critF',   nm:'치명타 피해 증가', ic:'💥',  tx:'치명타 피해 <b>+50</b>',              ap:p=>{p.px.p_critF=1; p.critF+=PERK_CRITF_A;}},
   {id:'p_def',     nm:'방어력 증가',      ic:'🛡️',  tx:'방어력 <b>+10%</b>',                  ap:p=>{p.px.p_def=1; p.def*=PERK_DEF_M;}},
-  {id:'p_steal',   nm:'생명 흡수',        ic:'🩸',  tx:'준 피해의 <b>10%</b> 회복',           ap:p=>{p.px.p_steal=1; p.steal+=PERK_STEAL;}},
-  {id:'p_axeHit',  nm:'피격 시 도끼',     ic:'🪓',  tx:'피격 시 <b>50%</b> 확률로 도끼 <b>1개</b>',   ap:p=>p.px.p_axeHit=1},
-  {id:'p_arrowEv', nm:'회피 시 화살',     ic:'🏹',  tx:'회피 시 <b>50%</b> 확률로 화살 <b>1개</b>',   ap:p=>p.px.p_arrowEv=1},
-  {id:'p_spearCt', nm:'반격 시 창',       ic:'🔱',  tx:'반격 시 <b>50%</b> 확률로 창 <b>1개</b>',     ap:p=>p.px.p_spearCt=1},
 ];
 /* ⚑ 주인 방향(2026-09-03) — 한 런 획득 수를 «풀 크기(PERKS.length)» 와 분리한 상수. sim.js 와 같은 값·같은 뜻.
    지금은 풀도 10·획득도 10 이라 동작 불변이고, 나중에 풀만 늘려도 «한 런 = 10개» 면 파워 총량이 그대로다.
@@ -1836,10 +1840,10 @@ const TUNE={
   wall2Hp:1.0, wall2Dmg:1.0,    // 15챕터 이상 추가 배수 (임시 비활성 — T1 재산정)
   waveHp:0.15, waveDmg:0.08,    // 웨이브 인덱스당 (R03)
   wall3Hp:2.0, wall3Dmg:1.5,    // 90챕터 대형 벽 (⚑ T1 R03 켬 — 벽 예산: 구간 70→120 률을 3.30/3.38% → 1.88/2.54% 로 내려 D(120) 보존)
-  wall4Hp:3.2, wall4Dmg:1.8,    // ⚑⚑⚑ T102 로 위치가 300 → **500** 으로 옮겨졌다(주인 «신화9강 풀셋은 500챕터에서 벽»). 배수 3.2/1.8 은 T1 R03 값 그대로이고 **T103 이 과녁 C(신화+9강 = 챕터 500 클리어율 2~10%)에 맞춰 재산정한다** — 260 위에는 다른 과녁이 없어 벽 예산 제약이 «완전히» 없다. slotCostG 1.6 의 짝 노브다
-  wall4At:500,                  // ⚑⚑⚑ T102 (주인 확정 2026-09-03) — 최종 벽 챕터. 10·15·90 벽은 위치 고정이고 «신화9강 부분만» 옮긴다
+  wall4Hp:3.2, wall4Dmg:1.8,    // ⚑⚑⚑ T104 로 위치가 500 → **600** 으로 옮겨졌다(주인 «챕터 600 확장 + 사다리 8점»). 배수 3.2/1.8 은 T1 R03 값 그대로이고 **T103 이 새 사다리 8점(맨 아랫줄 = 신화9강+슬롯100 챕터 600)에 맞춰 재산정한다** — 위치만 옮겨 두고 배수는 손대지 않는다(주인 지시 ③). slotCostG 1.6 의 짝 노브다
+  wall4At:600,                  // ⚑⚑⚑ T104 (주인 확정 2026-09-03) — 최종 벽 챕터 500 → 600. 10·15 벽은 위치 고정이고 «최종 벽 + 90 벽» 은 T103 이 재산정한다(위치만 600 에 옮겨 둠)
   bossHp:8, bossDmg:1.8,        // 주인 확정 상수 (튜닝 노브 아님) — 5배수 챕터 추가 배수 폐기
-  maxChapter:500,               // PLAN §2.4 (§11 도입으로 20 → 100 → 300 → ⚑⚑⚑ T102 주인 확정으로 500)
+  maxChapter:600,               // PLAN §2.4 (§11 도입으로 20 → 100 → 300 → 500 → ⚑⚑⚑ T104 주인 확정으로 600)
   /* 플레이어 기본치 (영구강화 4종 폐지 — 성장은 §11 장비 + 슬롯 강화가 전담)
      ⚑ T35 주인 확정(PLAN §11.5-a): 공 25 / 체 150 / 실드 250. 실드는 `maxHp*0.8` 파생이 아니라 독립 스탯이다. */
   /* ⚑ 주인 확정 2026-09-03 (ROUTINE «플레이어 기본 스탯») — 노브 아님. PLAN §2.3 표와 1:1 · sim.js 와 동일. */
@@ -1864,7 +1868,7 @@ function enemyStats(c,w){
   if(c>=10){hp*=TUNE.wallHp; dmg*=TUNE.wallDmg;}
   if(c>=15){hp*=TUNE.wall2Hp; dmg*=TUNE.wall2Dmg;}
   if(c>=90){hp*=TUNE.wall3Hp; dmg*=TUNE.wall3Dmg;}     /* 90 대형 벽 (PLAN §11.7) */
-  if(c>=TUNE.wall4At){hp*=TUNE.wall4Hp; dmg*=TUNE.wall4Dmg;}  /* ⚑ T102 — 최종 벽 500 (PLAN §11.7). 리터럴 300 을 `wall4At` 로 뽑아 두 엔진이 한 값만 본다 */
+  if(c>=TUNE.wall4At){hp*=TUNE.wall4Hp; dmg*=TUNE.wall4Dmg;}  /* ⚑ T104 — 최종 벽 600 (PLAN §11.7). 리터럴 500 을 `wall4At` 로 뽑아 두 엔진이 한 값만 본다 */
   return {hp:Math.round(hp), dmg:Math.round(dmg)};
 }
 
@@ -2544,7 +2548,10 @@ function hitPlayer(dmg,isMelee,src){
     if(px.evadeCounter&&pkk(p,1.0*px.evadeCounter)) doCounter(src);
     if(px.evadeAxe&&pkk(p,0.10*px.evadeAxe)) fireAxe(p,1);
     gainWard(p,0.10*px.wardEvade);
-    /* ⑨ 회피 시 화살 — 회피 1회당 50% 확률로 화살 1발 (sim.js 와 1:1) */
+    /* ⚑⚑⚑ T104 — 1번 특전 «회피 시 회복»: 회피 성공마다 10% 굴려서 최대 체력 6% 회복.
+       heal(...,true) 로 회복 증폭·오버킬 수리 분기를 안 타므로 실드는 안 채운다(위임 기본값 · sim.js 와 1:1). */
+    if(px.p_evadeHeal&&pkk(p,PERK_EVHEAL_CH)){ heal(p,p.maxHp*PERK_EVHEAL_F,true); addText('🍀 +'+fmt(p.maxHp*PERK_EVHEAL_F),'#7ED957'); }
+    /* ④ 회피 시 화살 — 회피 1회당 50% 확률로 화살 1발 (sim.js 와 1:1 · T104 로 순번 9 → 4) */
     if(px.p_arrowEv&&pkk(p,PERK_SUMMON_CH)) fireArrows(p,1);
     return;
   }

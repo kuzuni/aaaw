@@ -78,10 +78,10 @@ const TUNE={
   wall2Hp:1.0, wall2Dmg:1.0,    // 15챕터 이상 추가 배수 (임시 비활성 — T1 재산정)
   waveHp:0.15, waveDmg:0.08,    // 웨이브 인덱스당 (R03)
   wall3Hp:2.0, wall3Dmg:1.5,    // 90챕터 대형 벽 (⚑ T1 R03 켬 — 벽 예산: 구간 70→120 률을 3.30/3.38% → 1.88/2.54% 로 내려 D(120) 보존)
-  wall4Hp:3.2, wall4Dmg:1.8,    // ⚑⚑⚑ T102 로 위치가 300 → **500** 으로 옮겨졌다(주인 «신화9강 풀셋은 500챕터에서 벽»). 배수 3.2/1.8 은 T1 R03 값 그대로이고 **T103 이 과녁 C(신화+9강 = 챕터 500 클리어율 2~10%)에 맞춰 재산정한다** — 260 위에는 다른 과녁이 없어 벽 예산 제약이 «완전히» 없다. slotCostG 1.6 의 짝 노브다
-  wall4At:500,                  // ⚑⚑⚑ T102 (주인 확정 2026-09-03) — 최종 벽 챕터. 10·15·90 벽은 위치 고정이고 «신화9강 부분만» 옮긴다
+  wall4Hp:3.2, wall4Dmg:1.8,    // ⚑⚑⚑ T104 로 위치가 500 → **600** 으로 옮겨졌다(주인 «챕터 600 확장 + 사다리 8점»). 배수 3.2/1.8 은 T1 R03 값 그대로이고 **T103 이 새 사다리 8점(맨 아랫줄 = 신화9강+슬롯100 챕터 600)에 맞춰 재산정한다** — 위치만 옮겨 두고 배수는 손대지 않는다(주인 지시 ③). slotCostG 1.6 의 짝 노브다
+  wall4At:600,                  // ⚑⚑⚑ T104 (주인 확정 2026-09-03) — 최종 벽 챕터 500 → 600. 10·15 벽은 위치 고정이고 «최종 벽 + 90 벽» 은 T103 이 사다리 8점에 맞춰 재산정한다(위치만 600 에 옮겨 둠)
   bossHp:8, bossDmg:1.8,        // 주인 확정 상수 (튜닝 노브 아님) — 5배수 챕터 추가 배수 폐기
-  maxChapter:500,               // PLAN §2.4 (§11 도입으로 20 → 100 → 300 → ⚑⚑⚑ T102 주인 확정으로 500)
+  maxChapter:600,               // PLAN §2.4 (§11 도입으로 20 → 100 → 300 → 500 → ⚑⚑⚑ T104 주인 확정으로 600)
   /* 플레이어 기본치 (영구강화 4종 폐지 — 성장은 §11 장비 + 슬롯 강화가 전담)
      ⚑ T35 주인 확정(PLAN §11.5-a): 공 25 / 체 150 / 실드 250. 실드는 `maxHp*0.8` 파생이 아니라 독립 스탯이다. */
   /* ⚑ 주인 확정 2026-09-03 (ROUTINE «플레이어 기본 스탯») — 노브 아님. PLAN §2.3 표와 1:1.
@@ -200,7 +200,7 @@ function enemyStats(c,w){
   if(c>=10){hp*=TUNE.wallHp; dmg*=TUNE.wallDmg;}
   if(c>=15){hp*=TUNE.wall2Hp; dmg*=TUNE.wall2Dmg;}
   if(c>=90){hp*=TUNE.wall3Hp; dmg*=TUNE.wall3Dmg;}     /* 90 대형 벽 (PLAN §11.7) */
-  if(c>=TUNE.wall4At){hp*=TUNE.wall4Hp; dmg*=TUNE.wall4Dmg;}  /* ⚑ T102 — 최종 벽 500 (PLAN §11.7). 리터럴 300 을 `wall4At` 로 뽑아 두 엔진이 한 값만 본다 */
+  if(c>=TUNE.wall4At){hp*=TUNE.wall4Hp; dmg*=TUNE.wall4Dmg;}  /* ⚑ T104 — 최종 벽 600 (PLAN §11.7). 리터럴 500 을 `wall4At` 로 뽑아 두 엔진이 한 값만 본다 */
   return {hp:Math.round(hp), dmg:Math.round(dmg)};
 }
 
@@ -209,30 +209,37 @@ function enemyStats(c,w){
    하나씩 자동으로 얻고, 10개를 다 얻은 뒤의 레벨업은 특전을 주지 않는다(위임 기본값).
    px 키 = 특전 id. 장비 계열 옵션(GOPT §11.6)이 쓰는 짧은 키(axe·wave·firstHit …)는 별도 네임스페이스로
    그대로 살아 있다 — 이번 전환에서 장비·스탯·경제는 한 줄도 안 바뀐다(주인 지시 ④).
+   ⚑⚑⚑ T104 (주인 확정 2026-09-03) — 획득 순서 재정렬 + 1번 특전 효과 교체.
+     ① 1번 특전이 «생명 흡수(준 피해 10% 회복)» → «회피 시 회복(10% 확률로 최대 체력 6% 회복)» 으로 바뀌었다.
+        엔진의 `steal` 스탯은 남지만 특전이 더는 안 쓴다(게이트 «흡혈» 단언은 이 특전 기준으로 갈아끼웠다).
+     ② 나머지 9종의 «효과·수치» 는 한 글자도 안 바뀐다 — 순서만 아래처럼 바뀐다.
    수치 해석(주인 위임 기본값 ⑦):
+     · 회피 시 회복 = **회피 성공마다 10% 굴려서** 최대 체력 6% 회복(초과분 버림 · 실드 안 채움 · 트리거는
+       «내가 적 공격을 회피한 순간» = 4번 «회피 시 화살» 과 같은 자리 · 4번보다 앞서 굴린다)
      · 확률형(회피·반격·치확)은 **+10** (기본 20 → 30) · 치명타 피해는 **+50** (기본 150 → 200)
      · 공격력 +20% · 방어력 +10% 는 **기본치에 곱연산**이고 장비 합산 «뒤» 에 걸린다
        (`mkPlayer` 가 장비 옵션을 먼저 다 적용한 뒤 특전이 붙으므로 획득 시점 곱이 곧 «장비 합산 뒤» 다)
-     · 생명 흡수 = 준 피해의 10% 를 체력으로 회복(초과분 버림 · 실드는 안 채움 → `heal(...,true)`)
-     · 8·9·10 소환은 기존 엔진 그대로 1개 = 1발, 쿨다운 없음
+     · 3·4·5 소환은 기존 엔진 그대로 1개 = 1발, 쿨다운 없음
    ⚑ 소환 연쇄 임계 B: 세 소환이 전부 «피격/회피/반격» 축이라 **소환 적중이 새 소환을 낳지 않는다** → B = 0.
    금지축(경제·이속·최대체력/최대실드 증가·적중률·부활·분신·주기형 회복)은 그대로다.
-   **흡혈 금지는 폐기됐다**(주인 확정 ⑥ — 7번이 최신 확정. 적중률 금지는 유효). ---------- */
+   **적중률 금지는 유효**(흡혈 금지는 T96 에서 폐기됐고, T104 로 흡혈 축 자체가 특전에서 사라졌다). ---------- */
 const PERK_ATK_M=1.20, PERK_DEF_M=1.10, PERK_EVADE_A=10, PERK_COUNTER_A=10,
-      PERK_CRITR_A=10, PERK_CRITF_A=50, PERK_STEAL=10, PERK_SUMMON_CH=0.50;
-/* 순서 고정 — 이 배열의 순서가 곧 획득 순서다(주인 표 1~10번). 게이트가 순서·수치를 대조한다. */
+      PERK_CRITR_A=10, PERK_CRITF_A=50, PERK_EVHEAL_CH=0.10, PERK_EVHEAL_F=0.06, PERK_SUMMON_CH=0.50;
+/* 순서 고정 — 이 배열의 순서가 곧 획득 순서다(주인 표 1~10번). 게이트가 순서·수치를 대조한다.
+   ⚑⚑⚑ T104 — 새 순서: 회피 시 회복 → 반격률 → 반격 시 창 → 회피 시 화살 → 피격 시 도끼 →
+                          공격력 → 회피율 → 치확 → 치배 → 방어력 (주인 확정 2026-09-03). */
 function mkPerks(){
   return [
+    {id:'p_evadeHeal',nm:'회피 시 회복',      d:'회피 시 10% 확률로 최대 체력 6% 회복', ap:p=>p.px.p_evadeHeal=1},
+    {id:'p_counter', nm:'반격률 증가',        d:'반격률 +10',                      ap:p=>{p.px.p_counter=1;p.counter+=PERK_COUNTER_A;}},
+    {id:'p_spearCt', nm:'반격 시 창',         d:'반격 시 50% 확률로 창 1개',       ap:p=>p.px.p_spearCt=1},
+    {id:'p_arrowEv', nm:'회피 시 화살',       d:'회피 시 50% 확률로 화살 1개',     ap:p=>p.px.p_arrowEv=1},
+    {id:'p_axeHit',  nm:'피격 시 도끼',       d:'피격 시 50% 확률로 도끼 1개',     ap:p=>p.px.p_axeHit=1},
     {id:'p_atk',     nm:'공격력 증가',        d:'공격력 +20%',                     ap:p=>{p.px.p_atk=1;p.dmg*=PERK_ATK_M;}},
     {id:'p_evade',   nm:'회피율 증가',        d:'회피율 +10',                      ap:p=>{p.px.p_evade=1;p.evade+=PERK_EVADE_A;}},
-    {id:'p_counter', nm:'반격률 증가',        d:'반격률 +10',                      ap:p=>{p.px.p_counter=1;p.counter+=PERK_COUNTER_A;}},
     {id:'p_critR',   nm:'치명타 확률 증가',   d:'치명타 확률 +10',                 ap:p=>{p.px.p_critR=1;p.critR+=PERK_CRITR_A;}},
     {id:'p_critF',   nm:'치명타 피해 증가',   d:'치명타 피해 +50',                 ap:p=>{p.px.p_critF=1;p.critF+=PERK_CRITF_A;}},
     {id:'p_def',     nm:'방어력 증가',        d:'방어력 +10%',                     ap:p=>{p.px.p_def=1;p.def*=PERK_DEF_M;}},
-    {id:'p_steal',   nm:'생명 흡수',          d:'준 피해의 10% 회복',              ap:p=>{p.px.p_steal=1;p.steal+=PERK_STEAL;}},
-    {id:'p_axeHit',  nm:'피격 시 도끼',       d:'피격 시 50% 확률로 도끼 1개',     ap:p=>p.px.p_axeHit=1},
-    {id:'p_arrowEv', nm:'회피 시 화살',       d:'회피 시 50% 확률로 화살 1개',     ap:p=>p.px.p_arrowEv=1},
-    {id:'p_spearCt', nm:'반격 시 창',         d:'반격 시 50% 확률로 창 1개',       ap:p=>p.px.p_spearCt=1},
   ];
 }
 const PERKS=mkPerks();
@@ -904,7 +911,10 @@ function hitPlayer(G,dmg,isMelee,src){
     if(px.evadeCounter&&pkk(p,1.0*px.evadeCounter))doCounter(G,src);
     if(px.evadeAxe&&pkk(p,0.10*px.evadeAxe))fireAxe(p,1);
     gainWard(p,0.10*px.wardEvade);
-    /* ⑨ 회피 시 화살 — 회피 1회당 50% 확률로 화살 1발 */
+    /* ⚑⚑⚑ T104 (주인 확정) — 1번 특전 «회피 시 회복»: 회피 성공마다 10% 굴려서 최대 체력 6% 회복.
+       `heal(...,true)` 로 회복 증폭/오버킬 수리 분기를 타지 않는다 → 실드는 안 채운다(위임 기본값). */
+    if(px.p_evadeHeal&&pkk(p,PERK_EVHEAL_CH))heal(p,p.maxHp*PERK_EVHEAL_F,true);
+    /* ④ 회피 시 화살 — 회피 1회당 50% 확률로 화살 1발 (T104 로 순번 9 → 4) */
     if(px.p_arrowEv&&pkk(p,PERK_SUMMON_CH))fireArrows(p,1);
     /* ☠️🌾 사신의 낫 — 회피 시 20% 확률로 그 적 즉사. **보스 포함**(주인 명시).
        게임에는 낫이 베는 전용 연출이 붙는다(일반 처치 연기와 구별). */
