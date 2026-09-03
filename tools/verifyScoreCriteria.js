@@ -99,6 +99,17 @@ const HAR_RE = /장비 «(전설|신화|영웅|희귀|일반)(?:\+(\d+))? 6부�
   const e2sp = pick(e2sec, 'PLAN 실험2 스프레드 임계', /(\d+)%p 이상\)이면/, 1);
   const simE2sp = pick(SIM, 'sim 실험2 스프레드 임계', /sp<(\d+)\?'OK':'초과'/, 1);
   cmp('실험2 스프레드 임계(%p)', e2sp, simE2sp);
+  /* ⚑⚑ P3 R04 (주인 승인 39번 ⓐ · 2026-09-03) — 채점 대상 등급을 못박는다.
+     일반 44종은 주인 확정 동결이라 워커 노브가 없어 폭 판정에서 뺐다. 뺀 것이 «조용히 다시 들어오거나»,
+     반대로 «희귀·전설까지 함께 빠져 폭 채점이 통째로 사문화되는» 것을 둘 다 막는다 —
+     문면과 상수가 서로를 잡으므로 한쪽만 바꾸면 빨개진다. */
+  cmp('실험2 채점 대상 등급 문면', 'yes', /채점 대상 등급 = 희귀·전설 두 등급만/.test(e2sec) ? 'yes' : 'no',
+      'PLAN §7 실험2 절이 «채점 대상 등급 = 희귀·전설 두 등급만» 이라고 적어야 한다 (승인 39번 ⓐ)');
+  const simE2rar = pick(SIM, 'sim 실험2 채점 등급', /const EXP2_SCORE_RAR\s*=\s*\[([\d,]+)\]/, 1);
+  cmp('실험2 채점 대상 등급(구현)', '1,2', simE2rar, '희귀(1)·전설(2)만 — 일반(0)은 참고 표시');
+  const simE2used = /if\(EXP2_SCORE_RAR\.includes\(r\)&&sp<25\)spPass\+\+;/.test(SIM);
+  cmp('실험2 채점이 EXP2_SCORE_RAR 을 쓴다', 'yes', simE2used ? 'yes' : 'no',
+      '합격 집계가 상수를 거쳐야 한다 (등급 번호를 리터럴로 박아 우회하는 것 차단)');
   const e2min = pick(e2sec, 'PLAN 실험2 표본 하한', /표본 (\d+)판 미만/, 1);
   const simE2min = pick(SIM, 'sim 실험2 표본 하한', /if\(s\.n>=(\d+)\)rows\.push/, 1);
   cmp('실험2 표본 하한(판)', e2min, simE2min);
@@ -216,6 +227,21 @@ const HAR_RE = /장비 «(전설|신화|영웅|희귀|일반)(?:\+(\d+))? 6부�
   if (simE5n !== null)
     rows.push({ name: '실험5 판수 하한(≥1000)', plan: `≥${EXP5_N_FLOOR}`, impl: String(simE5n),
                 ok: Number(simE5n) >= EXP5_N_FLOOR, note: 'T87 — PLAN·엔진이 사이좋게 같이 내려가는 것도 막는다' });
+  /* ⚑⚑ P3 R04 (주인 승인 38번 A안 · 2026-09-03) — 사다리의 «측정 조건» 을 못박는다.
+     이 축은 이미 한 번 조용히 어긋났다: PLAN §7·§11.7·LADDER 주석이 셋 다 «특전 미획득» 이라 적어 두었는데
+     코드는 «특전을 다 먹은 런» 을 재고 있었고(R01 발견), 그 상태로 회차 점수가 매겨졌다.
+     이제 자는 «일반 특전만 뜨는 런» 이고, 문면 두 곳 ↔ 호출부가 서로를 잡는다 —
+     한쪽만 바꾸면 빨개진다(코드만 되돌리면 ③이, 문면만 되돌리면 ①②가 걸린다). */
+  const e5secLad = PLAN.slice(PLAN.indexOf('실험5 (스탯 사다리 검증'), PLAN.indexOf('조정 노브:'));
+  const e5cond = /슬롯 0렙 · 일반 특전만 뜨는 런/.test(e5secLad);
+  cmp('실험5 측정 조건 문면(§7)', 'yes', e5cond ? 'yes' : 'no',
+      'PLAN §7 실험5 절이 «슬롯 0렙 · 일반 특전만 뜨는 런» 이라고 적어야 한다 (승인 38번 A안)');
+  const ladHead = PLAN.slice(PLAN.indexOf('⚑ 주인 확정 스탯 사다리'), PLAN.indexOf('| 상태 | 겨우 클리어하는 챕터'));
+  cmp('실험5 측정 조건 문면(§11.7)', 'yes', /«일반 특전만 뜨는 런»/.test(ladHead) ? 'yes' : 'no',
+      'PLAN §11.7 사다리 표 머리도 같은 조건을 적어야 한다');
+  const simE5lock = /for\(let i=0;i<N;i\+\+\)\s*if\(runChapter\(c,b,\{rarityLock:0\}\)\.clear\)w\+\+;/.test(SIM);
+  cmp('실험5 호출부가 일반 등급 고정', 'yes', simE5lock ? 'yes' : 'no',
+      'exp5_ladder 가 runChapter(c,b,{rarityLock:0}) 로 돌아야 한다 — {} 나 {noPerk:1} 이면 자가 바뀐 것이다');
 }
 
 /* ─────────── 등재된 기존 차이 (KNOWN) ─────────── */

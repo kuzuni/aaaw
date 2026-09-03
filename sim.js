@@ -1490,16 +1490,27 @@ function exp2_perkWinrate(){
   rows.slice(0,12).forEach(x=>console.log(`  ${x.id}(${['일','희','전','신'][x.r]}) ${x.wr.toFixed(0)}% (${x.n}판)`));
   console.log('-- 하위 12 --');
   rows.slice(-12).forEach(x=>console.log(`  ${x.id}(${['일','희','전','신'][x.r]}) ${x.wr.toFixed(0)}% (${x.n}판)`));
-  console.log('-- 등급별 스프레드 (표본 25판 이상만) --');
+  /* ⚑⚑ 채점 범위 (주인 승인 39번 ⓐ · 2026-09-03 · P3 R04 이행) — **일반 등급은 폭 판정에서 뺀다.**
+     이유는 «일반이 잘 안 나와서» 가 아니라 **워커에게 노브가 없어서**다: 주인이 일반 44종을 내용·수치
+     전부 동결했고 게이트 `verifyCommonFreeze` 가 4자 대조로 그 수정을 실제로 막는다. 그대로 두면
+     채점표 실험2 1점 중 1/3 을 회차가 시작도 하기 전에 잃는다(= 총점 상한 9.67).
+     주인 답 ⓐ = «일반 등급 폭은 채점에서 제외, 실험2 1점을 희귀·전설 각 1/2점으로 재배분».
+     일반 칸은 **측정·표시는 그대로 하고 판정만 참고**로 돌린다 — 동결분이 나빠지는 것을 놓치지 않기 위해서다. */
+  const EXP2_SCORE_RAR=[1,2];   // 채점 대상 등급 (희귀·전설) — 일반(0)은 동결이라 참고 표시만
+  console.log('-- 등급별 스프레드 (표본 25판 이상만 · ⚑ 채점은 희귀·전설 각 1/2점, 일반은 참고 — 승인 39번 ⓐ) --');
+  let spPass=0;
   for(let r=0;r<3;r++){
     const rr=rows.filter(x=>x.r===r);
     if(!rr.length){console.log(`  ${RAR_NAME[r]}: 표본 없음`);continue;}
     const hi=rr[0],lo=rr[rr.length-1],sp=hi.wr-lo.wr;
+    if(EXP2_SCORE_RAR.includes(r)&&sp<25)spPass++;
     /* R09: 소수점 1자리로 출력한다. 정수 반올림이면 «최상 80% / 최하 55% → 폭 25%p OK» 처럼
        끝값과 폭이 서로 안 맞아 보여(실제 79.8−55.2=24.6) 읽는 쪽이 판정 오류로 오해한다 —
        R09 비평가 2명이 독립적으로 같은 오독을 했다. 판정(sp<25)은 원래부터 미반올림 값이라 무변경. */
-    console.log(`  ${RAR_NAME[r]}: 최상 ${hi.id} ${hi.wr.toFixed(1)}% / 최하 ${lo.id} ${lo.wr.toFixed(1)}% → 폭 ${sp.toFixed(1)}%p ${sp<25?'OK':'초과'}`);
+    const tag=EXP2_SCORE_RAR.includes(r)?'':'  ← 참고(채점 제외 · 일반 44종 동결)';
+    console.log(`  ${RAR_NAME[r]}: 최상 ${hi.id} ${hi.wr.toFixed(1)}% / 최하 ${lo.id} ${lo.wr.toFixed(1)}% → 폭 ${sp.toFixed(1)}%p ${sp<25?'OK':'초과'}${tag}`);
   }
+  console.log(`  채점 합격 ${spPass}/${EXP2_SCORE_RAR.length} (희귀·전설 각 1/2점 — 승인 39번 ⓐ)`);
   if(process.env.EXP2_FULL){
     console.log('-- [진단] 등급별 전 특전 승률 (표본 25판 이상, 내림차순) --');
     for(let r=0;r<3;r++){
@@ -1577,8 +1588,18 @@ function exp4_gearProgress(){
 }
 /* ---------- 실험5: 스탯 사다리 7점 검증 (⚑ T35 — PLAN §11.7 주인 확정 과녁) ---------- */
 /* 종전의 앵커 3점(C=30 · A=90 · B=300)은 주인이 폐기했다. 유일한 과녁은 아래 «등급별 스탯 사다리» 다:
-   노템 5 · 일반 15 · 희귀 30 · 영웅 50 · 전설 70 · 신화 120 · 신화+9강 260 (전부 슬롯 0렙 · 특전 미획득).
-   합격 구간은 §7 T6 제안 기준을 그대로 승계한다 — 과녁 챕터 클리어율 2~10% (기대 재도전 10~50회). */
+   노템 5 · 일반 15 · 희귀 30 · 영웅 50 · 전설 70 · 신화 120 · 신화+9강 260 (전부 슬롯 0렙).
+   합격 구간은 §7 T6 제안 기준을 그대로 승계한다 — 과녁 챕터 클리어율 2~10% (기대 재도전 10~50회).
+   ⚑⚑ 측정 조건 = «일반 특전만 뜨는 런» (주인 승인 38번 A안 · 2026-09-03 · P3 R04 이행).
+   왜 바뀌었나. R01 이 세 자를 나란히 재 보니 **2~10% 밴드가 존재하지 않는 자가 둘**이었다 —
+   PLAN 문면대로 «특전 미획득» 으로 재면 챕터 30 이 0.0%(하한 미달), 종전 코드처럼 «특전 전부» 로 재면
+   24.0%(상한 초과)다. 특전이 클리어율의 지배 요인이라 그 사이에 밴드가 없다.
+   주인 답 = A안 — **사다리를 실험1 ①단계와 같은 자(일반 특전만)로 재정의**한다. 그러면
+   ① 두 실험이 같은 자를 써서 회차마다 서로를 깨지 않고 ② «일반이 절대 기준» 지시와 방향이 같으며
+   ③ «장비 등급이 과녁 챕터를 정한다» 는 사다리 본래 취지도 그대로 남는다.
+   구현은 `runChapter(c,b,{rarityLock:0})` 한 곳뿐이다(실험1 의 등급 고정과 같은 경로).
+   ⚠ `noPerk` 옵션(R01 신설)은 «특전 미획득» 자를 따로 볼 때만 쓰는 진단용으로 남는다 — 채점에는 안 쓴다.
+   게이트 `verifyScoreCriteria` 가 PLAN §7·§11.7 문면 ↔ 이 호출을 대조한다(자가 조용히 돌아가는 것 차단). */
 const LADDER=[
   {id:'노템',      rar:-1, plus:0, at:5,   want:[25,150,250]},
   {id:'일반',      rar:0,  plus:0, at:15,  want:[50,250,400]},
@@ -1603,7 +1624,7 @@ function exp5_ladder(){
   const N=parseInt(process.env.EXP5_N||String(EXP5_SCORE_N),10);
   const only=process.env.EXP5_ONLY;                 /* '신화' 등으로 한 칸만 측정 */
   const span=parseInt(process.env.EXP5_SPAN||'0',10);   /* >0 이면 과녁 ±span 챕터도 함께 측정 */
-  console.log(`\n=== 실험5: 스탯 사다리 7점 (PLAN §11.7 · 각 챕터 ${N}판 · 슬롯 0렙 · 합격 2~10%) ===`);
+  console.log(`\n=== 실험5: 스탯 사다리 7점 (PLAN §11.7 · 각 챕터 ${N}판 · 슬롯 0렙 · 일반 특전만 · 합격 2~10%) ===`);
   const rows=[];
   for(const L of LADDER){
     if(only&&only!==L.id)continue;
@@ -1616,7 +1637,7 @@ function exp5_ladder(){
     for(let c=L.at-span;c<=L.at+span;c++){
       if(c<1)continue;
       let w=0;
-      for(let i=0;i<N;i++) if(runChapter(c,b,{}).clear)w++;
+      for(let i=0;i<N;i++) if(runChapter(c,b,{rarityLock:0}).clear)w++;   /* ⚑ 승인38 A안 — 사다리 자 = «일반 특전만 뜨는 런» */
       const rate=w/N*100;
       const exp=rate>0?(100/rate).toFixed(1)+'회':'∞';
       const tag=c===L.at?(rate>=2&&rate<=10?'   ← 과녁 ✓':'   ← 과녁 ✗(합격 2~10%)'):'';
