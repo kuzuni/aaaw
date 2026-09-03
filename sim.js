@@ -98,9 +98,13 @@ function payDevilCost(p){
   return p.maxHp;
 }
 /* ⚑ 주인 확정 제약 (PLAN §2.4, 2026-09-02 14:2X) — 전 300 챕터 공통:
-   ① 적 총 수 ≤ 100 (보스 제외 웨이브 적 합) ② 쉼터 1~4 ③ 악마 정확히 1 ④ 천사 정확히 1.
-   가중치(45/30/25) 배치는 폐기 — 악마1·천사1 을 먼저 깔고 남는 슬롯을 전부 쉼터로 채운 뒤 순서만 시드 셔플한다. */
-const LAYOUT_MAXENEMY=100;
+   ① 적 총 수 ≤ 50 ② 쉼터 1~4 ③ 악마 정확히 1 ④ 천사 정확히 1.
+   ⚑⚑ T96 (주인 확정 2026-09-03 ③) — 상한 **100 → 50**. 챕터 1~300 레이아웃이 이 상한으로 다시 만들어진다.
+   `chapterLayout` 이 시드 결정적이라 상수 하나로 전 구간이 재생성된다 — 챕터 1~300 실측:
+   적 총 수 **40~50마리**(웨이브 4개×10=40 또는 4×12=48 또는 5×10=50 · 종전 상한 100 에서는 60까지 갔다),
+   웨이브 4개 161챕터 · 5개 139챕터, 쉼터 1~2개, 악마 1·천사 1 은 전 챕터 그대로다.
+   후반 난이도는 마릿수가 아니라 적 스탯으로 낸다는 주인 조항은 그대로다. */
+const LAYOUT_MAXENEMY=50;
 /* ⚑ 쉼터 보상 (PLAN §2.4 · 주인 확정 2026-09-02 17:1X · T49) — «❤️ 체력 260 회복(고정값)» vs «🌟 경험치 +26».
    고정값이라 최대체력 비율로 되돌리지 말 것. index.html 과 이름·값이 같아야 한다(게이트 verifyRestPolicy). */
 const REST_HEAL=260, REST_EXP=26;
@@ -118,21 +122,8 @@ const STUN_BOSS_MUL=1/3;
    (밸런스는 발동 확률 10% 단위·발수로만). 창·검기는 일직선 관통형이라 관통 마릿수도 여기서 못 박는다. */
 const R_AXE=0.30, R_ARROW=0.50, R_WAVE=0.50, R_BOLT=0.75, R_SPEAR=1.00;
 const WAVE_PIERCE=2, WAVE_PIERCE_BIG=8, SPEAR_PIERCE=8;
-/* 새 132종 전용 상수 — 주기 소환 2초(⏰ 3종) · 공속 램프 3초마다 +5%(🎻) · 사신의 낫 20%(☠️🌾, 보스 포함) */
-const AUTO_SUMMON_T=2.0, ASPD_RAMP_T=3.0, ASPD_RAMP_AMT=0.10, REAPER_CH=0.20;
-/* ⚑⚑ P3 R04 (주인 승인 40번 ⓐ+ⓔ · 2026-09-03) — ③단계 «등급 내 폭» 전용 노브 2개.
-   OVERKILL_HEAL_C / OVERKILL_REPAIR_C = 오버킬 회복 2종(🩸 r_overheal · 🔧⚡ l_overRepair)에 붙인 계수.
-     종전엔 «초과 데미지 전부» 라 두 등급의 1위를 모두 이 축이 독점했고(희귀 99.0 · 전설 99.7),
-     구조형이라 내릴 노브가 아예 없었다. 주인이 ⓐ(구조형에 계수 부착)를 승인해 여기서 내린다.
-     ⚠ 실측: 계수 0.50 은 무동작(승률 98.8 그대로)이다 — 오버킬 데미지 자체가 최대 체력보다 크기 때문에
-     «절반» 이어도 여전히 완전 회복이다. 0.10 에서야 물린다(희귀 99 → 74).
-   COUNTER_CHAIN_N = 🔂 l_counterChain 의 «반드시 더 반격» 횟수(주인 예시 «반격 연쇄» 노브).
-     T69 의 «무한 연쇄 금지» 는 그대로다 — 상한이 있는 유한 연쇄다.
-   AUTO_SPEAR_T = 🔱⏰ 자동 창의 주기. 종전엔 ⏰ 3종이 AUTO_SUMMON_T 하나를 같이 썼는데, 창만
-     «관통 8마리 × 마리당 100%» 라 같은 2초에서 전설 1위를 독점했다 — 창만 3초로 떼어 놓는다. */
-const OVERKILL_HEAL_C=0.10, OVERKILL_REPAIR_C=0.10, COUNTER_CHAIN_N=2, AUTO_SPEAR_T=3.0;
-/* ⚑ 등급 등장 확률 — 신화 폐지에 따른 3단 재정의 (일반 45 / 희귀 35 / 전설 20 · PLAN §3.0) */
-const RARITY_P=[0.45,0.35,0.20];
+/* ⚑ T96 — 주기 소환·공속 램프·오버킬 회복·반격 연쇄·등급 확률 상수는 특전 132종과 함께 폐지됐다
+   (새 10종에는 주기형 소환도 등급도 없다). 장비 옵션이 쓰는 `autoBolt`(3초 주기)만 남는다. */
 /* ⚑ 주인 확정 — 방어막(ward)은 장수 상한이 없다(무한). 수치형 실드와 별개 축으로, 실드는 데미지를
    «흡수» 하고 방어막은 타격 «1회» 를 통째로 무효화한다. 한 장이 소모되는 순간 «방어막 방어» 트리거
    (🛡️❤️ 회복 · 🛡️💥 반사 · 🥅 창)가 굴러간다. */
@@ -171,72 +162,36 @@ function enemyStats(c,w){
   return {hp:Math.round(hp), dmg:Math.round(dmg)};
 }
 
-/* ---------- 특전 정의 — ⚑ 주인 확정 재설계본 132종 (PLAN §3 · 정본 `docs/perk-redesign.md`)
-   일반 44 · 희귀 46 · 전설 42, 편차 4. **신화 등급 폐지**(장비의 신화 등급은 별개 — 유지).
-   **모든 특전이 고유다**(주인 확정 «획득 중복 금지») — 풀 필터가 `taken` 전체를 뺀다.
-   px 키 = **특전 id 그대로**. 구 128종이 쓰던 짧은 키(axe·wave·firstHit …)는 지우지 않았다 —
-   장비 계열 옵션(GOPT §11.6)이 그 키들을 그대로 쓰기 때문이다. 즉 이 파일에는 두 네임스페이스가 있다:
-     · 짧은 키  = 장비 옵션 전용 (수치는 종전 그대로 — 특전 교체가 장비 밸런스를 건드리지 않는다)
-     · id 키    = 새 특전 전용 (아래 표)
-   경제(골드·경험치)·이속·최대체력·즉시회복·흡혈·적중률·부활·분신·주기형 회복은 추가 금지 축이다. ---------- */
+/* ---------- 특전 = 고정 10종 · 순서 획득 (⚑⚑⚑ 주인 확정 2026-09-03 · PLAN §3) ----------
+   **132종 체제(등급·선택창·새로고침·전지의 눈)는 통째로 폐지됐다.** 레벨업할 때마다 아래 순서대로
+   하나씩 자동으로 얻고, 10개를 다 얻은 뒤의 레벨업은 특전을 주지 않는다(위임 기본값).
+   px 키 = 특전 id. 장비 계열 옵션(GOPT §11.6)이 쓰는 짧은 키(axe·wave·firstHit …)는 별도 네임스페이스로
+   그대로 살아 있다 — 이번 전환에서 장비·스탯·경제는 한 줄도 안 바뀐다(주인 지시 ④).
+   수치 해석(주인 위임 기본값 ⑦):
+     · 확률형(회피·반격·치확)은 **+10** (기본 20 → 30) · 치명타 피해는 **+50** (기본 150 → 200)
+     · 공격력 +20% · 방어력 +10% 는 **기본치에 곱연산**이고 장비 합산 «뒤» 에 걸린다
+       (`mkPlayer` 가 장비 옵션을 먼저 다 적용한 뒤 특전이 붙으므로 획득 시점 곱이 곧 «장비 합산 뒤» 다)
+     · 생명 흡수 = 준 피해의 10% 를 체력으로 회복(초과분 버림 · 실드는 안 채움 → `heal(...,true)`)
+     · 8·9·10 소환은 기존 엔진 그대로 1개 = 1발, 쿨다운 없음
+   ⚑ 소환 연쇄 임계 B: 세 소환이 전부 «피격/회피/반격» 축이라 **소환 적중이 새 소환을 낳지 않는다** → B = 0.
+   금지축(경제·이속·최대체력/최대실드 증가·적중률·부활·분신·주기형 회복)은 그대로다.
+   **흡혈 금지는 폐기됐다**(주인 확정 ⑥ — 7번이 최신 확정. 적중률 금지는 유효). ---------- */
+const PERK_ATK_M=1.20, PERK_DEF_M=1.10, PERK_EVADE_A=10, PERK_COUNTER_A=10,
+      PERK_CRITR_A=10, PERK_CRITF_A=50, PERK_STEAL=10, PERK_SUMMON_CH=0.50;
+/* 순서 고정 — 이 배열의 순서가 곧 획득 순서다(주인 표 1~10번). 게이트가 순서·수치를 대조한다. */
 function mkPerks(){
-  const P=[];
-  const add=(id,r,ap)=>P.push({id,r,ap:ap||(p=>p.px[id]=1)});
-  /* ===== 일반 44 ===== */
-  /* 소환 5 */
-  add('c_axeHit',0); add('c_arrowMiss',0); add('c_boltKill',0); add('c_waveAtk',0); add('c_spearEvade',0);
-  /* 버프 9 */
-  add('c_aspdAtk',0); add('c_evadeAtkB',0); add('c_evadeKill',0); add('c_atkPerm',0); add('c_evadePerm',0);
-  add('c_critMiss',0); add('c_aspdEvade',0); add('c_shieldAtk',0); add('c_noShieldEvade',0);
-  /* 회복 5 — 🍖 c_killHeal2 는 주인 확정 상수(처치 시 체력 5%), 튜닝 노브가 아니다 */
-  add('c_killHeal2',0,p=>{p.px.c_killHeal2=1;p.killHeal+=0.05;});
-  add('c_killShield3',0); add('c_hitHeal',0); add('c_shieldHit',0); add('c_evadeHealS',0);
-  /* 기타 15 */
-  add('c_stunAtk',0); add('c_stunHit',0); add('c_thornsS',0); add('c_rangeThorns',0);
-  add('c_wardHit',0); add('c_wardEvade',0); add('c_wardKill',0);
-  add('c_firstHit',0); add('c_backDmg',0); add('c_reaper',0); add('c_rangedDmg',0);
-  add('c_stunDmg',0); add('c_stunNoEvade',0); add('c_fourthDmg',0); add('c_evadeStack',0);
-  /* 추가 확정 10 */
-  add('c_stunKillNear',0); add('c_fourthCrit',0); add('c_fourthBolt',0);
-  add('c_lowEvade',0); add('c_lowAtk',0); add('c_wardEmpty',0);
-  add('c_collAtk',0); add('c_collEvade',0); add('c_collCounter',0); add('c_collDef',0);
-  /* ===== 희귀 46 ===== */
-  /* 소환 10 */
-  add('r_axeCrit',1); add('r_axeEvade',1); add('r_arrowAtk',1); add('r_arrowKill',1); add('r_boltEvade',1);
-  add('r_boltMiss',1); add('r_waveHit',1); add('r_waveCrit',1); add('r_spearKill',1); add('r_spearCounter',1);
-  /* 소환 개조 3 */
-  add('r_axeBounce',1); add('r_boltChain',1); add('r_arrowX2',1);
-  /* 버프 10 */
-  add('r_atkBuffM',1); add('r_critRBuff',1); add('r_critFBuff',1); add('r_defBuff2',1); add('r_hitEvadeBuff',1);
-  add('r_aspdKill',1); add('r_counterAtkM',1); add('r_missAspd',1); add('r_shieldAtkM',1); add('r_noShieldAtk',1);
-  /* 회복 8 */
-  add('r_overheal',1);
-  add('r_healAmp',1,p=>{p.px.r_healAmp=1;p.healAmp+=1.50;});      /* 💞 체력 회복 효과 +150% */
-  add('r_repairAmp',1,p=>{p.px.r_repairAmp=1;p.repairAmp+=1.50;}); /* 🔧 실드 수리 효과 +150% */
-  add('r_critHeal3',1); add('r_evadeShield',1); add('r_counterHeal',1); add('r_lowShield',1); add('r_wardHeal',1);
-  /* 기타 15 */
-  add('r_stunCrit',1); add('r_stunSlow',1); add('r_stunDmgM',1); add('r_comboDmg',1); add('r_counterX',1);
-  add('r_critF100',1,p=>{p.px.r_critF100=1;p.critF+=100;});        /* 🔥 치명타 데미지 +100% */
-  add('r_atk50',1,p=>{p.px.r_atk50=1;p.dmg*=1.50;});               /* 💪 공격력 +50% */
-  add('r_wardAtk',1); add('r_hitCounter',1); add('r_fifthCrit',1); add('r_evade3Dmg',1); add('r_stunEvade',1);
-  add('r_eventShield',1); add('r_stunCritR',1); add('r_wardSpear',1);
-  /* ===== 전설 42 ===== */
-  /* 소환 10 */
-  add('l_autoBolt',2); add('l_autoAxe',2); add('l_autoSpear',2); add('l_spear2Atk',2); add('l_boltAtk',2);
-  add('l_axeAtk',2); add('l_arrowAtk',2); add('l_waveAtk',2); add('l_spearCrit',2); add('l_boltHit',2);
-  /* 소환 개조 5 */
-  add('l_arrowToSpear',2); add('l_wavePierce',2); add('l_axeSpin',2); add('l_boltChainK',2); add('l_spearStun',2);
-  /* 버프 7 (정본 19번 «수집가» 는 일반 41번과 동일 효과라 삭제됨) */
-  add('l_noCritAtk3',2,p=>{p.px.l_noCritAtk3=1;p.dmg*=3;});        /* 💀⚔️ 치확 0% 대신 공격력 3배 */
-  add('l_shieldIgnore',2); add('l_slowAura',2); add('l_atkBuffL',2); add('l_critFBuffL',2);
-  add('l_evadeAspdL',2); add('l_aspdRamp',2);
-  /* 회복 5 */
-  add('l_overRepair',2); add('l_healSync',2); add('l_critHealL',2); add('l_killHeal5',2); add('l_wardHealK',2);
-  /* 기타 15 */
-  add('l_stunHit3',2); add('l_stunExec',2); add('l_dualWield',2); add('l_cleave',2); add('l_execute',2);
-  add('l_thorns',2); add('l_evade2Dmg',2); add('l_fullHpDmg',2); add('l_restWard',2); add('l_wardEvadeL',2);
-  add('l_missCrit',2); add('l_missStack',2); add('l_wardThorns',2); add('l_stunKillNear',2); add('l_counterChain',2);
-  return P;
+  return [
+    {id:'p_atk',     nm:'공격력 증가',        d:'공격력 +20%',                     ap:p=>{p.px.p_atk=1;p.dmg*=PERK_ATK_M;}},
+    {id:'p_evade',   nm:'회피율 증가',        d:'회피율 +10',                      ap:p=>{p.px.p_evade=1;p.evade+=PERK_EVADE_A;}},
+    {id:'p_counter', nm:'반격률 증가',        d:'반격률 +10',                      ap:p=>{p.px.p_counter=1;p.counter+=PERK_COUNTER_A;}},
+    {id:'p_critR',   nm:'치명타 확률 증가',   d:'치명타 확률 +10',                 ap:p=>{p.px.p_critR=1;p.critR+=PERK_CRITR_A;}},
+    {id:'p_critF',   nm:'치명타 피해 증가',   d:'치명타 피해 +50',                 ap:p=>{p.px.p_critF=1;p.critF+=PERK_CRITF_A;}},
+    {id:'p_def',     nm:'방어력 증가',        d:'방어력 +10%',                     ap:p=>{p.px.p_def=1;p.def*=PERK_DEF_M;}},
+    {id:'p_steal',   nm:'생명 흡수',          d:'준 피해의 10% 회복',              ap:p=>{p.px.p_steal=1;p.steal+=PERK_STEAL;}},
+    {id:'p_axeHit',  nm:'피격 시 도끼',       d:'피격 시 50% 확률로 도끼 1개',     ap:p=>p.px.p_axeHit=1},
+    {id:'p_arrowEv', nm:'회피 시 화살',       d:'회피 시 50% 확률로 화살 1개',     ap:p=>p.px.p_arrowEv=1},
+    {id:'p_spearCt', nm:'반격 시 창',         d:'반격 시 50% 확률로 창 1개',       ap:p=>p.px.p_spearCt=1},
+  ];
 }
 const PERKS=mkPerks();
 
@@ -606,9 +561,8 @@ function mkPlayer(build,G){
     dmg:pw.atk, aspd:TUNE.pAspd0, critR:TUNE.pCrit0, critF:TUNE.pCritF0,
     def:TUNE.pDef0, counter:TUNE.pCounter0, evade:TUNE.pEvade0, steal:0, killHeal:0, misfire:0, goldMul:1, walkMul:1, healAmp:0,
     maxHp, hp:maxHp, maxSh:pw.sh, sh:pw.sh,   /* ⚑ T35: 실드 독립 스탯 (`maxHp*0.8` 파생 폐기) */
-    level:1, exp:0, missStk:0, ward:0, repairAmp:0,
-    atkN:0, evStk:0, evStreak2:0, evStreak3:0, nextX3:false, nextP200:false,
-    comboT:null, comboN:0, rampN:0, lowShieldUsed:false, buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]}, px:basePx()};
+    level:1, exp:0, ward:0, repairAmp:0,
+    buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]}, px:basePx()};
   /* 장비 계열 옵션 적용 (PLAN §11.1 — 상위 등급은 하위 옵션 포함) */
   for(const pt of GT.parts){
     const g=build.eq[pt]; if(!g)continue;
@@ -625,28 +579,17 @@ const bsum=(p,k)=>{let s=0;for(const b of p.buffs[k])s+=b.amt;return s;};
    구 호출부가 넘기던 다섯째 인자(max)는 무시된다 — 표시 텍스트에서도 «최대 N중첩» 은 사라졌다. */
 function addBuff(p,k,amt,dur){ p.buffs[k].push({t:dur,amt}); }
 const pkk=(p,ch)=>Math.random()<ch*(p.px.procX2?1.22:1);
-/* 🃏 수집가 4종 — «보유한 특전 1개당». 획득 순간이 아니라 실효 스탯에서 매번 세므로
-   나중에 얻는 특전까지 소급된다(주인 원문 «보유한 특전 1개당»). */
-const perkN=p=>(p.G&&p.G.taken?p.G.taken.length:0);
 const effDmg=p=>{const px=p.px;let m=1+bsum(p,'atk');
   if(px.rage&&p.sh<=0)m*=1.5;                              /* 장비 옵션 */
-  if(px.c_shieldAtk&&p.sh>0)m*=1.20;                       /* 🛡️⚔️ 실드가 남아있는 동안 공격력 +20% */
-  if(px.r_shieldAtkM&&p.sh>0)m*=1.20;                      /* 🎇 실드가 있으면 공격력 +20% */
-  if(px.r_noShieldAtk&&p.sh<=0)m*=1.50;                    /* 😤👑 실드가 없는 동안 공격력 +50% */
-  if(px.c_lowAtk&&p.hp<=p.maxHp*0.50)m*=1.15;              /* 🔥🩸 체력 50% 이하 공격력 +15% */
-  if(px.c_collAtk)m*=1+0.02*perkN(p);                      /* 🃏⚔️ 특전 1개당 공격력 +2% */
   return p.dmg*m;};
-const effAspd=p=>p.aspd*(1+bsum(p,'aspd'))*(1+ASPD_RAMP_AMT*(p.rampN||0));   /* 🎻 3초마다 +10% */
-const effCritR=p=>p.px.l_noCritAtk3?0:p.critR+bsum(p,'critR');               /* 💀⚔️ 치확 0% */
+const effAspd=p=>p.aspd*(1+bsum(p,'aspd'));
+const effCritR=p=>p.critR+bsum(p,'critR');
 const effCritF=p=>p.critF+bsum(p,'critF');
-const effDef=p=>{let d=p.def+bsum(p,'def');if(p.px.c_collDef)d+=2*perkN(p);return Math.min(80,d);};
+const effDef=p=>Math.min(80,p.def+bsum(p,'def'));
 const effEvade=p=>{const px=p.px;let e=p.evade+bsum(p,'evade');
   if(px.lastStand&&p.hp<=p.maxHp*0.10)e+=40;               /* 장비 옵션 */
-  if(px.c_noShieldEvade&&p.sh<=0)e+=10;                    /* 😤 실드가 없는 동안 회피 +10% */
-  if(px.c_lowEvade&&p.hp<=p.maxHp*0.50)e+=15;              /* 🕯️ 체력 50% 이하 회피 +15% */
-  if(px.c_collEvade)e+=2*perkN(p);                         /* 🃏💨 특전 1개당 회피 +2% */
   return Math.min(90,e);};
-const effCounter=p=>p.counter+(p.px.c_collCounter?2*perkN(p):0);             /* 🃏🔁 특전 1개당 반격 +2% */
+const effCounter=p=>p.counter;
 /* ⚑ 실드 수리 한 곳 — 🔧 «실드 수리 효과 +100%»(r_repairAmp)가 여기 한 자리에서만 걸리므로
    특전이든 장비 옵션이든 수리는 전부 이 동사를 거친다. 시간 경과형 수리는 금지축이라 호출부가 없다. */
 function repair(p,amt){ if(amt<=0)return; p.sh=Math.min(p.maxSh,p.sh+amt*(1+p.repairAmp)); }
@@ -663,7 +606,6 @@ function heal(p,amt,noBoost){
     if(px.healShield3&&pkk(p,0.20*px.healShield3)) repair(p,p.maxSh*0.03);
     if(px.healShield5&&pkk(p,0.30*px.healShield5)) repair(p,p.maxSh*0.08);
     if(px.healAtkBuff) addBuff(p,'atk',0.08,3);
-    if(px.l_healSync) repair(p,amt);   /* 💠 체력을 회복할 때 같은 수치만큼 실드도 같이 수리 */
     if(over>0){
       if(px.overheal) repair(p,over*7);   /* 장비 옵션 */
       if(px.overBolt&&p.G.overBoltCd<=0){ p.G.overBoltCd=0.12; fireBolts(p,true); }
@@ -702,21 +644,6 @@ function onKill(G,e,over){
   if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff))addBuff(p,'critR',14,4);      /* 장비 옵션 */
   if(px.killDefBuff)addBuff(p,'def',10*px.killDefBuff,3);                       /* 장비 옵션 */
   if(px.killAspd)p.aspd*=1.01;                                                  /* 장비 옵션 */
-  /* ===== 새 132종 «처치 시» 축 ===== */
-  if(px.c_killShield3&&pkk(p,0.10))repair(p,p.maxSh*0.10);        /* 🔰 10% 확률로 실드 10% 충전 */
-  if(px.l_killHeal5&&pkk(p,0.30))heal(p,p.maxHp*0.10);            /* 💉 30% 확률로 체력 10% 회복 */
-  if(px.c_evadeKill)addBuff(p,'evade',40,2);                      /* 👟 2초간 회피 +40% (확률 없음) */
-  if(px.c_atkPerm&&pkk(p,0.30))p.dmg*=1.01;                       /* 🌱 30% 확률로 공격력 +1% */
-  if(px.c_evadePerm&&pkk(p,0.30))p.evade+=1;                      /* 🍃 30% 확률로 회피 +1% */
-  if(px.r_aspdKill&&pkk(p,0.40))addBuff(p,'aspd',0.10,7);         /* ⚡👑 40% 확률로 7초간 공속 +10% */
-  if(px.c_boltKill&&pkk(p,0.70))fireBolts(p,1);                   /* ⚡ 70% 확률로 번개 1회 */
-  if(px.r_arrowKill&&pkk(p,0.40))fireArrows(p,2);                 /* 🏹 40% 확률로 화살 2발 */
-  if(px.r_spearKill&&pkk(p,0.50))fireSpear(p,1);                  /* 🔱 50% 확률로 창 1개 */
-  if(px.c_wardKill&&pkk(p,0.10))p.ward++;                         /* ⚔️✨ 10% 확률로 방어막 1장 */
-  if(over>0&&px.r_overheal)heal(p,over*OVERKILL_HEAL_C);               /* 🩸 오버킬 힐 — 초과 데미지의 10% */
-  if(over>0&&px.l_overRepair)repair(p,over*OVERKILL_REPAIR_C);           /* 🔧⚡ 오버킬 수리 — 초과 데미지의 10% */
-  if(px.c_stunKillNear&&pkk(p,0.20)){const t=nearestTo(G,e.worldX,e);if(t)applyStun(G,t,3);}   /* 💫👟 */
-  if(px.l_stunKillNear&&pkk(p,0.60)){const t=nearestTo(G,e.worldX,e);if(t)applyStun(G,t,3);}   /* 💫👑 */
   /* 웨이브 전멸 실드 충전 폐지 (PLAN §2.3 주인 지시) — 실드 충전은 특전으로만 */
   if(e.isBoss)G.cleared=true;   /* 클리어 확정을 먼저 — 보스 경험치로 레벨업해도 특전 3택 없음 (PLAN §2.4 주인 지시) */
   gainExp(G,(e.isBoss?TUNE.expBoss:TUNE.expKill)+(px.sage?1:0));
@@ -724,7 +651,7 @@ function onKill(G,e,over){
 function gainExp(G,n){
   const p=G.player;
   p.exp+=n;
-  while(p.exp>=TUNE.expNeed(p.level)){p.exp-=TUNE.expNeed(p.level);p.level++;if(!G.cleared)perkChoice(G);}
+  while(p.exp>=TUNE.expNeed(p.level)){p.exp-=TUNE.expNeed(p.level);p.level++;if(!G.cleared)grantNextPerk(G);}
 }
 /* ⚑ T48 1단계 — 스턴 메커니즘 (주인 15:5X · PLAN §3.0).
    적은 원래 제자리 고정이라 «정지» 할 것이 공격뿐이다 — 스턴 중엔 근접 타격도 화살도 나가지 않는다.
@@ -750,13 +677,6 @@ function procOnMiss(G,e){
   if(px.missReset&&pkk(p,0.30*px.missReset))p.atkTimer=0;
   if(px.missRush){p.atkTimer=0;p.nextAtk=Math.min(1.5,Math.max(p.nextAtk,1.0));}
   if(px.missSpear&&pkk(p,0.20*px.missSpear))fireSpear(p,1);
-  /* ===== 새 132종 «빗나가면» 축 ===== */
-  if(px.c_arrowMiss&&pkk(p,0.30))fireArrows(p,1);           /* 🏹 30% 확률로 화살 1발 */
-  if(px.r_boltMiss&&pkk(p,0.40))fireBolts(p,2);             /* ⚡ 40% 확률로 번개 2회 */
-  if(px.c_critMiss&&pkk(p,0.30))addBuff(p,'critR',5,7);     /* 💨 30% 확률로 7초간 치확 +5% */
-  if(px.r_missAspd&&pkk(p,0.70))addBuff(p,'aspd',0.20,7);   /* 💨⚡ 70% 확률로 7초간 공속 +20% */
-  if(px.l_missCrit)p.nextCrit=true;                         /* 🎯💨 다음 공격 무조건 치명타 */
-  if(px.l_missStack)p.missStk++;                            /* 💢 «데미지 +100%» 스택 — 무제한 적립 */
 }
 /* 횟수형 방어막 — «적 공격 1회를 완전히 막아주는 방어막 1장». 5장이면 5번 막는다.
    ⚑ 주인 확정으로 **장수 상한 없음**. 수치형 실드(p.sh)와 별개 축이라 서로 간섭하지 않는다. */
@@ -771,7 +691,6 @@ function procOnRanged(G,src,dmg){
   if(px.rangeThorns&&src&&src.hp>0&&pkk(p,0.30*px.rangeThorns))reflect(G,src,effDmg(p)*0.8);/* 장비 옵션 */
   if(px.rangeBolt&&pkk(p,0.30*px.rangeBolt))fireBolts(p,1);                                 /* 장비 옵션 */
   if(px.rangeSpear&&pkk(p,0.10*px.rangeSpear))fireSpear(p,1);                               /* 장비 옵션 */
-  if(px.c_rangeThorns&&src&&src.hp>0&&pkk(p,0.30))reflect(G,src,dmg*1.00);                  /* 🏹🌵 100% 반사 */
 }
 /* 반사 한 곳 — 반사는 «플레이어가 겨눈 타격» 이 아니라 적 회피를 타지 않는다(주인 확정 T43 위임 판단). */
 function reflect(G,src,amt){ if(!src||src.hp<=0||amt<=0)return; src.hp-=amt; if(src.hp<=0)onKill(G,src,-src.hp); }
@@ -781,46 +700,29 @@ function dealDmg(G,e,ratio,fromBasic){
   const full=e.hp>=e.maxHp-0.5, stunned=e.stun>0;
   let cr=effCritR(p);
   if(px.fullHpCrit&&full)cr=Math.max(cr,62);                 /* 장비 옵션 */
-  if(px.r_stunCritR&&stunned)cr+=60;                         /* 🧊 기절 중인 적에게 치확 +60% */
-  if(fromBasic&&px.c_fourthCrit&&p.atkN%4===0)cr=100;        /* 🔢🎯 4번째 공격마다 무조건 치명타 */
   if(fromBasic&&p.nextCrit)cr=100;
   const crit=Math.random()*100<cr;
   if(fromBasic&&p.nextCrit)p.nextCrit=false;
   /* ⚑ 적 회피 10% (PLAN §2.3 주인 확정). 판정을 치명타 굴림 «뒤» 에 두는 이유:
      빗맞아도 그 «공격» 은 일어난 것이라 nextCrit(여기) 과 nextAtk(playerStrike) 가 함께 소모된다 — 위임 기본값.
-     여기가 유일한 빗맞음 지점이므로 «빗맞음 트리거» 축도 이 자리에 붙는다.
-     🗿 c_stunNoEvade — «기절 중인 적은 회피하지 못함»: 굴림 자체를 건너뛴다. */
+     여기가 유일한 빗맞음 지점이므로 «빗맞음 트리거» 축도 이 자리에 붙는다. */
   G.atkTries++;
-  if(!(stunned&&px.c_stunNoEvade)&&Math.random()<ENEMY_EVADE){G.miss++;procOnMiss(G,e);return false;}
   let d=effDmg(p)*ratio*(crit?effCritF(p)/100:1)*rand(0.92,1.08);
   /* 가산 보너스 풀 — «+n%» 로 적히는 데미지 보너스는 서로 합연산 (주인 정정 16:3X).
      스택형(빗맞음·회피)은 «적중 1타당 1개» 소모하고, 몇 장이 쌓여 있든 한 타에 한 번만 붙는다. */
   let addBonus=0;
   if(full&&px.firstHit)addBonus+=0.20*px.firstHit;           /* 장비 옵션 */
-  if(full&&px.c_firstHit)addBonus+=1.00;                     /* 🎯 풀피 적 +100% */
-  if(full&&px.l_fullHpDmg)addBonus+=2.00;                    /* 🎯👑 풀피 적 +200% */
-  if(px.c_rangedDmg&&e.ranged)addBonus+=0.30;                /* 🏹💀 원거리 적 +30% */
-  if(stunned&&px.c_stunDmg)addBonus+=0.30;                   /* 💢 기절한 적 +30% */
-  if(stunned&&px.r_stunDmgM)addBonus+=1.00;                  /* 🧲 기절한 적 +100% */
-  if(px.c_backDmg||px.backDmg){
+  if(px.backDmg){                                            /* 장비 옵션 (순수 배수) */
     let front=null;for(const en of aliveList(G))if(!front||en.worldX<front.worldX)front=en;
-    if(front&&e!==front){ if(px.c_backDmg)addBonus+=1.00;    /* 🔙 뒤에 있는 적 +100% */
-                          if(px.backDmg)d*=3.2; }            /* 장비 옵션 (순수 배수) */
+    if(front&&e!==front)d*=3.2;
   }
-  if(fromBasic&&px.c_fourthDmg&&p.atkN%4===0)addBonus+=1.00; /* 🔢 4번째 공격마다 +100% */
-  if(px.l_missStack&&p.missStk>0){p.missStk--;addBonus+=1.50;} /* 💢 빗맞음 스택 +150% */
-  if(px.c_evadeStack&&p.evStk>0){p.evStk--;addBonus+=0.50;}  /* 🌀🗡️ 회피 스택 */
-  if(px.r_comboDmg){                                          /* 🥊 같은 적 연타 +10%씩 누적 */
-    if(p.comboT===e)p.comboN++;else{p.comboT=e;p.comboN=0;}
-    addBonus+=0.10*p.comboN;
-  }
-  if(fromBasic&&px.r_evade3Dmg&&p.nextP200){p.nextP200=false;addBonus+=3.00;}   /* 💃 2연속 회피 */
   if(addBonus)d*=1+addBonus;
-  if(stunned&&px.l_stunExec)d*=8;                            /* 🕳️ 기절한 적에게 데미지 8배 */
   if(px.execute&&e.hp<=e.maxHp*0.5)d*=2.2;                   /* 장비 옵션 */
-  if(fromBasic&&px.l_evade2Dmg&&p.nextX3){p.nextX3=false;d*=8;}                 /* 🎭 2연속 회피 */
   e.hp-=d;
-  if(p.steal>0)heal(p,d*p.steal/100);
+  /* ⑦ 생명 흡수 — «준 피해의 10% 회복». `noBoost=true` 로 부른다: 주인 문면이 «준 피해의 10%» 라
+     회복 증폭(장비 회복량 +n%)을 타지 않고, «실드는 안 채움» 조항대로 오버킬 수리 분기도 안 탄다.
+     초과분은 `heal` 의 maxHp 클램프로 그냥 버려진다 (위임 판단 — 문면을 그대로 옮긴 것). */
+  if(p.steal>0)heal(p,d*p.steal/100,true);
   if(crit){
     /* 장비 옵션 축 (구 키) */
     if(px.critChain)addBuff(p,'critR',5*px.critChain,3);
@@ -833,20 +735,9 @@ function dealDmg(G,e,ratio,fromBasic){
     if(px.critReset&&pkk(p,0.45*px.critReset))p.atkTimer=0;
     if(px.stunCritM&&pkk(p,0.15*px.stunCritM))applyStun(G,e,3);
     if(px.stunCritL&&pkk(p,0.35*px.stunCritL))applyStun(G,e,3);
-    /* ===== 새 132종 «치명타 시» 축 ===== */
-    if(px.r_axeCrit&&pkk(p,0.30))fireAxe(p,2);               /* 🪓 30% 확률로 도끼 2개 */
-    if(px.r_waveCrit&&pkk(p,0.30))fireWave(p,1);             /* 🌊 30% 확률로 검기 1개 */
-    if(px.l_spearCrit&&pkk(p,0.40))fireSpear(p,1);           /* 🔱 40% 확률로 창 1개 */
-    if(px.r_critRBuff&&pkk(p,0.70))addBuff(p,'critR',20,7);  /* 💥 70% 확률로 7초간 치확 +20% */
-    if(px.r_critFBuff&&pkk(p,0.60))addBuff(p,'critF',40,7);  /* 🔥 60% 확률로 7초간 치배 +40% */
-    if(px.l_critFBuffL&&pkk(p,0.60))addBuff(p,'critF',100,7);/* 💥👑 60% 확률로 7초간 치배 +100% */
-    if(px.r_critHeal3&&pkk(p,0.60))heal(p,p.maxHp*0.05);     /* ❤️‍🔥 60% 확률로 체력 5% 회복 */
-    if(px.l_critHealL&&pkk(p,0.70))heal(p,p.maxHp*0.05);     /* ❣️ 70% 확률로 체력 5% 회복 */
-    if(px.r_stunCrit&&pkk(p,0.20))applyStun(G,e,6);          /* 💫 20% 확률로 그 적 6초 기절 */
     gainWard(p,0.12*px.wardCrit);                            /* 장비 옵션 */
   }
   if(px.execKill&&!e.isBoss&&e.hp>0&&e.hp<=e.maxHp*0.25)e.hp=0;                 /* 장비 옵션 */
-  if(px.l_execute&&e.hp>0&&e.hp<=e.maxHp*0.40)e.hp=0;        /* 🩸 체력 40% 이하 즉시 처치 (보스 포함) */
   if(e.hp<=0)onKill(G,e,-e.hp);
   return crit;
 }
@@ -864,21 +755,10 @@ function summonHit(G,e,ratio){
   dealDmg(G,e,ratio);
   if(G.procN<PROC_TICK_CAP){G.procN++;procOnAttack(G,e);}
 }
-/* 소환 적중 한 곳 — 소환 개조 특전(🪓🌪️ 3회전 · 🪞 튕김 · 🔱💫 관통 기절)이 여기서만 갈린다.
-   투사체 해석 지점이 세 군데(주 루프 · pushProj 오버플로 즉발 · 관통 즉발)라 동사를 하나로 모았다. */
+/* 소환 적중 한 곳 — 투사체 해석 지점이 세 군데(주 루프 · pushProj 오버플로 즉발 · 관통 즉발)라
+   동사를 하나로 모았다. 소환 개조 특전은 새 10종 체제에 없다(도끼·화살·창 모두 «1개 = 1발»). */
 function projHit(G,pr,e){
-  const p=G.player,px=p.px;
-  if(pr.type==='axe'){
-    const times=px.l_axeSpin?4:1;                                  /* 🪓🌪️ 4회전 4타 */
-    for(let i=0;i<times;i++){ if(e.hp<=0)break; summonHit(G,e,R_AXE); }
-    if(px.r_axeBounce){                                            /* 🪞 2번 튕겨 다른 적 */
-      const o=aliveList(G).filter(x=>x!==e);
-      for(let i=0;i<2&&o.length;i++)summonHit(G,pick(o),R_AXE);
-    }
-    return;
-  }
-  summonHit(G,e,pr.ratio);
-  if(pr.type==='spear'&&px.l_spearStun&&pkk(p,0.90))applyStun(G,e,3);   /* 🔱💫 창에 뚫린 적 90% 3초 기절 */
+  summonHit(G,e,pr.type==='axe'?R_AXE:pr.ratio);
 }
 function pushProj(G,pr){
   if(G.pprojs.length<PROJ_CAP){G.pprojs.push(pr);return;}
@@ -893,22 +773,16 @@ function pushProj(G,pr){
 function fireAxe(p,n){const G=p.G;n=(n||1)*(p.px.axeCount?3:1);
   for(let k=0;k<n;k++){const t=randTarget(G);if(t)pushProj(G,{type:'axe',x:p.worldX+14,tgt:t,ratio:R_AXE,spd:430});}}
 function fireArrows(p,n){const G=p.G,px=p.px;n=n||2;
-  if(px.l_arrowToSpear)return fireSpear(p,n);      /* 🏹→🔱 내가 쏘는 모든 화살이 창으로 */
-  if(px.r_arrowX2)n*=2;                            /* 🏹² 화살이 2배로 생성 */
   if(px.arrowCount)n=Math.round(n*1.5);            /* 장비 «화살 3발로 증가» (기본 2발 → 3발) */
   for(let k=0;k<n;k++){const t=randTarget(G);if(t)pushProj(G,{type:'parrow',x:p.worldX+14,tgt:t,ratio:R_ARROW,spd:560});}}
-/* 번개는 즉발(하늘에서 떨어진다) — 투사체를 만들지 않는다. 연쇄(🔗·🔗👑)는 맞은 적의 «옆 적» 하나로 1번만 튄다. */
+/* 번개는 즉발(하늘에서 떨어진다) — 투사체를 만들지 않는다. 연쇄 개조는 새 10종 체제에 없다. */
 function fireBolts(p,n){const G=p.G,px=p.px;n=(n||1)*(px.boltCount?2:1);
   for(let k=0;k<n;k++){
     const t=randTarget(G);if(!t)continue;
     summonHit(G,t,R_BOLT);
-    if(px.l_boltChainK||(px.r_boltChain&&pkk(p,0.30))){
-      const o=nearestTo(G,t.worldX,t);
-      if(o)summonHit(G,o,R_BOLT);                  /* 튄 번개도 풀데미지 */
-    }
   }}
 function fireWave(p,n){const G=p.G,px=p.px;n=n||1;
-  const big=px.l_wavePierce;                       /* 🌊🔱 거대 검기 — 창처럼 8마리 관통 */
+  const big=false;                                 /* 거대 검기 개조 특전은 새 10종에 없다 */
   const pierce=big?WAVE_PIERCE_BIG:(px.waveKing?20:WAVE_PIERCE);
   const reach=big?88*SPEAR_PIERCE:(px.waveKing?1400:340);
   for(let k=0;k<n;k++)pushProj(G,{type:'wave',x:p.worldX+14,ratio:R_WAVE,spd:470,maxX:p.worldX+reach,hit:new Set(),pierce,node:frontNode(G)});}
@@ -932,19 +806,6 @@ function procOnAttack(G,e){
   if(px.bolt&&pkk(p,0.05*px.bolt))fireBolts(p,1);
   if(px.arsenal&&pkk(p,0.05*px.arsenal))pick([fireAxe,fireArrows,fireBolts,fireWave,fireSpear])(p,1);
   gainWard(p,0.10*px.wardAtk);
-  /* ===== 새 132종 «공격 시» 축 ===== */
-  if(px.c_waveAtk&&pkk(p,0.10))fireWave(p,1);              /* 🌊 10% 확률로 검기 1개 */
-  if(px.r_arrowAtk&&pkk(p,0.15))fireArrows(p,2);           /* 🏹 15% 확률로 화살 2발 */
-  if(px.l_boltAtk&&pkk(p,0.20))fireBolts(p,2);             /* ⚡ 20% 확률로 번개 2회 */
-  if(px.l_axeAtk&&pkk(p,0.20))fireAxe(p,2);                /* 🪓 20% 확률로 도끼 2개 */
-  if(px.l_arrowAtk&&pkk(p,0.20))fireArrows(p,2);           /* 🏹 20% 확률로 화살 2발 */
-  if(px.l_waveAtk&&pkk(p,0.20))fireWave(p,2);              /* 🌊 20% 확률로 검기 2개 */
-  if(px.c_aspdAtk&&pkk(p,0.30))addBuff(p,'aspd',0.05,7);   /* ⚡ 30% 확률로 7초간 공속 +5% */
-  if(px.c_evadeAtkB&&pkk(p,0.30))addBuff(p,'evade',5,7);   /* 🛡️ 30% 확률로 7초간 회피 +5% */
-  if(px.r_atkBuffM&&pkk(p,0.60))addBuff(p,'atk',0.10,7);   /* ⚔️ 60% 확률로 7초간 공격력 +10% */
-  if(px.l_atkBuffL&&pkk(p,0.50))addBuff(p,'atk',0.20,7);   /* ⚔️ 50% 확률로 7초간 공격력 +20% */
-  if(px.r_wardAtk&&pkk(p,0.10))p.ward++;                   /* 🛡️✨ 10% 확률로 방어막 1장 */
-  if(px.c_stunAtk&&e&&e.hp>0&&pkk(p,0.10))applyStun(G,e,3);/* 💫 10% 확률로 그 적 3초 기절 */
 }
 function doCounter(G,src,depth){
   const p=G.player,px=p.px;
@@ -953,7 +814,7 @@ function doCounter(G,src,depth){
      빗맞으면 반격 연쇄(counterChain)도 끊긴다 — 위임 기본값. */
   G.atkTries++;
   if(Math.random()<ENEMY_EVADE){G.miss++;procOnMiss(G,src);return;}
-  const cd=effDmg(p)*0.7*(1+px.counterX)*(px.r_counterX?2.5:1);   /* ⚜️ 반격 피해 +150% */
+  const cd=effDmg(p)*0.7*(1+px.counterX);                        /* counterX = 장비 옵션 */
   src.hp-=cd;
   /* 장비 옵션 축 (구 키) */
   if(px.counterAtkS)addBuff(p,'atk',0.05*px.counterAtkS,3);
@@ -962,22 +823,16 @@ function doCounter(G,src,depth){
   if(px.counterCrit)addBuff(p,'critR',14,3);
   if(px.counterHeal)heal(p,p.maxHp*0.04*px.counterHeal);
   if(px.counterWave&&pkk(p,1.0*px.counterWave))fireWave(p,1);
-  /* ===== 새 132종 «반격 시» 축 ===== */
-  if(px.r_spearCounter&&pkk(p,0.60))fireSpear(p,1);         /* 🔱 60% 확률로 창 1개 */
-  if(px.r_counterAtkM&&pkk(p,0.70))addBuff(p,'atk',0.10,7); /* 🗡️👑 70% 확률로 7초간 공격력 +10% */
-  if(px.r_counterHeal&&pkk(p,0.60))heal(p,p.maxHp*0.10);    /* 💧 60% 확률로 체력 10% 회복 */
+  /* ⑩ 반격 시 창 — 반격 1회당 50% 확률로 창 1개 (쿨다운 없음) */
+  if(px.p_spearCt&&pkk(p,PERK_SUMMON_CH))fireSpear(p,1);
   if(src.hp<=0)onKill(G,src,-src.hp);
   /* 🔂 반격하면 반드시 두 번 더 반격 — 연쇄 상한 3회(T69 의 «무한 연쇄 금지» 는 유지) */
   else if(px.counterChain&&!depth)doCounter(G,src,1);
-  else if(px.l_counterChain&&(depth||0)<COUNTER_CHAIN_N)doCounter(G,src,(depth||0)+1);
 }
 function hitPlayer(G,dmg,isMelee,src){
   const p=G.player,px=p.px;
   if(Math.random()*100<effEvade(p)){
     /* ===== 회피 시 ===== */
-    p.evStreak2++;p.evStreak3++;
-    if(px.l_evade2Dmg&&p.evStreak2>=2){p.evStreak2=0;p.nextX3=true;}     /* 🎭 2연속 회피 → 다음 공격 3배 */
-    if(px.r_evade3Dmg&&p.evStreak3>=2){p.evStreak3=0;p.nextP200=true;}   /* 💃 2연속 회피 → 다음 공격 +300% */
     /* 장비 옵션 축 (구 키) */
     if(px.evadeEvBuff)addBuff(p,'evade',8*px.evadeEvBuff,3);
     if(px.evadeAspd)addBuff(p,'aspd',0.10,2);
@@ -990,41 +845,22 @@ function hitPlayer(G,dmg,isMelee,src){
     if(px.evadeCounter&&pkk(p,1.0*px.evadeCounter))doCounter(G,src);
     if(px.evadeAxe&&pkk(p,0.10*px.evadeAxe))fireAxe(p,1);
     gainWard(p,0.10*px.wardEvade);
-    /* ===== 새 132종 «회피 시» 축 ===== */
-    if(px.c_spearEvade&&pkk(p,0.10))fireSpear(p,1);            /* 🔱 10% 확률로 창 1개 */
-    if(px.r_axeEvade&&pkk(p,0.30))fireAxe(p,2);                /* 🪓 30% 확률로 도끼 2개 */
-    if(px.r_boltEvade&&pkk(p,0.30))fireBolts(p,2);             /* ⚡ 30% 확률로 번개 2회 */
-    if(px.c_aspdEvade&&pkk(p,0.30))addBuff(p,'aspd',0.05,7);   /* 🌀 30% 확률로 7초간 공속 +5% */
-    if(px.l_evadeAspdL&&pkk(p,0.80))addBuff(p,'aspd',0.20,7);  /* 🌪️ 80% 확률로 7초간 공속 +20% */
-    if(px.c_evadeHealS&&pkk(p,0.10))heal(p,p.maxHp*0.05);      /* 🍀 10% 확률로 체력 5% 회복 */
-    if(px.r_evadeShield&&pkk(p,0.20))repair(p,p.maxSh*0.10);   /* 🔶 20% 확률로 실드 10% 수리 */
-    if(px.c_wardEvade&&pkk(p,0.10))p.ward++;                   /* 👥✨ 10% 확률로 방어막 1장 */
-    if(px.l_wardEvadeL&&pkk(p,0.50))p.ward++;                  /* 🔰✨ 50% 확률로 방어막 1장 */
-    if(px.c_evadeStack)p.evStk++;                              /* 🌀🗡️ «다음 공격 +50%» 스택 */
-    if(px.r_stunEvade&&src&&pkk(p,0.60))applyStun(G,src,3);    /* 🕷️ 60% 확률로 그 적 3초 기절 */
+    /* ⑨ 회피 시 화살 — 회피 1회당 50% 확률로 화살 1발 */
+    if(px.p_arrowEv&&pkk(p,PERK_SUMMON_CH))fireArrows(p,1);
     /* ☠️🌾 사신의 낫 — 회피 시 20% 확률로 그 적 즉사. **보스 포함**(주인 명시).
        게임에는 낫이 베는 전용 연출이 붙는다(일반 처치 연기와 구별). */
-    if(px.c_reaper&&src&&src.hp>0&&pkk(p,REAPER_CH)){src.hp=0;onKill(G,src,0);}
     return;
   }
   /* ===== 맞았다 ===== */
-  p.evStreak2=0;p.evStreak3=0;
-  if(px.l_aspdRamp)p.rampN=0;                                  /* 🎻 피격당하면 초기화 */
-  /* 💎 실드가 남아있는 동안 피격 시 50% 확률로 데미지 완전 무시 (방어막보다 앞 — 방어막을 아끼는 쪽이 유리) */
-  const ignored=px.l_shieldIgnore&&p.sh>0&&pkk(p,0.70);
   /* 횟수형 방어막 — 이 타격 «1회» 를 통째로 무효화하고 1장 소모한다 (수치형 실드보다 먼저).
      «데미지 완전 무효» 라 방어력·실드·체력을 아예 건드리지 않지만, «맞은 사건» 자체는 일어난 것이라
      아래 피격 트리거들은 그대로 굴린다(주인 원문이 «그 타격 데미지 완전 무효» 이므로 — 위임 판단). */
-  const warded=!ignored&&p.ward>0;
+  const warded=p.ward>0;
   if(warded){
     p.ward--;
     /* ===== 방어막 방어 트리거 ===== */
-    if(px.r_wardHeal)heal(p,p.maxHp*0.10);                                   /* 🛡️❤️ 체력 10% 회복 */
-    if(px.l_wardHealK){heal(p,p.maxHp*0.20);repair(p,p.maxSh*0.20);}         /* 🛡️❤️👑 체력20%+실드20% */
-    if(px.l_wardThorns)reflect(G,src,effDmg(p)*9);                           /* 🛡️💥 공격력의 900% 반사 */
-    if(px.r_wardSpear&&!isMelee)fireSpear(p,1);                              /* 🥅 화살을 막으면 창을 쏨 */
   }
-  const nulled=ignored||warded;
+  const nulled=warded;
   let d=nulled?0:dmg*(1-effDef(p)/100);
   if(!nulled&&px.guardCrystal&&p.sh>0)d*=0.80;
   if(!nulled&&p.sh>0){const ab=Math.min(p.sh,d);p.sh-=ab;d-=ab;}
@@ -1037,7 +873,6 @@ function hitPlayer(G,dmg,isMelee,src){
     }
   }
   /* 🚑 체력이 30% 아래로 떨어지면 실드 30% 즉시 충전 (판당 1번) */
-  if(px.r_lowShield&&!p.lowShieldUsed&&p.hp<=p.maxHp*0.30){p.lowShieldUsed=true;repair(p,p.maxSh*0.30);}
   /* 장비 옵션 축 (구 키) */
   if(px.defHitBuff)addBuff(p,'def',3*px.defHitBuff,3);
   if(px.defBuff2&&pkk(p,0.30*px.defBuff2))addBuff(p,'def',14,4);
@@ -1053,98 +888,50 @@ function hitPlayer(G,dmg,isMelee,src){
   gainWard(p,0.08*px.wardHit);
   if(px.stunHitS&&src&&pkk(p,0.20*px.stunHitS))applyStun(G,src,3);
   if(px.stunHitL&&src&&pkk(p,0.55*px.stunHitL))applyStun(G,src,3);
-  /* ===== 새 132종 «피격 시» 축 ===== */
-  if(px.c_axeHit&&pkk(p,0.20))fireAxe(p,1);                    /* 🪓 20% 확률로 도끼 1개 */
-  if(px.r_waveHit&&pkk(p,0.30))fireWave(p,2);                  /* 🌊 30% 확률로 검기 2개 */
-  if(px.l_boltHit&&pkk(p,0.60))fireBolts(p,2);                 /* ⚡ 60% 확률로 번개 2회 */
-  if(px.c_hitHeal&&pkk(p,0.20))heal(p,p.maxHp*0.05);           /* 🩹 20% 확률로 체력 5% 회복 */
-  if(px.c_shieldHit&&pkk(p,0.10))repair(p,p.maxSh*0.05);       /* 🔋 10% 확률로 실드 5% 충전 */
-  if(px.r_defBuff2&&pkk(p,0.60))addBuff(p,'def',10,7);         /* 🛡️ 60% 확률로 7초간 방어력 +10% */
-  if(px.r_hitEvadeBuff&&pkk(p,0.60))addBuff(p,'evade',10,7);   /* 🌫️ 60% 확률로 7초간 회피 +10% */
-  if(px.c_stunHit&&src&&pkk(p,0.10))applyStun(G,src,3);        /* 💫🛡️ 10% 확률로 때린 적 3초 기절 */
-  if(px.l_stunHit3&&src&&pkk(p,0.70))applyStun(G,src,6);       /* 💫 70% 확률로 때린 적 6초 기절 */
-  if(px.c_thornsS&&pkk(p,0.30))reflect(G,src,dmg*0.50);        /* 🌿 30% 확률로 받은 피해의 50% 반사 */
-  if(px.l_thorns)reflect(G,src,dmg*6.00);                      /* 🦔 무조건 받은 피해의 600% 반사 */
-  if(px.c_wardHit&&pkk(p,0.10))p.ward++;                       /* 🔰✨ 10% 확률로 방어막 1장 */
-  if(px.c_wardEmpty&&!warded&&p.ward===0&&pkk(p,0.30))p.ward++;/* ⛏️ 방어막이 없는 상태에서 맞으면 30% */
+  /* ⑧ 피격 시 도끼 — 피격 1회당 50% 확률로 도끼 1개 */
+  if(px.p_axeHit&&pkk(p,PERK_SUMMON_CH))fireAxe(p,1);
   /* 원거리 피격 축 — 위 «피격 시» 트리거를 전부 굴린 «뒤» 에 추가로 굴린다 (별개 축, 주인 16:1X) */
   if(!isMelee)procOnRanged(G,src,dmg);
   if(isMelee&&src&&src.hp>0){
     const cc=Math.random()*100<effCounter(p);
-    const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.20*px.hitCounterS))
-            ||(px.r_hitCounter&&pkk(p,0.60));                  /* 💢 피격 시 60% 확률로 즉시 반격 */
+    const pc=(px.hitCounter&&pkk(p,0.30*px.hitCounter))||(px.hitCounterS&&pkk(p,0.20*px.hitCounterS));
     if(cc||pc)doCounter(G,src);
   }
   void taken;
 }
 function playerStrike(G,e){
   const p=G.player,px=p.px;
-  p.atkN++;                                   /* 평타 카운터 — 🔢 4번째 · 🔨 5회마다 · 🔱⚔️ 2회마다 */
   let ratio=1;
   if(p.nextAtk>0){ratio*=1+p.nextAtk;p.nextAtk=0;}
   const crit=dealDmg(G,e,ratio,true);
   if(px.clone&&e.hp>0)dealDmg(G,e,0.25);                       /* 장비 옵션 */
-  if(px.l_dualWield&&e.hp>0)dealDmg(G,e,1.00);                 /* ⚔️⚔️ 이도류 — 2타는 공격력의 100% */
-  if(px.l_cleave){                                             /* 🗡️🌀 대상과 바로 뒤 적까지 */
-    const b=nearestTo(G,e.worldX,e);
-    if(b&&b.hp>0&&b.worldX>=e.worldX)dealDmg(G,b,ratio);
-  }
   if(crit&&px.extraHit&&pkk(p,0.75*px.extraHit)&&e.hp>0)dealDmg(G,e,2.3);   /* 장비 옵션 */
-  if(px.c_fourthBolt&&p.atkN%4===0)fireBolts(p,1);             /* 🔢⚡ 4번째 공격마다 번개 1회 */
-  if(px.l_spear2Atk&&p.atkN%3===0)fireSpear(p,1);              /* 🔱⚔️ 공격 3회마다 창 1개 */
-  if(px.r_fifthCrit&&p.atkN%5===0)p.nextCrit=true;             /* 🔨 공격 5회마다 다음 공격 확정 치명타 */
   procOnAttack(G,e);
 }
 
-/* 특전 선택 (정책: policy) */
-/* ⚑ 등급 3단 (신화 폐지) — 일반 45 / 희귀 35 / 전설 20 (PLAN §3.0 · RARITY_P) */
-function rollRarity(G){
-  const r=Math.random();
-  return r<RARITY_P[2]?2:r<RARITY_P[2]+RARITY_P[1]?1:0;
-}
-/* ⚑ 주인 확정 «획득 중복 금지» — 모든 특전이 고유다. 이미 가진 것은 풀에서 통째로 빠진다. */
-const perkPool=(G,rar)=>PERKS.filter(x=>x.r===rar&&!G.taken.includes(x));
-function rollPerks(G,n){
-  /* PLAN §3.0 주인 지시: 등급은 선택지당 1번만 굴리고, 전부 그 등급에서만 나온다 (등급 섞임 금지) */
-  const rar=rollRarity(G);
-  const pool=perkPool(G,rar);
-  const out=[],used=new Set();
-  while(out.length<n&&out.length<pool.length){
-    const perk=pick(pool);
-    if(used.has(perk))continue;
-    used.add(perk);out.push(perk);
-  }
-  return out;
-}
-/* 특전 기회 1번 = 레벨업 또는 악마 거래. 두 자리가 한 동사를 거치게 모아 둔다 (PLAN §4 · T70).
-   ⚑ P1(T83) — 여기 걸려 있던 💗 l_perkHp(«특전 기회마다 최대 체력 +1.8%»)는 새 132종에서 사라졌다
-   («최대 체력 증가» 는 주인 확정 금지축). 카운터만 남는다. */
-function grantPerkChance(G){
-  G.perkChances++;
-}
-function perkChoice(G){
-  grantPerkChance(G);   /* 레벨업 = 특전 기회 1번 (PLAN §4) */
-  if(G.noPerk)return;   /* ⚑ P3(T85) 자(尺) 수리 — 실험5 사다리는 «특전 미획득» 이 정본이다 (PLAN §7·§11.7) */
-  const p=G.player;
-  let opts;
-  if(G.rarityLockOn){ /* 등급 고정 실험 */
-    const pool=perkPool(G,G.rarityLock);
-    opts=[];const used=new Set();
-    while(opts.length<3&&opts.length<pool.length){const pp=pick(pool);if(!used.has(pp)){used.add(pp);opts.push(pp);}}
-  }else opts=rollPerks(G,3);   /* ⚑ 선택지 3개 고정 (🔮 전지의 눈 삭제 — PLAN §3.0) */
-  if(!opts.length)return;
-  const chosen=pick(opts);
-  chosen.ap(p);
-  G.taken.push(chosen);
+/* ---------- 특전 획득 = «순서대로 자동» (⚑⚑⚑ 주인 확정 2026-09-03 · PLAN §2.4·§3) ----------
+   레벨업할 때마다 `PERKS` 배열의 다음 순번을 하나 준다. **선택창·등급 굴림·새로고침·전지의 눈은 없다.**
+   10개를 다 얻은 뒤의 레벨업은 특전을 주지 않는다(위임 기본값 — 반복 획득을 원하시면 한 줄로 정정).
+   악마의 거래도 같은 동사를 거친다(«다음 순번을 하나 앞당겨 준다» — 위임 기본값). */
+function grantPerkChance(G){ G.perkChances++; }
+/* 다음 순번 특전 1개를 지급한다. 지급했으면 그 특전을, 남은 게 없으면 null 을 돌려준다. */
+function grantNextPerk(G){
+  grantPerkChance(G);   /* 레벨업·악마 = 특전 기회 1번 (PLAN §4) */
+  if(G.noPerk)return null;   /* 진단용 «특전 미획득» 자 — 사다리 회귀 대조에만 쓴다 */
+  if(G.taken.length>=PERKS.length)return null;   /* 10개를 다 얻으면 더는 안 준다 */
+  const perk=PERKS[G.taken.length];              /* ⚑ 순서 = 배열 순서. 무작위·중복이 존재하지 않는다 */
+  perk.ap(G.player);
+  G.taken.push(perk);
+  return perk;
 }
 
 /* ---------- 챕터 1회 실행 ---------- */
 function runChapter(chapter,build,opts){
   opts=opts||{};
   const G={chapter,player:null,nodes:[],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
-    perkChances:0,taken:[],refreshBonus:0,overBoltCd:0,autoBoltT:3,autoSumT:AUTO_SUMMON_T,autoSpearT:AUTO_SPEAR_T,rampT:ASPD_RAMP_T,stuns:0,misses:0,
+    perkChances:0,taken:[],overBoltCd:0,autoBoltT:3,stuns:0,misses:0,
     dead:false,cleared:false,t:0,atkTries:0,miss:0,   /* 적 회피 10% 실측용 (PLAN §2.3) */
-    rarityLockOn:opts.rarityLock!==undefined,rarityLock:opts.rarityLock,noPerk:!!opts.noPerk};
+    noPerk:!!opts.noPerk};
   const p=mkPlayer(build,G);G.player=p;p.G=G;
   const layout=chapterLayout(chapter);
   let x=560,wi=0;
@@ -1180,8 +967,6 @@ function runChapter(chapter,build,opts){
     for(const n of G.nodes){
       if(!n.done&&(n.type==='rest'||n.type==='devil'||n.type==='angel')&&p.worldX>n.x-95){
         n.done=true;ev=true;
-        if(p.px.r_eventShield)repair(p,p.maxSh*0.40);        /* 🚪 이벤트를 지날 때마다 실드 40% 충전 */
-        if(n.type==='rest'&&p.px.l_restWard)p.ward+=15;      /* 🏕️🛡️ 쉼터에서 쉴 때마다 방어막 15장 */
         if(n.type==='rest'){
           /* ⚑ 주인 확정(2026-09-02 16:4X · PLAN §7): 가상 플레이어는 쉼터에서 «항상 🌟 경험치» 를 고른다.
              체력 회복 분기는 시뮬에서 금지 — 전 실험(1~5·사다리·하니스) 공통 측정 조건.
@@ -1192,15 +977,13 @@ function runChapter(chapter,build,opts){
           /* SIM_DEVIL_POLICY: ⚑ 주인 확정(2026-09-03 · PLAN §2.4 · T90) — 가상 플레이어는 악마 거래를 **항상 수락**한다
              (승인 대기 32번 종결. 쉼터 «항상 경험치» 와 같은 축의 측정 조건 통일 — 체력 조건부 수락은 폐기).
              실제 게임(index.html)은 유저 자유 선택이므로 두 선택지를 그대로 둔다. */
-          if(!G.noPerk){   /* noPerk = 특전 미획득 측정 — 악마 거래도 특전이라 건너뛴다 */
+          /* ⚑ T96 — «전설 확정» 은 등급과 함께 사라졌다. 악마는 **다음 순번 특전을 하나 앞당겨 준다**
+             (주인 위임 기본값 — 특전이 순서 고정이라 «전설 확정» 이 의미를 잃었다).
+             줄 특전이 남아 있을 때만 거래가 성립한다 — 10개를 다 얻었으면 비용도 안 내고 지나간다(위임).
+             비용(최대체력 30% 차감)·«항상 수락» 정책은 T90 그대로다. */
+          if(!G.noPerk&&G.taken.length<PERKS.length){
             payDevilCost(p);   /* 비용 = 최대체력의 30% 를 «최대치에서» 차감 (현재체력 차감 아님) */
-            /* ⚑ 주인 확정: 악마 이벤트 = **전설 확정** (신화 폐지로 «15% 확률로 신화» 조항 삭제) */
-            let pool=perkPool(G,2);
-            if(!pool.length)pool=perkPool(G,1);   /* 게임과 같은 폴백: 전설 풀이 비면 희귀로 */
-            if(pool.length){
-              grantPerkChance(G);   /* ⚑ 악마도 «특전 기회» 다 (PLAN §4 · T70) */
-              const perk=pick(pool);perk.ap(p);G.taken.push(perk);
-            }
+            grantNextPerk(G);
           }
         }else{
           /* SIM_ANGEL_POLICY: ⚑ 주인 확정(2026-09-03 · PLAN §2.4 · T90) — 가상 플레이어는 천사에서
@@ -1218,22 +1001,8 @@ function runChapter(chapter,build,opts){
     if(dist>74){p.worldX+=132*p.walkMul*dt;p.atkTimer=Math.min(p.atkTimer,0.35);}
     else{p.atkTimer-=dt*effAspd(p);if(p.atkTimer<=0){p.atkTimer+=1;playerStrike(G,tgt);}}
     if(p.px.autoBolt){G.autoBoltT-=dt;if(G.autoBoltT<=0){G.autoBoltT=3;fireBolts(p,p.px.autoBolt);}}   /* 장비 옵션 */
-    /* ⏰ 2초마다 자동 소환 3종 (주기형 «공격» — 허용축. 주기형 «회복» 은 금지축이라 여기 없다) */
-    if(p.px.l_autoBolt||p.px.l_autoAxe){
-      G.autoSumT-=dt;
-      if(G.autoSumT<=0){
-        G.autoSumT=AUTO_SUMMON_T;
-        if(p.px.l_autoBolt)fireBolts(p,1);      /* ⚡⏰ 번개 1회 */
-        if(p.px.l_autoAxe)fireAxe(p,2);         /* 🪓⏰ 도끼 2개 */
-      }
-    }
-    /* 🔱⏰ 창만 주기가 따로다 — 창은 관통 8마리·마리당 100% 라 같은 2초에서 전설 1위를 독점했다(승인 40 ⓔ) */
-    if(p.px.l_autoSpear){
-      G.autoSpearT-=dt;
-      if(G.autoSpearT<=0){ G.autoSpearT=AUTO_SPEAR_T; fireSpear(p,1); }
-    }
-    /* 🎻 전투 중 3초마다 공격속도가 +5%씩 계속 빨라진다 (피격당하면 초기화 — hitPlayer) */
-    if(p.px.l_aspdRamp){G.rampT-=dt;if(G.rampT<=0){G.rampT=ASPD_RAMP_T;p.rampN++;}}
+    /* ⚑ T96 — 주기형 자동 소환(⏰ 3종)·공속 램프(🎻)는 특전과 함께 폐지됐다.
+       주기형 «공격» 축에 남는 것은 장비 옵션 `autoBolt`(위 3초) 하나뿐이다. */
     /* 적 */
     for(const e of alive){
       if(e.hp<=0)continue;
@@ -1242,13 +1011,11 @@ function runChapter(chapter,build,opts){
       if(e.stun>0){
         e.stun-=dt;
         /* ⛓️ 기절이 끝난 적은 3초간 공격속도 -50% */
-        if(e.stun<=0&&p.px.r_stunSlow)e.slow=6;
         continue;
       }
       if(e.slow>0)e.slow-=dt;
       const d=e.worldX-p.worldX;
-      /* 🥶 위압의 오라 — 모든 적의 공격속도 -30% (상시). ⛓️ 둔화와 곱해진다. */
-      const ivm=(p.px.l_slowAura?1/0.50:1)*(e.slow>0?2:1);
+      const ivm=(e.slow>0?2:1);                            /* 둔화 — 적 상태 축만 남는다 */
       if(!e.ranged){
         if(d<105){
           e.atkTimer-=dt;
@@ -1346,211 +1113,63 @@ function eqStr(a){
 }
 
 /* ---------- 실험들 ---------- */
-/* 실험1·2 하니스 = **변별점 규칙** (주인 확정 2026-09-02 15:1X · 승인 25번 3안 채택 · T31).
-   ⚑ 정본 규칙 (종전 T5 «그 챕터 도달 시점의 관측 중앙값» 은 이 규칙으로 개정됐다):
-     ① 두 하니스 모두 전체 클리어율이 변별 구간 15~85% 안에 있어야 한다 (바닥/천장 포화면 측정 자체가 무의미 — T7).
-     ② 실험2 는 그 안에서도 «변별력 최대» 인 60~70% 지점을 목표로 잡는다.
-     ③ 실험1 은 등급 3단(일반·희귀·전설) 클리어율이 전부 1~99% 비포화 + 인접 ≥2%p 분리되는 지점으로 잡는다.
-     ④ 경제·난이도 노브를 바꾼 회차마다 재보정한다 (T5 의 재보정 조항은 그대로 유효 — 기준만 바뀌었다).
-     ⑤ «도달 시점 실제 계정과의 괴리» 는 위반이 아니라 **참고 지표**다 (3안). 실험3 곡선이 목표에 들어올수록 저절로 줄어든다.
-   감시: `node tools/verifyHarness.js` (①②③ 위반 시 exit 1 · ⑤ 는 표시만). 값을 바꾸면 그 게이트를 --rebase 로 갱신할 것.
-   EXP1_GEAR='등급,강화,슬롯' 형태 환경변수로 덮어쓸 수 있다. */
-/* ⚑ T1 R01 신설 — 하니스 «챕터» 축. 정본 ②③ 은 하니스가 변별 구간에 앉기를 요구하는데,
-   R01 의 난이도 재적합(기저 40/8 → 26/5.2) 후 챕터 6 에서 강화 축이 **절벽**이 됐다:
-   미장착 2.3% ↔ 일반+0 99.7% 사이에 값이 없다(일반+N 은 위로만 간다). 즉 종전처럼 강화로는 못 고른다.
-   그래서 «어느 챕터에서 재나» 를 새 조절 축으로 열었다 — `EXP1_CH`/`EXP2_CH` 로 덮어쓸 수 있고
-   기본값이 곧 채택 하니스다. `tools/verifyHarness.js` 가 이 기본값을 소스에서 읽어 자동 추종한다. */
-function hCh(env,def){ const v=Number(process.env[env]); return Number.isFinite(v)&&v>0?v:def; }
-function harness(env,defRar,defPlus,defSlot){
-  const s=(process.env[env]||'').split(',').map(v=>v.trim()===''?NaN:Number(v));   /* T7: ''.split(',') → [''] → Number('')=0 이라 기본값이 무시되던 버그 수정 */
-  const rar=Number.isFinite(s[0])?s[0]:defRar, plus=Number.isFinite(s[1])?s[1]:defPlus, slot=Number.isFinite(s[2])?s[2]:defSlot;
-  return {b:mkBuild(rar,plus,slot),desc:`${GT.rarName[rar]}${plus?'+'+plus:''} 6부위 · 슬롯 ${slot}렙`};
-}
-/* ⚑⚑⚑ 주인 확정 «실험1 등급 과녁» (2026-09-03 · 새 132종 체제) — 등급을 하나만 뜨게 강제했을 때의 클리어율.
-   **일반만 10% · 희귀만 20% · 전설만 80%** (허용 오차 ±5%p). 신화 등급은 폐지됐다.
-   전설 80 은 «전설 뜨면 판이 뒤집힌다» 는 주인 의도다. 일반 44종은 내용·수치 전부 동결이라
-   일반 10% 는 **적 밸런스(난이도 노브)로만** 맞추고, 그 뒤 난이도를 동결한 채 희귀·전설을 특전 수치로 맞춘다.
-   게이트 `tools/verifyScoreCriteria.js` 가 PLAN §7 문면과 이 두 상수를 대조한다. */
-const EXP1_TARGET=[10,20,80];      // 일반 · 희귀 · 전설
-const EXP1_TOL=5;                  // ±%p
-const RAR_NAME=['일반','희귀','전설'];
-function exp1_rarityLadder(){
-  const h=harness('EXP1_GEAR',1,0,0), CH=hCh('EXP1_CH',30);
-  /* ⚑⚑ T72 재선정 (2026-09-03, 주인 확정 «밸런스 기준점» + 기본 스탯 개편 · 정본 ②③④).
-     주인이 **표준 장비를 «희귀 풀셋» 으로 못박았다**(PLAN §2.3) — 이제 «일반 등급 + 강화» 픽스처는 못 쓴다.
-     장비가 고정되므로 조절 축은 챕터(와 미세 축인 슬롯)뿐이다.
-     기본 스탯 개편(치확 5→20 · 반격 10→20 · 방어 5→20 · 회피 8→20)으로 플레이어가 크게 세져
-     종전 «챕터 13·일반+3» 은 30.7% → 89.3% 로 변별 구간(15~85%) 위로 빠졌다.
-     200~300판 실측 스윕(희귀 풀셋·슬롯0): ch19 100.0 · ch22 80.5 · ch25 93.5 · ch28 80.7 ·
-     **ch30 52.0**(사다리 20.3 / 44.7 / 67.0 / 78.0 — 포화 0, 인접 24.3·22.3·11.0%p) · ch33 29.5 · ch36 26.0 · ch39 2.5.
-     ⚠ 챕터 축은 단조가 아니다(T28 — `chapterLayout` 제비뽑기가 지배): 26 은 93.7% 인데 28 은 80.7%,
-       30 에서 52.0% 로 떨어진다. 반드시 실측으로 고를 것. → **챕터 30 · 희귀 풀셋 · 슬롯 0 채택**. */
-  /* ⚑ T1 R02 재보정 (정본 ④ — 챕터 10 벽을 켠 회차). 하니스 챕터 13 은 벽 구간(c≥10) 안이라 ×1.5 를 그대로 맞는다:
-     종전 «일반+1» 이 혼합 23.7% → 4.7% 로 변별 구간(15~85%) 아래로 빠졌다. 챕터는 그대로 두고 강화만 +1 → +3.
-     300판 실측 후보 — ch13·+2 17.3%(사다리 2.3/6.7/22.0/58.0, 일반 칸이 바닥에 붙는다) · **채택 ch13·+3 29.3%**
-     (사다리 12.0/18.0/47.3/72.7, 간격 6.0·29.3·25.4%p, 포화 0) · ch13·+4 48.3%(전설 68.3·신화 82.3 으로 위가 답답하다). */
-  /* **T47 재선정 (2026-09-02, 주인 확정 «레벨업 필요 경험치 4+4*Lv» · 변별점 규칙 ③):** 요구 경험치가 레벨당 2배로
-     늘어 같은 챕터에서 얻는 특전 수가 줄었다. T45·T46 까지 반영한 엔진에서 300판 재측정 — 종전 «일반+2» 는
-     24.3% → **10.7%** 로 변별 구간(15~85%) 아래로 빠졌다. 후보: 일반+3 17.0%(사다리 2.7/13.0/22.3/50.0 — 일반 칸이
-     바닥 1.0% 에 붙는다) · **일반+4 30.7%**(사다리 일반 8.3 / 희귀 21.7 / 전설 40.7 / 신화 61.7, 간격 13.4·19.0·21.0%p,
-     포화 0) → **일반+4 슬롯0 채택**.
-     T49(쉼터 260/26)까지 들어온 최종 트리에서 재측정 — 36.0%(사다리 12.3/25.7/51.7/66.7, 포화 0)로 밴드 안. */
-  /* T31 재보정 (2026-09-02, 스탯 사다리 개편 후 · 변별점 규칙 ③): 종전 «전설 6부위·슬롯 1렙» 은 개편으로 챕터6 클리어율이
-     100.0% 가 되어 등급 4단이 전부 천장 포화했다(사다리 100/100/100/100 — 측정 불능). 300판 실측으로 재보정한 값이다:
-       일반+2 슬롯0 → 혼합 52.7% · 사다리 일반 12.0 / 희귀 41.7 / 전설 75.0 / 신화 87.3% (간격 29.7·33.3·12.3%p, 포화 0).
-     ⚠ 등급 축(일반→희귀)은 챕터6 에서 23.0% → 100.0% 로 절벽이라 하니스를 «등급» 으로는 못 고른다 —
-       연속 미세 조절이 되는 축이 강화(+1강당 장비 기여 +13%)뿐이라 «일반 등급 + 강화» 를 픽스처로 쓴다.
-     ⚑ **T1 R01 재보정 (난이도 재적합 · 정본 ②③④)**: 기저 40/8 → 26/5.2 로 챕터 6 이 통째로 물러져 일반+2 가 100.0% 천장 포화가 됐고,
-       강화 축을 내려도 **미장착 2.3% ↔ 일반+0 99.7%** 라 챕터 6 에는 변별 구간(15~85%)에 앉을 값이 아예 없다.
-       그래서 새로 연 «챕터» 축으로 재선정 — **챕터 13 · 일반+1 · 슬롯 0** (300판 실측: 혼합 26.0% ·
-       사다리 일반 4.3 / 희귀 12.3 / 전설 36.0 / 신화 62.3%, 간격 8.0·23.7·26.3%p, 포화 0 — 바닥·천장 양쪽 여유 최대).
-       후보 비교: 챕터 11·일반+1 은 일반→희귀 간격이 5.0%p 뿐이고(30.3 vs 35.3) 신화가 90.3% 로 천장에 가깝다.
-       ⚠ 인접 챕터가 난이도 순서를 보장하지 않는다(T28 — `chapterLayout` 제비뽑기가 지배): 챕터 10 은 일반+1 로 99.5% 인데
-         챕터 11 은 같은 하니스로 58.7% 다. 챕터 축으로 고를 때는 **반드시 실측으로** 고르고 «12 가 11 보다 어렵다» 로 추정하지 말 것.
-     ⚠ 실경제에서 일반 장비에 +강은 붙지 않는다(합성 +강은 전설부터) — 이것은 대표성이 아니라 변별력을 위한 **측정 픽스처**이고,
-       변별점 규칙(⑤)은 대표성을 요구하지 않는다. 부작용: `GT.optCount(0,plus)=0` 이라 실험1·2 는 **장비 옵션 0개** 환경에서 돈다
-       (특전 효과만 분리해 재는 데는 오히려 유리하지만, «특전 × 장비 옵션» 상호작용은 이 두 실험이 못 본다 — 실험4·5 의 몫). */
-  console.log(`\n=== 실험1: 등급 고정 파워 사다리 (챕터${CH}, 하니스 ${h.desc}, 300판) ===`);
-  const rates=[];
-  for(const rar of [null,0,1,2]){
-    let wins=0,times=0,n=300;
-    for(let i=0;i<n;i++){
-      const r=runChapter(CH,h.b,rar===null?{}:{rarityLock:rar});
-      if(r.clear){wins++;times+=r.time;}
-    }
-    const nm=rar===null?'혼합':RAR_NAME[rar];
-    const rate=wins/n*100;
-    if(rar!==null)rates[rar]=rate;
-    console.log(`${nm}: 클리어 ${rate.toFixed(1)}%  평균시간 ${wins?(times/wins).toFixed(0):'-'}s`);
-  }
-  /* ⚑⚑ T1 R01 (2026-09-03 주인 확정 «실험1 과녁 개정(4등급)») — 종전 «단조증가» 판정을 이 과녁이 **대체**한다.
-     주인 원문: «등급 강제 클리어율 일반 15% · 희귀 25% · 전설 35% · 신화 45% (±5%p. 신화 45 는 위임)».
-     단조증가는 «희귀가 신화보다 낮기만 하면 통과» 라 등급 간 격차에 상한이 없었고, 실제로 신화가 81% 까지 부풀어도
-     3점 만점이 나왔다. 과녁은 격차 자체에 상한을 두므로 «신화 뻥튀기» 류 인플레 튜닝이 구조적으로 불가능해진다.
-     ±5%p 는 주인이 준 허용 오차이고, 300판 표준오차(±2%p 남짓)를 감안하면 한 시드로 판정하지 말 것 —
-     회차 채점은 시드 3벌 이상의 평균으로 한다(R01 실측: 시드 1/2/3 에서 일반 18.7·18.7·17.7 로 ±0.5%p 폭). */
-  console.log(`\n  — 등급 과녁 판정 (주인 확정: 일반 ${EXP1_TARGET[0]} · 희귀 ${EXP1_TARGET[1]} · 전설 ${EXP1_TARGET[2]}, 허용 ±${EXP1_TOL}%p) —`);
-  console.log('  | 등급 | 과녁 | 실측 | 편차 | 판정 |');
-  console.log('  |---|---|---|---|---|');
-  let pass=0;
-  for(let r=0;r<3;r++){
-    const t=EXP1_TARGET[r],v=rates[r],d=v-t;
-    const ok=Math.abs(d)<=EXP1_TOL;if(ok)pass++;
-    console.log(`  | ${RAR_NAME[r]} | ${t}% | ${v.toFixed(1)}% | ${(d>=0?'+':'')+d.toFixed(1)}%p | ${ok?'✓':'✗'} |`);
-  }
-  console.log(`  과녁 합격 ${pass}/${EXP1_TARGET.length}`);
-}
-function exp2_perkWinrate(){
-  const h=harness('EXP2_GEAR',1,0,15), CH=hCh('EXP2_CH',30);
-  /* ⚑⚑⚑ P3 R01 재선정 (T85 · 2026-09-03 · 정본 ②④ — 난이도 영점 회차라 재보정 의무가 걸린다).
-     «일반 영점»(적 기저 26.82/4.986 → 40.0/7.44)으로 종전 «챕터 30 · 슬롯 5» 가 90.3% → 36.7% 로
-     목표 밴드(60~70%) **아래**로 빠졌다. 표준 장비는 주인 확정 «희귀 풀셋» 이라 조절 축은 슬롯뿐이다.
-     챕터 30 · 희귀 풀셋 실측(시드 3~4벌 × 200~300판): 슬롯0 22.8 · 5 36.7 · 10 49.2 · 15 58.3 ·
-     16 60.6 · 17 60.6 · 18 63.1 · 19 67.5 · 20 73.7 · 25 80.0.
-     게이트(`verifyHarness` 시드 12벌 × 300판, 이쪽이 판정 기준)로 좁힌 재측정:
-     **슬롯 14 55.0 · 15 63.0 · 16 62.0 · 18 68.7**  → 밴드(60~70%) 정중앙이자 균등보너스 계단(5의 배수)인
-     **챕터 30 · 희귀 풀셋 · 슬롯 15 채택**.
-     ⚠ 같은 시드·판수라도 게이트 수치가 본 스윕과 몇 %p 다르다 — 게이트는 «도달시점 계정 채집» 을 먼저 돌려
-       난수 스트림이 앞서 소모되기 때문이다. 하니스 채택은 반드시 게이트 수치로 할 것.
-     ⚠ 실경제에서 챕터 30 도달 시점의 슬롯 중앙값은 9렙 언저리라 이 하니스는 «대표성» 이 아니라
-       변별력을 위한 측정 픽스처다(정본 ⑤ — 괴리는 위반이 아니라 참고 지표). */
-  /* ⚑⚑ T72 재선정 (2026-09-03 · 정본 ②④) — 실험1 과 같은 사유(표준 장비 «희귀 풀셋» 확정 + 기본 스탯 개편).
-     종전 «챕터 11·일반+4» 는 64.7% → 99.3% 로 천장 포화했다.
-     장비가 고정되어 강화 축이 사라졌으므로 **슬롯(레벨당 공/체/실 +1%)이 유일한 미세 축**이다.
-     챕터 30 에서 게이트 300판(시드 12벌) 실측: 슬롯0 52.3 · 슬롯3 53.7 · 슬롯4 51.7 · **슬롯5 65.0** ·
-     슬롯6 76.3 · 슬롯7 69.3. → 목표 밴드 60~70% 정중앙인 **챕터 30 · 희귀 풀셋 · 슬롯 5 채택**
-     (챕터 축만으로는 28=80.7 ↔ 30=52.0 으로 밴드를 통째로 건너뛴다).
-     ⚠ 슬롯 축도 단조가 아니다 — 레벨당 +1% 는 시드별 챕터 배치가 만드는 계단보다 작아 4↘·6↗ 처럼 뒤집힌다.
-       고를 때는 반드시 이 게이트의 시드 12벌로 재고, 한 칸 차이는 잡음으로 보지 말 것. */
-  /* ⚑ T1 R02 재보정 (정본 ②④ — 챕터 10 벽을 켠 회차). 챕터 11 도 벽 안이라 종전 «일반+1·슬롯3» 이 64.7% → 21.0%
-     로 밴드 아래로 빠졌다. 300판 실측 — 일반+3·슬롯3 54.0% · **채택 일반+4·슬롯0 66.7%** · 일반+4·슬롯3 70.0% ·
-     일반+5·슬롯0 80.3%. 채점이 실제로 도는 1200판에서 재확인 **65.4%** 로 밴드(60~70%) 정중앙이다.
-     R01 이 슬롯 축까지 써야 했던 것과 달리 이번엔 강화 축만으로 밴드에 앉아 슬롯 0렙으로 되돌렸다. */
-  /* **T47 재선정 (2026-09-02 · 변별점 규칙 ②④):** 주인 확정 «레벨업 필요 경험치 4+4*Lv» 로 특전 획득이 느려져
-     T46 이 고른 «일반+9» 가 73.3% → **41.0%**(게이트 300판)로 목표 밴드 60~70% 밖으로 떨어졌다. 재측정 —
-     게이트 300판: 일반+9 41.0% · **일반+10 60.3%** · 일반+11 73.0% / 채점이 실제로 도는 1200판: 일반+9 42.3% ·
-     **일반+10 58.5%** · 일반+11 71.1%. 두 판수 모두에서 밴드(허용 ±8%p) 안이고 300판 기준으로는 밴드 정중앙인
-     **일반+10 슬롯0 채택** (일반+11 은 300판 73.0% 로 밴드를 넘는다).
-     T49(쉼터 260/26)까지 들어온 최종 트리에서 재측정 — 62.3% 로 목표 밴드 60~70% 안, 구성 유지. */
-  /* T31 재보정 (2026-09-02 · 변별점 규칙 ②): 종전 «신화 6부위·슬롯 0렙» 은 스탯 사다리 개편 후 챕터8 클리어율이
-     100.0%(천장 포화)라 특전별 승률 차가 전혀 안 벌어졌다. 300판 실측으로 목표 밴드 60~70% 에 맞춘 값이다:
-       일반+6 52.0% · **일반+7 66.3%** · 일반+8 84.3% → 일반+7 슬롯0 채택 (종전 규칙값의 66.7% 와 사실상 같은 지점).
-     **T43·T45 재보정 (적 회피 10% + 소환 적중 트리거 · 정본 ④):** 두 변경이 반대 방향으로 밀어(회피 −, 소환 +)
-     같은 하니스가 66.3% → 55.0%(T43 단독) → 77.7%(T45 단독) → **62.3%(둘 다 반영)** 로 움직였다.
-     둘 다 반영한 엔진에서 300판 재측정 — 일반+6 44.3% · **일반+7 62.3%** · 일반+8 67.7% · 일반+9 75.7%
-     → **일반+7 슬롯0 유지**가 목표 밴드 정중앙이다(중간 커밋에서 일반+6 으로 내렸다가 되돌렸다).
-     **T46 재보정 (시뮬 쉼터 = 항상 경험치 · 정본 ②④):** 쉼터 회복(최대체력 40%)이 시뮬에서 빠지자 같은 하니스가
-     62.3% → 46.0% 로 목표 밴드(60~70%) 밖으로 나갔다 → 1200판 재측정으로 일반+9 채택(69.3%).
-     **T49 재보정 (쉼터 보상 260/26 · 같은 세션):** 경험치가 +10 → +26 이 되자 일반+9 가 80.7%(게이트 300판)로
-     다시 밴드를 넘겨 한 단계 내렸다 — 1200판 기준 일반+7 52.2% · **일반+8 66.1%** · 일반+9 69.3%(T46 시점)
-     → **일반+8 슬롯0 채택**(게이트 300판 65.0%).
-     ⚑ **T1 재개 R01 재보정 (난이도 재적합 · 정본 ②④)**: 기저 40/8 → 22.8/4.56 으로 챕터 8 이 물러져 일반+10 이 천장 포화가 됐다.
-       실험1 과 같은 이유로 «챕터» 축을 써서 재선정 — **챕터 11 · 일반+1 · 슬롯 3**.
-       ⚠ 강화 축만으로는 밴드에 못 앉는다: 챕터 11 에서 일반+1 은 1200판 58.7/59.3%(밴드 아래) · 일반+2 는 300판 73.3%(밴드 위)로
-         **두 값 사이에 강화 단계가 없다**. 슬롯(레벨당 +1%)이 유일하게 남은 미세 축이라 이것으로 채웠다 —
-         일반+1 슬롯3 = 1200판 **62.6 / 63.8%**(게이트 300판 63.0%)로 목표 밴드 60~70% 안이다.
-       종전 등재: 챕터 8 · 일반+10 · 62.3%.
-     축 선택 근거·픽스처 성격·옵션 0개 부작용은 실험1 주석과 동일하다. */
-  /* ⚑⚑ T80 (2026-09-03 주인 지시 «①측정은 12,000판 이상(노이즈 규명 반영)») — 채점 기본값 1,200 → 12,000판.
-     이유는 «표본을 늘리면 점수가 잘 나와서» 가 아니라 **1,200판에서는 이 지표가 측정 자체가 불가능**하기 때문이다:
-     R05 비평가 B 의 몬테카를로(«등급 내 33종의 참승률이 완전히 같다» 는 귀무모형 3,000회)에서 순수 잡음만의
-     기대 폭이 일반 20.3 · 희귀 20.8 · 전설 18.7 · **신화 26.5%p** — 즉 완벽하게 균형 잡힌 특전 집합이어도
-     신화 칸은 합격선 25%p 를 잡음만으로 넘긴다. 비평가 A 의 판수 사다리 실측도 같다(신화 45.0 → 38.9 → 35.7%p).
-     판수는 하니스(장비·챕터)를 옮기는 것이 아니라 **같은 자로 더 오래 재는 것**이라 지표 조작이 아니고,
-     PLAN §7 이 이미 «진단 전용 무료 노브» 로 열어 둔 축이다. 비용은 채점 1회당 약 10배(17초 → 약 3분).
-     EXP2_N: 그보다 더 늘려(60,000판 등) 점근값을 볼 때만 사용. 낮추는 쪽은 탐색용이지 채점용이 아니다.
-     EXP2_FULL=1: 등급별 전 특전 승률을 덤프해 어느 특전을 올리고 내릴지 고를 때 사용. */
-  const EXP2_SCORE_N=12000;   // 채점용 기본 판수 (PLAN §7 · 주인 확정 하한 — 게이트 verifyScoreCriteria 가 감시)
-  let base=0,N=parseInt(process.env.EXP2_N||String(EXP2_SCORE_N),10);
-  console.log(`\n=== 실험2: 특전별 기여도 (챕터${CH}, 하니스 ${h.desc}, ${N}판) ===`);
-  const stat={};
-  for(const p of PERKS)stat[p.id]={w:0,n:0};
-  for(let i=0;i<N;i++){
-    const r=runChapter(CH,h.b,{});
-    if(r.clear)base++;
-    const set=new Set(r.taken);
-    for(const id of set){stat[id].n++;if(r.clear)stat[id].w++;}
-  }
-  console.log(`전체 클리어율: ${(base/N*100).toFixed(1)}%`);
+/* ⚑ T96 — 실험1·2 의 «하니스»(harness()/hCh(), 변별점 규칙 ①~⑤)는 등급 고정 실험과 함께 사라졌다.
+   새 과녁 2점은 주인이 장비·챕터를 **직접 못박았으므로**(희귀 풀셋·슬롯0·챕터15 / 노장비·챕터4)
+   «변별 구간에 앉도록 하니스를 재선정한다» 는 절차 자체가 성립하지 않는다 — 자가 고정이다.
+   `tools/verifyHarness.js` 도 같은 이유로 대상이 사라졌다(T96 3단계 게이트 대개편 몫). */
+/* ⚑⚑⚑ 실험1 = «난이도 과녁 2점» (주인 확정 2026-09-03 · T96/T97 국면의 1순위 과녁) ----------
+   **종전의 «등급 강제 클리어율(일반 10 · 희귀 20 · 전설 80)» 은 등급이 폐지되어 측정 대상이 사라졌다.**
+   주인이 그 자리에 놓은 새 과녁은 딱 두 점이다 (원문 «15챕터 정도에서 승리 확률 10%,
+   노장비로는 4스테이지 정도까지가 승리 확률 30%»):
+     ① 표준 장비(희귀 풀셋 · 슬롯 0) + 특전 순서 획득 → **챕터 15 클리어율 ≈ 10%**
+     ② 노장비(장비 0 · 슬롯 0)   + 특전 순서 획득 → **챕터 4  클리어율 ≈ 30%**
+   허용 오차 **±2%p** · 판수는 과녁당 1,000판 이상(주인 위임 기본값 · 기존 회귀 측정 규약 그대로).
+   자(尺)에 «등급 고정» 이 없다 — 특전은 순서 획득이라 런마다 같은 순서로만 붙는다.
+   ⚠ 이 함수는 **재는 자일 뿐 맞추는 것은 T97** 이다(난이도 노브 = TUNE 구간 성장률·벽 배수·적 수). */
+const EXP1_TARGETS=[
+  {id:'표준 장비(희귀 풀셋·슬롯0)', rar:1, plus:0, slot:0, at:15, want:10},
+  {id:'노장비(장비0·슬롯0)',        rar:-1,plus:0, slot:0, at:4,  want:30},
+];
+const EXP1_TOL=2;                  // ±%p (주인 확정)
+const EXP1_SCORE_N=1000;           // 과녁당 채점 판수 하한 (주인 확정 «1,000판 이상»)
+function exp1_targets(){
+  const N=parseInt(process.env.EXP1_N||String(EXP1_SCORE_N),10);
+  const span=parseInt(process.env.EXP1_SPAN||'0',10);   /* >0 이면 과녁 ±span 챕터도 함께 찍는다(탐색용) */
+  console.log(`\n=== 실험1: 난이도 과녁 2점 (주인 확정 · 각 ${N}판 · 특전 순서 획득 · 허용 ±${EXP1_TOL}%p) ===`);
   const rows=[];
-  for(const p of PERKS){
-    const s=stat[p.id];
-    if(s.n>=25)rows.push({id:p.id,r:p.r,n:s.n,wr:s.w/s.n*100});
-  }
-  rows.sort((a,b)=>b.wr-a.wr);
-  console.log('-- 상위 12 --');
-  rows.slice(0,12).forEach(x=>console.log(`  ${x.id}(${['일','희','전','신'][x.r]}) ${x.wr.toFixed(0)}% (${x.n}판)`));
-  console.log('-- 하위 12 --');
-  rows.slice(-12).forEach(x=>console.log(`  ${x.id}(${['일','희','전','신'][x.r]}) ${x.wr.toFixed(0)}% (${x.n}판)`));
-  /* ⚑⚑ 채점 범위 (주인 승인 39번 ⓐ · 2026-09-03 · P3 R04 이행) — **일반 등급은 폭 판정에서 뺀다.**
-     이유는 «일반이 잘 안 나와서» 가 아니라 **워커에게 노브가 없어서**다: 주인이 일반 44종을 내용·수치
-     전부 동결했고 게이트 `verifyCommonFreeze` 가 4자 대조로 그 수정을 실제로 막는다. 그대로 두면
-     채점표 실험2 1점 중 1/3 을 회차가 시작도 하기 전에 잃는다(= 총점 상한 9.67).
-     주인 답 ⓐ = «일반 등급 폭은 채점에서 제외, 실험2 1점을 희귀·전설 각 1/2점으로 재배분».
-     일반 칸은 **측정·표시는 그대로 하고 판정만 참고**로 돌린다 — 동결분이 나빠지는 것을 놓치지 않기 위해서다. */
-  const EXP2_SCORE_RAR=[1,2];   // 채점 대상 등급 (희귀·전설) — 일반(0)은 동결이라 참고 표시만
-  console.log('-- 등급별 스프레드 (표본 25판 이상만 · ⚑ 채점은 희귀·전설 각 1/2점, 일반은 참고 — 승인 39번 ⓐ) --');
-  let spPass=0;
-  for(let r=0;r<3;r++){
-    const rr=rows.filter(x=>x.r===r);
-    if(!rr.length){console.log(`  ${RAR_NAME[r]}: 표본 없음`);continue;}
-    const hi=rr[0],lo=rr[rr.length-1],sp=hi.wr-lo.wr;
-    if(EXP2_SCORE_RAR.includes(r)&&sp<25)spPass++;
-    /* R09: 소수점 1자리로 출력한다. 정수 반올림이면 «최상 80% / 최하 55% → 폭 25%p OK» 처럼
-       끝값과 폭이 서로 안 맞아 보여(실제 79.8−55.2=24.6) 읽는 쪽이 판정 오류로 오해한다 —
-       R09 비평가 2명이 독립적으로 같은 오독을 했다. 판정(sp<25)은 원래부터 미반올림 값이라 무변경. */
-    const tag=EXP2_SCORE_RAR.includes(r)?'':'  ← 참고(채점 제외 · 일반 44종 동결)';
-    console.log(`  ${RAR_NAME[r]}: 최상 ${hi.id} ${hi.wr.toFixed(1)}% / 최하 ${lo.id} ${lo.wr.toFixed(1)}% → 폭 ${sp.toFixed(1)}%p ${sp<25?'OK':'초과'}${tag}`);
-  }
-  console.log(`  채점 합격 ${spPass}/${EXP2_SCORE_RAR.length} (희귀·전설 각 1/2점 — 승인 39번 ⓐ)`);
-  if(process.env.EXP2_FULL){
-    console.log('-- [진단] 등급별 전 특전 승률 (표본 25판 이상, 내림차순) --');
-    for(let r=0;r<3;r++){
-      const rr=rows.filter(x=>x.r===r);
-      console.log(`  [${RAR_NAME[r]}] ${rr.map(x=>`${x.id} ${x.wr.toFixed(0)}%(${x.n})`).join(' · ')}`);
+  for(const T of EXP1_TARGETS){
+    const b=mkBuild(T.rar,T.plus,T.slot);   /* rar<0 = 노장비 (사다리 «노템» 칸과 같은 자) */
+    const pw=buildPower(b);
+    console.log(`\n  [${T.id}] → 과녁 챕터 ${T.at} · ${T.want}%`);
+    console.log(`    스탯: 공 ${pw.atk.toFixed(1)} / 체 ${pw.hp.toFixed(1)} / 실 ${pw.sh.toFixed(1)}`);
+    for(let c=T.at-span;c<=T.at+span;c++){
+      if(c<1)continue;
+      let w=0;
+      for(let i=0;i<N;i++) if(runChapter(c,b).clear)w++;
+      const rate=w/N*100, d=rate-T.want, ok=Math.abs(d)<=EXP1_TOL;
+      const tag=c===T.at?(ok?'   ← 과녁 ✓':`   ← 과녁 ✗(${T.want}±${EXP1_TOL}%)`):'';
+      console.log(`    챕터 ${String(c).padStart(3)}: 클리어율 ${rate.toFixed(1)}%${tag}`);
+      if(c===T.at) rows.push([T.id,T.at,T.want,rate,d,ok]);
     }
   }
+  console.log(`\n  — 과녁 판정 —`);
+  console.log('  | 조건 | 과녁 챕터 | 과녁 | 실측 | 편차 | 판정 |');
+  console.log('  |---|---|---|---|---|---|');
+  let pass=0;
+  for(const [id,at,want,rate,d,ok] of rows){
+    if(ok)pass++;
+    console.log(`  | ${id} | ${at} | ${want}% | ${rate.toFixed(1)}% | ${(d>=0?'+':'')+d.toFixed(1)}%p | ${ok?'✓':'✗'} |`);
+  }
+  console.log(`  과녁 합격 ${pass}/${EXP1_TARGETS.length}`);
 }
+/* ⚑ 실험2(«등급 내 폭») 는 T96 에서 폐지됐다 — 등급이 사라져 «등급 안에서의 최상−최하» 라는
+   측정 대상 자체가 없다. 특전이 고정 10종·순서 획득이라 «어떤 특전을 뽑았나» 라는 변량도 없다.
+   모드 2 는 자리를 비워 두되(번호 재사용 금지 규약과 같은 취지) 왜 비었는지 말하고 끝낸다. */
+function exp2_retired(){
+  console.log('\n=== 실험2: 폐지 (T96 · 2026-09-03 주인 확정) ===');
+  console.log('  등급·선택창이 사라져 «등급 내 폭» 은 측정 대상이 없다. 새 과녁은 실험1(난이도 과녁 2점)이다.');
+}
+
 function exp3_progression(){
   const MAXC=parseInt(process.env.EXP3_MAX||String(TUNE.maxChapter),10);
   /* ⚑ T75 — «하니스 재시도 상한» 과 «채점 목표 상한» 은 다른 숫자여야 한다 (종전엔 둘 다 400 이었다).
@@ -1622,16 +1241,11 @@ function exp4_gearProgress(){
 /* 종전의 앵커 3점(C=30 · A=90 · B=300)은 주인이 폐기했다. 유일한 과녁은 아래 «등급별 스탯 사다리» 다:
    노템 5 · 일반 15 · 희귀 30 · 영웅 50 · 전설 70 · 신화 120 · 신화+9강 260 (전부 슬롯 0렙).
    합격 구간은 §7 T6 제안 기준을 그대로 승계한다 — 과녁 챕터 클리어율 2~10% (기대 재도전 10~50회).
-   ⚑⚑ 측정 조건 = «일반 특전만 뜨는 런» (주인 승인 38번 A안 · 2026-09-03 · P3 R04 이행).
-   왜 바뀌었나. R01 이 세 자를 나란히 재 보니 **2~10% 밴드가 존재하지 않는 자가 둘**이었다 —
-   PLAN 문면대로 «특전 미획득» 으로 재면 챕터 30 이 0.0%(하한 미달), 종전 코드처럼 «특전 전부» 로 재면
-   24.0%(상한 초과)다. 특전이 클리어율의 지배 요인이라 그 사이에 밴드가 없다.
-   주인 답 = A안 — **사다리를 실험1 ①단계와 같은 자(일반 특전만)로 재정의**한다. 그러면
-   ① 두 실험이 같은 자를 써서 회차마다 서로를 깨지 않고 ② «일반이 절대 기준» 지시와 방향이 같으며
-   ③ «장비 등급이 과녁 챕터를 정한다» 는 사다리 본래 취지도 그대로 남는다.
-   구현은 `runChapter(c,b,{rarityLock:0})` 한 곳뿐이다(실험1 의 등급 고정과 같은 경로).
-   ⚠ `noPerk` 옵션(R01 신설)은 «특전 미획득» 자를 따로 볼 때만 쓰는 진단용으로 남는다 — 채점에는 안 쓴다.
-   게이트 `verifyScoreCriteria` 가 PLAN §7·§11.7 문면 ↔ 이 호출을 대조한다(자가 조용히 돌아가는 것 차단). */
+   ⚑⚑ 측정 조건 = **특전 순서 획득**(T96 · 2026-09-03). 종전의 «일반 특전만 뜨는 런»(승인 38번 A안)은
+   등급이 폐지되어 성립하지 않는다 — 이제 모든 런이 같은 순서로 같은 10종을 받으므로 자가 하나뿐이다.
+   ⚠ `noPerk` 옵션은 «특전 미획득» 을 따로 볼 때만 쓰는 진단용으로 남는다 — 채점에는 안 쓴다.
+   ⚠ 사다리 7점 자체는 PLAN §11.7 주인 확정 과녁이라 그대로 두되, **이 국면의 1순위는 실험1 의 새 과녁 2점**이다
+      (주인 «어쨌든 챕터 난이도 조절 먼저»). 재적합은 T97 몫이다. */
 const LADDER=[
   {id:'노템',      rar:-1, plus:0, at:5,   want:[25,150,250]},
   {id:'일반',      rar:0,  plus:0, at:15,  want:[50,250,400]},
@@ -1656,7 +1270,7 @@ function exp5_ladder(){
   const N=parseInt(process.env.EXP5_N||String(EXP5_SCORE_N),10);
   const only=process.env.EXP5_ONLY;                 /* '신화' 등으로 한 칸만 측정 */
   const span=parseInt(process.env.EXP5_SPAN||'0',10);   /* >0 이면 과녁 ±span 챕터도 함께 측정 */
-  console.log(`\n=== 실험5: 스탯 사다리 7점 (PLAN §11.7 · 각 챕터 ${N}판 · 슬롯 0렙 · 일반 특전만 · 합격 2~10%) ===`);
+  console.log(`\n=== 실험5: 스탯 사다리 7점 (PLAN §11.7 · 각 챕터 ${N}판 · 슬롯 0렙 · 특전 순서 획득 · 합격 2~10%) ===`);
   const rows=[];
   for(const L of LADDER){
     if(only&&only!==L.id)continue;
@@ -1669,7 +1283,7 @@ function exp5_ladder(){
     for(let c=L.at-span;c<=L.at+span;c++){
       if(c<1)continue;
       let w=0;
-      for(let i=0;i<N;i++) if(runChapter(c,b,{rarityLock:0}).clear)w++;   /* ⚑ 승인38 A안 — 사다리 자 = «일반 특전만 뜨는 런» */
+      for(let i=0;i<N;i++) if(runChapter(c,b).clear)w++;   /* ⚑ T96 — 사다리 자 = «특전 순서 획득» */
       const rate=w/N*100;
       const exp=rate>0?(100/rate).toFixed(1)+'회':'∞';
       const tag=c===L.at?(rate>=2&&rate<=10?'   ← 과녁 ✓':'   ← 과녁 ✗(합격 2~10%)'):'';
@@ -1717,8 +1331,8 @@ const mode=process.argv[2]||'all';
 if(process.env.SEED!==undefined&&process.env.SEED!=='') setSeed(Number(process.env.SEED));   /* R11: 하니스 시드 (미설정 시 종전과 동일) */
 if(mode==='table'){ dumpGearTable(); process.exit(0); }
 if(mode==='fit'){ fitAnchors(); process.exit(0); }
-if(mode==='1'||mode==='all')exp1_rarityLadder();
-if(mode==='2'||mode==='all')exp2_perkWinrate();
+if(mode==='1'||mode==='all')exp1_targets();
+if(mode==='2')exp2_retired();   /* 폐지 — 'all' 에서 빠진다 */
 if(mode==='3'||mode==='all')exp3_progression();
 if(mode==='4'||mode==='all')exp4_gearProgress();
 if(mode==='5'||mode==='all')exp5_ladder();
