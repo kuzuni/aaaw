@@ -65,7 +65,11 @@ const TUNE={
   pAtk0:25, pHp0:150, pSh0:250, pAspd0:1.0, pCrit0:20, pCritF0:150, pCounter0:20, pDef0:20, pEvade0:20,
   goldKillBase:0.6, goldKillPer:0.10, goldClearPer:3,
   goldGrowth:1.22,              // 챕터당 골드 성장 배수 (R07: 1.185 → 1.22. 1.185 는 챕터 90 대형 벽에서 슬롯 13 에 갇혀 F2P·과금 둘 다 영구 정체했다 — 실험4 실측. eHpG 보다 높게 둬야 후반 벽에서 수입이 적 성장을 따라잡는다)
-  expKill:3, expBoss:9, expNeed:lv=>4+4*lv,
+  expKill:3, expBoss:9,
+  /* ⚑⚑ T96 4단계 (주인 확정 2026-09-03) — `4+4*lv` → **`4+3*lv`**.
+     10레벨까지 누적 Σ(4+3L)=205 가 고정 챕터의 경험치 공급 205 와 정확히 같아지게 고른 값이다
+     (종전 4+4L 이면 260 이 필요해 적 50 상한 안에서는 10개를 절대 못 모은다 — 주인 지시 ②). */
+  expNeed:lv=>4+3*lv,
 };
 TUNE.goldKill=c=>(TUNE.goldKillBase+TUNE.goldKillPer*c)*Math.pow(TUNE.goldGrowth,c-1)*rand(1,1.8);
 TUNE.goldClear=c=>TUNE.goldClearPer*c*Math.pow(TUNE.goldGrowth,c-1);
@@ -105,6 +109,8 @@ function payDevilCost(p){
    웨이브 4개 161챕터 · 5개 139챕터, 쉼터 1~2개, 악마 1·천사 1 은 전 챕터 그대로다.
    후반 난이도는 마릿수가 아니라 적 스탯으로 낸다는 주인 조항은 그대로다. */
 const LAYOUT_MAXENEMY=50;
+/* ⚑ 고정 구성 (주인 확정 2026-09-03) — 웨이브 4 × 12마리 + 보스 1 = 적 49 · 쉼터 2. index.html 과 같은 값. */
+const LAYOUT_WAVES=4, LAYOUT_WAVE_SIZE=12, LAYOUT_RESTS=2;
 /* ⚑ 쉼터 보상 (PLAN §2.4 · 주인 확정 2026-09-02 17:1X · T49) — «❤️ 체력 260 회복(고정값)» vs «🌟 경험치 +26».
    고정값이라 최대체력 비율로 되돌리지 말 것. index.html 과 이름·값이 같아야 한다(게이트 verifyRestPolicy). */
 const REST_HEAL=260, REST_EXP=26;
@@ -128,18 +134,24 @@ const WAVE_PIERCE=2, WAVE_PIERCE_BIG=8, SPEAR_PIERCE=8;
    «흡수» 하고 방어막은 타격 «1회» 를 통째로 무효화한다. 한 장이 소모되는 순간 «방어막 방어» 트리거
    (🛡️❤️ 회복 · 🛡️💥 반사 · 🥅 창)가 굴러간다. */
 function chapterLayout(c){
+  /* ⚑⚑⚑ T96 4단계 (주인 확정 2026-09-03) — «특전 10개를 얻을 정도의 적 개수로만 챕터를 구성해라».
+     **전 챕터 동일 고정 구성**이고 제비뽑기는 «순서» 에만 남는다:
+       웨이브 4 × 12마리 = 48 · 보스 1 → 적 **49마리**(상한 LAYOUT_MAXENEMY 50 이내)
+       쉼터 2 (고정 — 종전 1~4 변동 폐지) · 악마 1 · 천사 1
+     공급 = 48×3 + 9(보스) + 2×26(쉼터) = **205** = 필요 Σ(4+3·L), L=1..10 = **205**
+     → 완주하면 정확히 10번 레벨업 = 특전 10개. 중간에 죽으면 그만큼 덜 얻는다(의도).
+     ⚑ 적 «수» 는 더 이상 난이도 노브가 아니다 — 난이도는 적 스탯(구간 성장률·벽 배수)으로만 만든다.
+     ⚑ 덤: 챕터마다 적 수·쉼터 수가 흔들리던 것이 사라져 인접 챕터 난이도 역전(T28)이 구조적으로 없어진다.
+     게이트 `tools/verifyChapterFixed.js` 가 챕터 1~300 전수로 이 구성과 «완주 = 특전 10개» 를 실측한다. */
   const rnd=mulberry(c*1013904223+77);
-  let waveCount=4+(rnd()<0.4?1:0);
-  let size=rnd()<0.5?10:12;
-  while(waveCount*size>LAYOUT_MAXENEMY&&size>10) size-=2;      /* ① 마릿수부터 줄이고 */
-  while(waveCount*size>LAYOUT_MAXENEMY&&waveCount>4) waveCount--; /* 그래도 넘치면 웨이브 수 */
-  const evs=['devil','angel'];                                  /* ③④ 정확히 하나씩 */
-  const rest=clamp(waveCount-3,1,4);                            /* ② 남는 슬롯 = 쉼터, 1~4 클램프 */
-  for(let i=0;i<rest;i++) evs.push('rest');
+  const waveCount=LAYOUT_WAVES, size=LAYOUT_WAVE_SIZE;
+  const evs=['devil','angel'];                                  /* 악마 1 · 천사 1 */
+  for(let i=0;i<LAYOUT_RESTS;i++) evs.push('rest');             /* 쉼터 2 고정 */
   for(let i=evs.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); const t=evs[i]; evs[i]=evs[j]; evs[j]=t; }
   const out=[];
+  /* 웨이브 4 · 이벤트 4 를 번갈아 깔고 마지막이 보스다 — «웨이브 뒤 이벤트» 를 4번 반복하면
+     웨이브가 정확히 4개(48마리)가 된다. 종전엔 보스 앞에 웨이브를 하나 더 붙여 5웨이브(60마리)였다. */
   for(let i=0;i<evs.length;i++){ out.push({t:'wave',size}); out.push({t:evs[i]}); }
-  out.push({t:'wave',size});
   out.push({t:'boss'});
   return out;
 }
