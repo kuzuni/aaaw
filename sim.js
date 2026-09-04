@@ -294,23 +294,67 @@ function enemyStats(c,w){
    **적중률 금지는 유효**(흡혈 금지는 T96 에서 폐기됐고, T104 로 흡혈 축 자체가 특전에서 사라졌다). ---------- */
 const PERK_ATK_M=1.20, PERK_DEF_M=1.10, PERK_EVADE_A=10, PERK_COUNTER_A=10,
       PERK_CRITR_A=10, PERK_CRITF_A=50, PERK_EVHEAL_CH=0.10, PERK_EVHEAL_F=0.06, PERK_SUMMON_CH=1.00;
+/* ⚑⚑⚑ T119 신규 상수 (주인 확정 2026-09-04 13:0X) — 신규 22종이 쓰는 수치. index.html 과 같은 이름·같은 값.
+   처치 시 소환 확률 33/66/100 은 주인이 직접 정한 값이라 «10% 단위(5% 예외)» 규칙에서 제외된다
+   (`verifyNumClean` 에 주인 확정으로 등재). 가시갑옷 배율은 «100% = 1배» (주인 정의). */
+const PERK_KILL_N=0.33, PERK_KILL_R=0.66, PERK_KILL_L=1.00,
+      PERK_THORN_N=1.00, PERK_THORN_R=2.00, PERK_THORN_L=3.00,
+      PERK_AMP=1.00, PERK_FULLHP_A=1.00, PERK_BERSERK_M=3.00;
+/* 등급 굴림 확률 — 일반 60 / 희귀 25 / 전설 15 (⚑ 13:2X 주인 정정 · 처음 50/30/20 폐기).
+   «귀족의 눈» 은 여기서 일반을 빼고 재정규화한다(희귀 25/40 = 62.5% · 전설 15/40 = 37.5%). */
+const PERK_GRADE_RATE=[60,25,15];
+const PERK_GRADE_NAME=['일반','희귀','전설'];
 /* 순서 고정 — 이 배열이 주인 표 1~10번이다. 게이트가 순서·수치를 대조한다.
    ⚑⚑⚑ T117 — 표 순서는 더 이상 «획득 순서» 가 아니라 ⓐ 카드 표시·문면의 정본 순서 ⓑ 시뮬 측정 정책의
    우선순위(제시 3장 중 이 표에서 앞선 것을 고른다)다. 실제 획득 순서는 3택 굴림과 유저 선택이 정한다.
    ⚑⚑⚑ T104 — 새 순서: 회피 시 회복 → 반격률 → 반격 시 창 → 회피 시 화살 → 피격 시 도끼 →
                           공격력 → 회피율 → 치확 → 치배 → 방어력 (주인 확정 2026-09-03). */
+/* ⚑⚑⚑ T119 (주인 확정 2026-09-04 13:0X · 13:2X 정정) — 특전 풀 확장 + 등급 부활.
+   기존 10종 = **일반** · 신규 22종(일반 5 · 희귀 8 · 전설 9) = **풀 32종**.
+   `g` 0 = 일반 · 1 = 희귀 · 2 = 전설. 배열 순서 = 문면·카드의 정본 순서이자 **등급 안 시뮬 우선순위**다
+   (시뮬 정책: 제시 3장 중 «등급 높은 것 우선 · 같은 등급이면 이 배열에서 앞선 것»).
+   ⚑ 같은 이름·다른 등급의 «처치 시 X» 4계열은 **확률만 갱신(최댓값)** 한다 — 위임 기본값.
+     주인이 33/66/100 을 «같은 효과의 등급별 확률» 로 적었으므로 상위 등급을 얻으면 그 효과가 세지는 것이고,
+     따로 굴려 두 번 소환하지 않는다(가산을 원하시면 한 줄로 정정 — 그때는 소환 연쇄 B 가 크게 오른다).
+     가시갑옷은 주인이 «가산 중첩(+100 +200 +300 = 최대 +600%)» 을 직접 못 박았으므로 그쪽만 가산이다. */
 function mkPerks(){
+  const kmax=(p,k,v)=>{ p.px[k]=Math.max(p.px[k]||0,v); };   /* 처치 시 소환 — 확률 최댓값 갱신 */
   return [
-    {id:'p_evadeHeal',nm:'회피 시 회복',      d:'회피 시 10% 확률로 최대 체력 6% 회복', ap:p=>p.px.p_evadeHeal=1},
-    {id:'p_atk',     nm:'공격력 증가',        d:'공격력 +20%',                     ap:p=>{p.px.p_atk=1;p.dmg*=PERK_ATK_M;}},
-    {id:'p_evade',   nm:'회피율 증가',        d:'회피율 +10',                      ap:p=>{p.px.p_evade=1;p.evade+=PERK_EVADE_A;}},
-    {id:'p_arrowEv', nm:'회피 시 화살',       d:'회피 시 화살 1개',                ap:p=>p.px.p_arrowEv=1},
-    {id:'p_axeHit',  nm:'피격 시 도끼',       d:'피격 시 도끼 1개',                ap:p=>p.px.p_axeHit=1},
-    {id:'p_counter', nm:'반격률 증가',        d:'반격률 +10',                      ap:p=>{p.px.p_counter=1;p.counter+=PERK_COUNTER_A;}},
-    {id:'p_spearCt', nm:'반격 시 창',         d:'반격 시 창 1개',                  ap:p=>p.px.p_spearCt=1},
-    {id:'p_critR',   nm:'치명타 확률 증가',   d:'치명타 확률 +10',                 ap:p=>{p.px.p_critR=1;p.critR+=PERK_CRITR_A;}},
-    {id:'p_critF',   nm:'치명타 피해 증가',   d:'치명타 피해 +50',                 ap:p=>{p.px.p_critF=1;p.critF+=PERK_CRITF_A;}},
-    {id:'p_def',     nm:'방어력 증가',        d:'방어력 +10%',                     ap:p=>{p.px.p_def=1;p.def*=PERK_DEF_M;}},
+    /* ===== 일반 15종 (1~10 = 기존 10종 · 수치 불변) ===== */
+    {id:'p_evadeHeal',g:0,nm:'회피 시 회복',      d:'회피 시 10% 확률로 최대 체력 6% 회복', ap:p=>p.px.p_evadeHeal=1},
+    {id:'p_atk',     g:0,nm:'공격력 증가',        d:'공격력 +20%',                     ap:p=>{p.px.p_atk=1;p.dmg*=PERK_ATK_M;}},
+    {id:'p_evade',   g:0,nm:'회피율 증가',        d:'회피율 +10',                      ap:p=>{p.px.p_evade=1;p.evade+=PERK_EVADE_A;}},
+    {id:'p_arrowEv', g:0,nm:'회피 시 화살',       d:'회피 시 화살 1개',                ap:p=>p.px.p_arrowEv=1},
+    {id:'p_axeHit',  g:0,nm:'피격 시 도끼',       d:'피격 시 도끼 1개',                ap:p=>p.px.p_axeHit=1},
+    {id:'p_counter', g:0,nm:'반격률 증가',        d:'반격률 +10',                      ap:p=>{p.px.p_counter=1;p.counter+=PERK_COUNTER_A;}},
+    {id:'p_spearCt', g:0,nm:'반격 시 창',         d:'반격 시 창 1개',                  ap:p=>p.px.p_spearCt=1},
+    {id:'p_critR',   g:0,nm:'치명타 확률 증가',   d:'치명타 확률 +10',                 ap:p=>{p.px.p_critR=1;p.critR+=PERK_CRITR_A;}},
+    {id:'p_critF',   g:0,nm:'치명타 피해 증가',   d:'치명타 피해 +50',                 ap:p=>{p.px.p_critF=1;p.critF+=PERK_CRITF_A;}},
+    {id:'p_def',     g:0,nm:'방어력 증가',        d:'방어력 +10%',                     ap:p=>{p.px.p_def=1;p.def*=PERK_DEF_M;}},
+    {id:'p_killSpearN',g:0,nm:'처치 시 창',       d:'처치 시 33% 확률로 창 1개',        ap:p=>{p.px.p_killSpearN=1;kmax(p,'p_killSpear',PERK_KILL_N);}},
+    {id:'p_killBoltN', g:0,nm:'처치 시 번개',     d:'처치 시 33% 확률로 보이는 적 전부에게 번개 1회씩', ap:p=>{p.px.p_killBoltN=1;kmax(p,'p_killBolt',PERK_KILL_N);}},
+    {id:'p_killArrowN',g:0,nm:'처치 시 화살',     d:'처치 시 33% 확률로 화살 3개',      ap:p=>{p.px.p_killArrowN=1;kmax(p,'p_killArrow',PERK_KILL_N);}},
+    {id:'p_killAxeN',  g:0,nm:'처치 시 도끼',     d:'처치 시 33% 확률로 도끼 2개',      ap:p=>{p.px.p_killAxeN=1;kmax(p,'p_killAxe',PERK_KILL_N);}},
+    {id:'p_thornsN',   g:0,nm:'가시갑옷',         d:'가시갑옷 +100%',                  ap:p=>{p.px.p_thornsN=1;p.px.p_thorns+=PERK_THORN_N;}},
+    /* ===== 희귀 8종 ===== */
+    {id:'p_fullHp',    g:1,nm:'풀피 적 강타',     d:'체력이 가득 찬 적 공격 시 데미지 +100%', ap:p=>p.px.p_fullHp=1},
+    {id:'p_repairUp',  g:1,nm:'수리 증폭',        d:'실드 수리량 +100%',               ap:p=>{p.px.p_repairUp=1;p.repairAmp+=PERK_AMP;}},
+    {id:'p_healUp',    g:1,nm:'회복 증폭',        d:'체력 회복량 +100%',               ap:p=>{p.px.p_healUp=1;p.healAmp+=PERK_AMP;}},
+    {id:'p_thornsR',   g:1,nm:'가시갑옷',         d:'가시갑옷 +200%',                  ap:p=>{p.px.p_thornsR=1;p.px.p_thorns+=PERK_THORN_R;}},
+    {id:'p_killSpearR',g:1,nm:'처치 시 창',       d:'처치 시 66% 확률로 창 1개',        ap:p=>{p.px.p_killSpearR=1;kmax(p,'p_killSpear',PERK_KILL_R);}},
+    {id:'p_killBoltR', g:1,nm:'처치 시 번개',     d:'처치 시 66% 확률로 보이는 적 전부에게 번개 1회씩', ap:p=>{p.px.p_killBoltR=1;kmax(p,'p_killBolt',PERK_KILL_R);}},
+    {id:'p_killArrowR',g:1,nm:'처치 시 화살',     d:'처치 시 66% 확률로 화살 3개',      ap:p=>{p.px.p_killArrowR=1;kmax(p,'p_killArrow',PERK_KILL_R);}},
+    {id:'p_killAxeR',  g:1,nm:'처치 시 도끼',     d:'처치 시 66% 확률로 도끼 2개',      ap:p=>{p.px.p_killAxeR=1;kmax(p,'p_killAxe',PERK_KILL_R);}},
+    /* ===== 전설 9종 ===== */
+    {id:'p_killSpearL',g:2,nm:'처치 시 창',       d:'처치 시 창 1개',                  ap:p=>{p.px.p_killSpearL=1;kmax(p,'p_killSpear',PERK_KILL_L);}},
+    {id:'p_killBoltL', g:2,nm:'처치 시 번개',     d:'처치 시 보이는 적 전부에게 번개 1회씩', ap:p=>{p.px.p_killBoltL=1;kmax(p,'p_killBolt',PERK_KILL_L);}},
+    {id:'p_overkill',  g:2,nm:'오버킬 회복',      d:'처치 시 남은 데미지만큼 체력 회복', ap:p=>p.px.p_overkill=1},
+    {id:'p_killArrowL',g:2,nm:'처치 시 화살',     d:'처치 시 화살 3개',                ap:p=>{p.px.p_killArrowL=1;kmax(p,'p_killArrow',PERK_KILL_L);}},
+    {id:'p_killAxeL',  g:2,nm:'처치 시 도끼',     d:'처치 시 도끼 2개',                ap:p=>{p.px.p_killAxeL=1;kmax(p,'p_killAxe',PERK_KILL_L);}},
+    {id:'p_berserk',   g:2,nm:'광전사',           d:'공격력 300% 가 되는 대신 치명타 확률 0%', ap:p=>{p.px.p_berserk=1;p.dmg*=PERK_BERSERK_M;}},
+    {id:'p_nobleEye',  g:2,nm:'귀족의 눈',        d:'다음 특전부터 최소 희귀 이상만 나온다', ap:p=>p.px.p_nobleEye=1},
+    {id:'p_spearAvatar',g:2,nm:'창의 화신',       d:'내가 쏘는 모든 화살이 창으로 바뀐다', ap:p=>p.px.p_spearAvatar=1},
+    {id:'p_thornsL',   g:2,nm:'가시갑옷',         d:'가시갑옷 +300%',                  ap:p=>{p.px.p_thornsL=1;p.px.p_thorns+=PERK_THORN_L;}},
   ];
 }
 const PERKS=mkPerks();
@@ -330,17 +374,40 @@ const PERK_PICKS=10;
    index.html 과 같은 이름·같은 값·같은 동사(게이트 verifyPerkOrder 가 두 엔진을 대조한다). */
 const PERK_OFFER=3;
 /* 제시 카드 3장 — «아직 안 얻은 것만 · 한 장 안에서 중복 없음». 뽑기는 **판 난수**(전투 스트림)라
-   시드 하니스(SEED=…)에서는 결정적이다(챕터 시드가 아니다 — 주인 지시 ① 시뮬 측정 정책). */
-function offerPerks(taken){
-  const rest=PERKS.filter(p=>taken.indexOf(p)<0);
+   시드 하니스(SEED=…)에서는 결정적이다(챕터 시드가 아니다 — 주인 지시 ① 시뮬 측정 정책).
+   ⚑⚑⚑ T119 (주인 확정 2026-09-04 13:0X) — **카드 3장 각각** 등급을 `PERK_GRADE_RATE`(60/25/15)로 굴리고
+   그 등급의 «아직 안 얻은» 특전 중 무작위 1개를 뽑는다. 그 등급이 비었으면 **남은 등급들로 재정규화해
+   다시 굴린다**. «귀족의 눈»(p_nobleEye)을 얻었으면 일반을 빼고 굴린다(희귀 62.5 / 전설 37.5 재정규화 —
+   가중치를 그대로 두고 일반만 빼면 자동으로 25:15 = 62.5:37.5 가 된다). 희귀·전설이 다 떨어지면
+   일반으로 되돌아간다(재정규화가 «남은 등급» 만 보므로 구조적으로 그렇게 된다).
+   `noble` 을 인자로 받는 이유: index.html 은 `G.player.px`, sim.js 는 `G.player.px` 로 경로가 달라
+   동사 안에서 플레이어를 찾지 않고 «귀족의 눈을 켰나» 한 비트만 받는다(두 엔진 같은 본문). */
+function offerPerks(taken,noble){
   const out=[];
-  for(let i=0;i<PERK_OFFER&&rest.length;i++) out.push(rest.splice(Math.floor(Math.random()*rest.length),1)[0]);
+  for(let i=0;i<PERK_OFFER;i++){
+    /* 이 카드가 뽑을 수 있는 후보 = 아직 안 얻었고 이번 3장에도 없는 것 */
+    const cand=PERKS.filter(p=>taken.indexOf(p)<0&&out.indexOf(p)<0);
+    if(!cand.length)break;
+    /* 등급별 가중치 — 비어 있는 등급은 0 이 되어 자동 재정규화된다. 귀족의 눈이면 일반(0)을 뺀다. */
+    const w=PERK_GRADE_RATE.map((r,g)=>(cand.some(p=>p.g===g)?r:0));
+    if(noble&&(w[1]||w[2])) w[0]=0;
+    const tot=w[0]+w[1]+w[2];
+    let r=Math.random()*tot, g=0;
+    for(g=0;g<3;g++){ if(r<w[g])break; r-=w[g]; }
+    if(g>2)g=2;
+    const pool=cand.filter(p=>p.g===g);
+    out.push(pool[Math.floor(Math.random()*pool.length)]);
+  }
   return out;
 }
-/* ⚑ 시뮬 측정 정책 (재현성 · 주인 지시 ① — ROUTINE 17:0X «특전 확장 방향» ② 에서 미리 정해 둔 것):
-   가상 플레이어는 **제시된 3장 중 §3.1 표 순서가 가장 앞선 것**을 고른다.
+/* ⚑ 시뮬 측정 정책 (재현성 · 주인 지시 13:0X ②): 가상 플레이어는 제시 3장 중
+   **등급이 높은 것 우선 · 같은 등급이면 §3.1 표 순서가 앞선 것**을 고른다(실제 유저가 좋은 것을 고르는 것의 근사).
    실제 게임(index.html)은 유저 자유 선택이므로 이 함수를 쓰지 않는다 — 측정 조건 통일용이다. */
-function simPickPerk(offer){ let b=offer[0]; for(const p of offer) if(PERKS.indexOf(p)<PERKS.indexOf(b)) b=p; return b; }
+function simPickPerk(offer){
+  let b=offer[0];
+  for(const p of offer) if(p.g>b.g||(p.g===b.g&&PERKS.indexOf(p)<PERKS.indexOf(b))) b=p;
+  return b;
+}
 /* 획득 확정 한 곳 — 레벨업·악마가 같은 동사를 거친다(index.html pickPerk 와 1:1). */
 function pickPerk(G,perk){ perk.ap(G.player); G.taken.push(perk); return perk; }
 
@@ -711,7 +778,10 @@ function _basePxLegacy(){
 }
 /* 신 132종의 px 키 = 특전 id 그대로. 여기서 한 번에 0 으로 깔아 둔다 —
    특전을 추가·삭제해도 이 함수를 고칠 일이 없고, 오타 난 키가 조용히 `undefined` 로 도는 일도 없다. */
-function basePx(){ const o=_basePxLegacy(); for(const k of PERKS) o[k.id]=0; return o; }
+/* ⚑ T119 — 특전 id 말고도 «같은 이름·다른 등급» 계열이 모이는 합산 키 5개가 있다.
+   `p_kill*` 넷은 확률 최댓값이고 `p_thorns` 는 가산 배율이다(주인이 가시갑옷만 가산으로 확정). */
+const PERK_AGG_KEYS=['p_killSpear','p_killBolt','p_killArrow','p_killAxe','p_thorns'];
+function basePx(){ const o=_basePxLegacy(); for(const k of PERKS) o[k.id]=0; for(const k of PERK_AGG_KEYS) o[k]=0; return o; }
 function mkPlayer(build,G){
   const pw=buildPower(build);
   const maxHp=pw.hp;
@@ -741,7 +811,9 @@ const effDmg=p=>{const px=p.px;let m=1+bsum(p,'atk');
   if(px.rage&&p.sh<=0)m*=1.5;                              /* 장비 옵션 */
   return p.dmg*m;};
 const effAspd=p=>p.aspd*(1+bsum(p,'aspd'));
-const effCritR=p=>p.critR+bsum(p,'critR');
+/* ⚑ T119 — 광전사(전설 6): 치명타 확률을 **0 으로 고정**한다(치확 +10 특전·버프·장비 옵션이 있어도 0).
+   여기 한 자리에서 막으므로 «치명타 시» 트리거도 함께 죽는다 — 주인 문면 «치명타 확률 0%» 그대로. */
+const effCritR=p=>p.px.p_berserk?0:p.critR+bsum(p,'critR');
 const effCritF=p=>p.critF+bsum(p,'critF');
 const effDef=p=>Math.min(80,p.def+bsum(p,'def'));
 const effEvade=p=>{const px=p.px;let e=p.evade+bsum(p,'evade');
@@ -802,6 +874,17 @@ function onKill(G,e,over){
   if(px.killCritBuff&&pkk(p,0.30*px.killCritBuff))addBuff(p,'critR',14,4);      /* 장비 옵션 */
   if(px.killDefBuff)addBuff(p,'def',10*px.killDefBuff,3);                       /* 장비 옵션 */
   if(px.killAspd)p.aspd*=1.01;                                                  /* 장비 옵션 */
+  /* ⚑⚑⚑ T119 처치 시 트리거 (주인 확정 2026-09-04 13:0X) — «내가 처치했을 때» 다:
+     평타·반격·소환 적중·가시 반사로 죽인 경우 전부(소환 적중 = 공격 판정 §3.0 · 반사 처치도 «내 처치» 로 본다 — 위임).
+     그래서 **처치 시 소환이 다시 처치를 낳는 연쇄**가 생긴다 — 임계 B 는 `verifySummonChain` ⑤ 가 잰다.
+     확률은 «같은 이름·다른 등급» 중 **최댓값**(위임 기본값 — mkPerks 주석 참조). */
+  if(px.p_killSpear&&pkk(p,px.p_killSpear))fireSpear(p,1);
+  if(px.p_killBolt&&pkk(p,px.p_killBolt))fireBoltsAll(p,e.wave);   /* ⚑ 대상 = 죽은 적이 속한 웨이브 (대기 웨이브·보스로 넘어가지 않는다) */
+  if(px.p_killArrow&&pkk(p,px.p_killArrow))fireArrows(p,3);
+  if(px.p_killAxe&&pkk(p,px.p_killAxe))fireAxe(p,2);
+  /* ⚑ T119 오버킬 회복 (전설 3) — 처치한 타격의 «초과분» 100% 만큼 체력 회복.
+     최대치 초과분은 `heal` 의 클램프로 버려지고, 주인 문면대로 «힐» 이라 회복 증폭의 영향을 받는다(noBoost 아님). */
+  if(px.p_overkill&&over>0)heal(p,over);
   /* 웨이브 전멸 실드 충전 폐지 (PLAN §2.3 주인 지시) — 실드 충전은 특전으로만 */
   if(e.isBoss)G.cleared=true;   /* 클리어 확정을 먼저 — 보스 경험치로 레벨업해도 특전 3택 없음 (PLAN §2.4 주인 지시) */
   gainExp(G,(e.isBoss?TUNE.expBoss:TUNE.expKill)+(px.sage?1:0));
@@ -871,6 +954,7 @@ function dealDmg(G,e,ratio,fromBasic){
      스택형(빗맞음·회피)은 «적중 1타당 1개» 소모하고, 몇 장이 쌓여 있든 한 타에 한 번만 붙는다. */
   let addBonus=0;
   if(full&&px.firstHit)addBonus+=0.20*px.firstHit;           /* 장비 옵션 */
+  if(full&&px.p_fullHp)addBonus+=PERK_FULLHP_A;              /* ⚑ T119 희귀 1 풀피 적 강타 — 데미지 +100% (가산 보너스 풀) */
   if(px.backDmg){                                            /* 장비 옵션 (순수 배수) */
     let front=null;for(const en of aliveList(G))if(!front||en.worldX<front.worldX)front=en;
     if(front&&e!==front)d*=3.2;
@@ -933,6 +1017,10 @@ function fireAxe(p,n){const G=p.G;n=(n||1)*(p.px.axeCount?3:1);
   for(let k=0;k<n;k++){const t=randTarget(G);if(t)pushProj(G,{type:'axe',x:p.worldX+14,tgt:t,ratio:R_AXE,spd:430});}}
 function fireArrows(p,n){const G=p.G,px=p.px;n=n||2;
   if(px.arrowCount)n=Math.round(n*1.5);            /* 장비 «화살 3발로 증가» (기본 2발 → 3발) */
+  /* ⚑⚑⚑ T119 창의 화신 (전설 8) — «내가 쏘는 모든 화살이 창으로 바뀐다». 발사 동사 한 곳에서 갈아탄다:
+     특전 화살(회피 시·처치 시)도 장비 화살 옵션도 전부 이 함수를 거치므로 여기 한 줄이면 «모든 화살» 이다.
+     발수는 그대로이고 창 데미지(R_SPEAR 100%)·8마리 관통을 그대로 쓴다(주인 문면). */
+  if(px.p_spearAvatar){fireSpear(p,n);return;}
   for(let k=0;k<n;k++){const t=randTarget(G);if(t)pushProj(G,{type:'parrow',x:p.worldX+14,tgt:t,ratio:R_ARROW,spd:560});}}
 /* 번개는 즉발(하늘에서 떨어진다) — 투사체를 만들지 않는다. 연쇄 개조는 새 10종 체제에 없다. */
 function fireBolts(p,n){const G=p.G,px=p.px;n=(n||1)*(px.boltCount?2:1);
@@ -940,6 +1028,17 @@ function fireBolts(p,n){const G=p.G,px=p.px;n=(n||1)*(px.boltCount?2:1);
     const t=randTarget(G);if(!t)continue;
     summonHit(G,t,R_BOLT);
   }}
+/* ⚑⚑⚑ T119 «보이는 적 전부에게 번개 1회씩» — 주인 위임: «보이는 적» = 현재 교전 중인 웨이브의 살아 있는 적 전부
+   (적은 고정 배치라 «화면에 보이는» = 그 웨이브다). 회당 공격력 75%(R_BOLT) 는 종전 번개와 같다.
+   ⚑ 대상 웨이브는 **인자로 받는다** — 처치 시 번개는 «죽은 적이 속한 웨이브» 를 때린다.
+     여기서 `frontNode` 를 다시 부르면 한 웨이브를 전멸시킨 순간 최전방이 **다음 웨이브**로 넘어가,
+     연쇄가 화면 밖 대기 웨이브를 지나 **보스까지 즉사**시킨다(실측: 챕터 1 이 6.8초에 «클리어» 되고
+     레벨업이 보스 사후라 특전이 1장만 남았다). 이는 T44 «관통형은 발사 시점의 노드만 때린다 —
+     다음 웨이브 대기분은 절대 맞지 않는다»(주인 15:2X · PLAN §2.3)와 같은 축의 규칙이다.
+   ⚑ 대상은 발동 시점에 굳힌다 — 연쇄로 죽어도 자리가 밀리지 않는다. */
+function fireBoltsAll(p,node){const G=p.G;const nd=node||frontNode(G);if(!nd)return;
+  const list=nd.enemies.filter(e=>e.hp>0);
+  for(const e of list) if(e.hp>0) summonHit(G,e,R_BOLT);}
 function fireWave(p,n){const G=p.G,px=p.px;n=n||1;
   const big=false;                                 /* 거대 검기 개조 특전은 새 10종에 없다 */
   const pierce=big?WAVE_PIERCE_BIG:(px.waveKing?20:WAVE_PIERCE);
@@ -1025,6 +1124,11 @@ function hitPlayer(G,dmg,isMelee,src){
   const nulled=warded;
   let d=nulled?0:dmg*(1-effDef(p)/100);
   if(!nulled&&px.guardCrystal&&p.sh>0)d*=0.80;
+  /* ⚑⚑⚑ T119 가시갑옷 (주인 정의: «근접 적이 나를 때리면 그 적이 때린 데미지만큼 자기가 맞는다. 100% = 1배»).
+     위임 기본값 — 기준 데미지 = 이 공격이 **나에게 실제로 준 피해**(방어 적용 후 · 실드로 받은 양 포함 ·
+     회피했거나 방어막에 무효화됐으면 0)라 실드 흡수 «앞» 값이다. 대상은 **근접 공격만**(원거리 화살 제외).
+     반사는 «공격» 이 아니므로 `reflect` 를 거친다(적 회피 안 탐 · 치명타·소환 트리거 없음). 보스에게도 적용. */
+  const thornBase=d;
   if(!nulled&&p.sh>0){const ab=Math.min(p.sh,d);p.sh-=ab;d-=ab;}
   const taken=d;                                  /* 체력으로 실제로 들어간 피해 (반사 계산의 기준은 «받은 피해» 원본) */
   if(d>0){
@@ -1047,6 +1151,7 @@ function hitPlayer(G,dmg,isMelee,src){
   if(px.thornsS&&pkk(p,0.30*px.thornsS))reflect(G,src,dmg*0.70);
   if(px.thorns&&pkk(p,0.60*px.thorns))reflect(G,src,dmg*1.5);
   if(px.thornsKing)reflect(G,src,dmg*1.5);
+  if(px.p_thorns&&isMelee&&src)reflect(G,src,thornBase*px.p_thorns);   /* ⚑ T119 가시갑옷 — 가산 중첩(+100/+200/+300 = 최대 +600%) */
   gainWard(p,0.08*px.wardHit);
   if(px.stunHitS&&src&&pkk(p,0.20*px.stunHitS))applyStun(G,src,3);
   if(px.stunHitL&&src&&pkk(p,0.55*px.stunHitL))applyStun(G,src,3);
@@ -1083,7 +1188,8 @@ function grantNextPerk(G){
   grantPerkChance(G);   /* 레벨업·악마 = 특전 기회 1번 (PLAN §4) */
   if(G.noPerk)return null;   /* 진단용 «특전 미획득» 자 — 사다리 회귀 대조에만 쓴다 */
   if(G.taken.length>=PERK_PICKS)return null;     /* 한 런 획득 상한(=PERK_PICKS)을 다 채우면 더는 안 준다 */
-  const offer=offerPerks(G.taken);               /* ⚑ T117 — 남은 것 중 무작위 3장 (판 난수) */
+  /* ⚑ T117 — 남은 것 중 3장 (판 난수) · ⚑ T119 — 카드마다 등급 굴림 + 귀족의 눈 반영 */
+  const offer=offerPerks(G.taken,!!G.player.px.p_nobleEye);
   if(!offer.length)return null;                  /* 풀이 다 떨어졌다 — 팝업 없이 레벨업만 (주인 지시 ①) */
   return pickPerk(G,simPickPerk(offer));
 }

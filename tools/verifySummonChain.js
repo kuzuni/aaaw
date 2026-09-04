@@ -174,5 +174,88 @@ if (rowsS && !bad) {
   }
 }
 
+/* ---------- ⑤ ⚑⚑⚑ T119 처치 축 연쇄 (주인 확정 2026-09-04 13:0X) ----------
+   T96~T118 의 소환 3종은 트리거가 «피격/회피/반격» 이라 소환 적중이 새 소환을 낳지 않았다(공격 축 B = 0).
+   T119 가 «처치 시 창/번개/화살/도끼» 를 넣으면서 **처치 축 연쇄**가 새로 생겼다:
+   소환이 적을 죽이면 그 처치가 다시 소환을 낳는다. 주인 지시가 «이 풀로 B 를 다시 계산해
+   넘으면 값을 임의로 깎지 말고 주인 승인 대기에 등재» 라 여기서 재고 판정은 기준선으로만 한다.
+
+   재는 것 셋:
+     ⓐ 처치 1회가 낳는 소환 수 (분석 = 창1 + 화살3 + 도끼2 + 번개(웨이브 생존 수) · 실측)
+     ⓑ B_kill = 그 소환들이 낳는 «신규 처치» 기대값 — 최악 조건(적 체력 1 = 어떤 소환도 즉사)에서 잰다
+     ⓒ 구조적 유한성 — 번개 대상이 «죽은 적이 속한 웨이브» 로 묶여 있고 한 적은 한 번만 죽으므로
+        연쇄는 한 웨이브(최대 10마리) 안에서 끝난다. 이 성질이 깨지면(대상이 frontNode 로 되돌아가면)
+        연쇄가 대기 웨이브를 지나 보스까지 즉사시킨다 — T119 가 실측으로 잡은 회귀다. */
+console.log('\n=== ⑤ ⚑ T119 처치 축 연쇄 (처치 시 소환 4종) ===');
+{
+  const CUT2 = "const mode=process.argv[2]||'all';";
+  const at2 = SIM.indexOf(CUT2);
+  const ctx = { console: { log() { } }, process, Math, JSON, Number, String, Array, Set, Map, Object, Date, parseInt, parseFloat, isFinite, isNaN, require };
+  vm.createContext(ctx);
+  vm.runInContext(SIM.slice(0, at2) + '\n;globalThis.__K={onKill,PERKS,basePx,PROC_TICK_CAP,PERK_KILL_L};', ctx);
+  const K = ctx.__K || ctx.globalThis.__K;
+  /* ⓒ 구조적 단언 먼저 — 번개 대상이 «죽은 적의 웨이브» 인가 (두 파일) */
+  const boundS = /fireBoltsAll\(p,e\.wave\)/.test(SIM) && /function fireBoltsAll\(p,node\)/.test(SIM);
+  const boundH = /fireBoltsAll\(p,e\.wave\)/.test(HTML) && /function fireBoltsAll\(p,node\)/.test(HTML);
+  (boundS && boundH)
+    ? pass('ⓒ 처치 시 번개의 대상이 «죽은 적이 속한 웨이브» 로 묶여 있다 — 연쇄가 대기 웨이브·보스로 못 넘어간다')
+    : fail(`ⓒ 처치 시 번개가 웨이브에 안 묶여 있다(sim ${boundS} / game ${boundH}) — frontNode 로 되돌아가면 연쇄가 챕터를 통째로 즉사시킨다`);
+  /* ⓐ·ⓑ 실측 — 웨이브 하나(10마리)를 만들고 그 안의 한 마리를 «죽은 것» 으로 놓고 onKill 을 부른다 */
+  const WAVE = 10;
+  const mkG = hp => {
+    const nd = { type: 'wave', x: 0, done: false, enemies: [] };
+    for (let j = 0; j < WAVE; j++) nd.enemies.push({ worldX: 100 + j * 40, hp, maxHp: hp, dmg: 1, ranged: false, atkTimer: 1, stun: 0, slow: 0, wave: nd, dead: false, isBoss: false, exp: 0 });
+    const p = {
+      worldX: 0, dmg: 1e9, aspd: 1, critR: 0, critF: 150, def: 0, counter: 0, evade: 0, steal: 0, killHeal: 0,
+      misfire: 0, goldMul: 1, walkMul: 1, healAmp: 0, repairAmp: 0, nextCrit: false, nextAtk: 0, ward: 0,
+      maxHp: 1e9, hp: 1e9, maxSh: 0, sh: 0, level: 1, exp: 0,
+      buffs: { atk: [], aspd: [], critR: [], critF: [], def: [], evade: [] }, px: K.basePx(),
+    };
+    const G = { chapter: 1, player: p, nodes: [nd], pprojs: [], arrows: [], gold: 0, kills: 0, procN: 0,
+      perkChances: 0, taken: [], overBoltCd: 0, autoBoltT: 3, stuns: 0, misses: 0, dead: false, cleared: false,
+      t: 0, atkTries: 0, miss: 0, noPerk: false };
+    p.G = G;
+    for (const k of K.PERKS) { k.ap(p); G.taken.push(k); }
+    return { G, nd };
+  };
+  /* ⓐ 1세대 격리 — procN 을 상한-1 로 두면 바깥 처치만 트리거를 굴린다 */
+  {
+    const N = 20000; let s = 0;
+    for (let i = 0; i < N; i++) {
+      const { G, nd } = mkG(1e15);
+      const e = nd.enemies[0]; e.hp = 0;
+      G.procN = K.PROC_TICK_CAP - 1;
+      const before = G.pprojs.length, tries = G.atkTries;
+      K.onKill(G, e, 0);
+      s += (G.pprojs.length - before) + (G.atkTries - tries);   /* 투사체 + 즉발(번개) */
+    }
+    const b = s / N;
+    const want = 1 + 3 + 2 + (WAVE - 1);   /* 창1 + 화살3 + 도끼2 + 번개(같은 웨이브 생존 9) · 전부 100% */
+    console.log(`    ⓐ 처치 1회가 낳는 소환 수 = ${b.toFixed(3)} (분석 ${want} = 창1 + 화살3 + 도끼2 + 번개${WAVE - 1})`);
+    Math.abs(b - want) <= 0.5
+      ? pass(`ⓐ 실측 ${b.toFixed(2)} ≈ 분석 ${want} — 처치 시 소환 4종이 전부 확정 발동으로 걸린다(전설판 보유)`)
+      : fail(`ⓐ 실측 ${b.toFixed(2)} 가 분석 ${want} 와 다르다 — 처치 시 소환의 발수·확률·대상 범위를 확인할 것`);
+  }
+  /* ⓑ B_kill — 최악(적 체력 1)에서 «한 처치가 낳는 신규 처치» 수. 트리거 예산을 풀고 한 웨이브를 끝까지 굴린다. */
+  {
+    const N = 4000; let s = 0;
+    for (let i = 0; i < N; i++) {
+      const { G, nd } = mkG(1);
+      const e = nd.enemies[0]; e.hp = 0;
+      K.onKill(G, e, 0);
+      s += G.kills - 1;   /* 자기 자신(바깥 처치)을 뺀 신규 처치 */
+    }
+    const bk = s / N;
+    console.log(`    ⓑ B_kill(최악 · 적 체력 1) = ${bk.toFixed(3)} — 한 처치가 낳는 신규 처치 수`);
+    bk <= WAVE - 1 + 1e-9
+      ? pass(`ⓑ 연쇄가 한 웨이브 안에서 끝난다 (신규 처치 ${bk.toFixed(2)} ≤ 웨이브 잔여 ${WAVE - 1}) — 한 적은 한 번만 죽으므로 구조적으로 유한하다`)
+      : fail(`ⓑ 신규 처치 ${bk.toFixed(2)} 가 웨이브 잔여 ${WAVE - 1} 를 넘는다 — 연쇄가 웨이브를 넘어갔다(대상 범위 회귀)`);
+    bk > CAP
+      ? note(`ⓑ B_kill ${bk.toFixed(3)} > 주인 확정 임계 ${CAP} — **주인이 직접 정한 확률(33/66/100)·발수라 워커가 깎지 않는다.** ` +
+             `PROGRESS «주인 승인 대기» 에 등재했다. 공격 축과 달리 이 축은 «한 적은 한 번만 죽는다» 로 구조적으로 유한해 발산하지 않는다(위 ⓑ 단언)`)
+      : pass(`ⓑ B_kill ${bk.toFixed(3)} ≤ 주인 확정 임계 ${CAP}`);
+  }
+}
+
 console.log(`\n결과: ${okN} 통과 · ${bad} 실패`);
 process.exit(bad ? 1 : 0);

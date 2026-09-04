@@ -91,7 +91,7 @@ else {
    그래서 «102 인가» 가 아니라 «두 파일이 같은가 + 등급별 편차 ≤ PERK_RAR_GAP» 을 본다.
    T48 이 각 등급 33종(총 132)까지 채웠고, T77(주인 확정 «전투 무관 특전 4종 삭제»)이
    일반 2종(c_gold30·c_walk20)·신화 2종(m_gold2·m_sage)을 빼 31/33/33/31 = 128종, 편차 2 가 됐다. */
-const PERK_TOTAL = 10;   /* ⚑⚑ T96 — 주인 확정 «고정 10종·순서 획득». 등급·고유 플래그는 폐지됐다 */
+const PERK_TOTAL = 32;   /* ⚑⚑⚑ T119 — 주인 확정 «풀 32종(일반 15 · 희귀 8 · 전설 9) · 등급 부활 · 3택 1». T96 의 «고정 10종» 은 이 지시로 확장됐다 */
 console.log(`\n[② 특전 ${PERK_TOTAL}종 — id·순서·ap 본문 두 엔진 대조]`);
 const S = simPerks(), H = htmlPerks();
 if (!H) { bad('index.html 에서 const PERKS=[...] 를 찾지 못했다'); }
@@ -170,9 +170,11 @@ const FORMULAS = [
   /* ⚑⚑⚑ T117 — 3택이 돌아오면서 «지급 동사» 가 둘로 나뉘었다: 제시(offerPerks) + 확정(pickPerk).
      index.html 은 유저가 고르므로 sim.js 의 `grantNextPerk`(정책 선택까지 하는 시뮬 전용 동사)를 안 쓴다 —
      두 엔진이 공유해야 하는 것은 «3장을 어떻게 뽑는가»(offerPerks)와 «고른 것을 어떻게 붙이는가»(pickPerk)다. */
-  ['제시 동사(offerPerks)', /function offerPerks\(taken\)\{/, /function offerPerks\(taken\)\{/],
+  ['제시 동사(offerPerks)', /function offerPerks\(taken,noble\)\{/, /function offerPerks\(taken,noble\)\{/],
   ['확정 동사(pickPerk)', /function pickPerk\(G,perk\)\{/, /function pickPerk\(perk\)\{/],
   ['제시 장수 상수(PERK_OFFER=3)', /const PERK_OFFER=3;/, /const PERK_OFFER=3;/],
+  /* ⚑⚑⚑ T119 — 등급 굴림 확률·등급 이름이 두 엔진에서 같은 배열인가 (값 대조는 verifyPerkOrder ① 가 한다) */
+  ['등급 굴림 확률(PERK_GRADE_RATE)', /const PERK_GRADE_RATE=\[60,25,15\];/, /const PERK_GRADE_RATE=\[60,25,15\];/],
   ['특전 소환 확률 상수', /const PERK_ATK_M=1\.20, PERK_DEF_M=1\.10/, /const PERK_ATK_M=1\.20, PERK_DEF_M=1\.10/],
   ['경험치 요구식', /expNeed:lv=>5\*lv\+1/, /expNeed=lv=>5\*lv\+1/],   /* ⚑⚑⚑ T100 — 4+3*lv → 5*lv+1 */
 ];
@@ -199,9 +201,10 @@ const DIRECTIVES = [
      그 자리에 새 체제의 관측 가능 동작 3건을 넣는다. */
   /* ⚑⚑⚑ T117 (주인 확정 2026-09-04 12:3X) — 레벨업이 «3택 1» 로 돌아왔다.
      되살아난 것은 선택창뿐이고 등급·무료 새로고침·전지의 눈은 그대로 폐지다(그 부재는 아래 두 줄이 함께 잠근다). */
-  ['⚑ T117 레벨업 = 3택 선택창 (등급·새로고침은 그대로 폐지)', () => {
+  ['⚑ T117·T119 레벨업 = 3택 선택창 + 등급 굴림 (새로고침은 그대로 폐지)', () => {
     const m = HTML.match(/function openLevelUp\(\)\{[\s\S]*?\n\}/);
-    return !!m && /offerPerks\(G\.perksTaken\)/.test(m[0]) && /perkCardHTML\(p,i,'pick'\)/.test(m[0])
+    return !!m && /offerPerks\(G\.perksTaken,!!G\.player\.px\.p_nobleEye\)/.test(m[0])
+      && /perkCardHTML\(p,i,'pick'\)/.test(m[0])
       && /pickPerk\(p\)/.test(m[0]) && !/rollPerks|perkPool|refreshLeft|rollRarity/.test(m[0]);
   }],
   ['⚑ T117 줄 특전이 없으면 레벨업 팝업이 안 뜬다', () => {
@@ -250,14 +253,19 @@ if (H) {
     G: { perkChances: 3, overBoltCd: 0 },
   };
   for (const m of SIM.matchAll(/\b(PERK_[A-Z_]+)=([0-9.]+)/g)) sandbox[m[1]] = Number(m[2]);
+  /* ⚑ T119 — «같은 이름·다른 등급» 계열의 확률 최댓값 갱신 도우미. 두 엔진 다 mkPerks/PERKS 바로 위에
+     같은 본문으로 두므로 ap 본문 대조가 성립한다. 여기서도 같은 동사를 깔아야 ap 를 실행할 수 있다. */
+  sandbox.kmax = (p, k, v) => { p.px[k] = Math.max(p.px[k] || 0, v); };
   vm.createContext(sandbox);
   let thrown = [];
   const mkP = () => {
     const px = {};
     for (const k of pxKeys(SIM)) px[k] = 0;
+    /* ⚑ T119 — 합산 키 5개(p_kill* · p_thorns)와 repairAmp 를 함께 깔아 둔다 (sim.js basePx 와 같은 축) */
+    for (const k of ['p_killSpear', 'p_killBolt', 'p_killArrow', 'p_killAxe', 'p_thorns']) px[k] = 0;
     return { maxHp: 300, hp: 300, maxSh: 240, sh: 240, dmg: 30, aspd: 1, critR: 5, critF: 200,
       def: 5, counter: 10, evade: 8, steal: 0, killHeal: 0, misfire: 0, goldMul: 1, walkMul: 1,
-      healAmp: 0, px, G: sandbox.G };
+      healAmp: 0, repairAmp: 0, px, G: sandbox.G };
   };
   for (const h of H) {
     try {
@@ -661,8 +669,11 @@ console.log('\n[⑬ 인게임 UI — 발동 중 버프 아이콘 · 얻은 특�
   const rb = HTML.match(/function renderBuffBar\(\)\{[\s\S]*?\n\}/);
   if (!rb) bad('renderBuffBar() 가 없다');
   else {
-    /* ⚑ T96 — 등급이 폐지돼 «등급색» 이 없다. 특전 버프는 한 색(PERK_COLOR), 출처 불명은 회색 폴백. */
-    /PERK_COLOR/.test(rb[0]) ? ok('버프 아이콘이 특전 색(PERK_COLOR)을 쓴다') : bad('renderBuffBar 가 PERK_COLOR 를 쓰지 않는다');
+    /* ⚑⚑⚑ T119 — 등급이 부활해 «출처 특전의 등급색» 으로 돌아왔다(주인 «인포 팝업·미리보기 줄에도 등급색»).
+       한 색으로 되돌아가면(PERK_COLOR 직접 사용) 빨개진다 — 출처 불명 버프의 회색 폴백은 그대로다. */
+    (/perkColor\(g\.perk\)/.test(rb[0]) && !/=\s*PERK_COLOR/.test(rb[0]))
+      ? ok('⚑ T119 버프 아이콘이 출처 특전의 등급색(perkColor)을 쓴다')
+      : bad('renderBuffBar 가 등급색(perkColor)을 안 쓴다 — T96 시절의 한 색(PERK_COLOR)으로 되돌아갔는지 확인할 것');
     /g\.n>1/.test(rb[0]) ? ok('중첩 2 이상일 때만 중첩 수 뱃지') : bad('renderBuffBar 에 중첩 수 뱃지가 없다');
     /sort\(\(a,b\)=>a\.q-b\.q\)/.test(rb[0]) ? ok('버프 아이콘이 오래된 순(q)으로 세로 정렬') : bad('renderBuffBar 가 발동 순서로 정렬하지 않는다 (주인 지시: 오래된 것이 위)');
   }
@@ -680,7 +691,8 @@ console.log('\n[⑬ 인게임 UI — 발동 중 버프 아이콘 · 얻은 특�
   if (!rp) bad('renderPerkStrip() 이 없다');
   else {
     /for\(const pk of G\.perksTaken\)/.test(rp[0]) ? ok('미리보기 줄이 획득 순서(G.perksTaken)를 따른다') : bad('renderPerkStrip 이 획득 순서를 따르지 않는다');
-    /cc\s*=\s*PERK_COLOR/.test(rp[0]) ? ok('미리보기 아이콘에 특전 색') : bad('미리보기 줄에 특전 색이 없다');
+    /cc\s*=\s*perkColor\(o\.pk\)/.test(rp[0]) ? ok('⚑ T119 미리보기 칩이 특전의 등급색(perkColor)을 쓴다')
+      : bad('미리보기 줄이 등급색을 안 쓴다 — T96 시절의 한 색(PERK_COLOR)으로 되돌아갔는지 확인할 것');
     /c>1\?/.test(rp[0]) ? ok('중복 획득은 아이콘 1개 + 개수 뱃지') : bad('중복 획득 개수 뱃지가 없다');
     /pv-more">\+\$\{more\}/.test(rp[0]) ? ok('한 줄을 넘치면 최신 것만 남기고 «+N» 으로 합침') : bad('넘침 처리(«+N»)가 없다');
     /* ⚑ T116 U01 — «남길 개수» 가 cap-1 에서 capF(«+N» 칩의 실제 폭 44px 을 뺀 값)로 바뀌었다.
@@ -899,14 +911,20 @@ console.log('\n[⑯ 레벨업 특전 카드 — 메달리온 구도 · 순번 �
   !/#refBtn\{/.test(HTML) && !/id="refBtn"/.test(HTML) && !/id="refLeft"/.test(HTML)
     ? ok('새로고침 버튼·«남은 횟수» 줄이 없다 (선택창 폐지 — 되살아나면 빨개진다)')
     : bad('새로고침 버튼/«남은 횟수» 줄이 되살아났다 — 주인 확정 «새로고침 폐지» 위반');
-  /* 카드 태그는 등급이 아니라 획득 순번(«1/10»)이다 */
+  /* ⚑⚑⚑ T119 — 카드 태그가 «획득 순번(1/10)» 에서 **등급 이름**으로 돌아왔고, 테두리(`--pc`)가 등급색이다
+     (주인 «등급 테두리 색 부활 + 등급 이름»). 특전이 아닌 획득물(천사의 축복)만 «축복» 태그다. */
   const ch = HTML.match(/function perkCardHTML\(p,i,extra\)\{[\s\S]*?\n\}/);
-  /* ⚑ T102 — 분모가 PERKS.length(풀) 에서 PERK_PICKS(한 런 획득 수)로 바뀌었다. 둘 다 허용한다
-     (지금은 값이 같지만, 나중에 풀을 늘리면 태그는 «한 런 획득 총수» 를 보여야 맞다). */
-  (ch && /PERKS\.indexOf\(p\)/.test(ch[0]) && /\$\{n\+1\}\/\$\{PERK_PICKS\}/.test(ch[0]))
-    ? ok('카드 태그가 획득 순번 «N/PERK_PICKS» (등급 태그 폐지)')
-    : bad('카드 태그가 획득 순번이 아니다 — 등급 태그가 되살아났는지 확인할 것');
-  (ch && !/RARITY/.test(ch[0])) ? ok('카드에 등급색·등급명이 없다') : bad('카드가 아직 RARITY 를 참조한다');
+  (ch && /PERK_GRADE_NAME\[g\]/.test(ch[0]) && /'축복'/.test(ch[0]))
+    ? ok('⚑ T119 카드 태그가 등급 이름(일반/희귀/전설)이다 — 축복만 «축복»')
+    : bad('카드 태그가 등급 이름이 아니다 — T96 시절의 획득 순번 태그로 되돌아갔는지 확인할 것');
+  (ch && /--pc:\$\{perkColor\(p\)\}/.test(ch[0]))
+    ? ok('⚑ T119 카드 테두리색(--pc)이 등급색이다')
+    : bad('카드 테두리색이 등급색이 아니다');
+  /* 등급색 3종이 주인 위임값(회색·파랑·금색)으로 정의돼 있는가 — 색 자체가 사라지면 빨개진다 */
+  /const PERK_GRADE_COLOR=\['#9EA3AC','#4FA3F7','#FFB92E'\]/.test(HTML)
+    ? ok('⚑ T119 등급색 3종 = 일반 회색 · 희귀 파랑 · 전설 금색')
+    : bad('PERK_GRADE_COLOR 가 없거나 값이 다르다 (일반 회색 · 희귀 파랑 · 전설 금색)');
+  (ch && !/RARITY/.test(ch[0])) ? ok('카드가 옛 132종 등급 상수(RARITY)를 참조하지 않는다') : bad('카드가 아직 RARITY 를 참조한다');
 }
 
 /* ---------- ⑰ UI 아이콘 — 스탯 그리드 7 + 하단 5탭 (참고: docs/ref/메인 게임화면.jpg · 메인로비.jpg · T2 7단계) ---------- */

@@ -36,14 +36,15 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
 
     /* --- 부팅 --- */
     const boot = await p.evaluate(() => ({
-      perks: typeof PERKS !== 'undefined' ? PERKS.length : -1,
+      perks: typeof PERKS !== 'undefined' ? PERKS.length : -1, perkGrades: [0,1,2].map(g=>PERKS.filter(p=>p.g===g).length).join('/'),
       maxChapter: TUNE.maxChapter,
       screen: document.querySelector('.screen.on')?.id,
       startTxt: document.getElementById('startBtn')?.textContent.trim(),
       chapTxt: document.getElementById('lobbyChapName')?.textContent.trim(),
       saveKey: (() => { try { save.gold = save.gold; persist(); } catch (e) {} return Object.keys(localStorage).join(','); })(),
     }));
-    chk('특전 10종 로드', boot.perks === 10, `PERKS=${boot.perks}`);   /* ⚑ T96 — 고정 10종·순서 획득 (등급 폐지. 개수를 바꾸면 여기도 갱신) */
+    chk('⚑ T119 특전 32종 로드 (일반 15 · 희귀 8 · 전설 9)', boot.perks === 32 && boot.perkGrades === '15/8/9',
+      `PERKS=${boot.perks} · 등급별 ${boot.perkGrades}`);   /* ⚑ T119 — 풀 확장 + 등급 부활 (T96 의 «고정 10종» 은 확장됐다) */
     chk('챕터 상한 420', boot.maxChapter === 420, `maxChapter=${boot.maxChapter}`);   /* ⚑ T103 — 600 → 420 (주인 정정) */
     chk('로비 화면이 켜져 있다', boot.screen === 'lobby', boot.screen);
     chk('START 버튼 렌더', boot.startTxt === 'START', boot.startTxt);

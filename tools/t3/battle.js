@@ -82,6 +82,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       n: cards.length, tags: cards.map(c => c.querySelector('.tag')?.textContent),
       tx: cards.map(c => c.querySelector('.tx').textContent),
       medal: cards.map(c => getComputedStyle(c.querySelector('.ic')).clipPath !== 'none'),
+      pcs: cards.map(c => getComputedStyle(c).borderTopColor),
       taken: G.perksTaken.map(x => x.id), first: PERKS[0].id, ok: !!document.getElementById('perkPick0'),
       pickable: document.querySelectorAll('#overlay .perk-card.pick[data-i]').length,
     };
@@ -92,7 +93,12 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     `카드 ${pick.n}장 · 고를 수 있는 카드 ${pick.pickable}장`);
   chk('⚑ T117 고르기 «전» 에는 아직 아무것도 안 받았다', pick.taken.length === 0, `보유 ${pick.taken.join(',') || '0종'}`);
   chk('⚑ T117 세 장이 서로 다르다 (같은 카드 안 중복 금지)', new Set(pick.tx).size === 3, pick.tags.join(','));
-  chk('카드 태그가 표 번호 «N/10»', pick.tags.every(t => /^\d+\/10$/.test(t)), pick.tags.join(','));
+  /* ⚑⚑⚑ T119 — 카드 태그가 «획득 순번» 에서 **등급 이름**으로 돌아왔고 테두리가 등급색이다 */
+  chk('⚑ T119 카드 태그가 등급 이름(일반/희귀/전설)이다',
+    pick.tags.every(t => ['일반', '희귀', '전설'].includes(t)), pick.tags.join(','));
+  chk('⚑ T119 카드 테두리색이 등급색 3종 중 하나다 (일반 회색 · 희귀 파랑 · 전설 금색)',
+    pick.pcs.every(c => ['rgb(158, 163, 172)', 'rgb(79, 163, 247)', 'rgb(255, 185, 46)'].includes(c)),
+    pick.pcs.join(' / '));
   chk('특전 아이콘이 메달리온 구도', pick.medal.every(Boolean));
 
   /* ⚑ T96 — «(고유)» 표기 검사는 폐지. 특전이 10종·순서 획득이라 중복이 구조적으로 불가능하고
@@ -164,9 +170,10 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       overlap: !(bar.top >= hud.bottom - 0.5),
       hudBottom: Math.round(hud.bottom), barTop: Math.round(bar.top),
       perkName: perk ? perk.id : '-', key, pxn: Object.keys(G.pxPerk).length,
-      /* 기대 테두리색 = 그 특전의 등급색. 일반 등급색(#9EA3AC)은 «출처 없음» 폴백색과 같은 값이라
-         «회색이 아니다» 로는 판정할 수 없다 — 등급에서 기대색을 만들어 비교한다. */
-      wantCC: perk ? PERK_COLOR : null, wantRar: perk ? '특전' : '-',
+      /* ⚑⚑⚑ T119 — 등급이 부활해 기대 테두리색은 «그 특전의 등급색» 이다(T96~T118 은 한 색 PERK_COLOR 였다).
+         일반 등급색(#9EA3AC)은 «출처 없음» 폴백색과 같은 값이라 «회색이 아니다» 로는 판정할 수 없어,
+         등급에서 기대색을 만들어 비교한다. */
+      wantCC: perk ? perkColor(perk) : null, wantRar: perk ? PERK_GRADE_NAME[perk.g] : '-',
     };
   });
   chk('버프 발동 시 아이콘이 뜬다', buffOn.n === 2, `아이콘 ${buffOn.n}개(같은 출처 2중첩은 1칸)`);
@@ -277,16 +284,17 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('좁은 폭(360px)에서도 줄이 안 넘친다', !narrow.over && !narrow.hitInfo, `칩 ${narrow.n}개`);
   await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
 
-  /* ---------- ⚑ T89 «보유 특전» 버튼 (주인 지시 2026-09-03 · ⚑ T96 에서 레벨업 팝업으로 옮겨졌다) ----------
-     선택창이 폐지돼 «고르기 전에 확인» 이라는 원래 쓰임은 사라졌지만, «지금 내가 뭘 갖고 있나» 는
-     그대로 필요하므로 버튼은 레벨업 팝업에 남는다. 여기서 보는 것은 ①버튼이 오른쪽 하단에 있고
-     ②카드와 안 겹치고 ③목록이 열린 동안에도 시간이 멈춰 있고 ④닫으면 **같은 팝업**으로 돌아오는지다. */
+  /* ---------- ⚑ T89 «보유 특전» 버튼 (주인 지시 2026-09-03 · T96 이관 · ⚑ T117 로 원래 쓰임 복귀) ----------
+     ⚑ T117 로 3택 선택창이 돌아와 «고르기 전에 내가 뭘 갖고 있나 확인» 이라는 원래 쓰임을 되찾았다.
+     여기서 보는 것은 ①버튼이 오른쪽 하단에 있고 ②카드와 안 겹치고 ③목록이 열린 동안에도 시간이
+     멈춰 있고 ④닫으면 **선택지가 그대로인 같은 팝업**으로 돌아오는지다(재굴림 = 무료 새로고침 금지). */
   console.log('\n=== ⚑ 레벨업 팝업 «보유 특전» 버튼 (T89 · T96 이관) ===');
   await drainAll(p);
   const bk0 = await p.evaluate(() => {
-    /* 10개를 다 얻었으면 팝업이 안 뜬다 — 진짜 특전을 9개로 줄여 한 칸 비워 두고 연다
-       (앞 절이 같은 특전을 여러 번 밀어 넣어 뒀으므로 «중복까지 포함해» 9개가 되도록 다시 만든다) */
-    G.perksTaken = [PERKS.slice(0, PERKS.length - 1), G.perksTaken.filter(x => !PERKS.includes(x))].flat();
+    /* ⚑ T119 — 풀(32)이 한 런 상한(PERK_PICKS 10)보다 커졌다. 앞 절이 32종을 전부 밀어 넣어 뒀으므로
+       그대로 열면 **상한에 걸려** 팝업이 안 뜬다(hasPerkLeft = false). 상한 아래로 줄여 3장이 뜨게 만든다.
+       (앞 절이 같은 특전을 여러 번 밀어 넣어 뒀으므로 «중복까지 포함해» 다시 만든다) */
+    G.perksTaken = [PERKS.slice(0, 3), G.perksTaken.filter(x => !PERKS.includes(x))].flat();
     renderPerkStrip();
     openLevelUp();
     const btn = document.getElementById('perkBookBtn');

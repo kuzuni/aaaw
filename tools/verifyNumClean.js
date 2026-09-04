@@ -190,8 +190,14 @@ console.log('\n[Ⓑ 추상 표현 금지 — 주인 지시 ««대폭 증가» �
 const KNOWN_DECIMAL = ['장비 greatsword옵7', '장비 robe옵7', '장비 gauntlet옵7', '장비 greave옵2',
   '장비 greave옵6', '장비 beads옵4', '장비 beads옵7'];
 
-/* Ⓓ 확률 10% 단위(예외 5% 허용) = 5의 배수 — 잔여 1건 */
-const KNOWN_PROB = ['장비 plate옵4'];
+/* Ⓓ 확률 10% 단위(예외 5% 허용) = 5의 배수 — 잔여 1건 + ⚑⚑⚑ T119 주인 확정 8건
+   ⚑⚑⚑ T119 (주인 확정 2026-09-04 13:0X) — «처치 시 창/번개/화살/도끼» 8종의 발동 확률 **33% · 66%** 는
+   주인이 표에 직접 적은 값이다. ROUTINE 13:0X ②: «확률 10% 단위(5% 예외)» 는 주인이 33/66 을 직접
+   정했으므로 이 풀에는 적용하지 않는다 — 여기 등재로 그 예외를 명시한다. **워커 수정 금지**
+   (5의 배수로 깎으면 일반/희귀/전설 3단의 간격 설계가 통째로 바뀐다). 전설판(100%)은 5의 배수라 대상 아님. */
+const KNOWN_PROB = ['장비 plate옵4',
+  '특전 p_killSpearN', '특전 p_killBoltN', '특전 p_killArrowN', '특전 p_killAxeN',
+  '특전 p_killSpearR', '특전 p_killBoltR', '특전 p_killArrowR', '특전 p_killAxeR'];
 
 /* Ⓔ 지속시간 0.5초 단위 — 잔여 0건(전면 강제). 여기에 뭐가 추가되면 그건 규칙 위반이다. */
 const KNOWN_DUR = [];
