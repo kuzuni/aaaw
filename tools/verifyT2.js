@@ -588,8 +588,21 @@ console.log('\n[⑬ 인게임 UI — 발동 중 버프 아이콘 · 얻은 특�
   if (!/<div id="buffBar"><\/div>/.test(HTML)) bad('#buffBar 가 없다 — 발동 중 버프 아이콘 표시 자리가 사라졌다 (주인 지시 07:0X)');
   else ok('#buffBar 마크업 존재');
   {
-    const chapTop = (HTML.match(/#chapHud\{[^}]*top:(\d+)px/) || [])[1];
-    const buffTop = (HTML.match(/#buffBar\{[^}]*top:(\d+)px/) || [])[1];
+    /* ⚑ T116 U01 — 두 top 이 «고정 px» 에서 «프레임 높이 비율(+px)» 로 바뀌었다(레퍼런스 비례 맞춤).
+       단언의 뜻은 그대로 «버프 아이콘이 챕터 블록보다 42px 이상 아래» 이므로, 390×844 프레임(=fh 844)에서의
+       실제 px 로 환산해 비교한다. 두 표기(`top:NNpx` · `top:calc(var(--fh)*.NNN [+ NNpx])`)를 모두 읽는다. */
+    const topPx = sel => {
+      const m = HTML.match(new RegExp(sel.replace(/[#.]/g, c => '\\' + c) + '\\{[^}]*top:([^;]+);'));
+      if (!m) return null;
+      const t = m[1].trim();
+      let mm = t.match(/^(\d+(?:\.\d+)?)px$/);
+      if (mm) return +mm[1];
+      mm = t.match(/^calc\(var\(--fh\)\s*\*\s*\.(\d+)(?:\s*\+\s*(\d+(?:\.\d+)?)px)?\)$/);
+      if (mm) return 844 * +('.' + mm[1]) + (mm[2] ? +mm[2] : 0);
+      return null;
+    };
+    const chapTop = topPx('#chapHud');
+    const buffTop = topPx('#buffBar');
     /* 챕터 블록(제목 24px + 진행도 바)의 실측 높이가 42px 이라 top 차이가 그 이상이어야 겹치지 않는다.
        (헤드리스 실측: #chapHud top 64 → bottom 106) */
     if (!chapTop || !buffTop) bad('#chapHud / #buffBar 의 top 을 읽지 못했다 — 게이트를 갱신할 것');
@@ -662,7 +675,9 @@ console.log('\n[⑬ 인게임 UI — 발동 중 버프 아이콘 · 얻은 특�
     /cc\s*=\s*PERK_COLOR/.test(rp[0]) ? ok('미리보기 아이콘에 특전 색') : bad('미리보기 줄에 특전 색이 없다');
     /c>1\?/.test(rp[0]) ? ok('중복 획득은 아이콘 1개 + 개수 뱃지') : bad('중복 획득 개수 뱃지가 없다');
     /pv-more">\+\$\{more\}/.test(rp[0]) ? ok('한 줄을 넘치면 최신 것만 남기고 «+N» 으로 합침') : bad('넘침 처리(«+N»)가 없다');
-    /slice\(order\.length-\(cap-1\)\)/.test(rp[0]) ? ok('넘칠 때 «최신 것들» 이 보인다') : bad('넘칠 때 최신이 아니라 앞쪽이 남는다 (주인 지시: 최신 것들이 보이게)');
+    /* ⚑ T116 U01 — «남길 개수» 가 cap-1 에서 capF(«+N» 칩의 실제 폭 44px 을 뺀 값)로 바뀌었다.
+       이 단언이 지키는 것은 «앞쪽이 아니라 뒤쪽(최신)을 남긴다» 이므로 꼬리 slice 인지만 본다. */
+    /slice\(order\.length-\(?cap/.test(rp[0]) ? ok('넘칠 때 «최신 것들» 이 보인다') : bad('넘칠 때 최신이 아니라 앞쪽이 남는다 (주인 지시: 최신 것들이 보이게)');
   }
   /* 특전을 얻는 두 경로(레벨업·천사의 축복) 모두에서 줄이 갱신돼야 한다 */
   const tp = HTML.match(/function takePerk\(perk\)\{[\s\S]*?\n\}/);
@@ -1489,7 +1504,9 @@ console.log('\n[㉖ 대형 수치 표기 — 1만 이상 축약 (docs/ref, T54)]
 
   /* (7) 로비 상단 줄이 축약 표기를 담도록 좁혀져 있다 (실측 근거: 구 CSS 는 챕터 40 에서 417px)
          ⚑ T64 로 세 값에 `* var(--tf)` 배율이 얹혔다 — 기준값(gap 6 · padding 10 · clamp 식)은 그대로 지킨다. */
-  /\.lobby-top\{[^}]*gap:calc\(6px \* var\(--tf\)\)[^}]*padding:12px calc\(10px \* var\(--tf\)\) 0/.test(HTML)
+  /* ⚑ T116 U01 — 위 여백이 12px 에서 «프레임 높이 3.7%»(레퍼런스의 상단 바 y)로 바뀌었다.
+     이 단언이 지키는 것은 «gap 6 · 좌우 padding 10 · 배율 --tf» 이고 그 셋은 그대로다 — 세로 여백만 자유롭게 둔다. */
+  /\.lobby-top\{[^}]*gap:calc\(6px \* var\(--tf\)\)[^}]*padding:[^;]*? calc\(10px \* var\(--tf\)\) 0/.test(HTML)
     ? ok('로비 상단 줄 여백이 좁혀져 있다 (gap 6 · padding 10 · T64 배율)')
     : bad('로비 상단 줄 여백이 구 값으로 돌아갔다 — 골드 «8.26M» 에서 줄이 417px 가 된다');
   /\.lobby-top \.pill\{[\s\S]{0,200}?font-size:calc\(clamp\(11px, calc\(min\(100vw, 100vh \* 9 \/ 19\) \* \.036\), 14px\) \* var\(--tf\)\)[\s\S]{0,160}?min-width:0/.test(HTML)
@@ -1854,8 +1871,10 @@ console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
       ? ok(`${label} 줄의 여백·간격이 --tf 에 걸려 있다`)
       : bad(`${label} 줄의 여백·간격이 고정으로 돌아갔다 — 글자만 줄여서는 269px 프레임을 못 맞춘다`);
   }
-  /#avatar\{[^}]*width:calc\(52px \* var\(--tf\)\)/.test(HTML)
-    ? ok('로비 아바타(52px)도 --tf 에 걸려 있다 — 269px 프레임에서 줄의 19% 를 먹던 고정 치수')
+  /* ⚑ T116 U01 — 아바타가 «고정 52px» 에서 «프레임 높이 4.5%»(레퍼런스 비례)로 바뀌었다.
+     단언의 뜻은 «치수가 --tf 배율에 걸려 있다» 이므로 그 부분만 본다. */
+  /#avatar\{[^}]*width:calc\([^;]*var\(--tf\)\)/.test(HTML)
+    ? ok('로비 아바타 치수도 --tf 에 걸려 있다 — 269px 프레임에서 줄의 19% 를 먹던 고정 치수')
     : bad('로비 아바타가 고정 52px 로 돌아갔다 — 좁은 프레임에서 수치 자리를 먹는다');
   /#topbar \.pill\{[^}]*font-size:calc\(14px \* var\(--tf\)\)/.test(HTML)
     ? ok('인게임 pill 글자가 --tf 에 걸려 있다')
@@ -1863,7 +1882,8 @@ console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
   /#topbar #menuBtn,#topbar #sndBtnG\{width:calc\(42px \* var\(--tf\)\)/.test(HTML)
     ? ok('인게임 ☰·🔊 버튼도 --tf 에 걸려 있다 (flex:none 이라 안 줄면 줄을 밀어낸다)')
     : bad('인게임 ☰·🔊 가 고정 42px 로 돌아갔다 — 줄이 못 줄어 ☰ 가 프레임 밖으로 나간다');
-  /\.top-bar \.pill\{[^}]*font-size:calc\(14px \* var\(--tf\)\)[^}]*min-width:0/.test(HTML)
+  /* ⚑ T116 U01 — 글자가 14 → 13px 로 내려갔다(상단 바 높이를 레퍼런스 4.5% 로 맞추느라). --tf·min-width:0 은 그대로. */
+  /\.top-bar \.pill\{[^}]*font-size:calc\(1[34]px \* var\(--tf\)\)[^}]*min-width:0/.test(HTML)
     ? ok('장비·대장간·상점 pill 이 --tf + min-width:0 을 갖는다')
     : bad('장비·대장간·상점 pill 이 구 값으로 돌아갔다 — 269px 에서 좌우로 ±14.9px 삐져나간다');
 
