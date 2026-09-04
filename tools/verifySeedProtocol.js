@@ -94,10 +94,30 @@ console.log('\n④ 러너 tools/regress.js (규약 ①② 배선)');
   const dels = /delete env\.EXP2_N;\s*delete env\.EXP5_N;/.test(REG);
   dels ? pass('러너가 판수 환경변수를 지워 채점 기본값으로 돌린다')
        : fail('러너가 EXP2_N·EXP5_N 을 지우지 않는다 — 규약 ② 가 상속된 환경변수로 우회된다');
+  /* ⚑⚑⚑ T120 (주인 확정 2026-09-04 15:3X ①) — 판수와 같은 이유로 **자(尺)**도 상속되면 안 된다. */
+  /delete env\.EXP1_PERKMODE;/.test(REG)
+    ? pass('러너가 EXP1_PERKMODE 를 지워 «기준 플레이어» 자로 돌린다 (T120)')
+    : fail('러너가 EXP1_PERKMODE 를 지우지 않는다 — 회귀 표가 3택 자로 찍힐 수 있다(T120 ① 위반)');
   const parsers = ['1', '2', '5'].filter(e => new RegExp(`'${e}':\\s*parse`).test(REG));
   parsers.length === 3
     ? pass('실험1·2·5 세 실험을 모두 파싱한다')
     : fail(`파서가 실험 ${parsers.join('·') || '없음'} 만 있다 — 규약은 실험1·2·5 를 대상으로 한다`);
+}
+
+/* ⚑⚑⚑ T120 신설 — 자(尺) 고정. ①~④ 가 «같은 난수로 재는가» 를 봤다면 이 절은 «같은 플레이어로 재는가» 를 본다.
+   T119 가 3택·새 특전 조건으로 사다리를 다시 맞췄다가 주인이 «맞추라 한 적이 없다» 며 되돌린 자리다 —
+   자가 조용히 바뀌면 적 스탯이 그 자를 따라가고, 그것을 막는 것이 이 검사다. */
+console.log('\n⑥ 자(尺) 고정 — 사다리는 «기준 플레이어» 로만 잰다 (T120)');
+{
+  /const\s+PERK_MODE_PLAY\s*=\s*'3pick'\s*,\s*PERK_MODE_LADDER\s*=\s*'base10'/.test(SIM)
+    ? pass('sim.js 에 자 두 개(PERK_MODE_PLAY · PERK_MODE_LADDER)가 선언돼 있다')
+    : fail('sim.js 에 PERK_MODE_PLAY/PERK_MODE_LADDER 선언이 없다');
+  /const\s+EXP1_PERKMODE\s*=\s*process\.env\.EXP1_PERKMODE\s*\|\|\s*PERK_MODE_LADDER/.test(SIM)
+    ? pass('실험1 기본 자 = PERK_MODE_LADDER (EXP1_PERKMODE 는 참고표 전용 덮어쓰기)')
+    : fail('실험1 기본 자가 PERK_MODE_LADDER 가 아니다 — 사다리를 다른 조건으로 재고 있다');
+  /perkMode\s*:\s*opts\.perkMode\s*\|\|\s*PERK_MODE_PLAY/.test(SIM)
+    ? pass('runChapter 기본값은 3택 — 게임 동작은 자에 물들지 않는다')
+    : fail('runChapter 기본값이 3택이 아니다 — 자가 게임 동작까지 덮는다');
 }
 
 console.log('\n⑤ PLAN §7 규약 문면');

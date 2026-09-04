@@ -67,7 +67,7 @@ const chk = (n, c, d) => { R.push({ n, c }); console.log(`  ${c ? '✓' : '✗'}
 
 function loadSim(src) {
   const body = src.replace(/const mode=process\.argv[\s\S]*$/,
-    'module.exports={runChapter,mkBuild,buildPower,setSeed,TUNE,EXP1_TARGETS,LADDER};');
+    'module.exports={runChapter,mkBuild,buildPower,setSeed,TUNE,EXP1_TARGETS,LADDER,PERK_MODE_LADDER,PERK_MODE_PLAY,PERKS_BASE10};');
   const m = { exports: {} };
   vm.runInNewContext(body, { module: m, exports: m.exports, process, console: { log() {} }, require });
   return m.exports;
@@ -120,11 +120,14 @@ function run(simSrc, planSrc, routineSrc, regressSrc) {
       `공 ${p.atk.toFixed(1)} / 체 ${p.hp.toFixed(1)} / 실 ${p.sh.toFixed(1)}`);
   });
 
-  console.log(`\n=== ⓓ 실측 (시드 ${WANT.probeSeed} 고정 · 각 ${WANT.probeN}판 · 밴드 ±${WANT.band}%p) ===`);
+  console.log(`\n=== ⓓ 실측 (시드 ${WANT.probeSeed} 고정 · 각 ${WANT.probeN}판 · 밴드 ±${WANT.band}%p · ⚑ T120 기준 플레이어) ===`);
   RUNGS.forEach((g, i) => {
     S.setSeed(WANT.probeSeed);
     let win = 0;
-    for (let j = 0; j < WANT.probeN; j++) if (S.runChapter(g.ch, builds[i]).clear) win++;
+    /* ⚑⚑⚑ T120 (주인 확정 15:3X ①) — 사다리를 재는 자는 «기준 플레이어» 하나다:
+       기존 일반 10종을 옛 순서대로 «되는 만큼» 자동 획득 · 3택 없음 · 신규 22종·등급 없음.
+       3택·희귀·전설은 기준 위에 얹히는 유저 보너스라 이 자에 들어오지 않는다. */
+    for (let j = 0; j < WANT.probeN; j++) if (S.runChapter(g.ch, builds[i], { perkMode: S.PERK_MODE_LADDER }).clear) win++;
     const rate = win / WANT.probeN * 100;
     chk(`${g.k}칸: 챕터 ${g.ch} 클리어율이 ${WANT.rate}±${WANT.band}%p 안이다`,
       Math.abs(rate - WANT.rate) <= WANT.band, `실측 ${rate.toFixed(1)}%`);
@@ -144,6 +147,31 @@ function run(simSrc, planSrc, routineSrc, regressSrc) {
     S.LADDER.every((L, i) => L.at === S.EXP1_TARGETS[i].at && L.rar === S.EXP1_TARGETS[i].rar);
   chk('실험5 사다리 칸이 실험1 과 같은 챕터·등급이다', sameCh,
     `실험5 ${S.LADDER.map(l => l.at).join('·')}`);
+
+  /* ===== ⓖ 자(尺) 고정 — ⚑⚑⚑ T120 (주인 확정 2026-09-04 15:3X ①·④) =====
+     주인이 «맞추라 한 적이 없는데 왜 맞췄노» 로 되돌린 뒤 확정한 상시 규칙이다:
+     사다리를 재는 조건은 «기준 플레이어» 하나로 고정하고, 플레이어 쪽(3택·등급·신규 특전)이
+     바뀌어도 적 스탯을 임의로 재적합하지 않는다. 이 절은 **그 자가 배선돼 있는지**를 본다 —
+     자가 3택으로 슬쩍 돌아가면(실측 8칸이 통째로 어긋난다) 여기서 즉시 빨개진다. */
+  console.log('\n=== ⓖ 사다리 자(尺) = «기준 플레이어» 고정 (T120) ===');
+  chk('sim.js 에 `PERK_MODE_LADDER` 가 선언돼 있다', /const\s+PERK_MODE_PLAY\s*=\s*'3pick'\s*,\s*PERK_MODE_LADDER\s*=\s*'base10'/.test(simSrc));
+  chk('`PERKS_BASE10` = 기존 일반 10종 (풀 앞머리 10개)', /const\s+PERKS_BASE10\s*=\s*PERKS\.slice\(0\s*,\s*10\)/.test(simSrc));
+  chk('runChapter 가 perkMode 를 받고 기본값은 3택(게임 동작 불변)', /perkMode\s*:\s*opts\.perkMode\s*\|\|\s*PERK_MODE_PLAY/.test(simSrc));
+  chk('grantNextPerk 가 base10 에서 표 순서대로 자동 획득한다 (3택 굴림 없음)',
+    /G\.perkMode\s*===\s*PERK_MODE_LADDER[\s\S]{0,160}PERKS_BASE10\[G\.taken\.length\]/.test(simSrc));
+  chk('실험1 의 기본 자가 PERK_MODE_LADDER 다 (EXP1_PERKMODE 는 참고표 전용 덮어쓰기)',
+    /const\s+EXP1_PERKMODE\s*=\s*process\.env\.EXP1_PERKMODE\s*\|\|\s*PERK_MODE_LADDER/.test(simSrc));
+  chk('실험1 실측이 그 자로 돈다', /runChapter\(c,b,\{perkMode:EXP1_PERKMODE\}\)/.test(simSrc));
+  chk('실험5(진단)도 같은 자로 돈다', /runChapter\(c,b,\{perkMode:PERK_MODE_LADDER\}\)/.test(simSrc));
+  {
+    const base10 = S.PERKS_BASE10 || [];
+    const want10 = ['p_evadeHeal','p_atk','p_evade','p_arrowEv','p_axeHit','p_counter','p_spearCt','p_critR','p_critF','p_def'];
+    chk('기준 10종이 주인이 적은 옛 순서 그대로다 (회복→공격력→회피율→화살→도끼→반격률→창→치확→치피→방어력)',
+      base10.length === 10 && base10.every((p, i) => p.id === want10[i] && p.g === 0),
+      base10.map(p => p.id).join('·'));
+  }
+  chk('ROUTINE 에 «임의 재적합 금지» 상시 규칙이 살아 있다',
+    /임의로\s*재적합하지\s*않는다/.test(routineSrc));
 
   /* ===== ⓕ 러너 (tools/regress.js) ===== */
   console.log('\n=== ⓕ 회귀 러너 (tools/regress.js) ===');
@@ -190,6 +218,15 @@ if (process.argv.includes('--self')) {
     ['러너 판정 허용치만 ±5 로 벌리면', null, null, null, s => s.replace('Math.abs(v - t) <= 2', 'Math.abs(v - t) <= 5')],
     ['러너 파서에 칸 이름을 다시 박으면', null, null, null,
       s => s.replace(/\/\^\\s\*\\\|\\s\*\(\[\^\|\]\+\?\)/, '/^\\s*\\|\\s*(표준 장비[^|]*?)')],
+    /* ⚑⚑⚑ T120 ⓖ 음성 — 자(尺)가 3택으로 슬쩍 돌아가는 네 가지 길 */
+    ['실험1 의 자를 3택으로 되돌리면', s => s.replace('process.env.EXP1_PERKMODE||PERK_MODE_LADDER', "process.env.EXP1_PERKMODE||PERK_MODE_PLAY"), null, null, null],
+    ['실험1 실측에서 perkMode 배선을 떼면', s => s.replace('runChapter(c,b,{perkMode:EXP1_PERKMODE})', 'runChapter(c,b)'), null, null, null],
+    ['runChapter 의 perkMode 기본값을 base10 으로 바꾸면 (게임 동작까지 자로 덮는다)',
+      s => s.replace('perkMode:opts.perkMode||PERK_MODE_PLAY', 'perkMode:opts.perkMode||PERK_MODE_LADDER'), null, null, null],
+    ['기준 10종 순서를 흔들면 (공격력 ↔ 반격률)',
+      s => s.replace("const PERKS_BASE10=PERKS.slice(0,10);", "const PERKS_BASE10=PERKS.slice(0,10).slice().reverse();"), null, null, null],
+    ['ROUTINE 에서 «임의 재적합 금지» 상시 규칙을 지우면', null, null,
+      s => s.replace(/임의로\s*재적합하지\s*않는다/g, '필요하면 재적합한다'), null],
   ];
   let caught = 0;
   const quiet = console.log;

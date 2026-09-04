@@ -22,7 +22,12 @@ const TUNE={
      노브가 «기저» 아니면 «구간0 성장률» 뿐이다. 구간0 을 그대로 두고 기저만 올려 챕터 1~4 의 상대 형상을 보존했다.
      ⚠ 이 축은 매우 예민하다 — ×1.015 = 30.5% · ×1.020 = 24.2%(각 2,000판×3시드). 적 HP 가 정수 반올림이라
      «한 대 더 때려야 하나» 가 계단으로 바뀌는 탓이다. 0.5% 단위보다 잘게 움직이지 말 것. 근거 docs/balance/T97/raw.md. */
-  eBaseHp:66.840266, eBaseDmg:12.429661,
+  /* ⚑⚑⚑ T120 (주인 확정 2026-09-04 15:3X) — «전(前) 기준» 복구. T119 가 3택·새 특전 조건으로 이 네 값을
+     다시 맞춘 것(기저 ×1.3322 · 구간률 재절단)은 주인이 시킨 일이 아니라 **T114 완료 커밋 `f0ae9e0` 의 값으로
+     되돌렸다**. 주인 원문: «맞추라 한 적이 없는데 왜 맞췄노. 전에 그 기준대로 밸런스 되야 하는데.»
+     ⚑ 상시 규칙 — 특전·3택·등급 등 «플레이어 쪽» 이 바뀌어도 루틴은 이 네 값을 임의로 재적합하지 않는다.
+     재적합은 주인이 «맞춰라» 라고 한 경우에만, 그리고 언제나 `PERK_MODE_LADDER`(기준 플레이어) 조건으로만 한다. */
+  eBaseHp:50.174688, eBaseDmg:9.330519,
   /* ⚑ T35: 단일 성장률 `eHpG 1.185`·`eDmgG 1.08` 폐기 → PLAN §11.7 «구간별 성장률» 표.
      적 HP 는 플레이어 «공격력» 축, 적 DMG 는 «체력+실드» 축에서 주인 확정 스탯 사다리로부터 역산된 값이다.
      [하한, 성장률] — 챕터 c 에서 c+1 로 갈 때 적용할 배수를 c 로 찾는다.
@@ -79,8 +84,8 @@ const TUNE={
         잔차가 1 아래로 나오고, 주인 지시 ④가 «잔차가 1 아래면 벽을 끄고 률만으로 잇는다» 로 정해 두었다.
      ⚠ 적 HP·DMG 는 `Math.round` 라 초반 칸의 계단이 크다(2칸 챕터 15: 적 HP 51 → 52 가 14.5% → 5.5%).
         0.5% 단위보다 잘게 움직이지 말 것. 근거·실측표 `docs/balance/T103/result.md`. */
-  eHpSeg:[[0,1.0292],[5,1.008822],[15,1.074962],[28,1.085095],[40,1.046813],[70,1.020536],[150,1.021961],[380,1.014963]],
-  eDmgSeg:[[0,1.0265],[5,1.008822],[15,1.071268],[28,1.068514],[40,1.019517],[70,1.022446],[150,1.021431],[380,1.014963]],
+  eHpSeg:[[0,1.0292],[5,1.003143],[15,1.071776],[28,1.077458],[40,1.05304],[70,1.023291],[150,1.023071],[380,1.014651]],
+  eDmgSeg:[[0,1.0265],[5,1.003143],[15,1.068093],[28,1.060994],[40,1.025582],[70,1.025206],[150,1.022541],[380,1.014651]],
   /* ⚑⚑ 「벽 예산」 — T1 R02 가 «사다리 유지 + 벽 존재» 를 동시에 만족시킨 방법 (T35 가 남긴 숙제의 답).
      T35 는 «구간별 성장률이 사다리 7점에서 역산된 값이라 벽을 얹으면 사다리가 어긋난다» 며 벽 4종을 전부 껐다.
      하지만 어긋나는 건 «혼동» 이 아니라 **예산**이다: 과녁 7개 중 5 만 벽 밖(c<10)이고 15·30·50·70·120·260 은 전부 벽 안이라
@@ -410,6 +415,17 @@ function simPickPerk(offer){
 }
 /* 획득 확정 한 곳 — 레벨업·악마가 같은 동사를 거친다(index.html pickPerk 와 1:1). */
 function pickPerk(G,perk){ perk.ap(G.player); G.taken.push(perk); return perk; }
+
+/* ⚑⚑⚑ T120 (주인 확정 2026-09-04 15:3X) — **밸런스 자(尺) 고정: «기준 플레이어» 모드**.
+   주인 확정 ① 원문 요지: 사다리 8점은 «기존 일반 10종을 §3.1 옛 순서대로 «되는 만큼» 자동 획득 ·
+   3택 없음 · 신규 22종·등급 없음» 조건으로 잰다 — T114 가 8/8 을 낸 바로 그 조건이다.
+   3택과 희귀·전설 특전은 **기준 위에 얹히는 유저 보너스**라 사다리 측정에 들어오지 않는다.
+   ⚠ 이것은 **자(尺)만 고정하는 것**이다 — 실제 게임 동작(index.html)은 T117·T119 의 3택·등급 그대로다.
+   `runChapter(c,b,{perkMode:PERK_MODE_LADDER})` 로 켠다. 기본값은 종전대로 3택(`PERK_MODE_PLAY`).
+   `PERKS_BASE10` 은 «기존 10종» = 풀 앞머리 10개이고, 그 배열 순서가 곧 옛 획득 순서다
+   (회복 → 공격력 → 회피율 → 화살 → 도끼 → 반격률 → 창 → 치확 → 치피 → 방어력). */
+const PERK_MODE_PLAY='3pick', PERK_MODE_LADDER='base10';
+const PERKS_BASE10=PERKS.slice(0,10);
 
 /* ================= 장비 시스템 (PLAN §11) ================= */
 /* 등급 5 · 부위 6 · 부위당 종류 3 (=18계열). 장착 시 공/체 상승 + 계열 옵션.
@@ -1188,6 +1204,12 @@ function grantNextPerk(G){
   grantPerkChance(G);   /* 레벨업·악마 = 특전 기회 1번 (PLAN §4) */
   if(G.noPerk)return null;   /* 진단용 «특전 미획득» 자 — 사다리 회귀 대조에만 쓴다 */
   if(G.taken.length>=PERK_PICKS)return null;     /* 한 런 획득 상한(=PERK_PICKS)을 다 채우면 더는 안 준다 */
+  /* ⚑⚑⚑ T120 — «기준 플레이어» 자(尺): 기존 일반 10종을 옛 순서대로 «되는 만큼» 자동 획득한다.
+     3택 굴림을 아예 거치지 않으므로 **난수를 한 번도 안 쓴다** — T114 가 8/8 을 낸 그 스트림과 같다. */
+  if(G.perkMode===PERK_MODE_LADDER){
+    const p=PERKS_BASE10[G.taken.length];
+    return p?pickPerk(G,p):null;
+  }
   /* ⚑ T117 — 남은 것 중 3장 (판 난수) · ⚑ T119 — 카드마다 등급 굴림 + 귀족의 눈 반영 */
   const offer=offerPerks(G.taken,!!G.player.px.p_nobleEye);
   if(!offer.length)return null;                  /* 풀이 다 떨어졌다 — 팝업 없이 레벨업만 (주인 지시 ①) */
@@ -1200,7 +1222,9 @@ function runChapter(chapter,build,opts){
   const G={chapter,player:null,nodes:[],pprojs:[],arrows:[],gold:0,kills:0,procN:0,
     perkChances:0,taken:[],overBoltCd:0,autoBoltT:3,stuns:0,misses:0,
     dead:false,cleared:false,t:0,atkTries:0,miss:0,   /* 적 회피 10% 실측용 (PLAN §2.3) */
-    noPerk:!!opts.noPerk};
+    noPerk:!!opts.noPerk,
+    /* ⚑⚑⚑ T120 — 특전 획득 자(尺). 기본 = 게임과 같은 3택, 사다리 측정 = «기준 플레이어»(base10). */
+    perkMode:opts.perkMode||PERK_MODE_PLAY};
   const p=mkPlayer(build,G);G.player=p;p.G=G;
   const layout=chapterLayout(chapter);
   let x=560,wi=0;
@@ -1410,10 +1434,16 @@ const LADDER_STAT={5:[25,150,250], 15:[50,250,400], 28:[108.9,543.4,868.9], 40:[
   70:[524.7,2619.1,4188.9], 150:[3742.2,18703.1,29921.9], 380:[106912,533475,853125], 420:[190050,948300,1516500]};
 const EXP1_TOL=2;                  // ±%p (주인 확정)
 const EXP1_SCORE_N=1000;           // 과녁당 채점 판수 하한 (주인 확정 «1,000판 이상»)
+/* ⚑⚑⚑ T120 — 실험1 은 **언제나 «기준 플레이어»(`PERK_MODE_LADDER`)로 잰다**. 이것이 주인 확정 ① 의 자다.
+   `EXP1_PERKMODE=3pick` 는 «3택 조건이면 얼마나 되나» 를 같이 찍어 보는 **참고표 전용 진단 스위치**이고
+   판정 자가 아니다(주인 확정 ③ — 참고표는 판정 아님). 기본값은 반드시 `PERK_MODE_LADDER` 여야 한다
+   (게이트 `verifyScoreCriteria` ⓔ 가 이 배선을 소스에서 대조한다). */
+const EXP1_PERKMODE=process.env.EXP1_PERKMODE||PERK_MODE_LADDER;
 function exp1_targets(){
   const N=parseInt(process.env.EXP1_N||String(EXP1_SCORE_N),10);
   const span=parseInt(process.env.EXP1_SPAN||'0',10);   /* >0 이면 과녁 ±span 챕터도 함께 찍는다(탐색용) */
-  console.log(`\n=== 실험1: 난이도 사다리 8점 (주인 확정 · 각 ${N}판 · 특전 순서 획득 · 허용 ±${EXP1_TOL}%p) ===`);
+  const modeNm=EXP1_PERKMODE===PERK_MODE_LADDER?'기준 플레이어(일반 10종 옛 순서 자동 획득 · 3택 없음)':`참고(${EXP1_PERKMODE})`;
+  console.log(`\n=== 실험1: 난이도 사다리 8점 (주인 확정 · 각 ${N}판 · ${modeNm} · 허용 ±${EXP1_TOL}%p) ===`);
   const rows=[];
   for(const T of EXP1_TARGETS){
     const b=mkBuild(T.rar,T.plus,T.slot);   /* rar<0 = 노장비 (사다리 «노템» 칸과 같은 자) */
@@ -1425,7 +1455,7 @@ function exp1_targets(){
     for(let c=T.at-span;c<=T.at+span;c++){
       if(c<1)continue;
       let w=0;
-      for(let i=0;i<N;i++) if(runChapter(c,b).clear)w++;
+      for(let i=0;i<N;i++) if(runChapter(c,b,{perkMode:EXP1_PERKMODE}).clear)w++;   /* ⚑ T120 — 자 = 기준 플레이어 */
       const rate=w/N*100, d=rate-T.want, ok=Math.abs(d)<=EXP1_TOL;
       const tag=c===T.at?(ok?'   ← 과녁 ✓':`   ← 과녁 ✗(${T.want}±${EXP1_TOL}%)`):'';
       console.log(`    챕터 ${String(c).padStart(3)}: 클리어율 ${rate.toFixed(1)}%${tag}`);
@@ -1549,7 +1579,7 @@ function exp5_ladder(){
   const N=parseInt(process.env.EXP5_N||String(EXP5_SCORE_N),10);
   const only=process.env.EXP5_ONLY;                 /* '신화' 등으로 한 칸만 측정 */
   const span=parseInt(process.env.EXP5_SPAN||'0',10);   /* >0 이면 과녁 ±span 챕터도 함께 측정 */
-  console.log(`\n=== 실험5: 스탯 사다리 (진단 전용 — 기준 폐기 · 각 챕터 ${N}판 · 슬롯 0렙 · 특전 순서 획득) ===`);
+  console.log(`\n=== 실험5: 스탯 사다리 (진단 전용 — 기준 폐기 · 각 챕터 ${N}판 · 슬롯 0렙 · ⚑ T120 기준 플레이어) ===`);
   const rows=[];
   for(const L of LADDER){
     if(only&&only!==L.id)continue;
@@ -1562,7 +1592,7 @@ function exp5_ladder(){
     for(let c=L.at-span;c<=L.at+span;c++){
       if(c<1)continue;
       let w=0;
-      for(let i=0;i<N;i++) if(runChapter(c,b).clear)w++;   /* ⚑ T96 — 사다리 자 = «특전 순서 획득» */
+      for(let i=0;i<N;i++) if(runChapter(c,b,{perkMode:PERK_MODE_LADDER}).clear)w++;   /* ⚑ T120 — 사다리 자 = «기준 플레이어»(실험1 과 같은 자) */
       const rate=w/N*100;
       const exp=rate>0?(100/rate).toFixed(1)+'회':'∞';
       const tag=c===L.at?'   ← 사다리 과녁 챕터 (슬롯 0렙 관측 — 판정은 실험1)':'';

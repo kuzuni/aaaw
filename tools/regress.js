@@ -38,7 +38,12 @@ if (RAWDIR) fs.mkdirSync(RAWDIR, { recursive: true });
 function run(exp, seed) {
   const env = Object.assign({}, process.env, { SEED: String(seed) });
   /* 판수는 **주지 않는다** — 규약 ② 대로 채점 기본값(EXP2_SCORE_N·EXP5_SCORE_N)이 그대로 쓰이게 둔다. */
-  delete env.EXP2_N; delete env.EXP5_N; delete env.EXP5_ONLY; delete env.EXP5_SPAN;
+  delete env.EXP2_N; delete env.EXP5_N; delete env.EXP5_ONLY; delete env.EXP5_SPAN; delete env.EXP1_N; delete env.EXP1_SPAN;
+  /* ⚑⚑⚑ T120 (주인 확정 2026-09-04 15:3X ①) — **자(尺)도 주지 않는다.**
+     사다리 8점은 언제나 «기준 플레이어»(sim.js `PERK_MODE_LADDER`)로 잰다. `EXP1_PERKMODE` 는
+     «3택 조건이면 얼마나 되나» 를 따로 찍어 보는 참고표 전용 스위치이고 판정 자가 아니므로,
+     러너가 그 스위치를 물려받아 회귀 표를 다른 자로 찍는 일이 없게 여기서 지운다(규약 ② 와 같은 취지). */
+  delete env.EXP1_PERKMODE;
   const t0 = Date.now();
   const out = execFileSync(process.execPath, ['sim.js', exp], { cwd: ROOT, env, encoding: 'utf8', maxBuffer: 1 << 28 });
   const sec = ((Date.now() - t0) / 1000).toFixed(0);
@@ -85,7 +90,7 @@ const JUDGE = {
   '2': () => '',                                                                      // 폐지 (T96)
   '5': () => '',                                                                      // 진단 표시만 (판정은 실험1)
 };
-const TITLE = { '1': '실험1 난이도 사다리 8점', '2': '실험2 (폐지)', '5': '실험5 스탯 사다리 · 슬롯0 (진단 — 판정 없음)' };
+const TITLE = { '1': '실험1 난이도 사다리 8점 (⚑ T120 자 = 기준 플레이어 · 일반 10종 옛 순서 자동 획득 · 3택 없음)', '2': '실험2 (폐지)', '5': '실험5 스탯 사다리 · 슬롯0 (진단 — 판정 없음)' };
 
 /* ---------- 실행 ---------- */
 console.error(`# 회귀 측정 (시드 ${SEEDS.join('·')} · 실험 ${EXPS.join('·')})`);
