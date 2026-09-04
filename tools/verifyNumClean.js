@@ -120,6 +120,13 @@ console.log('\n=== 숫자 청결 게이트 (주인 확정 «깔끔한 숫자 규
 console.log(`  대상: 특전 ${perks.length}종 tx · 장비 옵션 ${gopt.length}칸 d (두 파일) · PLAN 표 ${PLAN_ROWS.length}행`);
 
 /* ---------- Ⓐ «%p» 표기 전면 금지 (0건 강제) ---------- */
+/* ⚑⚑⚑ T124 (주인 확정 2026-09-04 19:2X) — 세트 옵션 문면은 주인이 표에 적은 그대로다(워커 수정 금지).
+   특전의 `OWNER_TX` 와 같은 «문면 기준» 면제다. 키(«장비 <종류>옵N») 목록으로 등재하지 않는 이유는
+   부위별 순서 셔플 때문에 같은 문면이 18칸에 흩어져 있고, 주인이 표만 돌려도 키가 통째로 밀리기 때문이다.
+   ⚠ 이 면제도 «주인이 쓴 그 문장 그대로일 때만» 유효하다 — 문면을 바꾸려면 주인 확인이 필요하다. */
+const OWNER_GEAR_TX = ['치명타 확률 +5', '치명타 피해 +20', '반격률 +10', '치명타 피해 +25', '회피 +8',
+  '최대 체력 +8%', '방어력 +12%', '실드가 있을 때 가시갑옷 +12%'];
+
 console.log('\n[Ⓐ «%p» 표기 금지 — 주인 지시 «게이트의 금지어 검사에 %p 추가»]');
 {
   const hits = ALL_TEXT.filter(x => /%p/.test(strip(x.t))).map(x => `${x.k}${x.who === 'html' ? '(index.html)' : ''}: «${strip(x.t)}»`);
@@ -153,10 +160,10 @@ console.log('\n[Ⓐ «%p» 표기 금지 — 주인 지시 «게이트의 금지
     .map(x => `${x.k}: «${strip(x.t)}»`);
   barePerk.length ? bad(`특전 tx 에 단위 없는 스탯 표기 ${barePerk.length}건 — ${barePerk.join(' / ')}`)
                   : ok('특전 스탯 표기 단위 누락 0건 (주인 확정 10종 문면은 면제 — 위 주석)');
-  const KNOWN_BARE = ['장비 axe옵3', '장비 crown옵1', '장비 crown옵3', '장비 crown옵6', '장비 plate옵4',
-    '장비 chain옵7', '장비 sandal옵1', '장비 sandal옵3', '장비 sandal옵6', '장비 boots옵1',
-    '장비 boots옵3', '장비 greave옵7', '장비 beads옵3'];
-  const bareGear = gopt.filter(x => BARE.test(strip(x.t))).map(x => x.k);
+  /* ⚑ T124 — 18계열 옵션표가 폐지되면서 종전 등재 13건(axe옵3·crown옵1 …)은 대상이 사라져 지웠다.
+     새 세트 옵션의 «치명타 확률 +5»·«회피 +8» 등은 위 OWNER_GEAR_TX 로 문면 면제한다. */
+  const KNOWN_BARE = [];
+  const bareGear = gopt.filter(x => BARE.test(strip(x.t)) && !OWNER_GEAR_TX.includes(strip(x.t))).map(x => x.k);
   const freshBare = bareGear.filter(k => !KNOWN_BARE.includes(k));
   freshBare.length ? bad(`장비 옵션에 단위 없는 스탯 표기가 새로 ${freshBare.length}건 늘었다 — ${freshBare.join(', ')}`)
                    : ok(`장비 옵션 단위 누락 ${bareGear.length}칸 전부 등재된 기존 분 (주인 검토 대기 — 특전은 «+8%», 장비는 «+7» 로 갈려 있다)`);
@@ -193,9 +200,9 @@ console.log('\n[Ⓑ 추상 표현 금지 — 주인 지시 ««대폭 증가» �
    ⚑ T82 (주인 확정 «킬힐 5% 기준») — 킬 회복 4종(c_killHeal2 · c_killShield3 · l_killHeal5 · l_killShield10)이
    5·10% 로 정리돼 **동결분에서 빠졌다**. 이제 이 넷이 다시 소수점으로 깎이면 여기서 곧장 빨개진다. */
 
-/* Ⓒ 소수점 금지 (주인: «0.37% 같은 값 금지») — 잔여 7건 전부 장비 옵션 */
-const KNOWN_DECIMAL = ['장비 greatsword옵7', '장비 robe옵7', '장비 gauntlet옵7', '장비 greave옵2',
-  '장비 greave옵6', '장비 beads옵4', '장비 beads옵7'];
+/* Ⓒ 소수점 금지 (주인: «0.37% 같은 값 금지») — ⚑ T124 로 잔여 0건.
+   종전 7건은 전부 18계열 옵션이었고 그 표가 폐지되면서 대상이 사라졌다(새 세트 옵션에는 소수점이 없다). */
+const KNOWN_DECIMAL = [];
 
 /* Ⓓ 확률 10% 단위(예외 5% 허용) = 5의 배수 — 잔여 1건 + ⚑⚑⚑ T119 주인 확정 8건
    ⚑⚑⚑ T119 (주인 확정 2026-09-04 13:0X) — «처치 시 창/번개/화살/도끼» 8종의 발동 확률 **33% · 66%** 는
@@ -204,7 +211,7 @@ const KNOWN_DECIMAL = ['장비 greatsword옵7', '장비 robe옵7', '장비 gaunt
    (5의 배수로 깎으면 일반/희귀/전설 3단의 간격 설계가 통째로 바뀐다). 전설판(100%)은 5의 배수라 대상 아님. */
 /* ⚑⚑⚑ T121 (주인 확정 2026-09-04 16:0X) — 같은 33/66 어법의 «처치 시» 특전이 4종 더 늘었다
    (공격력 스택 · 회피 스택 · 회복 6% · 수리 66%). T119 와 같은 근거로 등재한다 — **워커 수정 금지**. */
-const KNOWN_PROB = ['장비 plate옵4',
+const KNOWN_PROB = [   /* ⚑ T124 — 종전 '장비 plate옵4' 는 18계열 폐지로 대상 소멸 */
   '특전 p_killSpearN', '특전 p_killBoltN', '특전 p_killArrowN', '특전 p_killAxeN',
   '특전 p_killSpearR', '특전 p_killBoltR', '특전 p_killArrowR', '특전 p_killAxeR',
   '특전 p_killAtkStk', '특전 p_killEvStk', '특전 p_killHealN', '특전 p_killRepair',
@@ -236,13 +243,10 @@ const KNOWN_COEF = [
   '특전 p_evHealR', '특전 p_evRepairR', '특전 p_evRepairL',
   /* ⚑ T104 정리 — 종전 132종 시절의 c_evadePerm / c_collAtk / c_collEvade / c_collCounter / c_collDef / c_atkPerm 6종은
      T96 특전 폐지 지시로 사라졌으므로 등재 목록에서도 지웠다(래칫 안내 «해소분 지울 것» 이행). */
-  /* 아래 25건은 전부 장비 옵션 — 특전이 아니다. */
-  '장비 greatsword옵1', '장비 greatsword옵3',
-  '장비 axe옵1', '장비 bow옵1', '장비 plate옵1', '장비 plate옵2', '장비 plate옵5',
-  '장비 robe옵4', '장비 gauntlet옵4', '장비 leather옵1', '장비 leather옵5', '장비 leather옵6',
-  '장비 handwrap옵3', '장비 handwrap옵4', '장비 handwrap옵5', '장비 sandal옵4', '장비 sandal옵5',
-  '장비 boots옵4', '장비 boots옵6', '장비 greave옵1', '장비 greave옵2', '장비 greave옵5',
-  '장비 greave옵6', '장비 pendant옵4', '장비 pendant옵5'];
+  /* ⚑ T124 — 종전 장비 25건은 18계열 옵션표가 폐지되면서 전부 대상이 사라졌다.
+     새 세트 옵션의 «최대 체력 +8%»·«방어력 +12%»·«실드가 있을 때 가시갑옷 +12%» 는 주인 확정 문면이라
+     위 OWNER_GEAR_TX 로 면제한다(키가 아니라 문면 기준 — 부위별 셔플로 키가 흩어지기 때문). */
+];
 
 const isMul = (v, u) => Math.abs(v / u - Math.round(v / u)) < 1e-9;
 /* 확률 표기는 두 어순을 다 쓴다 — «20% 확률로» 와 «확률 60%».
@@ -269,7 +273,7 @@ const AXES = [
 let remain = 0;
 for (const ax of AXES) {
   console.log(`\n[${ax.n} ${ax.name} — 래칫 (등재 ${ax.known.length}건, 신규만 불합격)]`);
-  const cur = ITEMS.filter(x => ax.hit(strip(x.t)));
+  const cur = ITEMS.filter(x => ax.hit(strip(x.t)) && !OWNER_GEAR_TX.includes(strip(x.t)));   /* ⚑ T124 주인 확정 문면 면제 */
   const curK = cur.map(x => x.k);
   const known = new Set(ax.known);
   const fresh = cur.filter(x => !known.has(x.k));

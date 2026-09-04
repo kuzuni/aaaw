@@ -14,7 +14,7 @@
 
    방식:
      ① pkk 기저확률표 추출 — sim.js 의 `pkk(p, B*px.KEY)` 전수에서 KEY→B 를 뽑는다.
-     ② GOPT 126칸에서 각 옵션이 ++ 하는 px 키와 그 옵션의 인덱스(→ 요구 등급/강화)를 뽑는다.
+     ② GOPT 144칸(⚑ T124 — 3세트 × 6부위 × 8옵션)에서 각 옵션이 ++ 하는 px 키와 그 옵션의 인덱스(→ 요구 등급/강화)를 뽑는다.
      ③ 계열 내부 누적: 신화+9(옵1~7 전부)에서 B × 중복수 > 1.0 이면 포화.
      ④ 계열 간 누적: 부위별로 1계열만 장착 가능하므로 «부위별 최대치» 를 합산해 > 1.0 이면 포화.
      ⑤ m_procX2(×1.22) 동반 시에만 1.0 을 넘는 키는 🟡 경고(포화 자체는 아님).
@@ -63,7 +63,7 @@ const series = {};   // type -> [{d, keys:[...]}]
 let cur = null;
 for (let i = gStart + 1; i < gEnd; i++) {
   const L = lines[i];
-  const open = L.match(/^\s{2}([a-z]+):\s*\[/);
+  const open = L.match(/^\s{2}([a-z_]+):\s*\[/);
   if (open) { cur = open[1]; series[cur] = []; continue; }
   if (cur && /^\s{2}\],?\s*$/.test(L)) { cur = null; continue; }
   if (!cur) continue;
@@ -89,23 +89,24 @@ const partOf = {}, PARTS = [];
 if (typesSrc) {
   for (const m of typesSrc.matchAll(/([a-z]+):\s*\[([^\]]*)\]/g)) {
     PARTS.push(m[1]);
-    for (const t of m[2].matchAll(/'([a-z]+)'/g)) partOf[t[1]] = m[1];
+    for (const t of m[2].matchAll(/'([a-z_]+)'/g)) partOf[t[1]] = m[1];
   }
 }
 const nameSrc = grabObj('typeName');
 const typeName = {};
-if (nameSrc) for (const m of nameSrc.matchAll(/([a-z]+):\s*'([^']*)'/g)) typeName[m[1]] = m[2];
+if (nameSrc) for (const m of nameSrc.matchAll(/([a-z_]+):\s*'([^']*)'/g)) typeName[m[1]] = m[2];
 const nm = t => `${typeName[t] || t}(${t})`;
 
 /* 옵션 인덱스 → 요구 등급/강화 (GT.optCount 규칙: 등급 n개 + 신화 +3/+6/+9 에 1개씩) */
-const reqOf = i => ['희귀', '영웅', '전설', '신화 0강', '신화 +3강', '신화 +6강', '신화 +9강'][i] || `옵${i + 1}`;
+/* ⚑ T124 — 일반부터 옵션 1개라 8단이 됐다(일반 · 희귀 · 영웅 · 전설 · 신화 · +3 · +6 · +9). */
+const reqOf = i => ['일반', '희귀', '영웅', '전설', '신화 0강', '신화 +3강', '신화 +6강', '신화 +9강'][i] || `옵${i + 1}`;
 
 const nSeries = Object.keys(series).length;
 const nOpt = Object.values(series).reduce((a, b) => a + b.length, 0);
 console.log('=== 효과 포화 대조 (T19 게이트) ===');
 console.log(`  대상: ${nSeries}계열 ${nOpt}칸 · pkk 확률 키 ${Object.keys(BASE).length}종`);
-if (nSeries !== 18 || nOpt !== 126) {
-  console.error(`✗ 계열/칸 수가 18계열 126칸이 아니다 (${nSeries}/${nOpt}) — 파싱이 깨졌거나 스펙이 바뀌었다`);
+if (nSeries !== 18 || nOpt !== 144) {
+  console.error(`✗ 종류/칸 수가 18종류 144칸이 아니다 (${nSeries}/${nOpt}) — 파싱이 깨졌거나 스펙이 바뀌었다`);
   process.exit(1);
 }
 
@@ -184,7 +185,7 @@ for (const c of capChk) {
   let curS = null;
   for (let i = gStart + 1; i < gEnd; i++) {
     const L = lines[i];
-    const open = L.match(/^\s{2}([a-z]+):\s*\[/); if (open) { curS = open[1]; sums[curS] = 0; continue; }
+    const open = L.match(/^\s{2}([a-z_]+):\s*\[/); if (open) { curS = open[1]; sums[curS] = 0; continue; }
     if (curS && /^\s{2}\],?\s*$/.test(L)) { curS = null; continue; }
     if (!curS) continue;
     for (const m of L.matchAll(c.re)) sums[curS] += Number(m[1]);

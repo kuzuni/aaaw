@@ -462,8 +462,10 @@ function gtConsts(src) {
   else bad('GT.optCount 본문이 두 파일에서 다르다');
 }
 
-/* ---------- ⑩ GOPT 18계열 × 7옵션 = 126칸 전수 대조 ---------- */
-console.log('\n[⑩ GOPT 18계열 옵션표 — 설명문 126칸 + ap 본문 전수 대조 (PLAN §11.6)]');
+/* ---------- ⑩ GOPT 18종류 × 8옵션 = 144칸 전수 대조 ---------- */
+/* ⚑ T124 — 18«계열» 이 «3세트 × 6부위» 로 바뀌었다. 종류 수(18)는 그대로지만 종류 키가 `crit_weapon`
+   처럼 밑줄을 쓰고 옵션이 8칸(일반부터 1개)이 됐다 — 파서의 키 정규식과 칸 수 단언을 함께 갱신했다. */
+console.log('\n[⑩ GOPT 세트 옵션표 — 설명문 144칸 + ap 본문 전수 대조 (PLAN §11.6)]');
 function goptTable(src) {
   const i = src.indexOf('const GOPT={');
   if (i < 0) return null;
@@ -472,7 +474,7 @@ function goptTable(src) {
   const body = src.slice(i + 'const GOPT={'.length, end);
   const out = {};
   /* `type:[ ... ],` 블록을 괄호 깊이로 쪼갠다 */
-  const re = /^\s{2}([a-z]+):\[/gm;
+  const re = /^\s{2}([a-z_]+):\[/gm;
   let m;
   while ((m = re.exec(body))) {
     const start = m.index + m[0].length;
@@ -503,15 +505,15 @@ function goptTable(src) {
   if (!OS || !OH) bad(`GOPT 파싱 실패 (${!OS ? 'sim.js' : ''}${!OS && !OH ? ' / ' : ''}${!OH ? 'index.html' : ''}) — 게이트를 갱신할 것`);
   else {
     const ts = Object.keys(OS), th = Object.keys(OH);
-    ts.length === 18 ? ok('sim.js GOPT 18계열') : bad(`sim.js GOPT 가 ${ts.length}계열 (18 이어야 함)`);
+    ts.length === 18 ? ok('sim.js GOPT 18종류 (3세트 × 6부위)') : bad(`sim.js GOPT 가 ${ts.length}종류 (18 이어야 함)`);
     const missT = ts.filter(t => !th.includes(t));
     const extraT = th.filter(t => !ts.includes(t));
-    missT.length ? bad(`index.html 에 없는 계열 ${missT.length}개: ${missT.join(' ')}`) : ok('18계열 전부 index.html 에 존재');
-    extraT.length ? bad(`sim.js 에 없는 계열 ${extraT.length}개: ${extraT.join(' ')}`) : ok('잉여 계열 0');
+    missT.length ? bad(`index.html 에 없는 종류 ${missT.length}개: ${missT.join(' ')}`) : ok('18종류 전부 index.html 에 존재');
+    extraT.length ? bad(`sim.js 에 없는 종류 ${extraT.length}개: ${extraT.join(' ')}`) : ok('잉여 종류 0');
     let cells = 0, dDiff = [], apDiff = [], nCnt = [];
     for (const t of ts) {
       const a = OS[t], b = OH[t] || [];
-      if (a.length !== 7) nCnt.push(`${t}=${a.length}`);
+      if (a.length !== 8) nCnt.push(`${t}=${a.length}`);
       if (b.length !== a.length) { dDiff.push(`${t}: 옵션 수 sim ${a.length} vs index ${b.length}`); continue; }
       for (let i = 0; i < a.length; i++) {
         cells++;
@@ -519,7 +521,7 @@ function goptTable(src) {
         if (norm(a[i].ap) !== norm(b[i].ap)) apDiff.push(`${t}[${i + 1}] ap sim«${a[i].ap}» vs index«${b[i].ap}»`);
       }
     }
-    nCnt.length ? bad(`7옵션이 아닌 계열: ${nCnt.join(' ')}`) : ok('18계열 전부 7옵션 (신화 +9강이 옵션의 끝 — PLAN §11.1)');
+    nCnt.length ? bad(`8옵션이 아닌 종류: ${nCnt.join(' ')}`) : ok('18종류 전부 8옵션 (일반 1 … 신화 5 · +3/+6/+9 각 +1 — PLAN §11.1)');
     dDiff.length ? bad(`설명문 불일치 ${dDiff.length}칸:\n    ` + dDiff.slice(0, 8).join('\n    ')) : ok(`설명문 ${cells}칸 전수 일치`);
     apDiff.length ? bad(`ap 본문 불일치 ${apDiff.length}칸:\n    ` + apDiff.slice(0, 8).join('\n    ')) : ok(`ap 본문 ${cells}칸 전수 일치`);
 
@@ -528,7 +530,7 @@ function goptTable(src) {
     let planMiss = [];
     for (const t of ts) for (const o of OS[t]) if (o.d && !PLAN.includes(o.d)) planMiss.push(`${t}: ${o.d}`);
     planMiss.length ? bad(`PLAN §11.6 표에 없는 설명문 ${planMiss.length}칸:\n    ` + planMiss.slice(0, 8).join('\n    '))
-      : ok('126칸 설명문 전부 PLAN §11.6 표에 존재');
+      : ok('144칸 설명문 전부 PLAN §11.6 표에 존재');
   }
 }
 

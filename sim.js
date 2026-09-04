@@ -566,19 +566,29 @@ const PERK_MODE_PLAY='3pick', PERK_MODE_LADDER='base10';
 const PERKS_BASE10=PERKS.slice(0,10);
 
 /* ================= 장비 시스템 (PLAN §11) ================= */
-/* 등급 5 · 부위 6 · 부위당 종류 3 (=18계열). 장착 시 공/체 상승 + 계열 옵션.
-   옵션 개수: 일반0 · 희귀1 · 영웅2 · 전설3 · 신화4, 신화는 +3/+6/+9 강에서 1개씩 추가(최대 7). */
+/* ⚑⚑⚑ T124 (주인 확정 2026-09-04 · 19:2X) — 장비 계열 재설계.
+   18계열(부위마다 서로 다른 계열)이 폐지되고 **세트 3개 × 부위 6개**가 됐다.
+   종류 이름 = «세트명 + 부위명»(치명 무기 · 체력실드 투구 … 회피 목걸이)이라 종류 수는 18 그대로지만
+   **옵션은 세트 안 6부위가 공유**한다(상위 등급이 하위 옵션을 포함하는 규칙은 그대로).
+   옵션 개수: 일반1 · 희귀2 · 영웅3 · 전설4 · 신화5, 신화는 +3/+6/+9 강에서 1개씩 추가(최대 8).
+   — 종전 «일반 0개» 가 아니라 **일반부터 1개**다(주인 확정). */
 const GT={
   parts:['weapon','helm','armor','glove','boot','neck'],
   partName:{weapon:'무기',helm:'투구',armor:'갑옷',glove:'장갑',boot:'신발',neck:'목걸이'},
+  /* 세트 순서 = [치명, 체력실드, 회피] — `mkBuild(...,typeIdx=0)` 이 쓰는 기준 장비가 치명 세트다(T124 ④). */
+  sets:['crit','hpsh','evade'],
+  setName:{crit:'치명',hpsh:'체력실드',evade:'회피'},
   types:{
-    weapon:['greatsword','axe','bow'], helm:['helmet','crown','hood'],
-    armor:['plate','chain','robe'],    glove:['gauntlet','leather','handwrap'],
-    boot:['sandal','boots','greave'],  neck:['pendant','amulet','beads'],
+    weapon:['crit_weapon','hpsh_weapon','evade_weapon'], helm:['crit_helm','hpsh_helm','evade_helm'],
+    armor:['crit_armor','hpsh_armor','evade_armor'],     glove:['crit_glove','hpsh_glove','evade_glove'],
+    boot:['crit_boot','hpsh_boot','evade_boot'],         neck:['crit_neck','hpsh_neck','evade_neck'],
   },
-  typeName:{greatsword:'대검',axe:'전투도끼',bow:'장궁',helmet:'투구',crown:'왕관',hood:'두건',
-    plate:'판금갑옷',chain:'사슬갑옷',robe:'로브',gauntlet:'건틀릿',leather:'가죽장갑',handwrap:'핸드랩',
-    sandal:'샌들',boots:'부츠',greave:'장화',pendant:'펜던트',amulet:'부적',beads:'구슬목걸이'},
+  typeName:{crit_weapon:'치명 무기',crit_helm:'치명 투구',crit_armor:'치명 갑옷',
+    crit_glove:'치명 장갑',crit_boot:'치명 신발',crit_neck:'치명 목걸이',
+    hpsh_weapon:'체력실드 무기',hpsh_helm:'체력실드 투구',hpsh_armor:'체력실드 갑옷',
+    hpsh_glove:'체력실드 장갑',hpsh_boot:'체력실드 신발',hpsh_neck:'체력실드 목걸이',
+    evade_weapon:'회피 무기',evade_helm:'회피 투구',evade_armor:'회피 갑옷',
+    evade_glove:'회피 장갑',evade_boot:'회피 신발',evade_neck:'회피 목걸이'},
   rarName:['일반','희귀','영웅','전설','신화'],
   /* ⚑⚑⚑ T102 (주인 확정 2026-09-03) — 등급별 1부위 기여 (0강·슬롯 0렙). 등급 배수 재설계본이다.
      주인 원문: «일반에서 전설까지는 공체실 각각 2배씩 뛰고, 전설→신화는 6배, 신화→신화9강은 20배».
@@ -635,183 +645,215 @@ GT.allTypes=[]; for(const pt of GT.parts) for(const ty of GT.types[pt]) GT.allTy
    (toFixed(6) 로 부동소수 누적 오차를 끊는다 — 임계가 1ULP 라도 밀리면 시드 재현성이 깨진다). */
 GT.gachaCum=(()=>{ const c=[]; let a=0; for(let i=GT.gachaRate.length-1;i>=0;i--){ a=+(a+GT.gachaRate[i]).toFixed(6); c[i]=a; } return c; })();
 GT.rarRoll=r=>{ for(let i=GT.gachaRate.length-1;i>0;i--) if(r<GT.gachaCum[i]) return i; return 0; };
-/* 옵션 개수: 등급별 + 신화 강화 보너스 */
+/* 옵션 개수: 등급별 + 신화 강화 보너스 (⚑ T124 — 일반부터 1개 · 등급마다 +1 · 최대 8) */
 GT.optCount=(rar,plus)=>{
-  let n=rar;                                   // 일반0 희귀1 영웅2 전설3 신화4
+  let n=rar+1;                                 // 일반1 희귀2 영웅3 전설4 신화5
   if(rar===4){ if(plus>=3)n++; if(plus>=6)n++; if(plus>=9)n++; }
   return n;
 };
 
-/* ---- 18계열 옵션표 (PLAN §11.6 초안 — 기존 엔진 동사만 재사용) ----
-   각 계열 7단계, 상위 등급은 하위 옵션을 전부 포함하고 하나 더 얹는다. */
+/* ---- 3세트 × 6부위 옵션표 (PLAN §11.6 — ⚑⚑⚑ 주인 확정 T124 2026-09-04 19:2X) ----
+   세트마다 옵션 6개(a~f)를 정해 **6부위가 그대로 공유**하고, 부위별로 a~e 만 5칸 순환시켜 순서를 돌린다.
+   f(6번째 = 신화 +3강)는 전 부위 고정이고(주인 «치명 시 도끼는 무조건 6번째»), 7·8번째(신화 +6/+9강)는
+   세 세트 공통 «공격력 +10%» 다. 상위 등급은 하위 옵션을 전부 포함한다(종전 규칙 그대로).
+
+     부위별 순서 — 무기 abcde · 투구 bcdea · 갑옷 cdeab · 장갑 deabc · 신발 eabcd · 목걸이 abcde (+ f 고정)
+     세트 옵션 — 치명 a 치확+5 · b 치피+20 · c 반격+10 · d 치확+5 · e 치피+25 · f 치명 시 50% 도끼
+                 체력실드 a 체력+8% · b 실드+10% · c 방어+12% · d 실드+10% · e 실드 시 가시+12% · f 실드+10%
+                 회피 a 회피+8 · b 회피 시 50% 도끼 · c 저체력 회피 회복 · d 체력+8% · e 실드+10% · f 실드+10%
+
+   위임 기본값(주인이 다르면 한 줄로 정정) —
+   · «같은 옵션이 여러 부위에 있으면 각각 따로 합산·발동»(주인 명시). 스탯 옵션은 그냥 더하고,
+     발동 옵션(도끼·회복)은 **부위 수만큼 따로 굴린다**(풀셋 +3강이면 6번).
+   · «최대 체력 +8%»·«최대 실드 +10%»·«공격력 +10%» 는 **가산 합산**이다(곱연산 아님 — 주인 참고표의
+     풀셋 +9강 합산 «체력 +48% · 실드 +180% · 공격력 +120%» 가 가산이어야 나온다). 그래서 `ap` 는
+     퍼센트를 `px.g_hpP/g_shP/g_atkP` 에 모으고 `mkPlayer` 가 마지막에 한 번 곱한다.
+   · «방어력 +12%» 는 방어 스탯(0~80 의 피해 감소율)에 **+12 를 더한다** — 풀셋 +72 (주인 참고표와 일치).
+     특전 «방어력 증가»(곱연산 ×1.08)와 달리 가산인 이유도 같다(기본 방어 0 에서 곱연산은 0 이다).
+   · «실드가 있을 때 가시갑옷 +12%» 는 특전 가시갑옷과 **가산**(피격 순간 실드가 있었을 때만 · +0.12 배). */
 const GOPT={
-  /* 무기 */
-  greatsword:[ /* 검기 계열 */
-    {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
-    {d:'공격 시 5% 확률 검기 발사', ap:p=>p.px.wave++},
-    {d:'공격 시 30% 확률 공격력 +14% 4초', ap:p=>p.px.atkBuffM++},
-    {d:'검기 관통 20·사거리 1400', ap:p=>p.px.waveKing=1},
-    {d:'공격 시 25% 확률 공격력 +35% 5초', ap:p=>p.px.atkBuffL++},
-    {d:'반격 시 검기 발사(확정)', ap:p=>p.px.counterWave++},
-    {d:'체력 50% 이하 적에게 피해 2.2배', ap:p=>p.px.execute=true},
+  /* --- 치명 세트 --- */
+  crit_weapon:[ /* 치명 무기 */
+    {d:'치명타 확률 +5', ap:p=>p.critR+=5},
+    {d:'치명타 피해 +20', ap:p=>p.critF+=20},
+    {d:'반격률 +10', ap:p=>p.counter+=10},
+    {d:'치명타 확률 +5', ap:p=>p.critR+=5},
+    {d:'치명타 피해 +25', ap:p=>p.critF+=25},
+    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  axe:[ /* 도끼 계열 */
-    {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
-    {d:'공격 시 5% 확률 도끼 발사', ap:p=>p.px.axe++},
-    {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
-    {d:'도끼 3개로 증가',       ap:p=>p.px.axeCount=1},
-    {d:'도끼 발동 확률 +5%',   ap:p=>p.px.axe++},
-    {d:'처치 시 실드 충전',      ap:p=>p.px.killShield3++},
-    {d:'최대 체력 적 첫 타격 피해 +20%', ap:p=>p.px.firstHit++},
+  crit_helm:[ /* 치명 투구 */
+    {d:'치명타 피해 +20', ap:p=>p.critF+=20},
+    {d:'반격률 +10', ap:p=>p.counter+=10},
+    {d:'치명타 확률 +5', ap:p=>p.critR+=5},
+    {d:'치명타 피해 +25', ap:p=>p.critF+=25},
+    {d:'치명타 확률 +5', ap:p=>p.critR+=5},
+    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  bow:[ /* 화살 계열 */
-    {d:'공격력 +6%',            ap:p=>p.dmg*=1.06},
-    {d:'공격 시 5% 확률 화살 2발', ap:p=>p.px.arrow2++},
-    {d:'치명타 배율 +30',       ap:p=>p.critF+=30},
-    {d:'화살 3발로 증가',       ap:p=>p.px.arrowCount=1},
-    {d:'치명타 시 75% 확률 추가타', ap:p=>p.px.extraHit++},
-    {d:'화살 발동 확률 +5%',   ap:p=>p.px.arrow2++},
-    {d:'최대 체력 적에게 치명타 확률 62', ap:p=>p.px.fullHpCrit=true},
+  crit_armor:[ /* 치명 갑옷 */
+    {d:'반격률 +10', ap:p=>p.counter+=10},
+    {d:'치명타 확률 +5', ap:p=>p.critR+=5},
+    {d:'치명타 피해 +25', ap:p=>p.critF+=25},
+    {d:'치명타 확률 +5', ap:p=>p.critR+=5},
+    {d:'치명타 피해 +20', ap:p=>p.critF+=20},
+    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  /* 투구 */
-  helmet:[ /* 방어 계열 */
-    {d:'방어 +6',               ap:p=>p.def+=6},
-    {d:'피격 시 방어 +3 3초(누적)', ap:p=>p.px.defHitBuff++},
-    {d:'방어 +8',               ap:p=>p.def+=8},
-    {d:'피격 시 30% 확률 방어 +14 4초', ap:p=>p.px.defBuff2++},
-    {d:'피격 시 방어 +5 4초(누적)', ap:p=>p.px.wallBuff++},
-    {d:'피격 시 20% 확률 방어 +15 4초', ap:p=>p.px.defBuffL++},
-    {d:'실드가 있으면 받는 피해 20% 감소', ap:p=>p.px.guardCrystal=true},
+  crit_glove:[ /* 치명 장갑 */
+    {d:'치명타 확률 +5', ap:p=>p.critR+=5},
+    {d:'치명타 피해 +25', ap:p=>p.critF+=25},
+    {d:'치명타 확률 +5', ap:p=>p.critR+=5},
+    {d:'치명타 피해 +20', ap:p=>p.critF+=20},
+    {d:'반격률 +10', ap:p=>p.counter+=10},
+    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  crown:[ /* 치명타 확률 계열 */
-    {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
-    {d:'치명타 시 치명 확률 +5 3초(누적)', ap:p=>p.px.critChain++},
-    {d:'치명타 확률 +8',        ap:p=>p.critR+=8},
-    {d:'처치 시 30% 확률 치명 확률 +14 4초', ap:p=>p.px.killCritBuff++},
-    {d:'치명타 시 45% 확률 공격 즉시 재장전', ap:p=>p.px.critReset++},
-    {d:'치명타 확률 +10',       ap:p=>p.critR+=10},
-    {d:'치명타 시 공격력 +15% 4초', ap:p=>p.px.critAtkBuff++},
+  crit_boot:[ /* 치명 신발 */
+    {d:'치명타 피해 +25', ap:p=>p.critF+=25},
+    {d:'치명타 확률 +5', ap:p=>p.critR+=5},
+    {d:'치명타 피해 +20', ap:p=>p.critF+=20},
+    {d:'반격률 +10', ap:p=>p.counter+=10},
+    {d:'치명타 확률 +5', ap:p=>p.critR+=5},
+    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  hood:[ /* 번개 계열 */
-    {d:'치명타 배율 +25',       ap:p=>p.critF+=25},
-    {d:'공격 시 5% 확률 번개 1회', ap:p=>p.px.bolt++},
-    {d:'치명타 시 치명 배율 +34 4초', ap:p=>p.px.critFBuff++},
-    {d:'번개 2회로 증가',       ap:p=>p.px.boltCount=1},
-    {d:'3초마다 번개 자동 발사', ap:p=>p.px.autoBolt++},
-    {d:'치명타 시 공격속도 +25% 3초', ap:p=>p.px.critAspdBuff++},
-    {d:'공격 시 5% 확률 소환 무작위 발사', ap:p=>p.px.arsenal++},
+  crit_neck:[ /* 치명 목걸이 */
+    {d:'치명타 확률 +5', ap:p=>p.critR+=5},
+    {d:'치명타 피해 +20', ap:p=>p.critF+=20},
+    {d:'반격률 +10', ap:p=>p.counter+=10},
+    {d:'치명타 확률 +5', ap:p=>p.critR+=5},
+    {d:'치명타 피해 +25', ap:p=>p.critF+=25},
+    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  /* 갑옷 */
-  plate:[ /* 체력·피격 계열 */
-    {d:'최대 체력 +8%',         ap:p=>{const a=p.maxHp*0.08;p.maxHp+=a;heal(p,a,true);}},
-    {d:'피격 시 15% 확률 체력 2% 회복', ap:p=>p.px.hitHeal++},
-    {d:'최대 체력 +10%',        ap:p=>{const a=p.maxHp*0.10;p.maxHp+=a;heal(p,a,true);}},
-    {d:'피격 시 22% 확률 회피 +14 3초', ap:p=>p.px.hitEvadeBuff++},
-    {d:'최대 체력 +12%',        ap:p=>{const a=p.maxHp*0.12;p.maxHp+=a;heal(p,a,true);}},
-    {d:'피격 시 5% 확률 실드 5% 충전', ap:p=>p.px.shieldOnHit++},
-    {d:'사망 시 1회 부활',       ap:p=>p.px.revive++},
+  /* --- 체력실드 세트 --- */
+  hpsh_weapon:[ /* 체력실드 무기 */
+    {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'방어력 +12%', ap:p=>p.def+=12},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'실드가 있을 때 가시갑옷 +12%', ap:p=>p.px.g_thornSh+=0.12},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  chain:[ /* 가시 계열 */
-    {d:'방어 +5',               ap:p=>p.def+=5},
-    {d:'피격 시 60% 확률 가시 반사', ap:p=>p.px.thorns++},
-    {d:'방어 +7',               ap:p=>p.def+=7},
-    {d:'피격 시 방어 +3 3초(누적)', ap:p=>p.px.defHitBuff++},
-    {d:'가시 반사 확률 +60%',   ap:p=>p.px.thorns++},
-    {d:'최대 체력 +10%',        ap:p=>{const a=p.maxHp*0.10;p.maxHp+=a;heal(p,a,true);}},
-    {d:'피격 시 30% 확률 회피 +15 3초', ap:p=>p.px.evadeHitBuff++},
+  hpsh_helm:[ /* 체력실드 투구 */
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'방어력 +12%', ap:p=>p.def+=12},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'실드가 있을 때 가시갑옷 +12%', ap:p=>p.px.g_thornSh+=0.12},
+    {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  robe:[ /* 실드 계열 */
-    {d:'최대 실드 +15%',        ap:p=>p.maxSh*=1.15},
-    {d:'처치 시 실드 소량 충전', ap:p=>p.px.killShield3++},
-    {d:'최대 실드 +20%',        ap:p=>p.maxSh*=1.20},
-    {d:'회복 시 30% 확률 실드 8% 충전', ap:p=>p.px.healShield5++},
-    {d:'처치 시 실드 충전 강화', ap:p=>p.px.killShield10++},
-    {d:'최대 실드 +25%',        ap:p=>p.maxSh*=1.25},
-    {d:'실드가 0일 때 공격력 1.5배', ap:p=>p.px.rage=true},
+  hpsh_armor:[ /* 체력실드 갑옷 */
+    {d:'방어력 +12%', ap:p=>p.def+=12},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'실드가 있을 때 가시갑옷 +12%', ap:p=>p.px.g_thornSh+=0.12},
+    {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  /* 장갑 */
-  gauntlet:[ /* 치명타 배율 계열 */
-    {d:'치명타 배율 +30',       ap:p=>p.critF+=30},
-    {d:'치명타 시 치명 배율 +20 3초', ap:p=>p.px.critFsmall++},
-    {d:'치명타 배율 +40',       ap:p=>p.critF+=40},
-    {d:'치명타 시 30% 확률 체력 4% 회복', ap:p=>p.px.critHeal3++},
-    {d:'치명타 배율 +50',       ap:p=>p.critF+=50},
-    {d:'치명타 시 75% 확률 추가타', ap:p=>p.px.extraHit++},
-    {d:'뒤쪽 적에게 피해 3.2배',   ap:p=>p.px.backDmg=true},
+  hpsh_glove:[ /* 체력실드 장갑 */
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'실드가 있을 때 가시갑옷 +12%', ap:p=>p.px.g_thornSh+=0.12},
+    {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'방어력 +12%', ap:p=>p.def+=12},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  leather:[ /* 공격속도 계열 */
-    {d:'공격속도 +8%',          ap:p=>p.aspd*=1.08},
-    {d:'공격 시 30% 확률 공속 +5% 3초', ap:p=>p.px.c_aspdBuff++},
-    {d:'공격속도 +10%',         ap:p=>p.aspd*=1.10},
-    {d:'처치 시 공속 +20% 4초',  ap:p=>p.px.aspdKill++},
-    {d:'공격속도 +12%',         ap:p=>p.aspd*=1.12},
-    {d:'처치마다 공속 영구 +1%', ap:p=>p.px.killAspd=true},
-    {d:'공속 +35%·이동속도 +35%', ap:p=>{p.aspd*=1.35;p.walkMul+=0.35;}},
+  hpsh_boot:[ /* 체력실드 신발 */
+    {d:'실드가 있을 때 가시갑옷 +12%', ap:p=>p.px.g_thornSh+=0.12},
+    {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'방어력 +12%', ap:p=>p.def+=12},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  handwrap:[ /* 연타·분신 계열 */
-    {d:'공격력 +5%',            ap:p=>p.dmg*=1.05},
-    {d:'공격 시 30% 확률 공격력 +5% 3초', ap:p=>p.px.c_atkBuff++},
-    {d:'공격력 +7%',            ap:p=>p.dmg*=1.07},
-    {d:'공격 시 10% 확률 공격력 영구 +1%', ap:p=>p.px.atkPerm++},
-    {d:'공격력 +9%',            ap:p=>p.dmg*=1.09},
-    {d:'기본공격마다 분신 추가타', ap:p=>p.px.clone=true},
-    {d:'체력 25% 이하 적 즉사(보스 제외)', ap:p=>p.px.execKill=true},
+  hpsh_neck:[ /* 체력실드 목걸이 */
+    {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'방어력 +12%', ap:p=>p.def+=12},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'실드가 있을 때 가시갑옷 +12%', ap:p=>p.px.g_thornSh+=0.12},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  /* 신발 (주인 예시 계열 그대로) */
-  sandal:[ /* 회피 계열 */
-    {d:'회피 +7',               ap:p=>p.evade+=7},
-    {d:'회피 시 10% 확률 도끼 1개 발사', ap:p=>p.px.evadeAxe++},
-    {d:'회피 +8',               ap:p=>p.evade+=8},
-    {d:'회피 시 공격력 +28% 5초', ap:p=>p.px.evadeAtkBuff++},
-    {d:'회피 시 15% 확률 체력 7% 회복', ap:p=>p.px.evadeHeal++},
-    {d:'회피 시 회피 +8 3초(누적)', ap:p=>p.px.evadeEvBuff++},
-    {d:'회피 시 다음 공격 치명타 확정', ap:p=>p.px.evadeCrit=true},
+  /* --- 회피 세트 --- */
+  evade_weapon:[ /* 회피 무기 */
+    {d:'회피 +8', ap:p=>p.evade+=8},
+    {d:'회피 시 50% 확률로 도끼 1개', ap:p=>p.px.g_evAxe++},
+    {d:'체력 50% 미만일 때 회피 시 30% 확률로 체력 10% 회복', ap:p=>p.px.g_evHeal++},
+    {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  boots:[ /* 반격 계열 */
-    {d:'반격 확률 +7',          ap:p=>p.counter+=7},
-    {d:'반격 시 공격력 +5% 3초', ap:p=>p.px.counterAtkS++},
-    {d:'반격 확률 +8',          ap:p=>p.counter+=8},
-    {d:'반격 시 공격력 +14% 4초', ap:p=>p.px.counterAtkM++},
-    {d:'반격 피해 +100%',        ap:p=>p.px.counterX++},
-    {d:'반격 시 체력 4% 회복',   ap:p=>p.px.counterHeal++},
-    {d:'반격 시 연쇄 반격(확정)', ap:p=>p.px.counterChain=true},
+  evade_helm:[ /* 회피 투구 */
+    {d:'회피 시 50% 확률로 도끼 1개', ap:p=>p.px.g_evAxe++},
+    {d:'체력 50% 미만일 때 회피 시 30% 확률로 체력 10% 회복', ap:p=>p.px.g_evHeal++},
+    {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'회피 +8', ap:p=>p.evade+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  greave:[ /* 체력 계열 */
-    {d:'최대 체력 +8%',         ap:p=>{const a=p.maxHp*0.08;p.maxHp+=a;heal(p,a,true);}},
-    {d:'처치 시 체력 0.5% 회복', ap:p=>p.killHeal+=0.005},
-    {d:'최대 체력 +10%',        ap:p=>{const a=p.maxHp*0.10;p.maxHp+=a;heal(p,a,true);}},
-    {d:'회복량 +20%',           ap:p=>p.healAmp+=0.2},
-    {d:'최대 체력 +12%',        ap:p=>{const a=p.maxHp*0.12;p.maxHp+=a;heal(p,a,true);}},
-    {d:'처치 시 체력 +0.8% 추가 회복', ap:p=>p.killHeal+=0.008},
-    {d:'체력 10% 이하 시 회피 +40', ap:p=>p.px.lastStand=true},
+  evade_armor:[ /* 회피 갑옷 */
+    {d:'체력 50% 미만일 때 회피 시 30% 확률로 체력 10% 회복', ap:p=>p.px.g_evHeal++},
+    {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'회피 +8', ap:p=>p.evade+=8},
+    {d:'회피 시 50% 확률로 도끼 1개', ap:p=>p.px.g_evAxe++},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  /* 목걸이 */
-  pendant:[ /* 회복 계열 */
-    {d:'회복량 +15%',           ap:p=>p.healAmp+=0.15},
-    {d:'회복 시 30% 확률 방어 +5 3초', ap:p=>p.px.healDefBuff++},
-    {d:'회복량 +20%',           ap:p=>p.healAmp+=0.20},
-    {d:'회복 시 20% 확률 실드 3% 충전', ap:p=>p.px.healShield3++},
-    {d:'회복 시 공격력 +8% 3초', ap:p=>p.px.healAtkBuff++},
-    {d:'회복 시 20% 확률 추가 회복', ap:p=>p.px.healBoost2++},
-    {d:'과회복분의 7배가 실드로 전환', ap:p=>p.px.overheal=true},
+  evade_glove:[ /* 회피 장갑 */
+    {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'회피 +8', ap:p=>p.evade+=8},
+    {d:'회피 시 50% 확률로 도끼 1개', ap:p=>p.px.g_evAxe++},
+    {d:'체력 50% 미만일 때 회피 시 30% 확률로 체력 10% 회복', ap:p=>p.px.g_evHeal++},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  amulet:[ /* 처치 계열 */
-    {d:'골드 획득 +30%',        ap:p=>p.goldMul+=0.3},
-    {d:'처치 시 방어 +10 3초',   ap:p=>p.px.killDefBuff++},
-    {d:'골드 획득 +40%',        ap:p=>p.goldMul+=0.4},
-    {d:'처치 시 30% 확률 치명 확률 +14 4초', ap:p=>p.px.killCritBuff++},
-    {d:'획득 경험치 +1',        ap:p=>p.px.sage=true},
-    {d:'처치 시 실드 충전 강화', ap:p=>p.px.killShield10++},
-    {d:'골드 획득 2배',          ap:p=>p.goldMul*=2},
+  evade_boot:[ /* 회피 신발 */
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'회피 +8', ap:p=>p.evade+=8},
+    {d:'회피 시 50% 확률로 도끼 1개', ap:p=>p.px.g_evAxe++},
+    {d:'체력 50% 미만일 때 회피 시 30% 확률로 체력 10% 회복', ap:p=>p.px.g_evHeal++},
+    {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
-  beads:[ /* 창 계열 */
-    {d:'공격력 +5%',            ap:p=>p.dmg*=1.05},
-    {d:'공격 시 5% 확률 창 발사', ap:p=>p.px.spear++},
-    {d:'치명타 확률 +6',        ap:p=>p.critR+=6},
-    {d:'창 피해 13.5배·관통',    ap:p=>p.px.spearMaster=1},
-    {d:'창 발동 확률 +5%',    ap:p=>p.px.spear++},
-    {d:'적 화살 30% 확률 오발',  ap:p=>p.misfire+=0.30},
-    {d:'모든 발동 확률 1.22배',  ap:p=>p.px.procX2=true},
+  evade_neck:[ /* 회피 목걸이 */
+    {d:'회피 +8', ap:p=>p.evade+=8},
+    {d:'회피 시 50% 확률로 도끼 1개', ap:p=>p.px.g_evAxe++},
+    {d:'체력 50% 미만일 때 회피 시 30% 확률로 체력 10% 회복', ap:p=>p.px.g_evHeal++},
+    {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
+    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
 };
 
@@ -928,6 +970,13 @@ function _basePxLegacy(){
     missAtk:0,missDef:0,missAspd:0,missReset:0,missRush:false,missSpear:0,
     /* ⚑ T48 2단계 — 원거리 피격 축 · 반사 확장 · 고중첩 변형 (주인 16:0X·16:1X·16:2X) */
     rangeShield:0,rangeThorns:0,rangeBolt:0,rangeSpear:0,thornsS:0,thornsKing:false,aspdStack10:0,
+    /* ⚑⚑⚑ T124 장비 세트 옵션 축 (3세트 × 6부위 · 주인 확정 19:2X)
+       — 퍼센트 합산 3개(공격력·최대 체력·최대 실드 · `mkPlayer` 가 마지막에 한 번 곱한다)
+       + 발동 카운터 3개(치명 시 도끼 · 회피 시 도끼 · 저체력 회피 회복 — 부위 수만큼 따로 굴린다)
+       + 조건부 가시 배율 1개(실드가 있었을 때만 더해지는 가산 배율).
+       ⚠ 위 «구 키» 들은 18계열 옵션표가 폐지되면서 GOPT 어디에서도 안 켜진다(전부 0 고정) —
+         엔진 트리거 자리는 남겨 두되 새 옵션은 아래 `g_*` 축만 쓴다. */
+    g_atkP:0,g_hpP:0,g_shP:0,g_critAxe:0,g_evAxe:0,g_evHeal:0,g_thornSh:0,
   };
 }
 /* 신 132종의 px 키 = 특전 id 그대로. 여기서 한 번에 0 으로 깔아 둔다 —
@@ -956,6 +1005,9 @@ function mkPlayer(build,G){
     const n=GT.optCount(g.rar,g.plus);
     for(let i=0;i<n&&i<tbl.length;i++) tbl[i].ap(p);
   }
+  /* ⚑ T124 — 세트 옵션의 퍼센트 축은 **가산 합산 뒤 한 번만** 곱한다(주인 참고표: 풀셋 +9강 = 공 +120% ·
+     체 +48% · 실 +180%). 부위마다 곱연산으로 걸면 1.10^18 이 되어 주인 수치와 어긋난다. */
+  p.dmg*=1+p.px.g_atkP/100; p.maxHp*=1+p.px.g_hpP/100; p.maxSh*=1+p.px.g_shP/100;
   p.hp=p.maxHp; p.sh=p.maxSh=Math.round(p.maxSh);
   return p;
 }
@@ -1206,6 +1258,12 @@ function dealDmg(G,e,ratio,fromBasic){
       if(px.p_critSpearL&&pkk(p,PERK_CRITSP_L))fireSpear(p,1);
       if(px.p_critBoltL&&pkk(p,PERK_CRITBOLT_L))fireBoltsAll(p,e.wave);
     }
+    /* ⚑⚑⚑ T124 치명 세트 f «치명타 시 50% 확률로 도끼 1개» — 부위마다 따로 굴린다(풀셋 +3강이면 6번).
+       «치명타 시» 축의 소환이라 T121 의 창·번개와 같은 연쇄를 낳는다 → 같은 틱 예산을 쓴다. */
+    if(px.g_critAxe&&G.procN<PROC_TICK_CAP){
+      G.procN++;
+      for(let i=0;i<px.g_critAxe;i++) if(pkk(p,0.50))fireAxe(p,1);
+    }
     gainWard(p,0.12*px.wardCrit);                            /* 장비 옵션 */
   }
   if(px.execKill&&!e.isBoss&&e.hp>0&&e.hp<=e.maxHp*0.25)e.hp=0;                 /* 장비 옵션 */
@@ -1370,6 +1428,10 @@ function hitPlayer(G,dmg,isMelee,src){
     if(px.evadeShield&&pkk(p,0.15*px.evadeShield))repair(p,p.maxSh*0.10);
     if(px.evadeCounter&&pkk(p,1.0*px.evadeCounter))doCounter(G,src);
     if(px.evadeAxe&&pkk(p,0.10*px.evadeAxe))fireAxe(p,1);
+    /* ⚑⚑⚑ T124 회피 세트 — b «회피 시 50% 확률로 도끼 1개» · c «체력 50% 미만일 때 회피 시 30% 확률로 체력 10% 회복».
+       둘 다 부위마다 따로 굴린다. c 의 체력 조건은 **회피 성공 순간의 체력 비율**로 본다(주인 문면). */
+    for(let i=0;i<px.g_evAxe;i++) if(pkk(p,0.50))fireAxe(p,1);
+    if(p.hp<p.maxHp*0.50) for(let i=0;i<px.g_evHeal;i++) if(pkk(p,0.30))heal(p,p.maxHp*0.10);
     gainWard(p,0.10*px.wardEvade);
     /* ⚑⚑⚑ T104 (주인 확정) — 1번 특전 «회피 시 회복»: 회피 성공마다 10% 굴려서 최대 체력 6% 회복.
        `heal(...,true)` 로 회복 증폭/오버킬 수리 분기를 타지 않는다 → 실드는 안 채운다(위임 기본값). */
@@ -1440,7 +1502,11 @@ function hitPlayer(G,dmg,isMelee,src){
   if(px.thornsS&&pkk(p,0.30*px.thornsS))reflect(G,src,dmg*0.70);
   if(px.thorns&&pkk(p,0.60*px.thorns))reflect(G,src,dmg*1.5);
   if(px.thornsKing)reflect(G,src,dmg*1.5);
-  if(px.p_thorns&&isMelee&&src)reflect(G,src,thornBase*px.p_thorns);   /* ⚑ T119 가시갑옷 — 가산 중첩(+100/+200/+300 = 최대 +600%) */
+  /* ⚑ T119 가시갑옷 — 가산 중첩(+100/+200/+300 = 최대 +600%).
+     ⚑ T124 체력실드 세트 e «실드가 있을 때 가시갑옷 +12%» 도 같은 축에 **가산**으로 얹힌다 —
+     조건은 피격 «전» 에 실드가 있었는지(`hadSh` · 실드 반사와 같은 기준)로 본다. */
+  const thornM=px.p_thorns+(hadSh?px.g_thornSh:0);
+  if(thornM&&isMelee&&src)reflect(G,src,thornBase*thornM);
   /* ⚑⚑⚑ T121 3차 «실드 반사»(전설 · 주인 확정 18:2X) — 실드가 있으면 피격 시 50% 로 그 데미지를 그대로 되갚는다.
      반사량 = 그 공격이 준 피해(방어 적용 «후» · 실드로 받은 양 포함) × 100% = 가시갑옷과 같은 기준값이다.
      근접·원거리 둘 다(원거리는 쏜 적) · 피해는 그대로 받는다(무시와 별개) · 가시갑옷과 중복된다(둘 다 되갚음). */
@@ -1924,14 +1990,14 @@ function exp5_ladder(){
 
 /* ---------- 계열 옵션표 덤프 (PLAN §11.6 등재용) ---------- */
 function dumpGearTable(){
-  const step=['희귀(1)','영웅(2)','전설(3)','신화(4)','신화+3(5)','신화+6(6)','신화+9(7)'];
-  console.log('| 부위 | 종류 | 계열 | '+step.map((s,i)=>`옵션${i+1} · ${s}`).join(' | ')+' |');
+  /* ⚑ T124 — 8단(일반부터 옵션 1개) · «계열» 열은 «세트» 열이 됐다. 세트 → 부위 순으로 찍는다. */
+  const step=['일반(1)','희귀(2)','영웅(3)','전설(4)','신화(5)','신화+3(6)','신화+6(7)','신화+9(8)'];
+  console.log('| 부위 | 종류 | 세트 | '+step.map((s,i)=>`옵션${i+1} · ${s}`).join(' | ')+' |');
   console.log('|---|---|---|'+step.map(()=>'---').join('|')+'|');
-  const line={greatsword:'검기',axe:'도끼 소환',bow:'화살 소환',helmet:'방어',crown:'치명타 확률',hood:'번개 소환',
-    plate:'체력·피격',chain:'가시 반사',robe:'실드',gauntlet:'치명타 배율',leather:'공격속도',handwrap:'연타·분신',
-    sandal:'회피',boots:'반격',greave:'체력',pendant:'회복',amulet:'처치',beads:'창 소환'};
-  for(const pt of GT.parts) for(const ty of GT.types[pt])
-    console.log(`| ${GT.partName[pt]} | ${GT.typeName[ty]} | ${line[ty]} | `+GOPT[ty].map(o=>o.d).join(' | ')+' |');
+  for(const st of GT.sets) for(const pt of GT.parts){
+    const ty=`${st}_${pt}`;
+    console.log(`| ${GT.partName[pt]} | ${GT.typeName[ty]} | ${GT.setName[st]} | `+GOPT[ty].map(o=>o.d).join(' | ')+' |');
+  }
 }
 
 /* ---------- fit: 앵커 챕터가 «겨우 클리어(≈5%)» 가 되는 요구 전투력 역산 (진단 전용) ---------- */

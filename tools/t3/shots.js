@@ -161,12 +161,13 @@ async function measure(p, map) {
 const SEED_GEAR = () => {
   save.inv = []; save.eq = {}; save.uid = 1;
   const plan = [
-    ['weapon', 'greatsword', 4, 2], ['helm', 'helmet', 3, 1], ['armor', 'plate', 3, 0],
-    ['glove', 'gauntlet', 2, 1], ['boot', 'boots', 2, 0], ['neck', 'pendant', 1, 0],
-    ['weapon', 'axe', 2, 0], ['weapon', 'bow', 1, 0], ['helm', 'crown', 1, 0],
-    ['armor', 'chain', 1, 0], ['glove', 'leather', 0, 0], ['boot', 'sandal', 0, 0],
-    ['neck', 'amulet', 0, 0], ['weapon', 'greatsword', 0, 0], ['helm', 'hood', 0, 0],
-    ['armor', 'robe', 0, 0], ['glove', 'handwrap', 0, 0], ['boot', 'greave', 0, 0],
+    /* ⚑ T124 — 종류 키가 «세트_부위» 로 바뀌었다(치명·체력실드·회피 × 6부위). 구성은 종전과 같은 모양이다. */
+    ['weapon', 'crit_weapon', 4, 2], ['helm', 'hpsh_helm', 3, 1], ['armor', 'crit_armor', 3, 0],
+    ['glove', 'crit_glove', 2, 1], ['boot', 'crit_boot', 2, 0], ['neck', 'crit_neck', 1, 0],
+    ['weapon', 'hpsh_weapon', 2, 0], ['weapon', 'evade_weapon', 1, 0], ['helm', 'crit_helm', 1, 0],
+    ['armor', 'hpsh_armor', 1, 0], ['glove', 'hpsh_glove', 0, 0], ['boot', 'evade_boot', 0, 0],
+    ['neck', 'hpsh_neck', 0, 0], ['weapon', 'crit_weapon', 0, 0], ['helm', 'evade_helm', 0, 0],
+    ['armor', 'evade_armor', 0, 0], ['glove', 'evade_glove', 0, 0], ['boot', 'hpsh_boot', 0, 0],
   ];
   for (const [pt, ty, rar, plus] of plan) save.inv.push(newGear(pt, ty, rar, plus));
   for (const pt of GT.parts) { const g = save.inv.find(x => x.part === pt); if (g) save.eq[pt] = g.u; }

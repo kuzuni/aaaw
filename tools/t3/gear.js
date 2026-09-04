@@ -121,8 +121,8 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     txt: document.getElementById('overlay').textContent.replace(/\s+/g, ' ').slice(0, 90),
   }));
   chk('세부 팝업이 열린다', det.on);
-  /* .gd-opt = 계열 옵션 7칸 + 슬롯 강화 안내 1줄 = 8 (안내 줄은 «슬롯 1레벨당…» 고정 문구) */
-  chk('옵션 7칸 목록 (해금 ◆ / 잠금 🔒) + 슬롯 안내 1줄', det.opts === 8 && det.locks >= 1 && det.opens >= 1,
+  /* ⚑ T124 — .gd-opt = 세트 옵션 **8칸** + 슬롯 강화 안내 1줄 = 9 (일반부터 1개 · 신화 +9강이 8칸째) */
+  chk('옵션 8칸 목록 (해금 ◆ / 잠금 🔒) + 슬롯 안내 1줄', det.opts === 9 && det.locks >= 1 && det.opens >= 1,
     `${det.opts}줄 (해금 ${det.opens} · 잠금 ${det.locks})`);
   chk('슬롯 강화 버튼', /슬롯 강화|슬롯 MAX/.test(det.up || ''), det.up);
   const before = await p.evaluate(() => { const pt = GT.parts.find(x => save.eq[x]); return { pt, lv: save.slots[pt] | 0, gold: save.gold }; });
@@ -138,8 +138,8 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   console.log('\n=== 대장간 — 수동 3칸 합성 (5단계 구도) ===');
   await p.evaluate(() => {
     save.inv = []; save.eq = {}; save.slots = {};
-    for (let i = 0; i < 3; i++) save.inv.push({ part: 'weapon', type: 'greatsword', rar: 0, plus: 0, u: save.uid++ });
-    save.inv.push({ part: 'helm', type: 'helmet', rar: 1, plus: 0, u: save.uid++ });
+    for (let i = 0; i < 3; i++) save.inv.push({ part: 'weapon', type: 'crit_weapon', rar: 0, plus: 0, u: save.uid++ });
+    save.inv.push({ part: 'helm', type: 'hpsh_helm', rar: 1, plus: 0, u: save.uid++ });
     autoEquipBest(); persist(); showScreen('gear'); renderGear();
   });
   await p.click('#fuseBtn'); await p.waitForTimeout(400);
@@ -150,7 +150,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   /* 인벤에서 같은 계열 3개 고르기 */
   await p.evaluate(async () => {
     const cells = [...document.querySelectorAll('#fgGrid .inv-cell')];
-    for (const c of cells) { const g = invById(+c.dataset.u); if (g && g.type === 'greatsword') c.click(); }
+    for (const c of cells) { const g = invById(+c.dataset.u); if (g && g.type === 'crit_weapon') c.click(); }
   });
   await p.waitForTimeout(400);
   const f1 = await p.evaluate(() => ({
@@ -164,7 +164,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('합성 버튼 활성', !f1.dis, f1.fuse);
   await p.click('#fgFuse'); await p.waitForTimeout(500);
   const f2 = await p.evaluate(() => ({ inv: save.inv.length, rar: save.inv.map(g => g.rar + ':' + g.type).join(','), fuses: save.fuses, picked: FG.length }));
-  chk('합성 실행 — 3개가 1개(상위 등급)로', f2.inv === 2 && /1:greatsword/.test(f2.rar), `인벤 ${f2.inv} [${f2.rar}]`);
+  chk('합성 실행 — 3개가 1개(상위 등급)로', f2.inv === 2 && /1:crit_weapon/.test(f2.rar), `인벤 ${f2.inv} [${f2.rar}]`);
   chk('합성 횟수 누적 · 재료 칸 비움', f2.fuses === 1 && f2.picked === 0);
   await p.screenshot({ path: `${OUT}/t3-forge.png` });
 
@@ -222,8 +222,8 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       localStorage.clear();
       localStorage.setItem('kkoma-knight-v2', JSON.stringify({
         uid: 2, gold: 0, gem: 0, maxChapter: 1, selChapter: 1, eq: { weapon: 1 }, slots: {},
-        inv: [{ u: 1, part: 'weapon', type: 'greatsword', rar: 4, plus: 9 },
-              { u: 1, part: 'armor', type: 'plate', rar: 0, plus: 0 }],
+        inv: [{ u: 1, part: 'weapon', type: 'crit_weapon', rar: 4, plus: 9 },
+              { u: 1, part: 'armor', type: 'hpsh_armor', rar: 0, plus: 0 }],
         gacha: { p50: 0, p10: 0, pulls: 0 },
       }));
     });

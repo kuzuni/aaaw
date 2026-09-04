@@ -570,10 +570,14 @@ function run(simSrc, htmSrc, planSrc) {
       /function fireBoltsAll\(p,\s*node\)/.test(src) && /fireBoltsAll\(p,e\.wave\)/.test(k));
     chk(`${nm} 오버킬 회복이 초과분을 그대로 회복한다 («힐» 이라 noBoost 아님)`,
       /p_overkill&&over>0\)\s*heal\(p,\s*over\)/.test(k.replace(/\s+/g, ' ').replace(/\( /g, '(')) || /p_overkill\s*&&\s*over\s*>\s*0\)\s*heal\(p,\s*over\)/.test(k));
+    /* ⚑ T124 — 가시 배율이 «특전 배율 + (피격 전 실드가 있었으면) 장비 세트 배율» 의 합이 됐다
+       (체력실드 세트 e «실드가 있을 때 가시갑옷 +12%»). 그래서 두 줄로 나뉘었다 —
+       ① 합산식이 `p_thorns + (hadSh ? g_thornSh : 0)` 인가 ② 그 합으로 «근접 피격 × 받은 피해» 를 반사하는가. */
+    const thornSrc = src.replace(/\s+/g, '');
+    chk(`${nm} 가시갑옷 배율 = 특전 + 실드 조건 장비(T124)`,
+      /constthornM=px\.p_thorns\+\(hadSh\?px\.g_thornSh:0\)/.test(thornSrc));
     chk(`${nm} 가시갑옷이 «근접 피격 · 받은 피해 × 배율» 로 반사한다`,
-      /px\.p_thorns&&isMelee&&src\)\s*reflect\((?:G,)?src,\s*thornBase\*px\.p_thorns/.test(src.replace(/\s+/g, '')
-        .replace('px.p_thorns&&isMelee&&src)reflect(', 'px.p_thorns&&isMelee&&src) reflect(').replace(/\s+/g, '')) ||
-      /p_thorns&&isMelee&&src\)\s*reflect\([^)]*thornBase\s*\*\s*px\.p_thorns/.test(src));
+      /thornM&&isMelee&&src\)reflect\((?:G,)?src,thornBase\*thornM/.test(thornSrc));
     /* ⚑ T121 — effCritR 이 한 줄 화살표에서 블록으로 바뀌었다(수집가·치명 + 치명 스택이 합쳐진다).
        그래도 «광전사면 즉시 0» 이 맨 앞이어야 «치명타 시» 트리거까지 함께 죽는다 — 두 모양 다 받는다. */
     chk(`${nm} 광전사가 effCritR 을 0 으로 고정한다`,

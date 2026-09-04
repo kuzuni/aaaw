@@ -38,7 +38,7 @@ const LIST = process.argv.includes('--list');
 /* ── 허용목록: «설명문 숫자인데 엔진 상수로 나타나지 않는 것이 정상» 인 항목 ──
    키는 `<항목ID>|<숫자>`. 값은 사유(사람이 읽는 근거). 사유 없이 추가 금지. */
 const ALLOW = {
-  'plate:7|1': '«사망 시 1회 부활» 의 1 = 부활 횟수 자체(px.revive 카운터)라 상수로 나타날 곳이 없다. 수동 확인: sim.js 의 revive 처리는 카운터를 1 감소시킬 뿐 배수 상수가 없다',
+  /* ⚑ T124 — 'plate:7|1'(판금갑옷 «사망 시 1회 부활») 항목은 18계열 옵션표가 폐지되면서 대상이 사라져 지웠다. */
   'l_misfire|2': '«오사 데미지 2배» 의 2 는 p.misfire 에서 두 단계 떨어진 곳(화살에 friendly 플래그를 심고, 화살 처리부 sim.js:819 `e.hp-=a.dmg*2`)에 있어 자동 추적 밖이다. 수동 확인 완료 — 2배 일치',
 };
 
@@ -327,7 +327,8 @@ function audit(itemId, text, apText, where) {
 let tableOk = true;
 {
   const dump = execFileSync(process.execPath, [SIMPATH, 'table'], { encoding: 'utf8' }).trim().split('\n');
-  const hi = PLAN.split('\n').findIndex(l => l.startsWith('| 부위 | 종류 | 계열 | 옵션1'));
+  /* ⚑ T124 — 표 머리글이 «계열» → «세트» 로 바뀌었다(3세트 × 6부위 재설계). */
+  const hi = PLAN.split('\n').findIndex(l => l.startsWith('| 부위 | 종류 | 세트 | 옵션1'));
   const planRows = hi < 0 ? [] : PLAN.split('\n').slice(hi, hi + dump.length);
   if (hi < 0) { tableOk = false; console.log('  ✗ §11.6 표 머리글을 PLAN 에서 못 찾았다'); }
   else for (let i = 0; i < dump.length; i++) {
