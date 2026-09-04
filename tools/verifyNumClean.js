@@ -125,7 +125,8 @@ console.log(`  대상: 특전 ${perks.length}종 tx · 장비 옵션 ${gopt.leng
    부위별 순서 셔플 때문에 같은 문면이 18칸에 흩어져 있고, 주인이 표만 돌려도 키가 통째로 밀리기 때문이다.
    ⚠ 이 면제도 «주인이 쓴 그 문장 그대로일 때만» 유효하다 — 문면을 바꾸려면 주인 확인이 필요하다. */
 const OWNER_GEAR_TX = ['치명타 확률 +5', '치명타 피해 +20', '반격률 +10', '치명타 피해 +25', '회피 +8',
-  '최대 체력 +8%', '방어력 +12%', '실드가 있을 때 가시갑옷 +12%'];
+  /* ⚑ 주인 정정 20:0X~20:3X — 체력실드 체력 +10% · 실드 +12% · 방어 +8%(«다 8로») · 6번 자리는 세 세트 다 도끼 발동 */
+  '최대 체력 +8%', '최대 체력 +10%', '최대 실드 +12%', '방어력 +8%', '실드가 있을 때 가시갑옷 +12%'];
 
 console.log('\n[Ⓐ «%p» 표기 금지 — 주인 지시 «게이트의 금지어 검사에 %p 추가»]');
 {
@@ -273,7 +274,9 @@ const AXES = [
 let remain = 0;
 for (const ax of AXES) {
   console.log(`\n[${ax.n} ${ax.name} — 래칫 (등재 ${ax.known.length}건, 신규만 불합격)]`);
-  const cur = ITEMS.filter(x => ax.hit(strip(x.t)) && !OWNER_GEAR_TX.includes(strip(x.t)));   /* ⚑ T124 주인 확정 문면 면제 */
+  /* ⚑ T124 주인 확정 문면 면제 — **장비 항목에만** 건다. 특전에도 걸면 «방어력 +8%» 처럼 문면이 같은
+     특전(p_def)까지 조용히 면제돼 래칫이 헐거워진다(실제로 한 번 그렇게 됐다). */
+  const cur = ITEMS.filter(x => ax.hit(strip(x.t)) && !(x.k.startsWith('장비 ') && OWNER_GEAR_TX.includes(strip(x.t))));
   const curK = cur.map(x => x.k);
   const known = new Set(ax.known);
   const fresh = cur.filter(x => !known.has(x.k));
