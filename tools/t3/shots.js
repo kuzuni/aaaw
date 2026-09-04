@@ -27,6 +27,7 @@ const VP = { width: 390, height: 844 };
 const MEASURE = {
   lobby: {
     '상단 바': '.lobby-top', '아바타': '#avatar', '전투력 pill': '#powerPill',
+    '재화 pill 끝칸': '.lobby-top .pill:last-of-type',
     '챕터 제목': '#lobbyChapName', '챕터 밑줄': '.chap-underline',
     '챕터 카드': '#dioCard', '좌 화살표': '#chPrev', '우 화살표': '#chNext',
     'START 버튼': '#startBtn', '하단 탭바': '#lobby .bottomNav',
@@ -39,31 +40,50 @@ const MEASURE = {
     '하단 패널': '#hud', '바 줄': '#hud .bars', 'EXP 바': '#expBar', 'HP 바': '#hpBar', '실드 바': '#shBar',
     '스탯 그리드': '#stats', '스탯칸1': '#stats .st:nth-child(1)', '스탯칸2': '#stats .st:nth-child(2)',
     '하단 발': '#hudFoot', 'Info 버튼': '#infoBtn', '특전 미리보기 줄': '#perkStrip',
+    '우하단 원형 버튼': '#hudRound',
   },
   gear: {
-    '상단 바': '#gear .top-bar', '장비 무대': '#gearHero', '좌 슬롯열': '#gearColL', '우 슬롯열': '#gearColR',
+    '상단 바': '#gear .top-bar', '아바타': '#gear .avatar-box',
+    '재화 pill 첫칸': '#gear .top-bar .pill:nth-of-type(1)', '재화 pill 끝칸': '#gear .top-bar .pill:last-of-type',
+    '장비 무대': '#gearHero', '좌 슬롯열': '#gearColL', '우 슬롯열': '#gearColR',
     '슬롯1(좌)': '#gearColL .slot-card:nth-child(1)', '슬롯3(좌)': '#gearColL .slot-card:nth-child(3)',
     '캐릭터': '#gearAvatar', '스탯 요약줄': '#gearStats', '액션바': '.gear-actionbar', '합성 버튼': '#fuseBtn',
     '인벤 그리드': '#invGrid', '인벤칸1': '#invGrid .inv-cell:nth-child(1)', '인벤칸5': '#invGrid .inv-cell:nth-child(5)',
     '인벤칸6': '#invGrid .inv-cell:nth-child(6)', '인벤칸2': '#invGrid .inv-cell:nth-child(2)', '하단 탭바': '#gear .bottomNav',
   },
   gearpop: {
-    '팝업 박스': '#overlay .ov-inner', '이름 배너': '#overlay .ov-banner', '부제줄': '#overlay .ov-sub',
-    '아이템 아이콘': '#overlay .gd-ic', '기여 표': '#overlay .gd-contrib', '옵션 목록': '#overlay .gd-opts',
-    '비용줄': '#overlay .gd-cost', '버튼줄': '#overlay .gd-row',
+    /* ⚑ U02 — U01 이 적어 둔 `.gd-ic`/`.gd-contrib`/`.gd-opts`/`.gd-cost` 는 실재하지 않는 클래스라
+     *   4행이 통째로 «없음» 으로 나왔다. U02 가 팝업을 레퍼런스 5블록 구조로 재배치하면서
+     *   행 이름이 `docs/ui/ref-layout.md` ④ 표와 1:1 이 되게 실제 클래스로 맞췄다. */
+    '팝업 박스': '#overlay .ov-inner', '등급 배지': '#overlay .gd-badge',
+    '아이템 아이콘': '#overlay .gd-ic', '이름줄': '#overlay .gd-name', '메타줄': '#overlay .gd-meta',
+    '스탯 섹션': '#overlay .gd-stats', '옵션 목록': '#overlay .gd-opts', '비용줄': '#overlay .gd-cost',
+    '스탯 첫 줄': '#overlay .gd-stat', '옵션 첫 줄': '#overlay .gd-opt',
+    '버튼줄': '#overlay .gd-row',
     '버튼1': '#overlay .gd-row button:nth-child(1)', '버튼2': '#overlay .gd-row button:nth-child(2)',
     '닫기 버튼': '#gdClose',
   },
   shop: {
-    '상단 바': '#shop .top-bar', '본문': '#shopBody', '섹션 헤더1': '#shopBody .shop-sec:nth-child(1)',
-    '무료 카드': '#shopBody .gem-card', '뽑기 카드': '#shopBody .gacha-card',
+    /* ⚑ U02 정정 — 섹션 헤더는 `.shop-sec:first-child` 가 CSS 로 숨겨져 있어 첫 칸을 재면 «없음» 이다.
+     *   보이는 헤더 2개(장비 뽑기·다이아)를 자식 순번으로 잰다. */
+    '상단 바': '#shop .top-bar', '아바타': '#shop .avatar-box',
+    '재화 pill 첫칸': '#shop .top-bar .pill:nth-of-type(1)', '재화 pill 끝칸': '#shop .top-bar .pill:last-of-type',
+    '본문': '#shopBody',
+    '섹션 헤더1': '#shopBody > div:nth-child(3)', '섹션 헤더2': '#shopBody > div:nth-child(5)',
+    '무료 줄': '#shopBody .free-row', '무료 카드1': '#shopBody .free-row .gem-card:nth-child(1)',
+    '무료 카드2': '#shopBody .free-row .gem-card:nth-child(2)',
+    '뽑기 카드': '#shopBody .gacha-card',
     '뽑기 버튼줄': '#shopBody .gacha-btns', '다이아 그리드': '#shopBody .gem-grid',
     '상품 카드1': '#shopBody .gem-grid .gem-card:nth-child(1)', '상품 카드2': '#shopBody .gem-grid .gem-card:nth-child(2)',
-    '상품 카드3': '#shopBody .gem-grid .gem-card:nth-child(3)', '하단 탭바': '#shop .bottomNav',
+    '상품 카드3': '#shopBody .gem-grid .gem-card:nth-child(3)',
+    '상품 카드4(2행)': '#shopBody .gem-grid .gem-card:nth-child(4)', '하단 탭바': '#shop .bottomNav',
   },
   forge: {
     '상단 바': '#forge .top-bar', '대장간 무대': '#forgeStage', '결과 슬롯': '#fgResult', '화살표': '.fg-up',
-    '재료 줄': '#fgMats', '안내 배너': '#fgBanner', '액션바': '.forge-actionbar',
+    /* ⚑ U02 — 레퍼런스는 재료가 «1칸(w17)» 인데 게임은 규칙상 «3칸 합성»(PLAN)이라 줄 폭이 구조적으로 안 맞는다.
+     *   줄과 칸을 둘 다 내서 U03 비평가가 무엇이 구조 차이인지 볼 수 있게 한다. */
+    '재료 줄': '#fgMats', '재료 칸1': '#fgMats .fg-cell:nth-child(1)',
+    '안내 배너': '#fgBanner', '액션바': '.forge-actionbar',
     '자동 버튼': '#fgAuto', '합성 버튼': '#fgFuse', '인벤 그리드': '#fgGrid',
     '인벤칸1': '#fgGrid .inv-cell:nth-child(1)', '뒤로 줄': '.forge-back',
   },
@@ -75,7 +95,9 @@ const MEASURE = {
   perkbook: {
     '팝업 박스': '#overlay .ov-inner', '배너': '#overlay .ov-banner', '부제': '#overlay .ov-sub',
     '목록': '#overlay .perk-list', '목록 카드1': '#overlay .perk-list .perk-card:nth-child(1)',
-    '닫기 안내': '#overlay .tap-close',
+    /* 이 하니스는 «선택창에서 연 책» 상태를 찍으므로 하단 줄이 `.tap-close` 가 아니라 `#pbBack` 이다
+     *   (레퍼런스의 «닫기 안내 y91.5» 자리 — 둘 다 상자 밖 아래 줄이다). 둘 다 잰다. */
+    '닫기 안내': '#overlay .tap-close', '뒤로 버튼': '#pbBack',
   },
 };
 

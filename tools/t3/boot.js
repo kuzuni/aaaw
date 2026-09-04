@@ -74,7 +74,9 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     /* ⚑ T116 U01 — 값이 36 → 24px 로 바뀌었다(레퍼런스 비례: 제목 글자 블록이 프레임 폭의 31.3%).
        이 단언이 보는 것은 «좁은 폰에서 글씨가 프레임에 연동해 줄어들지 않는다» 이고, 그 성질은 그대로다 —
        CSS 값이 고정 px 인 한 세 뷰포트에서 모두 같은 값이 나와야 한다. */
-    chk('로비 제목 글씨가 축소되지 않는다 (CSS 24px 그대로)', mob.titleFs === '24px', mob.titleFs);
+    /* ⚑ T116 U02 — 리터럴만 24 → 20 (레퍼런스 제목 폭 31.3% 에 맞추며 줄인 값).
+       지키는 성질은 그대로다: «프레임 폭에 연동하지 않는 고정 px» — vw/clamp 로 바뀌면 이 단언이 깨진다. */
+    chk('로비 제목 글씨가 축소되지 않는다 (CSS 20px 그대로)', mob.titleFs === '20px', mob.titleFs);
     chk('하단 5탭이 뷰포트 안에 들어온다 (잘림 없음)', mob.navBottom <= mob.vh + 1, `nav.bottom ${mob.navBottom} ≤ vh ${mob.vh}`);
     chk('가로 스크롤 없음', !mob.hScroll);
     chk('viewport 메타 3항목', /width=device-width/.test(mob.meta) && /initial-scale=1/.test(mob.meta) && /viewport-fit=cover/.test(mob.meta), mob.meta);

@@ -35,12 +35,19 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   const shop0 = await p.evaluate(() => ({
     screen: document.querySelector('.screen.on')?.id,
     free: document.getElementById('freeBtn')?.textContent.trim(),
-    gem: save.gem, packs: document.querySelectorAll('.gem-grid .gem-card').length,
+    gem: save.gem,
+    /* ⚑ T116 U02 — 레퍼런스 상점은 3열 2행(6칸)이라 빈 칸을 «형태만» 잠금 카드로 채웠다(T116 ④ⓑ).
+       그래서 «상품» 은 잠금이 아닌 칸으로 세고, 잠금 칸에는 살 수 있는 버튼이 하나도 없어야 한다
+       — 지키는 성질(«주인이 정한 값 말고는 살 수 없다»)은 종전과 같고 오히려 강해졌다. */
+    packs: document.querySelectorAll('.gem-grid .gem-card:not(.lock)').length,
+    lockCells: document.querySelectorAll('.gem-grid .gem-card.lock').length,
+    lockBtns: document.querySelectorAll('.gem-grid .gem-card.lock button').length,
     pity: document.querySelector('.pity')?.textContent.replace(/\s+/g, ' ').trim(),
   }));
   chk('상점 화면 전환', shop0.screen === 'shop');
   chk('일일 무료 다이아 버튼', shop0.free === '수령', shop0.free);
-  chk('모의 결제 상품 1종 (주인이 정한 값만)', shop0.packs === 1, `${shop0.packs}종`);
+  chk('모의 결제 상품 1종 (주인이 정한 값만) · 잠금 칸은 살 수 없다',
+    shop0.packs === 1 && shop0.lockBtns === 0, `상품 ${shop0.packs}종 · 잠금 ${shop0.lockCells}칸(버튼 ${shop0.lockBtns})`);
   chk('천장·피티 잔여 표시', /50회 천장까지/.test(shop0.pity || ''), shop0.pity);
 
   await p.click('#freeBtn'); await p.waitForTimeout(300);

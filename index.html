@@ -69,6 +69,11 @@
   /* 아바타 — 레퍼런스는 프레임 폭 10.2% · 높이 4.4% 의 정사각(390 프레임에서 ≈38px). 종전 52px 은 h 6.2% 였다. */
   #avatar{width:calc(var(--fh)*.045 * var(--tf)); height:calc(var(--fh)*.045 * var(--tf));
     border-radius:12px; background:#5B87C7; border:3px solid #F2D34B; flex:none;}
+  /* ⚑ T116 U02 — 레퍼런스는 **모든 탭**의 상단 바가 «아바타 + 재화 pill 줄(x13.2 w85.4)» 로 같은 모양이다.
+     로비에만 아바타가 있고 장비·상점은 pill 이 전폭(w94.9)이라 «탭마다 상단 바가 다르다» 로 깎였다(공통 1점). */
+  .top-bar .avatar-box{width:calc(var(--fh)*.045 * var(--tf)); height:calc(var(--fh)*.045 * var(--tf));
+    border-radius:12px; background:#5B87C7; border:3px solid #F2D34B; flex:none;}
+  .lobby-top .pill{flex:1;}   /* pill 줄이 오른쪽 끝까지 차야 ref 의 w85.4 가 된다(종전 w64.9) */
   #powerPill{font-size:calc(clamp(12px, calc(min(100vw, 100vh * 9 / 19) * .041), 16px) * var(--tf)); color:var(--gold);}
   #sndBtnL,#sndBtnG{width:42px; height:42px; border-radius:12px; background:rgba(20,20,24,.72); font-size:17px; flex:none;}
   /* T54 — 상단 줄에서 빼 참고 스크린샷의 ☰ 자리로. ⚑ T116 U01 — 그 자리를 레퍼런스 % 로 맞췄다(x 88.3 · y 9.2 · 9.0×4.1). */
@@ -77,7 +82,9 @@
   /* ⚑ T116 U01 — 레퍼런스는 제목이 y 27.2% 에 있고 글자 블록 폭이 프레임의 31.3% 다(종전 y 11.6% · 폭 58.7%).
      24px 은 그 비례에서 나온 값이고 **프레임 폭에 연동하지 않는 고정값**이라 T40/T3 의 «좁은 폰에서 글씨가
      축소되지 않는다» 규약은 그대로다(T3 boot 의 실측 단언도 24px 로 같이 갱신). */
-  #lobbyChapName{margin-top:calc(var(--fh)*.19); font-size:24px; line-height:1.05; letter-spacing:1px;
+  /* ⚑ T116 U02 — 레퍼런스 챕터 제목은 «x34.7 w31.3 h2.3» 이다(종전 x31.6 w36.8 h3.0 — 폭이 5.5%p 넓었다).
+     글자 크기는 여전히 «프레임에 연동하지 않는 고정 px» 이다(T40 규약 — 좁은 폰에서 줄지 않는다). */
+  #lobbyChapName{margin-top:calc(var(--fh)*.195); font-size:20px; line-height:1.0; letter-spacing:1.1px;
     text-shadow:0 3px 0 rgba(0,0,0,.35); padding:0; background:none; color:var(--ink); font-family:inherit;}
   /* 이벤트 배너·좌우 사이드 아이콘 열 — 레퍼런스에 있는 «형태» 만 재현하고 기능은 잠금(🔒)이다(T116 ②·④ⓑ).
      흐름 밖(absolute)이라 로비 세로 배치를 건드리지 않는다. */
@@ -152,7 +159,9 @@
   #gearHero{flex:none; display:flex; align-items:center; justify-content:space-between;
     height:calc(var(--fh)*.275); padding:calc(var(--fh)*.013) 8.5% 0;
     background:linear-gradient(#4A8C3D,#3E7B33); border-bottom:3px solid #2A5520;}
-  .hero-col{display:flex; flex-direction:column; gap:calc(var(--fh)*.01); width:14%;}
+  /* ⚑ T116 U02 — 슬롯열은 레퍼런스에서 «무대 위쪽에 붙어»(y9.5 · 무대 y8.5) 칸 폭 14% · 피치 7.3% 다.
+     종전은 세로 가운데 정렬이라 무대 안에서 4.4%p 내려앉았고 칸도 11.6% 로 작았다. */
+  .hero-col{display:flex; flex-direction:column; gap:calc(var(--fh)*.0085); width:16.9%; align-self:flex-start;}
   #gearAvatar{flex:none; width:36%; height:78%; min-width:0; border-radius:14px; background:rgba(0,0,0,.12);}
   .slot-card{position:relative; aspect-ratio:1; border-radius:11px; background:rgba(20,20,24,.55);
     border:2.5px solid #6A6A78; display:flex; align-items:center; justify-content:center; font-size:22px; padding:0;}
@@ -197,8 +206,10 @@
      (재화는 이 화면으로 들어오는 장비 탭이 이미 보여 준다). 마크업은 그대로 두고 표시만 끈다 —
      `renderTopBars` 는 «숨은 줄은 폭 0» 을 이미 전제하고 있어 T64 의 맞춤 로직에 영향이 없다. */
   #forge .top-bar{display:none;}
+  /* ⚑ T116 U02 — 무대 h41 · 결과 슬롯 y11.5 w22 h10 · 화살표 y22 w8 h4 · 안내 문구 y15 h6 (ref ⑥).
+     («--fh 는 프레임보다 2.45% 작다» 보정 — 프레임 % ÷ 0.9755 를 쓴다) */
   #forgeStage{flex:none; position:relative; display:flex; align-items:center; gap:10px;
-    height:calc(var(--fh)*.41); padding:calc(var(--fh)*.095) 3% 12px;
+    height:calc(var(--fh)*.42); padding:calc(var(--fh)*.118) 3% 12px;
     background:linear-gradient(#5B4636,#3E2F24); border-bottom:3px solid #241A13;}
   /* T62 — 재료 줄(`#fgMats`)은 «칸 3개 + 간격 2개» 로 폭이 고정이라 33% 열보다 넓어질 수 있다.
      `align-items:center` 라 넘치는 폭이 좌우로 반씩 삐져나가고, 왼쪽 초과분이 스테이지 패딩(12px)을
@@ -207,19 +218,22 @@
   :root{--fgCell:44px; --fgGap:5px;}
   #forgeCol{display:flex; flex-direction:column; align-items:center; gap:calc(var(--fh)*.012); width:33%;
     align-self:flex-start; min-width:calc(var(--fgCell)*3 + var(--fgGap)*2);}
-  .fg-slot{position:relative; width:22%; aspect-ratio:1; min-width:74px; border-radius:13px; display:flex; align-items:center;
-    justify-content:center; font-size:30px; background:rgba(16,16,20,.55); border:3px solid #6A6A78;}
+  .fg-slot{position:relative; width:calc(var(--fh)*.1025); height:calc(var(--fh)*.1025); border-radius:13px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:34px; background:rgba(16,16,20,.55); border:3px solid #6A6A78;}
   .fg-slot.empty{border-style:dashed; color:#8A8A96;}
   .fg-slot .plus{position:absolute; bottom:-7px; left:50%; transform:translateX(-50%); font-size:10px;
     background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; border-radius:99px; padding:0 5px;}
-  .fg-up{font-size:19px; color:#5CD65C; line-height:1; text-shadow:0 2px 0 rgba(0,0,0,.4);}
+  .fg-up{font-size:30px; color:#5CD65C; line-height:1; text-shadow:0 2px 0 rgba(0,0,0,.4);}   /* ref w8 h4 */
   #fgMats{display:flex; gap:var(--fgGap);}
   .fg-cell{position:relative; width:var(--fgCell); height:var(--fgCell); border-radius:10px; display:flex; align-items:center;
     justify-content:center; font-size:19px; background:rgba(16,16,20,.5); border:2.5px solid #6A6A78; padding:0;}
   .fg-cell.empty{border-style:dashed; color:#8A8A96; font-size:17px;}
   /* 안내 문구 — 레퍼런스는 무대 «오른쪽 위»(x45 · y15 · 45×6)에 두 줄로 놓인다(종전은 무대 전체 높이를 채웠다). */
-  #fgBanner{flex:none; width:48%; margin:0 7% 0 auto; align-self:flex-start; display:flex; align-items:center; justify-content:center; text-align:center;
-    font-size:14px; line-height:1.5; background:rgba(10,10,14,.55); border-radius:12px; padding:8px 6px;}
+  #fgBanner{flex:none; width:48%; margin:calc(var(--fh)*.0359) 7% 0 auto; align-self:flex-start;
+    height:calc(var(--fh)*.0631); overflow:hidden;      /* ⚑ U02 — ref y15 h6 (종전 y9.3 h9.0) */
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    font-size:12px; line-height:1.3; background:rgba(10,10,14,.55); border-radius:12px; padding:2px 6px;}
   #fgBanner b{color:var(--gold);}
   /* ⚑ T116 U01 — 레퍼런스의 두 버튼은 «왼쪽 끝 28% · 오른쪽 끝 27.5%» 이고 가운데는 비어 있다(종전 46/46 반씩). */
   .forge-actionbar{flex:none; display:flex; align-items:center; justify-content:space-between; gap:8px;
@@ -240,15 +254,24 @@
   #fgBack{width:17%; padding:8px 4px; border-radius:12px; font-size:14px; background:var(--panel3);}
   /* ⚑ T116 U01 — 레퍼런스 상점은 «광고/무료 줄(y12.5 · h6.5) → 섹션 헤더(y22.5) → 3열 상품 그리드» 순이다.
      맨 위 헤더는 레퍼런스에 없어서 접고, 무료 보급 카드는 세로로 쌓인 카드가 아니라 한 줄짜리 띠로 만든다. */
-  #shopBody{flex:1 1 auto; min-height:0; overflow-y:auto; padding:calc(var(--fh)*.043) 3% 12px;}
-  .shop-sec{font-size:15px; color:var(--ink-dim); margin:12px 0 7px; text-align:center;}
+  /* ⚑ T116 U02 — 레퍼런스 상점(1) 의 세로 리듬을 그대로 재현한다:
+     무료 줄 y12.5 h6.5(**좌우 2칸**) → 헤더 y22.5 → 3열 그리드 1행 y27 · 2행 y47.5(각 h18.5 · 피치 20.5)
+     → 두 번째 헤더 y66 → 두 번째 카드행 y70.5 h18.5. 상품이 1종뿐이라 나머지 칸은 «형태만 · 기능 🔒»
+     (ROUTINE T116 ④ⓑ — 비평가의 «칸을 채우라» 는 형태로만 받고 상품을 새로 만들지 않는다). */
+  #shopBody{flex:1 1 auto; min-height:0; overflow-y:auto; padding:calc(var(--fh)*.039) 3% 12px;}
+  .shop-sec{font-size:15px; color:var(--ink-dim); margin:calc(var(--fh)*.035) 0 0;
+    height:calc(var(--fh)*.025); line-height:calc(var(--fh)*.025); text-align:center;}
   .shop-sec:first-child{display:none;}
-  #shopBody > .gem-card{display:flex; flex-direction:row; align-items:center; justify-content:center; gap:10px;
-    height:calc(var(--fh)*.065); padding:0 12px; font-size:13px;}
-  #shopBody > .gem-card .amt{font-size:16px;}
-  #shopBody > .gem-card button{margin:0; width:34%;}
+  .shop-sec.tight{margin-top:0;}
+  .free-row{display:flex; gap:2%; height:calc(var(--fh)*.065);}
+  .free-row .gem-card{flex:1; display:flex; flex-direction:row; align-items:center; justify-content:center; gap:8px;
+    height:100%; padding:0 9px; font-size:12px;}
+  .free-row .gem-card .amt{font-size:15px;}
+  .free-row .gem-card button{margin:0; width:38%; font-size:11.5px;}
   .gacha-card{border-radius:18px; padding:12px; background:linear-gradient(150deg,#5A3E8C,#8A4FA8 60%,#C05C9E);
-    box-shadow:0 5px 0 rgba(0,0,0,.28);}
+    box-shadow:0 5px 0 rgba(0,0,0,.28);
+    margin-top:calc(var(--fh)*.02); height:calc(var(--fh)*.185);      /* ⚑ U02 — 두 번째 카드행 y70.5 h18.5 */
+    display:flex; flex-direction:column; justify-content:center;}
   .gacha-card .ttl{font-size:20px; text-shadow:0 2px 0 rgba(0,0,0,.35);}
   .gacha-card .pity{font-size:12px; background:rgba(10,10,14,.42); border-radius:10px; padding:5px 8px; margin:6px 0; line-height:1.45;}
   .gacha-btns{display:flex; gap:8px;}
@@ -256,10 +279,12 @@
     background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; box-shadow:0 3px 0 #C77E12;}
   .gacha-btns button:disabled{filter:grayscale(.85); opacity:.6; box-shadow:none;}
   /* ⚑ T116 U01 — 레퍼런스 상품 그리드는 **3열**이고 카드 하나가 «폭 30% · 높이 18.5%»(세로가 긴 0.75 비율)다. */
-  .gem-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  .gem-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:calc(var(--fh)*.02) 2%;
+    margin-top:calc(var(--fh)*.02);}   /* ⚑ U02 — 1행 y27 · 행 피치 20.5 · 가로 간격 2 → 칸 폭 30 */
   .gem-card{border-radius:15px; padding:9px 6px; text-align:center; background:linear-gradient(#6E3B8E,#4A2A66);
     font-size:11.5px; line-height:1.25; display:flex; flex-direction:column; justify-content:space-between;}
-  .gem-grid .gem-card{aspect-ratio:.75;}
+  .gem-grid .gem-card{height:calc(var(--fh)*.185);}   /* = 프레임 18.5% (폭 30% 와 함께 0.62:1 비례) */
+  .gem-card.lock{background:linear-gradient(#3A3A44,#2A2A32); color:var(--ink-dim); opacity:.72;}
   .gem-card .amt{font-size:16px; color:#FFD9F0;}
   .gem-card button{margin-top:5px; width:100%; padding:6px 3px; border-radius:10px; font-size:12px; background:var(--panel3);}
   .gem-card button:disabled{opacity:.5;}
@@ -269,7 +294,27 @@
     background:rgba(20,20,24,.5); border-radius:9px; margin-bottom:4px; line-height:1.3;}
   .gd-opt.lock{opacity:.42;}
   .gd-stat{display:flex; justify-content:space-between; font-size:13.5px; padding:4px 7px; background:rgba(20,20,24,.5); border-radius:9px; margin-bottom:4px;}
+  /* ⚑ T116 U02 — 세부팝업 5블록 (레퍼런스 `장비 세부팝업.jpg` · 값은 전부 프레임 % 목표를 역산한 것):
+     배지 y27.5 w22 h2.3(윗변에 걸침) · 아이콘 x11 y30.5 w15 h7 · 이름줄 x28 w50 h3 · 메타줄 x29 w60 h3
+     · 스탯 y39.5 h9.5 · 옵션 y48 h14(안에서만 스크롤) · 비용 y62.5 h3 · 버튼 x15.5 y66 w69 h6 */
+  .gd-badge{position:absolute; top:calc(var(--fh)*-.005); left:50%; transform:translateX(-50%);
+    width:27.9%; height:calc(var(--fh)*.023); display:flex; align-items:center; justify-content:center;
+    font-size:12px; color:#1c1c20; border-radius:8px; box-shadow:0 2px 0 rgba(0,0,0,.35);}
+  .gd-head{display:flex; gap:3.4%; align-items:flex-start; width:100%; text-align:left;}
+  .gd-ic{width:19%; height:calc(var(--fh)*.0718); flex:none; display:flex; align-items:center; justify-content:center;
+    font-size:38px; background:rgba(20,20,24,.5); border-radius:13px;}
+  .gd-headtx{flex:1; min-width:0;}
+  .gd-name{width:81%; font-size:18px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .gd-meta{width:97%; display:flex; justify-content:space-between; gap:6px; margin-top:8px;
+    font-size:12.5px; color:var(--ink-dim); white-space:nowrap; overflow:hidden;}
+  .gd-stats{width:100%; margin-top:calc(var(--fh)*.0205);}
+  .gd-opts{width:100%; height:calc(var(--fh)*.1435); overflow-y:auto; overflow-x:hidden; text-align:left;}
+  /* 3줄이 «스탯 섹션 h9.5» 안에 들어가려면 한 줄 25px(=프레임 2.96%) — 종전 28px 은 10.7% 라 넘쳤다. */
+  #overlay.ov-gear .gd-stat{padding:3px 7px; margin-bottom:3px;}
+  .gd-secname{font-size:13px; color:var(--ink-dim); margin:4px 0 5px;}
+  .gd-cost{width:100%;}
   .gd-row{display:flex; gap:8px; width:100%; margin-top:8px;}
+  #overlay.ov-gear .gd-row{width:87.3%; margin-top:6px;}   /* = 프레임 x15.5 w69 */
   .gd-row button{flex:1; padding:12px 6px; border-radius:14px; font-size:15px; background:var(--panel3);}
   .gd-row button.gold{background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00;}
   .gd-row button:disabled{opacity:.5;}
@@ -296,11 +341,17 @@
   #topbar #sndBtnG{font-size:calc(17px * var(--tf));}
   #topbar #sndBtnG{margin-left:auto;}
   #chapHud{position:absolute; top:calc(var(--fh)*.108); left:0; right:0; text-align:center; pointer-events:none;}
-  #chapHud .nm{font-size:22px; line-height:1.1; letter-spacing:2px; text-shadow:0 2px 3px rgba(0,0,0,.5);}
+  /* ⚑ T116 U02 — 인게임 제목도 ref 는 «x36 w28 h2.6» 이다(종전 x30.1 w39.5 — 자간 2px 이 폭을 벌렸다). */
+  #chapHud .nm{font-size:17px; line-height:1.25; letter-spacing:1px; text-shadow:0 2px 3px rgba(0,0,0,.5);}
   #progOut{width:56%; height:9px; margin:5px auto 0; background:rgba(20,20,24,.8); border-radius:99px; overflow:hidden;}
   #progIn{height:100%; width:0%; background:var(--gold); border-radius:99px; transition:width .3s;}
   /* ⚑ T116 U01 — 배속 버튼은 레퍼런스에서 하단 패널 «바로 위»(y 65 · 11×4)다. 종전은 패널에서 12px 띄워 y 59 였다. */
   #speedBtn{position:absolute; left:12px; bottom:4px; padding:6px 12px; border-radius:12px; background:rgba(60,20,20,.85); font-size:15px; border:2px solid rgba(255,255,255,.25);}
+  /* ⚑ T116 U02 — 우하단 원형 버튼 «형태만»(ref x85 y63 w13 h6.5 · 기능 잠금). #cvWrap 은 y0~69.4 이므로
+     프레임 63% = 래퍼 높이의 90.8% 자리다. pointer-events 를 끊어 전투 조작을 가리지 않는다. */
+  #hudRound{position:absolute; left:85%; top:90.8%; width:13%; height:9.4%; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:17px; pointer-events:none;
+    background:rgba(20,20,24,.55); border:2.5px solid rgba(255,255,255,.22); color:var(--ink-dim);}
   /* 레퍼런스 우하단의 원형 버튼 — 형태만(기능 잠금 · 캔버스 조작을 막지 않게 pointer-events 없음) */
   #lockRound{position:absolute; right:2%; bottom:1.5%; width:13%; aspect-ratio:1; border-radius:50%;
     background:rgba(20,20,24,.45); border:2.5px solid rgba(255,255,255,.22); display:flex; align-items:center;
@@ -383,6 +434,28 @@
   .ov-inner{width:100%; display:flex; flex-direction:column; align-items:center; animation:popIn .34s cubic-bezier(.2,1.6,.4,1);
     position:relative; min-height:calc(var(--fh)*.43); max-height:calc(var(--fh)*.48); overflow-y:auto; overflow-x:hidden;
     background:#25252B; border:3px solid #45454F; border-radius:20px; padding:13px 11px;}
+  /* ⚑ T116 U02 — U01 은 «팝업 = 상자 하나» 로 눌렀는데, 레퍼런스의 팝업은 규격이 **세 벌**이다:
+     ⓐ 상자가 아예 없는 «전면» — 특전 획득창(`perks.jpg`: 카드가 화면에 바로 놓인다 · 하단 버튼 y79)
+     ⓑ 상자 y28 h44 — 장비 세부팝업(내용이 상자 안에 다 담긴다 · 버튼 y66 · 닫기는 상자 «밖» y91.5)
+     ⓒ 상자 y23 h52.5 — 특전 인포(제목 리본이 윗변에 걸치고 목록이 y26.5 에서 시작)
+     하나로 누른 탓에 U02 채점에서 특전 묶음이 0/13, 장비 팝업이 0/10 이었다(버튼줄 y83.7 = 상자 밖 → 안 보임).
+     `openOverlay(html,{cls})` 가 #overlay 에 이 세 클래스 중 하나를 걸고, 나머지 팝업은 종전 규격 그대로다. */
+  #overlay > .ov-out{margin-top:auto;}                       /* 상자 «밖» 아래 줄 (레퍼런스 닫기 안내 y91.5) */
+  /* ⓐ 전면 — 상자·테두리 없음. 좌우 여백 5.5% 라 카드가 x5.5 w89 로 앉는다. */
+  #overlay.ov-full{padding:calc(var(--fh)*.25) 5.5% calc(var(--fh)*.135);}
+  #overlay.ov-full .ov-inner{flex:1 1 auto; min-height:0; max-height:none; overflow:visible;
+    background:none; border:0; border-radius:0; padding:0;}
+  /* ⓑ 장비 세부팝업 — 상자 y28 h44 고정. 안쪽 여백 4.6% 라 본문이 x11 w79(ref x11 w78). */
+  /* ⚠ `--fh` 는 «프레임 높이» 가 아니라 `min(100dvh, 100vw*19/9)` 라 9:19.5 폰(390×844)에서 프레임보다
+     **2.45% 작다**(823.3px ↔ 844px). 그래서 «프레임 %» 목표를 CSS 에 적을 때는 0.9755 로 나눈 값을 쓴다
+     (예: 프레임 28% → `calc(var(--fh)*.287)`). U03 이 볼 것 — ref-layout.md 의 «⚑ U02 정정» 참조. */
+  #overlay.ov-gear{padding:calc(var(--fh)*.287) 6.5% calc(var(--fh)*.06);}
+  #overlay.ov-gear .ov-inner{min-height:calc(var(--fh)*.451); max-height:calc(var(--fh)*.451);
+    overflow:visible; padding:calc(var(--fh)*.0256) 4.6% 0;}
+  #overlay.ov-gear .ov-inner > *{flex:none;}   /* 상자 높이가 고정이라 안 눌리게 (안 그러면 목록이 쭈그러든다) */
+  /* ⓒ 특전 인포 — 상자 y23 h52.5 · 제목 리본이 윗변에 걸친다(ref x25 y21.5 w50 h4). */
+  #overlay.ov-book{padding:calc(var(--fh)*.2358) 6.5% calc(var(--fh)*.06);}
+  #overlay.ov-book .ov-inner{min-height:calc(var(--fh)*.5382); max-height:calc(var(--fh)*.5382);}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes popIn{from{transform:scale(.78); opacity:0}to{transform:scale(1); opacity:1}}
   @keyframes slideUp{from{transform:translateY(26px); opacity:0}to{transform:translateY(0); opacity:1}}
@@ -423,7 +496,12 @@
     background:radial-gradient(circle at 50% 32%, rgba(255,255,255,.42), rgba(255,255,255,0) 62%), var(--pc,#555);
     box-shadow:inset 0 0 0 2.5px rgba(0,0,0,.42), inset 0 0 0 4.5px rgba(255,255,255,.28);
     clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%);}
-  .perk-card .tx{font-size:14.5px; line-height:1.35;}
+  /* ⚑ T116 U02 — `flex:1` 이 없으면 문구 상자가 «글자 폭» 으로 쪼그라든다(레퍼런스 문구는 카드 오른쪽을
+     끝까지 채운다 — 실측 w27.5 ↔ ref 68). 아이콘 오른쪽 남은 폭을 전부 차지하게 한다. */
+  .perk-card .tx{font-size:14.5px; line-height:1.35; flex:1; min-width:0;}
+  /* 화면에는 안 보이되 DOM·낭독기에는 남는 라벨 — 레퍼런스의 «작은 정사각 책 버튼» 은 글자를 담을 폭(9%)이
+     없어서 아이콘만 둔다. 버튼의 뜻(«보유 특전»)은 지우지 않고 이 라벨로 유지한다. */
+  .sr-lbl{position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap;}
   .perk-card .tx b{color:#7ED957;}
   .perk-card.static{cursor:default; animation:slideUp .35s cubic-bezier(.2,1.4,.4,1) backwards;}
   .choice-btn{width:100%; border-radius:16px; padding:15px 14px; font-size:17px; margin-bottom:11px; background:var(--panel2); border:2.5px solid #4a4a54; line-height:1.35; animation:slideUp .4s cubic-bezier(.2,1.4,.4,1) backwards;}
@@ -453,6 +531,28 @@
   .reward-line b{color:var(--gold);}
   .perk-list{width:100%; max-height:52vh; overflow-y:auto; padding:12px 4px 2px;}
   .tap-close{margin-top:16px; font-size:14px; color:var(--ink-dim); letter-spacing:2px; animation:floaty 2s ease-in-out infinite;}
+  /* ⚑ T116 U02 — 팝업 규격 ⓐ/ⓒ 의 «자식» 재정의는 반드시 기본 규칙 **뒤**에 온다.
+     ⚠ 앞에 두면 게이트가 `.perk-card .ic{…}` · `.ov-foot{…}` 를 정규식의 «첫 일치» 로 읽어
+     이 재정의를 기본 규칙으로 착각한다(U02 에서 실제로 ⑧·메달리온 3항목이 빨개졌다). */
+  #overlay.ov-full .ov-banner{width:67.5%;}                   /* = 프레임 60% (ref 60) */
+  #overlay.ov-full .ov-sub{width:45%; margin-bottom:calc(var(--fh)*.047);}   /* = 프레임 40% · 카드를 y36.5 로 */
+  /* 카드 = 프레임 x5.5 y36.5 w89 h11 · 아이콘은 카드 «왼쪽 끝»(x8 w14 h8) · 문구 x25 w68 */
+  #overlay.ov-full .perk-card{padding:calc(var(--fh)*.0155) 3%; gap:3%;}
+  #overlay.ov-full .perk-card .ic{width:15.7%; height:calc(var(--fh)*.08); font-size:31px;}
+  /* 레퍼런스 문구 칸은 아이콘과 «같은 높이»(h7)로 잡혀 있다 — 한 줄짜리 문장이라도 칸은 그 높이다. */
+  #overlay.ov-full .perk-card .tx{min-height:calc(var(--fh)*.07); display:flex; align-items:center;}
+  /* 하단 줄 = 가운데 큰 버튼(x31 w38 h7.5) + 오른쪽 끝 작은 정사각(x86 w9 h6) · 둘이 «같은 줄» 이다.
+     .ov-foot 는 게이트 ⑧ 이 흐름 배치·오른쪽 정렬을 요구하므로 그대로 두고, 음수 margin 으로 같은 줄에 올린다
+     (절대 배치가 아니라 흐름 안이라 좁은 폭에서도 카드 위로 올라타지 않는다). */
+  #overlay.ov-full #luOk{width:42.7%; padding:calc(var(--fh)*.021) 14px;}
+  /* 음수 margin 으로 «계속 전진» 과 같은 줄에 올린 탓에 줄 전체(폭 100%)가 그 버튼을 덮는다 —
+     줄은 클릭을 통과시키고 버튼만 받게 한다(그러지 않으면 «계속 전진» 이 안 눌린다 · T3 battle 이 잡았다). */
+  #overlay.ov-full .ov-foot{margin-top:calc(var(--fh)*-.069); pointer-events:none;}
+  #overlay.ov-full .ov-foot > *{pointer-events:auto;}
+  #overlay.ov-full #perkBookBtn{width:10.1%; height:calc(var(--fh)*.06); font-size:17px;}
+  #overlay.ov-book .ov-banner{width:61.5%; margin-top:calc(var(--fh)*-.0304); margin-bottom:0;}
+  #overlay.ov-book .ov-sub{font-size:12px; margin-bottom:0;}
+  #overlay.ov-book .perk-list{padding:4px 4px 2px; max-height:none; flex:1 1 auto; min-height:0;}
   .up-row{display:flex; align-items:center; gap:10px; background:var(--panel2); border-radius:14px; padding:10px 12px; margin-bottom:8px; width:100%; text-align:left; animation:slideUp .4s cubic-bezier(.2,1.4,.4,1) backwards;}
   .up-row:nth-child(2){animation-delay:.05s}
   .up-row:nth-child(3){animation-delay:.10s}
@@ -470,7 +570,7 @@
   <!-- ============ LOBBY ============ -->
   <div id="lobby" class="screen on">
     <div class="lobby-top">
-      <canvas id="avatar"></canvas>
+      <canvas id="avatar" class="avatar-box"></canvas>
       <div class="pill" id="powerPill">⚔️ <span id="lbPower">0</span></div>
       <div class="pill">🪙 <span id="lbGold">0</span></div>
       <div class="pill">💎 <span id="lbGem">0</span></div>
@@ -495,6 +595,7 @@
   <!-- ============ 장비 (PLAN §11 · 참고: 캐릭터 장비.jpg) ============ -->
   <div id="gear" class="screen">
     <div class="top-bar">
+      <canvas class="avatar-box"></canvas>
       <div class="pill">⚔️ <span class="tPower">0</span></div>
       <div class="pill">🪙 <span class="tGold">0</span></div>
       <div class="pill">💎 <span class="tGem">0</span></div>
@@ -516,6 +617,7 @@
   <!-- ============ 합성 / 대장간 (PLAN §11.3 · 참고: 장비 합성 업글창.jpg) ============ -->
   <div id="forge" class="screen">
     <div class="top-bar">
+      <canvas class="avatar-box"></canvas>
       <div class="pill">⚔️ <span class="tPower">0</span></div>
       <div class="pill">🪙 <span class="tGold">0</span></div>
       <div class="pill">💎 <span class="tGem">0</span></div>
@@ -539,6 +641,7 @@
   <!-- ============ 상점 (PLAN §11.2·§11.5 · 참고: 상점 (1).jpg, 상점 (2).jpg) ============ -->
   <div id="shop" class="screen">
     <div class="top-bar">
+      <canvas class="avatar-box"></canvas>
       <div class="pill">⚔️ <span class="tPower">0</span></div>
       <div class="pill">🪙 <span class="tGold">0</span></div>
       <div class="pill">💎 <span class="tGem">0</span></div>
@@ -564,6 +667,9 @@
       <!-- ⚑ 주인 지시(07:0X) 발동 중 버프 아이콘 — 챕터 표시보다 아래, 화면 왼쪽 위 -->
       <div id="buffBar"></div>
       <button id="speedBtn">x1</button>
+      <!-- ⚑ T116 U02 — 레퍼런스 전투 화면의 우하단 원형 버튼(x85 y63 w13 h6.5). «형태만» 이고 기능은 잠금이다
+           (§1 새 콘텐츠 금지 · T116 ④ⓑ). 두 비평가가 «자리 비어 있음» 으로 함께 지목한 칸이다. -->
+      <div id="hudRound">🔒</div>
     </div>
     <div id="hud">
       <div class="bars">
@@ -1392,6 +1498,7 @@ function renderTopBars(){
   document.querySelectorAll('.tGem').forEach(e=>e.textContent=m);
   /* ⚑ T64 — 세 화면에 같은 줄이 하나씩 있고 보이는 것은 언제나 하나뿐이다(숨은 줄은 폭 0 이라 못 잰다). */
   document.querySelectorAll('.top-bar').forEach(r=>fitTopRow(r,r.querySelectorAll('span')));
+  drawAvatar();   /* ⚑ U02 — 탭마다 아바타가 있으므로 줄을 다시 그릴 때 같이 그린다(숨은 캔버스는 폭 0) */
 }
 
 /* ================= 장비 화면 (PLAN §11.1·§11.3·§11.4) ================= */
@@ -1571,30 +1678,46 @@ function gearContribHTML(g){
          `<div class="gd-stat"><span>🛡️ 실드</span><b>+${fmt(Math.round(GT.sh[g.rar]*m))}</b></div>`;
 }
 function slotMaxed(pt){ return (save.slots[pt]|0)>=GT.slotLvMax; }
-function slotUpgradeHTML(pt){
+/* ⚑ T116 U02 — 레퍼런스 세부팝업은 «스탯 섹션 / 옵션 목록 / 비용줄» 이 **따로 놓인 세 블록**이라
+   종전의 «강화 줄 + 안내 줄» 한 덩어리를 둘로 나눈다. 문구·수치는 그대로다(표시 구조만 바뀐다). */
+function slotCostHTML(pt){
   const lv=save.slots[pt]|0, cost=GT.slotCost(lv);
   return `<div class="gd-stat"><span>슬롯 강화 Lv.${lv} → ${slotMaxed(pt)?'MAX':'Lv.'+(lv+1)}</span>`+
-    `<b style="color:var(--gold)">${slotMaxed(pt)?`상한 Lv.${GT.slotLvMax}`:'🪙 '+fmt(cost)}</b></div>
-    <div class="gd-opt"><span>◆</span><span>슬롯 1레벨당 이 부위 장비의 공격력·체력·실드 +${GT.slotStep*100}% (상한 Lv.${GT.slotLvMax} · PLAN §11.4)</span></div>`;
+    `<b style="color:var(--gold)">${slotMaxed(pt)?`상한 Lv.${GT.slotLvMax}`:'🪙 '+fmt(cost)}</b></div>`;
 }
+function slotNoteHTML(pt){
+  return `<div class="gd-opt"><span>◆</span><span>슬롯 1레벨당 이 부위 장비의 공격력·체력·실드 +${GT.slotStep*100}% (상한 Lv.${GT.slotLvMax} · PLAN §11.4)</span></div>`;
+}
+function slotUpgradeHTML(pt){ return slotCostHTML(pt)+slotNoteHTML(pt); }
 function openGearDetail(u){
   const g=invById(u);
   if(!g){ closeOverlay(); return; }
   const lv=save.slots[g.part]|0, cost=GT.slotCost(lv), eqd=isEquipped(g);
-  openOverlay(`<div class="ov-banner" style="font-size:22px;color:${GT.rarColor[g.rar]}">${gearIcon(g.type)} ${gearName(g)}${g.plus?` +${g.plus}`:''}</div>
-    <div class="ov-sub">${GT.partName[g.part]} · ${GT.lineName[g.type]} 계열 · 슬롯 Lv.${lv}</div>
-    <div style="width:100%;text-align:left">
-      ${gearContribHTML(g)}
-      ${eqd?slotUpgradeHTML(g.part):''}
-      <div style="font-size:13px;color:var(--ink-dim);margin:8px 0 5px">계열 옵션 (${GT.optCount(g.rar,g.plus)}/7 해금)</div>
+  /* ⚑ T116 U02 — 레퍼런스 `장비 세부팝업.jpg` 의 구조로 재배치한다(두 비평가 공통 «가장 효과 큰 수정 2개» 중 하나):
+     등급 배지가 상자 윗변에 걸치고 → 좌상 정사각 아이콘 + 오른쪽 이름줄·메타줄 2단 헤더 →
+     스탯 섹션 → 옵션 목록(넘치면 목록 «안에서만» 스크롤) → 비용줄 → 버튼 2개, 닫기는 상자 밖.
+     종전은 한 줄로 흘러 버튼줄이 y83.7 = 상자 밖으로 나가 **화면에 렌더되지 않았다.** */
+  openOverlay(`<div class="gd-badge" style="background:${GT.rarColor[g.rar]}">${GT.rarName[g.rar]}</div>
+    <div class="gd-head">
+      <div class="gd-ic">${gearIcon(g.type)}</div>
+      <div class="gd-headtx">
+        <div class="gd-name" style="color:${GT.rarColor[g.rar]}">${gearName(g)}${g.plus?` +${g.plus}`:''}</div>
+        <div class="gd-meta"><span>${GT.partName[g.part]}</span><span>${GT.lineName[g.type]} 계열 · 슬롯 Lv.${lv}</span></div>
+      </div>
+    </div>
+    <div class="gd-stats">${gearContribHTML(g)}</div>
+    <div class="gd-opts">
+      ${eqd?slotNoteHTML(g.part):''}
+      <div class="gd-secname">계열 옵션 (${GT.optCount(g.rar,g.plus)}/7 해금)</div>
       ${optRowsHTML(g)}
     </div>
+    <div class="gd-cost">${eqd?slotCostHTML(g.part):''}</div>
     <div class="gd-row">
       ${eqd
         ? `<button id="gdUneq">해제</button><button class="gold" id="gdUp" ${save.gold<cost||slotMaxed(g.part)?'disabled':''}>${slotMaxed(g.part)?'슬롯 MAX':'슬롯 강화 🪙'+fmt(cost)}</button>`
         : `<button class="gold" id="gdEq">장착</button>`}
-    </div>
-    <button class="ghost-btn" id="gdClose">닫기</button>`);
+    </div>`,
+    {cls:'ov-gear', out:`<button class="ghost-btn" id="gdClose">닫기</button>`});
   if(eqd){
     $('gdUneq').onclick=()=>{ AU.play('click'); delete save.eq[g.part]; persist(); closeOverlay(); renderGear(); };
     $('gdUp').onclick=()=>{
@@ -1641,11 +1764,22 @@ function renderShop(){
   const one=GT.pullCost, ten=GT.pullCost*10;
   $('shopBody').innerHTML=`
     <div class="shop-sec">🎁 무료 보급</div>
-    <div class="gem-card" style="grid-column:1/-1">
-      <div class="amt">💎 ${fmtQty(GT.dailyGem)}</div>일일 무료 다이아
-      <button id="freeBtn" ${canFree?'':'disabled'}>${canFree?'수령':'오늘 수령 완료'}</button>
+    <div class="free-row">
+      <div class="gem-card">
+        <div class="amt">💎 ${fmtQty(GT.dailyGem)}</div>일일 무료
+        <button id="freeBtn" ${canFree?'':'disabled'}>${canFree?'수령':'완료'}</button>
+      </div>
+      <div class="gem-card lock"><div class="amt">🔒</div>추가 보급 (준비 중)</div>
     </div>
-    <div class="shop-sec">⚔️ 장비 뽑기</div>
+    <div class="shop-sec">💎 다이아 (모의 결제 — 실결제 없음)</div>
+    <div class="gem-grid">${GEM_PACKS.map((p,i)=>
+      `<div class="gem-card"><div class="amt">💎 ${fmtQty(p.gem)}</div>${p.nm}
+        <button data-p="${i}">₩${fmtWon(p.won)}</button></div>`).join('')
+      /* ⚑ 레퍼런스 그리드는 3열 2행(6칸)이다. 상품 종류를 늘리는 것은 새 콘텐츠(§1)라 나머지는 잠금 칸으로
+         «형태만» 채운다 — 눌리지 않고 아무 일도 안 한다. 주인이 상품을 정해 주시면 그 자리에 들어간다. */
+      +Array.from({length:Math.max(0,6-GEM_PACKS.length)},()=>
+      `<div class="gem-card lock"><div class="amt">🔒</div>준비 중</div>`).join('')}</div>
+    <div class="shop-sec tight">⚔️ 장비 뽑기</div>
     <div class="gacha-card">
       <div class="ttl">전설의 상자</div>
       <div class="pity">${gachaRateText()}<br>
@@ -1654,11 +1788,7 @@ function renderShop(){
         <button id="pull1" ${save.gem<one?'disabled':''}>1회 💎${fmtQty(one)}</button>
         <button id="pull10" ${save.gem<ten?'disabled':''}>10회 💎${fmtQty(ten)}</button>
       </div>
-    </div>
-    <div class="shop-sec">💎 다이아 (모의 결제 — 실결제 없음)</div>
-    <div class="gem-grid">${GEM_PACKS.map((p,i)=>
-      `<div class="gem-card"><div class="amt">💎 ${fmtQty(p.gem)}</div>${p.nm}
-        <button data-p="${i}">₩${fmtWon(p.won)}</button></div>`).join('')}</div>`;
+    </div>`;
   $('freeBtn').onclick=()=>{
     if(save.freeDay===today()) return;
     AU.play('coin'); save.gem+=GT.dailyGem; save.freeDay=today(); persist(); renderShop();
@@ -1727,13 +1857,17 @@ function drawDiorama(){
   }
   if(ch>=3){ c.font='22px serif'; c.fillText('💀', w*0.78, h*0.4); }
 }
+/* ⚑ T116 U02 — 로비뿐 아니라 장비·상점 상단 바에도 같은 아바타가 있다(모든 탭의 상단 바가 같은 모양).
+   숨은 화면의 캔버스는 clientWidth 0 이라 그 탭을 열 때 다시 그린다(renderTopBars 가 매번 부른다). */
 function drawAvatar(){
-  const a=$('avatar'), d=window.devicePixelRatio||1;
-  const w=a.clientWidth||52;
-  a.width=w*d; a.height=w*d;
-  const c=a.getContext('2d'); c.setTransform(d*w/60,0,0,d*w/60,0,0);
-  c.fillStyle='#5B87C7'; c.fillRect(0,0,60,60);
-  drawCharOn(c,30,56,{s:1.15,f:1,body:'#5E6A75',hat:'helmet'});
+  const d=window.devicePixelRatio||1;
+  document.querySelectorAll('.avatar-box').forEach(a=>{
+    const w=a.clientWidth||52;
+    a.width=w*d; a.height=w*d;
+    const c=a.getContext('2d'); c.setTransform(d*w/60,0,0,d*w/60,0,0);
+    c.fillStyle='#5B87C7'; c.fillRect(0,0,60,60);
+    drawCharOn(c,30,56,{s:1.15,f:1,body:'#5E6A75',hat:'helmet'});
+  });
 }
 
 /* ================= 버프/스탯 엔진 (sim.js 와 1:1) ================= */
@@ -2151,14 +2285,19 @@ function bankAndLobby(){
 
 /* ================= OVERLAY ================= */
 const ov=$('overlay');
+/* ⚑ T116 U02 — `opts.cls` 는 팝업 «규격»(ov-full / ov-gear / ov-book · CSS 참조), `opts.out` 은 상자 «밖»
+   아래에 놓이는 줄(레퍼런스의 닫기 안내 y91.5)이다. 둘 다 화면 배치용이고 게임 규칙과 무관하다. */
 function openOverlay(html,opts){
   opts=opts||{};
-  ov.innerHTML=`<div class="ov-inner">${opts.rays?'<div class="rays"></div>':''}${html}</div>`;
+  ov.innerHTML=`<div class="ov-inner">${opts.rays?'<div class="rays"></div>':''}${html}</div>`
+    +(opts.out?`<div class="ov-out">${opts.out}</div>`:'');
+  ov.className='';
+  if(opts.cls) ov.classList.add(opts.cls);
   ov.classList.add('on');
   ov.onclick=null;
   if(G) G.paused=true;
 }
-function closeOverlay(){ ov.classList.remove('on'); ov.innerHTML=''; ov.onclick=null; if(G) G.paused=false; }
+function closeOverlay(){ ov.className=''; ov.innerHTML=''; ov.onclick=null; if(G) G.paused=false; }
 
 /* ⚑ 화면에 뜨는 특전 문구는 **여기 한 곳**에서만 만든다 — PLAN §3.1 «효과» 열이 확정 스펙이고
    `tx` 가 그 문장이다(`<b>` 태그를 걷어내면 글자까지 같아야 한다 — 게이트가 두 엔진 + PLAN 을 대조).
@@ -2186,7 +2325,8 @@ function openLevelUp(){
       <div class="ov-sub">특전을 획득했습니다</div>
       ${perkCardHTML(perk,0,'static')}
       <button class="choice-btn gold" id="luOk">계속 전진</button>
-      <div class="ov-foot"><button id="perkBookBtn">📘 보유 특전 <b>${G.perksTaken.length}</b></button></div>`,{rays:true});
+      <div class="ov-foot"><button id="perkBookBtn">📘<b>${G.perksTaken.length}</b><span class="sr-lbl">보유 특전</span></button></div>`,
+      {rays:true,cls:'ov-full'});
     $('luOk').onclick=()=>{ AU.play('click'); afterPerk(); };
     /* ⚑ stopPropagation 필수 — 이 클릭이 오버레이까지 거품처럼 올라가면 책이 깔아 둔 ov.onclick(=복귀)에
        걸려 열자마자 되돌아간다(T89 가 T3 실측으로 잡은 버그). */
@@ -2209,11 +2349,13 @@ function openPerkBook(back){
   const list=G.perksTaken.length
     ? G.perksTaken.map((p,i)=>perkCardHTML(p,i,'static')).join('')
     : `<div class="ov-sub" style="margin-top:20px">아직 획득한 특전이 없습니다</div>`;
+  /* ⚑ T116 U02 — 인포 팝업은 «상자 y23 h52.5 + 윗변에 걸친 제목 리본» 규격(ov-book)이고,
+     닫기 안내는 레퍼런스대로 상자 «밖» 아래(y91.5)에 놓는다. */
   openOverlay(`<div class="ov-banner">📘 PERKS</div>
     <div class="ov-sub">이번 원정에서 얻은 특전 (${G.perksTaken.length})</div>
-    <div class="perk-list">${list}</div>
-    ${ret?`<button id="pbBack">← 특전 선택으로</button>`
-        :`<div class="tap-close">— 화면을 탭하면 닫힙니다 —</div>`}`);
+    <div class="perk-list">${list}</div>`,
+    {cls:'ov-book', out:ret?`<button id="pbBack">← 특전 선택으로</button>`
+        :`<div class="tap-close">— 화면을 탭하면 닫힙니다 —</div>`});
   if(ret) $('pbBack').onclick=e=>{ e.stopPropagation(); AU.play('click'); ret(); };
   ov.onclick=()=>{ AU.play('click'); ret?ret():closeOverlay(); };
 }
