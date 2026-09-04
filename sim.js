@@ -110,8 +110,12 @@ const TUNE={
   /* ⚑ 주인 확정 2026-09-03 (ROUTINE «플레이어 기본 스탯») — 노브 아님. PLAN §2.3 표와 1:1.
      종전엔 치배·방어·반격·회피 넷이 mkPlayer 에 리터럴로 박혀 있어 PLAN 어디에도 값이 없었다
      (T27 «미문서 상수 4종» · 승인 대기 22번). 주인이 값을 확정하면서 그 안건이 종결됐고,
-     넷을 여기로 끌어올려 «한 곳에서만 정의 → PLAN 과 대조» 가 가능해졌다(verifyCombatConst ①). */
-  pAtk0:25, pHp0:150, pSh0:250, pAspd0:1.0, pCrit0:20, pCritF0:150, pCounter0:20, pDef0:20, pEvade0:20,
+     넷을 여기로 끌어올려 «한 곳에서만 정의 → PLAN 과 대조» 가 가능해졌다(verifyCombatConst ①).
+     ⚑⚑⚑ T123 주인 확정 2026-09-04 18:5X «치확 0% 반격 0% 방어력 0% 회피 0% 로 하기» —
+     넷(pCrit0·pCounter0·pDef0·pEvade0)이 20 → 0 이 됐다. 공 25 / 체 150 / 실 250 / 공속 1.0 /
+     치명타 피해 150% 는 그대로. 이제 특전을 얻기 전엔 회피·반격·치명 트리거가 한 번도 안 터지고
+     특전으로만 자란다(주인이 알고 확정한 귀결 — ROUTINE 18:5X ②). */
+  pAtk0:25, pHp0:150, pSh0:250, pAspd0:1.0, pCrit0:0, pCritF0:150, pCounter0:0, pDef0:0, pEvade0:0,
   goldKillBase:0.6, goldKillPer:0.10, goldClearPer:3,
   goldGrowth:1.22,              // 챕터당 골드 성장 배수 (R07: 1.185 → 1.22. 1.185 는 챕터 90 대형 벽에서 슬롯 13 에 갇혀 F2P·과금 둘 다 영구 정체했다 — 실험4 실측. eHpG 보다 높게 둬야 후반 벽에서 수입이 적 성장을 따라잡는다)
   expKill:3, expBoss:9,
