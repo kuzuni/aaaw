@@ -494,6 +494,63 @@ function run(simSrc, htmSrc, planSrc) {
       both.every(([, src]) => userStrings(src).some(t => t.includes('스턴'))) && /스턴/.test(planSrc));
   }
 
+  /* ===== ③-c ⚑⚑⚑ T121 3차 신규 22종의 엔진 배선 대조 (주인 확정 17:5X ~ 18:4X) =====
+     확률 상수는 위에서 값이 대조됐지만, «그 상수를 그 자리에서 쓰는가» 는 별개다 —
+     실제로 T108 때 한 번, 소환 확률을 상수로 빼 놓고 호출부는 옛 값을 쓰던 자리가 있었다.
+     두 엔진의 공백·연출 인자를 지우고 «조건 토큰» 으로 대조한다(문면이 아니라 배선을 보는 자리). */
+  console.log('\n=== ③-c ⚑ T121 3차 신규 22종의 엔진 배선 (회피·피격·치명 소환 · 실드·방어막 축) ===');
+  {
+    const norm = src => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, '');
+    const WIRE = [
+      ['회피 시 화살 I/II/III 이 각자 자기 확률로 굴린다',
+        ['px.p_arrowEv&&pkk(p,PERK_SUMMON_N))fireArrows(p,1)',
+         'px.p_arrowEvR&&pkk(p,PERK_SUMMON_R))fireArrows(p,1)',
+         'px.p_arrowEvL&&pkk(p,PERK_SUMMON_L))fireArrows(p,1)']],
+      ['피격 시 도끼 I/II/III 이 각자 자기 확률로 굴린다',
+        ['px.p_axeHit&&pkk(p,PERK_SUMMON_N))fireAxe(p,1)',
+         'px.p_axeHitR&&pkk(p,PERK_SUMMON_R))fireAxe(p,1)',
+         'px.p_axeHitL&&pkk(p,PERK_SUMMON_L))fireAxe(p,1)']],
+      ['회피 시 창 · 피격 시 창이 33%(PERK_SUMMON_SP)로 굴린다',
+        ['px.p_spearEvL&&pkk(p,PERK_SUMMON_SP))fireSpear(p,1)',
+         'px.p_spearHitL&&pkk(p,PERK_SUMMON_SP))fireSpear(p,1)']],
+      ['치명 시 창(희귀 33·전설 66)·치명 시 번개(66)가 치명타 분기에 있고 번개는 «그 적의 웨이브» 를 때린다',
+        ['px.p_critSpearR&&pkk(p,PERK_CRITSP_R))fireSpear(p,1)',
+         'px.p_critSpearL&&pkk(p,PERK_CRITSP_L))fireSpear(p,1)',
+         'px.p_critBoltL&&pkk(p,PERK_CRITBOLT_L))fireBoltsAll(p,e.wave)']],
+      ['회피 시 회복 II 는 회복 증폭을 탄다(noBoost 아님) · 회피 시 수리 I/II 는 최대 실드 6%',
+        ['px.p_evHealR&&pkk(p,PERK_EVHEAL_R))',
+         'px.p_evRepairR&&pkk(p,PERK_EVREP_R))', 'px.p_evRepairL&&pkk(p,PERK_EVREP_L))',
+         'repair(p,p.maxSh*PERK_EVREP_F)']],
+      ['판정 순서 = 회피 → 방어막(1장 소모 후 종료) → 피해 무시·실드 방벽(각각 따로) → 피해',
+        ['if(p.ward>0){', 'constign1=px.p_ignoreN&&pkk(p,PERK_IGN_N);',
+         'constign2=p.sh>0&&px.p_shWallL&&pkk(p,PERK_SHWALL_L);', 'if(ign1||ign2)']],
+      ['실드 반사는 실드가 있었을 때만 · 기준값은 가시갑옷과 같은 thornBase',
+        ['px.p_shRefL&&hadSh&&src&&pkk(p,PERK_SHREF_L))reflect']],
+      ['피격 시 방어막 I/II/III 이 각자 확률로 따로 굴린다',
+        ['gainWard(p,px.p_wardHitN?PERK_WARD_N:0)', 'gainWard(p,px.p_wardHitR?PERK_WARD_R:0)',
+         'gainWard(p,px.p_wardHitL?PERK_WARD_L:0)']],
+      ['실드가 0 인 동안만 공격력 ×1.50 · 공속 ×1.30',
+        ['px.p_noShAtk&&p.sh<=0)m*=PERK_NOSH_ATK', 'p.px.p_noShAspd&&p.sh<=0?PERK_NOSH_ASPD:1']],
+      ['방어력 II/III 이 곱연산으로 걸린다', ['p.def*=PERK_DEF_R', 'p.def*=PERK_DEF_L']],
+    ];
+    for (const [nm, src] of both) {
+      const n = norm(src);
+      const miss = [];
+      for (const [, toks] of WIRE) for (const t of toks) if (!n.includes(t.replace(/\s+/g, ''))) miss.push(t);
+      chk(`${nm} 에 신규 22종의 배선이 전부 있다 (${WIRE.length}묶음)`, miss.length === 0,
+        miss.slice(0, 3).join(' · ') || `${WIRE.reduce((a, w) => a + w[1].length, 0)}개 토큰 전부 일치`);
+    }
+    /* 반사 인자까지는 엔진마다 연출 인자가 달라 각각 본다 */
+    /* 방어막은 «1장 소모하고 그 자리에서 끝난다» 는 조기 종료가 핵심이다 — 종료가 사라지면
+       막힌 타격이 다시 «피격» 이 되어 트리거·가시갑옷이 굴러간다(주인 18:2X 위반). */
+    chk('방어막 분기가 1장 소모 후 «그 타격은 끝» 으로 조기 종료한다 (두 엔진)',
+      /if\(p\.ward>0\)\{p\.ward--;return;\}/.test(norm(simSrc)) &&
+      /if\(p\.ward>0\)\{p\.ward--;[^}]*return;\}/.test(norm(htmSrc)));
+    chk('실드 반사가 두 엔진에서 thornBase 를 되갚는다',
+      /p_shRefL&&hadSh&&src&&pkk\(p,PERK_SHREF_L\)\)reflect\(G,src,thornBase\)/.test(norm(simSrc)) &&
+      /p_shRefL&&hadSh&&src&&pkk\(p,PERK_SHREF_L\)\)reflect\(src,thornBase,/.test(norm(htmSrc)));
+  }
+
   /* ⚑⚑⚑ T119 — 새로 생긴 «처치 시» 축은 `onKill` 에 있고, 그 축의 연쇄 기대값은
      `tools/verifySummonChain.js` ⑤ 가 따로 잰다(여기서 두 번 재지 않는다). 여기서는 «네 소환이 그 자리에 있는가» 만 본다. */
   console.log('\n=== ③-b ⚑ T119 신규 22종의 엔진 키·수치 대조 ===');
@@ -552,7 +609,7 @@ if (process.argv.includes('--self')) {
   /* 음성 검사 — 일부러 깨뜨린 사본마다 «빨개지는지» 만 본다. 통과하면 그 항목이 죽은 검사라는 뜻이다. */
   const cases = [
     ['sim 표 순서(id)를 흐트러뜨리면', s => s.replace("{id:'p_evade'", "{id:'zz_evade'"), null, null],
-    ['sim 공격력 배수를 1.30 으로', s => s.replace('PERK_ATK_M=1.20', 'PERK_ATK_M=1.30'), null, null],
+    ['sim 공격력 배수를 1.30 으로', s => s.replace('PERK_ATK_M=1.15', 'PERK_ATK_M=1.30'), null, null],
     /* ⚑ T108 신설 — 소환 3종이 다시 «50% 확률» 로 돌아가는 세 갈래 (상수 · 두 엔진 불일치 · 문면 잔재) */
     ['⚑ T108 소환 확률을 50% 로 되돌리면', s => s.replace('PERK_SUMMON_CH=1.00', 'PERK_SUMMON_CH=0.50'), null, null],
     ['⚑ T108 게임만 소환 확률이 다르면', null, s => s.replace('PERK_SUMMON_CH=1.00', 'PERK_SUMMON_CH=0.50'), null],
@@ -562,9 +619,9 @@ if (process.argv.includes('--self')) {
       s => s.replace("{id:'p_atk',     g:0,nm:'공격력 증가'", "{id:'p_ATKTMP',  g:0,nm:'공격력 증가'")
              .replace("{id:'p_counter', g:0,nm:'반격률 증가'", "{id:'p_atk',     g:0,nm:'반격률 증가'")
              .replace("{id:'p_ATKTMP',  g:0,nm:'공격력 증가'", "{id:'p_counter', g:0,nm:'공격력 증가'"), null, null],
-    ['game 치명타 피해를 +40 으로', null, s => s.replace('PERK_CRITF_A=50', 'PERK_CRITF_A=40'), null],
-    ['game 표시 텍스트를 바꾸면', null, s => s.replace('회피율 <b>+10</b>', '회피율 <b>+20</b>'), null],
-    ['PLAN 표의 효과를 바꾸면', null, null, s => s.replace('| 공격력 **+20%** |', '| 공격력 **+30%** |')],
+    ['game 치명타 피해를 +40 으로', null, s => s.replace('PERK_CRITF_A=30', 'PERK_CRITF_A=40'), null],
+    ['game 표시 텍스트를 바꾸면', null, s => s.replace('회피율 <b>+8</b>', '회피율 <b>+20</b>'), null],
+    ['PLAN 표의 효과를 바꾸면', null, null, s => s.replace('| 공격력 **+15%** |', '| 공격력 **+30%** |')],
     ['등급 굴림을 되살리면', s => s + '\nfunction rollRarity(){return 0;}\n', null, null],
     ['새로고침을 되살리면', null, s => s.replace('function pickPerk(perk){', 'function pickPerk(perk){ G.refreshLeft=1;'), null],
     /* ⚑ T117 신설 — 3택의 네 조항과 시뮬 정책이 각각 죽지 않았는지 */
@@ -584,12 +641,30 @@ if (process.argv.includes('--self')) {
     ['⚑ T119 게임만 처치 시 화살 발수가 다르면', null, s => s.replace('if(px.p_killArrow&&pkk(p,px.p_killArrow)) fireArrows(p,3);', 'if(px.p_killArrow&&pkk(p,px.p_killArrow)) fireArrows(p,2);'), null],
     ['⚑ T119 오버킬 회복이 회복 증폭을 안 타게 하면 (noBoost=true)', s => s.replace('if(px.p_overkill&&over>0)heal(p,over);', 'if(px.p_overkill&&over>0)heal(p,over,true);'), null, null],
     ['⚑ T119 가시갑옷이 원거리에도 걸리면', s => s.replace('if(px.p_thorns&&isMelee&&src)reflect', 'if(px.p_thorns&&src)reflect'), null, null],
-    ['⚑ T119 광전사가 치확을 0 으로 안 만들면', s => s.replace("const effCritR=p=>p.px.p_berserk?0:p.critR+bsum(p,'critR');", "const effCritR=p=>p.critR+bsum(p,'critR');"), null, null],
+    ['⚑ T119 광전사가 치확을 0 으로 안 만들면', s => s.replace('const effCritR=p=>{const px=p.px;if(px.p_berserk)return 0;', 'const effCritR=p=>{const px=p.px;'), null, null],
     ['⚑ T119 창의 화신이 화살을 그대로 쏘면', s => s.replace('if(px.p_spearAvatar){fireSpear(p,n);return;}', ''), null, null],
     ['⚑ T119 풀피 적 강타 계수를 +50% 로 내리면', s => s.replace('PERK_FULLHP_A=1.00', 'PERK_FULLHP_A=0.50'), null, null],
     ['⚑ T119 처치 시 소환 확률을 33 → 40% 로 올리면', s => s.replace('PERK_KILL_N=0.33', 'PERK_KILL_N=0.40'), null, null],
     ['⚑ T119 가시갑옷 배율을 +100 → +150% 로 올리면', s => s.replace('PERK_THORN_N=1.00', 'PERK_THORN_N=1.50'), null, null],
     ['⚑ T119 풀을 31종으로 줄이면', s => s.replace("    {id:'p_thornsL',   g:2,nm:'가시갑옷',         d:'가시갑옷 +300%',                  ap:p=>{p.px.p_thornsL=1;p.px.p_thorns+=PERK_THORN_L;}},\n", ''), null, null],
+    /* ⚑⚑⚑ T121 3차 신설 — 신규 22종의 배선·순서가 죽지 않았는지 (③-c 가 잡아야 한다) */
+    ['⚑ T121 3차 회피 시 화살을 다시 100% 로 되돌리면',
+      s => s.replace('if(px.p_arrowEv &&pkk(p,PERK_SUMMON_N))fireArrows(p,1);', 'if(px.p_arrowEv &&pkk(p,PERK_SUMMON_CH))fireArrows(p,1);'), null, null],
+    ['⚑ T121 3차 게임만 피격 시 도끼 II 를 빼면',
+      null, s => s.replace('if(px.p_axeHitR&&pkk(p,PERK_SUMMON_R)) fireAxe(p,1);', ''), null],
+    ['⚑ T121 3차 치명 시 번개가 웨이브 대신 최전방을 때리면',
+      s => s.replace('if(px.p_critBoltL&&pkk(p,PERK_CRITBOLT_L))fireBoltsAll(p,e.wave);', 'if(px.p_critBoltL&&pkk(p,PERK_CRITBOLT_L))fireBoltsAll(p);'), null, null],
+    ['⚑ T121 3차 실드 방벽에서 «실드가 있으면» 조건을 빼면',
+      s => s.replace('const ign2=p.sh>0&&px.p_shWallL&&pkk(p,PERK_SHWALL_L);', 'const ign2=px.p_shWallL&&pkk(p,PERK_SHWALL_L);'), null, null],
+    ['⚑ T121 3차 방어막이 다시 «피격» 으로 처리되면 (조기 종료 삭제)',
+      s => s.replace('if(p.ward>0){p.ward--;return;}', 'if(p.ward>0){p.ward--;}'), null, null],
+    ['⚑ T121 3차 실드 없을 때 공격력이 실드가 있어도 걸리면',
+      s => s.replace('if(px.p_noShAtk&&p.sh<=0)m*=PERK_NOSH_ATK;', 'if(px.p_noShAtk)m*=PERK_NOSH_ATK;'), null, null],
+    ['⚑ T121 3차 피격 시 방어막 III 을 빼면',
+      s => s.replace('gainWard(p,px.p_wardHitL?PERK_WARD_L:0);', ''), null, null],
+    ['⚑ T121 3차 방어력 II 배율을 +16 → +20% 로 올리면', s => s.replace('PERK_DEF_R=1.16', 'PERK_DEF_R=1.20'), null, null],
+    ['⚑ T121 3차 피해 무시 확률을 20 → 30% 로 올리면', s => s.replace('PERK_IGN_N=0.20', 'PERK_IGN_N=0.30'), null, null],
+    ['⚑ T121 3차 게임만 회피 시 수리 II 확률이 다르면', null, s => s.replace('PERK_EVREP_L=0.25', 'PERK_EVREP_L=0.30'), null],
     ['⚑ T117 제시 장수를 1장으로 줄이면', s => s.replace('const PERK_OFFER=3;', 'const PERK_OFFER=1;'), null, null],
     ['⚑ T117 게임만 제시 장수가 다르면', null, s => s.replace('const PERK_OFFER=3;', 'const PERK_OFFER=2;'), null],
     ['⚑ T119 시뮬 정책이 «표 순서 뒤쪽» 을 고르면',
