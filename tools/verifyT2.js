@@ -763,8 +763,16 @@ console.log('\n[⑭ 합성 화면 — 수동 3칸 선택 (PLAN §11.3, 스크린
     /sort\(\(a,b\)=>b\.plus-a\.plus\)\[0\]/.test(ff[0]) ? ok('재료 중 최고 강화품이 base (fuseAll 과 같은 기준)')
       : bad('base 선택 기준이 fuseAll 과 다르다');
     /save\.fuses\+\+/.test(ff[0]) ? ok('수동 합성도 합성 횟수(save.fuses)를 센다') : bad('수동 합성이 합성 횟수에 안 잡힌다');
-    /autoEquipBest\(\)/.test(ff[0]) ? ok('합성 후 상위품 자동 장착 (재료가 장착분이어도 알몸이 되지 않는다)')
-      : bad('합성 후 자동 장착이 없다 — 장착분을 재료로 쓰면 그 부위가 빈다');
+    /* ⚑⚑⚑ T125 ①-c (주인 확정 21:2X) — 자동 장착은 **폐지**됐다. 대신 «장착분은 재료가 아니다» 가
+       그 자리를 지킨다(그래야 합성으로 부위가 비지 않는다). 두 단언이 짝이다 —
+       ① 게임 어디에도 자동 장착 호출이 없다 ② 수동 합성 목록이 장착분을 재료 후보에서 뺀다. */
+    const CODE = HTML.replace(/\/\*[\s\S]*?\*\//g, ' ');   /* 주석의 «autoEquipBest() 를 없앴다» 같은 서술은 코드가 아니다 */
+    !/autoEquipBest\s*\(/.test(CODE) ? ok('게임 쪽 자동 장착 없음 (뽑기·합성 결과는 인벤에만 — T125 ①-c)')
+      : bad('index.html 에 자동 장착 호출이 남아 있다 — 주인 21:2X «뽑기만 하고 장착 안 했는데 자동 장착되는 거 안 되게»');
+    /if\(isEquipped\(g\)\)\{\s*toast/.test(HTML.replace(/\s+/g, m => m.includes('\n') ? '\n' : ' '))
+      || /isEquipped\(g\)\|\|\(lock/.test(HTML)
+      ? ok('합성 재료 후보에서 장착분 제외 (T125 ①-c · PLAN §11.3 과 일치)')
+      : bad('장착 중인 장비가 아직 합성 재료로 선택된다 — 자동 장착이 없어 그 부위가 빈 채 남는다');
   }
   /* (5) ⚑ 행동 대조 — 두 파일의 fuseMake 를 실제로 실행해 전 조합 비교 */
   const grab = (src, re) => { const m = src.match(re); return m ? m[0] : null; };

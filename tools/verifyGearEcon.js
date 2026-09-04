@@ -150,7 +150,8 @@ console.log('\n[③ §11.2 뽑기 — 자연 확률 · 50회 천장 · 10회 전
   X.setSeed(20260902);
   const st0 = X.newGacha();
   const nat = [0, 0, 0, 0, 0];
-  for (let i = 0; i < N; i++) { st0.p50 = 0; st0.p10 = 0; nat[X.gachaPull(st0).rar]++; }
+  /* ⚑ T125 — `gachaPull` 이 배열을 돌려준다(겹침 회차만 2개). 여기선 카운터를 매번 0 으로 되돌리므로 언제나 1개다. */
+  for (let i = 0; i < N; i++) { st0.p50 = 0; st0.p10 = 0; for (const g of X.gachaPull(st0)) nat[g.rar]++; }
   const want = [57.9, 30, 10, 2, 0.1];
   const tol  = [0.6, 0.6, 0.4, 0.2, 0.06];      /* ≈4σ (N=40만). --fast 는 표본이 작아 오탐 가능 — 참고용 */
   const nm = ['일반', '희귀', '영웅', '전설', '신화'];
@@ -167,11 +168,16 @@ console.log('\n[③ §11.2 뽑기 — 자연 확률 · 50회 천장 · 10회 전
   const st = X.newGacha();
   let lastM = 0, lastL = 0, maxM = 0, maxL = 0, hitM50 = 0, hitL10 = 0;
   const parts = new Map();
+  /* ⚑ T125 — 한 회차가 2개를 줄 수 있다(겹침). 간격은 «회차» 기준으로 재고, 그 회차에 나온 것 중
+     최고 등급으로 판정한다(겹침 회차는 신화 + 전설이라 둘 다 그 회차에서 채워진다). */
+  let overlap = 0;
   for (let i = 1; i <= N; i++) {
-    const g = X.gachaPull(st);
-    parts.set(g.part + '|' + g.type, (parts.get(g.part + '|' + g.type) || 0) + 1);
-    if (g.rar === 4) { const d = i - lastM; if (d > maxM) maxM = d; if (d === 50) hitM50++; lastM = i; }
-    if (g.rar >= 3) { const d = i - lastL; if (d > maxL) maxL = d; if (d === 10) hitL10++; lastL = i; }
+    const gs = X.gachaPull(st);
+    if (gs.length > 1) overlap++;
+    for (const g of gs) parts.set(g.part + '|' + g.type, (parts.get(g.part + '|' + g.type) || 0) + 1);
+    const top = Math.max(...gs.map(g => g.rar));
+    if (top === 4) { const d = i - lastM; if (d > maxM) maxM = d; if (d === 50) hitM50++; lastM = i; }
+    if (top >= 3) { const d = i - lastL; if (d > maxL) maxL = d; if (d === 10) hitL10++; lastL = i; }
   }
   chk('50회 천장 (신화 간격 ≤ 50)', maxM <= 50, `최대 간격 ${maxM}회 · 정확히 50 에서 확정된 사례 ${hitM50.toLocaleString()}건`);
   chk('천장이 실제로 발동한다 (간격 50 사례 존재)', hitM50 > 0, `${hitM50}건`);
@@ -179,25 +185,28 @@ console.log('\n[③ §11.2 뽑기 — 자연 확률 · 50회 천장 · 10회 전
   chk('피티가 실제로 발동한다 (간격 10 사례 존재)', hitL10 > 0, `${hitL10}건`);
 
   /* (c) 부위·종류 18종 균등 */
-  const vals = [...parts.values()], exp = N / 18;
+  const vals = [...parts.values()], exp = [...parts.values()].reduce((a, b) => a + b, 0) / 18;
   const dev = Math.max(...vals.map(v => Math.abs(v - exp) / exp));
   chk('부위·종류 18종 균등 랜덤', parts.size === 18 && dev < (FAST ? 0.10 : 0.03),
       `${parts.size}종 · 기대 ${exp.toFixed(0)} · 최대 편차 ${(dev * 100).toFixed(2)}%`);
 
-  /* (d) 겹침 이월 (주인 명시): 천장과 피티가 같은 회차에 걸리면 신화 우선 + 전설 확정은 다음 회차로 이월 */
+  /* (d) ⚑⚑⚑ T125 겹침 = **둘 다 지급** (주인 확정 21:0X · 종전 «이월» 조항 폐지):
+     천장(50)과 피티(10)가 같은 회차에 걸리면 그 회차가 신화 1 + 전설 1 = 2개를 주고 두 카운터가 다 0 이 된다. */
   const s1 = X.newGacha(); s1.p50 = 49; s1.p10 = 9;
   const g1 = X.gachaPull(s1);
-  chk('겹침: 천장 회차는 신화', g1.rar === 4, `등급 ${nm[g1.rar]}`);
-  chk('겹침: 신화 나오면 p50 리셋', s1.p50 === 0, `p50=${s1.p50}`);
-  chk('겹침: 전설 확정은 다음 뽑기로 이월 (p10 유지)', s1.p10 === 10, `p10=${s1.p10} (10 이어야 다음 회차가 전설 이상 확정)`);
+  chk('겹침: 한 회차가 2개를 준다', g1.length === 2, `${g1.length}개`);
+  chk('겹침: 신화 1개 + 전설 1개', g1.length === 2 && g1[0].rar === 4 && g1[1].rar === 3,
+      g1.map(g => nm[g.rar]).join(' + '));
+  chk('겹침: 두 카운터 다 리셋 (이월 없음)', s1.p50 === 0 && s1.p10 === 0, `p50=${s1.p50} p10=${s1.p10}`);
   const g2 = X.gachaPull(s1);
-  chk('이월된 전설 확정이 다음 회차에 실제로 나온다', g2.rar >= 3, `등급 ${nm[g2.rar]}`);
+  chk('겹침 다음 회차는 다시 1개 (이월분 없음)', g2.length === 1, `${g2.length}개`);
+  chk('겹침 회차 실측 빈도 > 0 (연속 뽑기에서도 실제로 일어난다)', overlap > 0, `${overlap.toLocaleString()}건 / ${N.toLocaleString()}회`);
 
   /* (e) 자연 신화는 «전설 이상» 이므로 피티 카운터도 리셋 (겹침이 아닐 때) */
   let seen = false;
   for (let t = 0; t < 5000 && !seen; t++) {
     const s = X.newGacha(); s.p50 = 10; s.p10 = 3;
-    const g = X.gachaPull(s);
+    const g = X.gachaPull(s)[0];
     if (g.rar === 4) { chk('자연 신화 획득 시 p50·p10 둘 다 리셋', s.p50 === 0 && s.p10 === 0, `p50=${s.p50} p10=${s.p10}`); seen = true; }
   }
   if (!seen) chk('자연 신화 획득 시 p50·p10 둘 다 리셋', false, '5,000 시도 안에 자연 신화가 안 나와 확인 불가');

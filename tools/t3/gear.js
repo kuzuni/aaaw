@@ -48,7 +48,9 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('일일 무료 다이아 버튼', shop0.free === '수령', shop0.free);
   chk('모의 결제 상품 1종 (주인이 정한 값만) · 잠금 칸은 살 수 없다',
     shop0.packs === 1 && shop0.lockBtns === 0, `상품 ${shop0.packs}종 · 잠금 ${shop0.lockCells}칸(버튼 ${shop0.lockBtns})`);
-  chk('천장·피티 잔여 표시', /50회 천장까지/.test(shop0.pity || ''), shop0.pity);
+  /* ⚑ T125 ①-b (주인 21:1X) — 문구가 «신화 확정까지 N회 · 전설 확정까지 N회» 두 줄로 바뀌었다. */
+  chk('천장 문구 — «신화 확정까지 N회 · 전설 확정까지 N회»',
+    /신화 확정까지\s*50\s*회/.test(shop0.pity || '') && /전설 확정까지\s*10\s*회/.test(shop0.pity || ''), shop0.pity);
 
   await p.click('#freeBtn'); await p.waitForTimeout(300);
   const shop1 = await p.evaluate(() => ({ gem: save.gem, free: document.getElementById('freeBtn').textContent.trim(), dis: document.getElementById('freeBtn').disabled }));
@@ -79,7 +81,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     /* «50번째가 반드시 신화» 로 보면 안 된다 — 그 전에 자연 신화가 나오면 천장이 리셋된다.
        천장의 실제 약속은 «신화 없이 50회를 넘기지 않는다», 피티는 «전설 이상 없이 10회를 넘기지 않는다» 다. */
     const rar = [];
-    for (let i = 0; i < 600; i++) rar.push(gachaPull(save.gacha).rar);
+    for (let i = 0; i < 600; i++) for (const g of gachaPull(save.gacha)) rar.push(g.rar);   /* ⚑ T125 — 배열 */
     let gapM = 0, curM = 0, gapL = 0, curL = 0;
     for (const r of rar) {
       curM = r === 4 ? 0 : curM + 1; gapM = Math.max(gapM, curM);
@@ -89,11 +91,58 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   });
   chk('50회 천장 — 신화 없이 50회를 넘지 않는다', pity.gapM <= 50, `600회 중 최장 무신화 구간 ${pity.gapM}회 · 신화 ${pity.myth}개`);
   chk('10회 피티 — 전설 이상 없이 10회를 넘지 않는다', pity.gapL <= 10, `최장 무전설 구간 ${pity.gapL}회 · 전설↑ ${pity.leg}개`);
+  /* ⚑⚑⚑ T125 ① (주인 21:0X) — 천장 겹침은 «이월» 이 아니라 «둘 다 지급» 이다.
+     ⓐ 한 회차(p50=49 · p10=9)가 신화 1 + 전설 1 = 2개 ⓑ 그 겹침이 낀 10연차는 결과가 11개 ⓒ 두 카운터 리셋. */
+  const ov = await p.evaluate(() => {
+    save.gacha = { p50: 49, p10: 9, pulls: 0 };
+    const got = gachaPull(save.gacha);
+    const one = { n: got.length, rars: got.map(g => g.rar), p50: save.gacha.p50, p10: save.gacha.p10 };
+    /* 10연차 안에서 겹치게: 카운터를 49·9 로 두면 **첫 회차**에서 천장과 피티가 같이 걸린다.
+       (40·0 으로 두고 10회째를 노리면 중간의 자연 전설이 피티를 리셋해 겹침이 안 날 수 있다 — 결정적으로 간다.) */
+    save.inv = []; save.eq = {}; save.gem = 1e9; save.gacha = { p50: 49, p10: 9, pulls: 0 };
+    doPull(10);
+    const ten = { inv: save.inv.length, pulls: save.gacha.pulls, cells: document.querySelectorAll('#overlay .inv-cell').length };
+    closeOverlay();
+    return { one, ten };
+  });
+  await p.waitForTimeout(200);
+  chk('겹침 회차가 2개를 준다 (신화 + 전설)', ov.one.n === 2 && ov.one.rars[0] === 4 && ov.one.rars[1] === 3,
+    `${ov.one.n}개 [${ov.one.rars.join(',')}]`);
+  chk('겹침 뒤 두 카운터 리셋 (이월 없음)', ov.one.p50 === 0 && ov.one.p10 === 0, `p50=${ov.one.p50} p10=${ov.one.p10}`);
+  chk('겹침이 낀 10연차는 11개', ov.ten.inv === 11 && ov.ten.pulls === 10, `인벤 ${ov.ten.inv} · 뽑기 ${ov.ten.pulls}회`);
+  chk('11개가 결과 화면에도 다 뜬다', ov.ten.cells === 11, `${ov.ten.cells}칸`);
+  /* ⚑⚑⚑ T125 ①-c — 뽑기 결과 자동 장착 금지 + 수동 장착 동작 */
+  const noAuto = await p.evaluate(() => {
+    save.inv = []; save.eq = {}; save.gem = 1e9; save.gacha = { p50: 0, p10: 0, pulls: 0 };
+    doPull(10); closeOverlay();
+    const eqAfterPull = Object.keys(save.eq).length;
+    const nw = save.inv.filter(g => g.nw).length;
+    const g = save.inv[0];
+    openGearDetail(g.u);                      /* 세부 팝업 → «장착» 버튼 */
+    const hasEq = !!document.getElementById('gdEq');
+    if (hasEq) document.getElementById('gdEq').click();
+    return { eqAfterPull, nw, inv: save.inv.length, eqAfterClick: Object.keys(save.eq).length,
+      equippedU: save.eq[g.part], u: g.u, nwCleared: !g.nw, hasEq };
+  });
+  await p.waitForTimeout(200);
+  chk('뽑기 결과가 자동 장착되지 않는다', noAuto.eqAfterPull === 0, `장착 ${noAuto.eqAfterPull}부위 · 인벤 ${noAuto.inv}개`);
+  chk('새로 뽑은 장비에 NEW 뱃지 플래그', noAuto.nw === noAuto.inv, `${noAuto.nw}/${noAuto.inv}`);
+  chk('세부 팝업의 «장착» 으로 수동 장착된다', noAuto.hasEq && noAuto.eqAfterClick === 1 && noAuto.equippedU === noAuto.u,
+    `장착 ${noAuto.eqAfterClick}부위 · uid ${noAuto.equippedU}`);
+  chk('장착하면 NEW 뱃지가 사라진다', noAuto.nwCleared);
+  await p.evaluate(() => { closeOverlay(); showScreen('shop'); }); await p.waitForTimeout(300);
   await p.screenshot({ path: `${OUT}/t3-shop.png` });
 
   /* ---------- 장비 탭 ---------- */
   console.log('\n=== 장비 탭 (장착 · 슬롯 강화 · 세부 팝업) ===');
-  await p.evaluate(() => { save.inv = []; save.eq = {}; save.gem = 1e9; save.gold = 1e9; for (let i = 0; i < 60; i++) { const g = gachaPull(save.gacha); g.u = save.uid++; save.inv.push(g); } autoEquipBest(); persist(); showScreen('gear'); });
+  /* ⚑ T125 ①-c — 자동 장착이 없어져 이 픽스처가 직접 «부위별 최고» 를 끼운다(장비 탭 단언의 전제). */
+  await p.evaluate(() => {
+    save.inv = []; save.eq = {}; save.gem = 1e9; save.gold = 1e9;
+    for (let i = 0; i < 60; i++) for (const raw of gachaPull(save.gacha)) { const g = newGear(raw.part, raw.type, raw.rar, raw.plus); g.u = save.uid++; save.inv.push(g); }
+    const best = autoEquip(save.inv);
+    for (const pt of GT.parts) if (best[pt]) save.eq[pt] = best[pt].u;
+    persist(); showScreen('gear');
+  });
   await p.waitForTimeout(500);
   const gear = await p.evaluate(() => ({
     screen: document.querySelector('.screen.on')?.id,
@@ -105,7 +154,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     power: power(),
   }));
   chk('장비 화면 6부위 슬롯 카드', gear.slots === 6, `${gear.slots}칸`);
-  chk('자동 장착 6부위', gear.equipped === 6, `${gear.equipped}부위`);
+  chk('6부위 장착 (픽스처가 수동으로 끼운 것)', gear.equipped === 6, `${gear.equipped}부위`);
   chk('공/체/실 3스탯 표시', gear.stats.length === 3, gear.stats.join(' | '));
   chk('인벤 칸이 전부 SVG 아이콘', gear.inv > 0 && gear.svg === gear.inv, `${gear.svg}/${gear.inv}`);
   chk('전투력이 장비로 오른다', gear.power > 0, `power=${gear.power}`);
@@ -140,7 +189,9 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     save.inv = []; save.eq = {}; save.slots = {};
     for (let i = 0; i < 3; i++) save.inv.push({ part: 'weapon', type: 'crit_weapon', rar: 0, plus: 0, u: save.uid++ });
     save.inv.push({ part: 'helm', type: 'hpsh_helm', rar: 1, plus: 0, u: save.uid++ });
-    autoEquipBest(); persist(); showScreen('gear'); renderGear();
+    /* ⚑ T125 ①-c — 자동 장착이 없어졌고 «장착분은 재료가 아니다» 가 됐다.
+       합성 시험은 재료 3개가 다 선택 가능해야 하므로 아무것도 장착하지 않은 상태로 둔다. */
+    persist(); showScreen('gear'); renderGear();
   });
   await p.click('#fuseBtn'); await p.waitForTimeout(400);
   const f0 = await p.evaluate(() => ({ screen: document.querySelector('.screen.on')?.id, mats: document.querySelectorAll('#fgMats .fg-cell').length, fuse: document.getElementById('fgFuse').textContent.trim(), dis: document.getElementById('fgFuse').disabled }));

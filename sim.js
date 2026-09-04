@@ -861,6 +861,13 @@ const GOPT={
 
 /* ---- 뽑기 (PLAN §11.2) ---- */
 function newGacha(){ return {p50:0,p10:0,pulls:0}; }
+/* ⚑⚑⚑ T125 (주인 확정 2026-09-04 · 21:0X) — 뽑기 천장 겹침은 «이월» 이 아니라 **둘 다 지급**이다.
+   신화 천장(누적 50회째)과 전설 피티(10회째)가 같은 회차에 걸리면 그 한 번이 **신화 1 + 전설 1 = 2개**를
+   주고(비용은 1회분), 두 카운터는 각자 0 으로 리셋된다. 10연차 안에서 겹치면 결과가 **11개**로 뜬다.
+   그래서 이 함수는 **배열**을 돌려준다(보통 1개 · 겹칠 때만 2개) — 호출부는 전부 배열로 받는다.
+   위임 기본값: 그 회차의 자연 굴림은 종전대로 신화가 대체하고, **추가 1개는 전설 등급 고정**이다
+   (피티의 «전설 이상» 은 신화가 이미 채웠으므로 보너스는 전설). 추가분의 종류도 일반 굴림과 같이 무작위다.
+   종전 조항(«겹치면 신화 우선 · 전설 확정은 다음 뽑기로 이월»)은 폐지됐다. */
 function gachaPull(st){
   st.pulls++; st.p50++; st.p10++;
   const pityM=st.p50>=GT.pityMyth, pityL=st.p10>=GT.pityLegend;
@@ -871,13 +878,13 @@ function gachaPull(st){
     rar = GT.rarRoll(r);            /* 임계는 GT.gachaRate 에서 파생 — 리터럴로 되돌리지 말 것 (T65) */
     if(pityL&&rar<3) rar=3;
   }
-  if(rar===4){
-    st.p50=0;
-    /* 50천장과 10피티가 겹치면 신화 우선 · 전설 확정은 다음 뽑기로 이월(p10 유지) */
-    if(!(pityM&&pityL)) st.p10=0;
-  }else if(rar===3) st.p10=0;
-  const t=GT.allTypes[Math.floor(grand()*GT.allTypes.length)];   /* 뽑기 스트림 (R11) */
-  return {part:t.part,type:t.type,rar,plus:0};
+  if(rar===4) st.p50=0;
+  if(rar>=3) st.p10=0;              /* 신화든 전설이든 전설 피티는 채워졌다 (겹침도 여기서 리셋된다) */
+  const mk=r=>{ const t=GT.allTypes[Math.floor(grand()*GT.allTypes.length)];   /* 뽑기 스트림 (R11) */
+    return {part:t.part,type:t.type,rar:r,plus:0}; };
+  const out=[mk(rar)];
+  if(pityM&&pityL) out.push(mk(3));  /* 겹침 = 전설 1개 추가 지급 */
+  return out;
 }
 
 /* ---- 합성 (PLAN §11.3) ---- */
@@ -1760,7 +1767,8 @@ function accRefresh(a){
 }
 function accPull(a){
   let n=0;
-  while(a.gem>=GT.pullCost){ a.gem-=GT.pullCost; a.inv.push(gachaPull(a.gacha)); n++; a.pulls++; }
+  /* ⚑ T125 — `gachaPull` 이 배열을 돌려준다(겹침 회차는 2개). `n` 은 «뽑은 횟수»(비용 기준)라 그대로 1씩 센다. */
+  while(a.gem>=GT.pullCost){ a.gem-=GT.pullCost; for(const g of gachaPull(a.gacha)) a.inv.push(g); n++; a.pulls++; }
   if(n)accRefresh(a);
   return n;
 }

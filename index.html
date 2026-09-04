@@ -168,6 +168,9 @@
   .slot-card .lv{position:absolute; top:-6px; right:-2px; font-size:9.5px; background:#1C1C22; border-radius:99px; padding:1px 5px; color:var(--gold);}
   .slot-card .plus{position:absolute; bottom:-6px; left:50%; transform:translateX(-50%); font-size:9.5px;
     background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; border-radius:99px; padding:0 5px;}
+  /* ⚑ T125 ①-c — «인벤에 더 좋은 장비가 있다» 표시. 자동 장착이 없어졌으니 눈에 띄되 조용해야 한다. */
+  .slot-card .upmark{position:absolute; top:-6px; left:-4px; font-size:10px; line-height:1.3; z-index:2;
+    background:#3FBF6A; color:#08240F; border-radius:99px; padding:0 4px; font-weight:700;}
   .slot-card .pt{position:absolute; top:2px; left:4px; font-size:8.5px; color:var(--ink-dim);}
   .slot-card.empty{opacity:.6; border-style:dashed;}
   /* ⚑ T116 U01 — 스탯 요약줄 y 36.5 · h 4.0 · 좌우 10% 여백 (종전 h 6.6 · 여백 2.6) */
@@ -195,6 +198,9 @@
     background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; border-radius:99px; padding:0 4px;}
   .inv-cell .eqm{position:absolute; inset:auto 0 0 0; font-size:8.5px; background:rgba(10,10,14,.72); border-radius:0 0 8px 8px;}
   .inv-cell .fus{position:absolute; top:-5px; right:-4px; font-size:9px; background:#E8483F; border-radius:99px; padding:0 4px; z-index:2;}
+  /* ⚑ T125 ①-c — 새로 뽑은 장비 표시(세부 팝업을 한 번 열면 지워진다) */
+  .inv-cell .nwm{position:absolute; top:-5px; left:50%; transform:translateX(-50%); font-size:8px; z-index:2;
+    background:#3FBF6A; color:#08240F; border-radius:99px; padding:0 4px; font-weight:700; letter-spacing:.3px;}
   /* 부위 태그 — 스크린샷의 좌상단 마름모 라벨 */
   .inv-cell .ptag,.fg-cell .ptag{position:absolute; top:-6px; left:-5px; font-size:8px; line-height:1.35; z-index:2;
     padding:1px 4px; border-radius:5px 5px 5px 0; color:#12121A; font-family:inherit;
@@ -1041,6 +1047,13 @@ const GOPT={
 
 /* ---- 뽑기 (PLAN §11.2) ---- */
 function newGacha(){ return {p50:0,p10:0,pulls:0}; }
+/* ⚑⚑⚑ T125 (주인 확정 2026-09-04 · 21:0X) — 뽑기 천장 겹침은 «이월» 이 아니라 **둘 다 지급**이다.
+   신화 천장(누적 50회째)과 전설 피티(10회째)가 같은 회차에 걸리면 그 한 번이 **신화 1 + 전설 1 = 2개**를
+   주고(비용은 1회분), 두 카운터는 각자 0 으로 리셋된다. 10연차 안에서 겹치면 결과가 **11개**로 뜬다.
+   그래서 이 함수는 **배열**을 돌려준다(보통 1개 · 겹칠 때만 2개) — 호출부는 전부 배열로 받는다.
+   위임 기본값: 그 회차의 자연 굴림은 종전대로 신화가 대체하고, **추가 1개는 전설 등급 고정**이다
+   (피티의 «전설 이상» 은 신화가 이미 채웠으므로 보너스는 전설). 추가분의 종류도 일반 굴림과 같이 무작위다.
+   종전 조항(«겹치면 신화 우선 · 전설 확정은 다음 뽑기로 이월»)은 폐지됐다. */
 function gachaPull(st){
   st.pulls++; st.p50++; st.p10++;
   const pityM=st.p50>=GT.pityMyth, pityL=st.p10>=GT.pityLegend;
@@ -1051,13 +1064,13 @@ function gachaPull(st){
     rar = GT.rarRoll(r);            /* 임계는 GT.gachaRate 에서 파생 — 리터럴로 되돌리지 말 것 (T65) */
     if(pityL&&rar<3) rar=3;
   }
-  if(rar===4){
-    st.p50=0;
-    /* 50천장과 10피티가 겹치면 신화 우선 · 전설 확정은 다음 뽑기로 이월(p10 유지) */
-    if(!(pityM&&pityL)) st.p10=0;
-  }else if(rar===3) st.p10=0;
-  const t=GT.allTypes[Math.floor(grand()*GT.allTypes.length)];   /* 뽑기 스트림 (R11) */
-  return {part:t.part,type:t.type,rar,plus:0};
+  if(rar===4) st.p50=0;
+  if(rar>=3) st.p10=0;              /* 신화든 전설이든 전설 피티는 채워졌다 (겹침도 여기서 리셋된다) */
+  const mk=r=>{ const t=GT.allTypes[Math.floor(grand()*GT.allTypes.length)];   /* 뽑기 스트림 (R11) */
+    return {part:t.part,type:t.type,rar:r,plus:0}; };
+  const out=[mk(rar)];
+  if(pityM&&pityL) out.push(mk(3));  /* 겹침 = 전설 1개 추가 지급 */
+  return out;
 }
 
 /* ---- 합성 (PLAN §11.3) ---- */
@@ -1309,7 +1322,8 @@ save.selChapter=Math.max(1,Math.min(save.selChapter|0||1,save.maxChapter));
 save.gold=Math.max(0,+save.gold||0); save.gem=Math.max(0,+save.gem||0);
 if(!Array.isArray(save.inv)) save.inv=[];
 save.inv=save.inv.filter(g=>g&&GT.parts.includes(g.part)&&GOPT[g.type]&&g.rar>=0&&g.rar<=4)
-  .map(g=>({u:Math.max(0,g.u|0), part:g.part, type:g.type, rar:g.rar|0, plus:Math.max(0,g.plus|0)}));
+  .map(g=>({u:Math.max(0,g.u|0), part:g.part, type:g.type, rar:g.rar|0, plus:Math.max(0,g.plus|0),
+    ...(g.nw?{nw:1}:{})}));   /* ⚑ T125 — «NEW» 뱃지는 세이브를 넘어서도 남는다(장착하거나 열어 보면 지워진다) */
 /* ⚑ T68 — uid «유일성» 보정. 종전엔 «uid 가 없는 항목»(`if(!g.u)`)만 봤다. 그래서 ① 같은 uid 가 둘인 세이브와
    ② `save.uid` 가 인벤 최대 uid 보다 뒤처진 세이브(구버전·부분 손상)가 그대로 통과했고, 그 다음 뽑기·합성이
    만든 신품이 **장착 중인 장비의 uid 를 그대로 재사용**했다. uid 는 인벤의 유일 키라(`invById`·`save.eq`·
@@ -1571,10 +1585,12 @@ function fusableKeys(){
 }
 function slotCardHTML(pt){
   const g=equippedGear(pt), lv=save.slots[pt]|0;
-  if(!g) return `<button class="slot-card empty" data-pt="${pt}"><span class="pt">${GT.partName[pt]}</span>➕<span class="lv">Lv.${lv}</span></button>`;
+  /* ⚑ T125 ①-c — 인벤에 더 좋은 장비가 있으면 «↑» 만 띄운다(자동으로 갈아끼우지 않는다). */
+  const up=betterInInv(pt)?'<span class="upmark">↑</span>':'';
+  if(!g) return `<button class="slot-card empty" data-pt="${pt}"><span class="pt">${GT.partName[pt]}</span>➕<span class="lv">Lv.${lv}</span>${up}</button>`;
   return `<button class="slot-card" data-pt="${pt}" style="border-color:${GT.rarColor[g.rar]};box-shadow:0 0 10px ${GT.rarGlow[g.rar]}">`+
     `<span class="pt">${GT.partName[pt]}</span>${gearIcon(g.type)}<span class="lv">Lv.${lv}</span>`+
-    `${g.plus?`<span class="plus">+${g.plus}</span>`:''}</button>`;
+    `${g.plus?`<span class="plus">+${g.plus}</span>`:''}${up}</button>`;
 }
 function renderGear(){
   renderTopBars();
@@ -1618,15 +1634,17 @@ function invCellHTML(g,o){
     `style="border-color:${GT.rarColor[g.rar]};background:linear-gradient(${GT.rarColor[g.rar]}55,${GT.rarColor[g.rar]}22)">`+
     `<span class="ptag" style="background:${GT.rarColor[g.rar]}">${GT.partName[g.part]}</span>`+
     `${gearIcon(g.type)}${g.plus?`<span class="plus">+${g.plus}</span>`:''}`+
-    `${isEquipped(g)?'<span class="eqm">장착</span>':''}${o.fus?'<span class="fus">3</span>':''}</button>`;
+    `${isEquipped(g)?'<span class="eqm">장착</span>':''}${g.nw?'<span class="nwm">NEW</span>':''}`+
+    `${o.fus?'<span class="fus">3</span>':''}</button>`;
 }
 $('fuseBtn').onclick=()=>{ AU.play('click'); openForge(); };
 
 /* ================= 합성 / 대장간 화면 (PLAN §11.3 · 참고: docs/ref/장비 합성 업글창.jpg) =================
    스크린샷의 «수동 3칸 선택» 구도: 재료 3칸 → ▲ → 결과 미리보기, 아래에 자동/합성 버튼과 인벤 그리드.
    ⚠ 산출물은 `fuseMake()` 하나만 쓴다 — 자동(fuseAll)과 규칙이 갈라질 수 없다.
-   ⚠ 재료 제한은 엔진(sim.js accRefresh)과 같은 «장착분도 재료» 다. PLAN §11.3 의 «장착 제외(위임)» 와
-      어긋나는 건 T41(승인 28번)로 등재돼 있고, 주인이 답하기 전에 게임만 바꾸면 sim 과 다시 벌어진다. */
+   ⚑⚑⚑ T125 ①-c (주인 확정 2026-09-04 21:2X) — 재료 제한이 **«장착분 제외»** 로 확정됐다(주인 «장착 중인 것은
+      재료 후보에서 제외 — 종전 규칙 유지»). 종전의 «장착분도 재료»(T41 · 승인 대기 28번)는 이로써 해소됐고,
+      게임이 PLAN §11.3 문면과 일치한다. `sim.js accRefresh` 는 «합성 후 즉시 재장착» 이 측정 정책이라 그대로다. */
 let FG=[];                                   /* 선택된 재료 uid 배열 (최대 3) */
 const fgMatsGear=()=>FG.map(invById).filter(Boolean);
 function fgKey(g){ return `${g.part}|${g.type}|${g.rar}`; }
@@ -1672,12 +1690,14 @@ function renderForge(){
   /* 인벤 — 선택된 것은 초록, 다른 키는 흐리게 */
   $('fgGrid').innerHTML = save.inv.length ? invSorted().map(g=>{
     const sel=FG.includes(g.u);
-    const off=lock&&!sel&&fgKey(g)!==lock;
+    const off=isEquipped(g)||(lock&&!sel&&fgKey(g)!==lock);   /* ⚑ T125 ①-c — 장착분은 재료 후보가 아니다 */
     return invCellHTML(g,{cls:(sel?'sel':'')+(off?' off':''),fus:!lock&&fk.has(fgKey(g))});
   }).join('') : `<div class="inv-empty">장비가 없습니다.<br>🏪 상점에서 뽑기로 장비를 얻으세요.</div>`;
   $('fgGrid').querySelectorAll('.inv-cell').forEach(b=>b.onclick=()=>{
     const g=invById(+b.dataset.u); if(!g) return;
     if(FG.includes(g.u)){ AU.play('click'); FG=FG.filter(u=>u!==g.u); renderForge(); return; }
+    /* ⚑ T125 ①-c — 장착 중인 장비는 재료가 되지 않는다(자동 장착이 없어져 그 부위가 빈 채 남기 때문). */
+    if(isEquipped(g)){ toast('장착 중인 장비는 재료가 되지 않습니다 — 먼저 해제하세요'); return; }
     if(lock&&fgKey(g)!==lock){ toast(`같은 부위·종류·등급만 재료가 됩니다 (${GT.partName[mats[0].part]} · ${GT.typeName[mats[0].type]} · ${GT.rarName[mats[0].rar]})`); return; }
     if(FG.length>=3){ toast('재료는 3개까지입니다'); return; }
     AU.play('click'); FG.push(g.u); renderForge();
@@ -1690,27 +1710,32 @@ $('fgFuse').onclick=()=>{
   const base=mats.slice().sort((a,b)=>b.plus-a.plus)[0], made=fuseMake(base);
   for(const m of mats){ const i=save.inv.indexOf(m); if(i>=0) save.inv.splice(i,1); }
   made.u=save.uid++; save.inv.push(made); save.fuses++;
-  FG=[]; autoEquipBest(); persist(); renderForge();
+  FG=[]; persist(); renderForge();                          /* ⚑ T125 ①-c — 자동 장착 없음 */
   toast(`🔨 ${GT.rarName[made.rar]} ${GT.typeName[made.type]}${made.plus?` +${made.plus}`:''} 완성!`);
 };
 $('fgAuto').onclick=()=>{
   AU.play('click');
   const before=save.inv.length;
-  const n=fuseAll(save.inv,new Set());
+  /* ⚑⚑⚑ T125 ①-c (주인 21:2X «장착 중인 것은 재료 후보에서 제외») — 자동 합성도 장착분은 안 먹는다.
+     자동 장착이 없어졌으므로 장착분을 재료로 쓰면 그 부위가 그대로 빈 채 남는다(종전엔 autoEquipBest 가 덮었다).
+     이로써 게임이 PLAN §11.3 «장착 중인 장비는 합성 재료에서 제외» 와 일치한다(승인 대기 28번 해소).
+     `sim.js` 의 accRefresh 는 측정 정책상 전체를 대상으로 합성하고 곧바로 재장착하므로 종전 그대로다. */
+  const n=fuseAll(save.inv,new Set(GT.parts.map(equippedGear).filter(Boolean)));
   for(const g of save.inv) if(!g.u) g.u=save.uid++;      /* fuseAll 이 만든 신품에 uid 부여 */
   save.fuses+=n; FG=[];
-  if(n){ AU.play('levelup'); autoEquipBest(); persist(); renderForge();
+  if(n){ AU.play('levelup'); persist(); renderForge();      /* ⚑ T125 ①-c — 자동 장착 없음 */
     toast(`🔨 ${n}회 합성 (장비 ${before} → ${save.inv.length})`); }
   else toast('합성할 조합이 없습니다 (같은 부위·종류·등급 3개)');
 };
-/* sim.js accRefresh() 와 같은 정책 — 부위별 최고 등급/강화를 항상 장착한다(gearScore 기준).
-   더 나쁜 장비를 일부러 끼워 둘 수는 없다(sim 과 계정 성장이 갈라지지 않게). */
-function autoEquipBest(){
-  const best=autoEquip(save.inv);
-  for(const pt of GT.parts){
-    const cur=equippedGear(pt);
-    if(best[pt]&&(!cur||gearScore(best[pt])>gearScore(cur))) save.eq[pt]=best[pt].u;
-  }
+/* ⚑⚑⚑ T125 ①-c (주인 확정 21:2X) — 게임 쪽 **자동 장착은 폐지**했다(종전 `autoEquipBest`).
+   뽑기·합성 결과는 인벤에만 들어가고, 장착은 유저가 장비 탭 → 인벤 칸 → «장착» 으로 직접 한다.
+   `autoEquip(inv)` 는 시뮬(`sim.js accRefresh`)의 측정 정책이라 엔진에는 그대로 남아 있다 — 게임에서는
+   «인벤에 더 좋은 게 있다» 는 **↑ 표시**만 계산한다(장착은 안 한다). */
+function betterInInv(pt){
+  const cur=equippedGear(pt);
+  let best=null;
+  for(const g of save.inv){ if(g.part!==pt||isEquipped(g))continue; if(!best||gearScore(g)>gearScore(best))best=g; }
+  return !!(best&&(!cur||gearScore(best)>gearScore(cur)));
 }
 function drawGearAvatar(){
   const cv=$('gearAvatar'), d=window.devicePixelRatio||1;
@@ -1752,6 +1777,7 @@ function slotUpgradeHTML(pt){ return slotCostHTML(pt)+slotNoteHTML(pt); }
 function openGearDetail(u){
   const g=invById(u);
   if(!g){ closeOverlay(); return; }
+  if(g.nw){ delete g.nw; persist(); }      /* ⚑ T125 ①-c — 한 번 열어 봤으면 «NEW» 는 지운다 */
   const lv=save.slots[g.part]|0, cost=GT.slotCost(lv), eqd=isEquipped(g);
   /* ⚑ T116 U02 — 레퍼런스 `장비 세부팝업.jpg` 의 구조로 재배치한다(두 비평가 공통 «가장 효과 큰 수정 2개» 중 하나):
      등급 배지가 상자 윗변에 걸치고 → 좌상 정사각 아이콘 + 오른쪽 이름줄·메타줄 2단 헤더 →
@@ -1786,7 +1812,7 @@ function openGearDetail(u){
       AU.play('coin'); save.gold-=c; save.slots[g.part]=(save.slots[g.part]|0)+1; persist(); openGearDetail(u); renderGear();
     };
   }else{
-    $('gdEq').onclick=()=>{ AU.play('click'); save.eq[g.part]=g.u; persist(); closeOverlay(); renderGear(); };
+    $('gdEq').onclick=()=>{ AU.play('click'); save.eq[g.part]=g.u; delete g.nw; persist(); closeOverlay(); renderGear(); };
   }
   $('gdClose').onclick=()=>{ AU.play('click'); closeOverlay(); };
 }
@@ -1842,8 +1868,11 @@ function renderShop(){
     <div class="shop-sec tight">⚔️ 장비 뽑기</div>
     <div class="gacha-card">
       <div class="ttl">전설의 상자</div>
+      <!-- ⚑ T125 ①-b (주인 21:1X) — 천장 문구는 «신화 확정까지 N회» · «전설 확정까지 N회» 두 줄이다.
+           N 은 GT.pityMyth·GT.pityLegend 에서 읽는다(하드코딩 금지 — 게이트가 문구 ↔ 상수를 대조한다). -->
       <div class="pity">${gachaRateText()}<br>
-        ${GT.pityMyth}회 천장까지 <b>${GT.pityMyth-st.p50}</b>회 · 전설 확정까지 <b>${GT.pityLegend-st.p10}</b>회 (누적 ${fmtQty(st.pulls)}회)</div>
+        신화 확정까지 <b>${GT.pityMyth-st.p50}</b>회<br>
+        전설 확정까지 <b>${GT.pityLegend-st.p10}</b>회 (누적 ${fmtQty(st.pulls)}회)</div>
       <div class="gacha-btns">
         <button id="pull1" ${save.gem<one?'disabled':''}>1회 💎${fmtQty(one)}</button>
         <button id="pull10" ${save.gem<ten?'disabled':''}>10회 💎${fmtQty(ten)}</button>
@@ -1867,16 +1896,22 @@ function doPull(n){
   if(save.gem<cost){ toast('💎 다이아가 부족합니다'); return; }
   AU.play('coin'); save.gem-=cost;
   const got=[];
+  /* ⚑ T125 — 한 회차가 2개를 줄 수 있다(신화 천장 × 전설 피티 겹침). 10연차면 결과가 11개로 뜬다. */
   for(let i=0;i<n;i++){
-    const raw=gachaPull(save.gacha);
-    const g=newGear(raw.part,raw.type,raw.rar,raw.plus);
-    save.inv.push(g); got.push(g); save.pulls++;
+    for(const raw of gachaPull(save.gacha)){
+      const g=newGear(raw.part,raw.type,raw.rar,raw.plus);
+      g.nw=1;                                  /* ⚑ T125 ①-c — «NEW» 뱃지(세부 팝업을 열면 지워진다) */
+      save.inv.push(g); got.push(g);
+    }
+    save.pulls++;
   }
-  autoEquipBest(); persist(); renderShop();
+  /* ⚑⚑⚑ T125 ①-c (주인 21:2X «뽑기만 하고 장착 안 했는데 자동 장착되는 거 안 되게») —
+     여기 있던 `autoEquipBest()` 를 없앴다. 뽑은 장비는 인벤에만 들어가고 장착은 장비 탭에서 유저가 한다. */
+  persist(); renderShop();
   const best=got.reduce((a,b)=>gearScore(b)>gearScore(a)?b:a);
   AU.play(best.rar>=3?'levelup':'perk');
-  openOverlay(`<div class="ov-banner" style="font-size:24px">🎁 ${n}회 뽑기</div>
-    <div class="ov-sub">최고 등급 <b style="color:${GT.rarColor[best.rar]}">${GT.rarName[best.rar]}</b> · 빈 부위는 자동 장착됩니다</div>
+  openOverlay(`<div class="ov-banner" style="font-size:24px">🎁 ${n}회 뽑기${got.length>n?` · <b style="color:var(--gold)">${got.length}개</b>`:''}</div>
+    <div class="ov-sub">최고 등급 <b style="color:${GT.rarColor[best.rar]}">${GT.rarName[best.rar]}</b> · 인벤토리에 담겼습니다 — 장착은 ⚔️ 장비 탭에서</div>
     <div class="pull-list">${got.map(g=>
       `<div class="inv-cell" style="border-color:${GT.rarColor[g.rar]};box-shadow:0 0 9px ${GT.rarGlow[g.rar]};background:linear-gradient(${GT.rarColor[g.rar]}55,${GT.rarColor[g.rar]}22)">`+
       `<span class="ptag" style="background:${GT.rarColor[g.rar]}">${GT.partName[g.part]}</span>${gearIcon(g.type)}</div>`).join('')}</div>
