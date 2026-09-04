@@ -204,9 +204,11 @@ const SEED_GEAR = () => {
   await p.waitForTimeout(250);
   await shot('gear', '장비 탭');
 
-  /* 장비 세부 팝업 — 장착 중인 무기 */
+  /* 장비 세부 팝업 — 장착 중인 무기
+     ⚑ T122 — 팝업은 `.ov-inner{animation:popIn .34s}` 라 250ms 면 여기도 애니메이션 도중이다
+     (실측 회차 간 차이는 0.00004%p 로 인쇄 정밀도 0.1%p 밖이지만, 자는 자다). */
   await p.evaluate(() => { openGearDetail(save.inv[0].u); });
-  await p.waitForTimeout(250);
+  await p.waitForTimeout(700);
   await shot('gearpop', '장비 세부 팝업');
   await p.evaluate(() => closeOverlay());
 
@@ -239,19 +241,38 @@ const SEED_GEAR = () => {
   await p.screenshot({ path: path.join(OUT, 'shot-battleFoe.png') });
   console.log('\n=== battleFoe — 전투 (적 발견) === (요소는 battle 과 같은 자를 쓴다)');
 
-  /* 특전 획득 팝업 — 3개 획득 상태에서 4번째를 받는 순간 */
+  /* 특전 획득 팝업 — 3개 획득 상태에서 4번째를 받는 순간
+   * ⚑ T122 — 종전 이 자리는 `grantNextPerk()` 를 불렀는데 그 동사는 **`sim.js` 전용**이다
+   *   (`verifyT2` ⑯·`verifyDevilPolicy` 가 «index.html 에 있으면 빨강» 으로 못 박은 이름).
+   *   T117 이 3택을 되살리면서 게임 쪽 지급 동사가 `offerPerks`(굴림) / `pickPerk`(적용) 둘로 갈렸고,
+   *   하니스만 옛 이름에 남아 `ReferenceError: grantNextPerk is not defined` 로 부팅부터 죽어 있었다.
+   *   지금은 **두 엔진 공용 동사 `pickPerk`** 로 표 앞에서부터 안 가진 것 3장을 채운다 —
+   *   굴림을 안 거치므로 «어느 3장을 들고 있나» 가 회차마다 같다(이 파일 머리의 «상태는 재현 가능하게» 규약).
+   *   `pickPerk` 가 `renderPerkStrip` 을 스스로 부르므로 여기서 다시 부르지 않는다. */
   await p.evaluate(() => {
     G.paused = true;
-    while (G.perksTaken.length < 3) grantNextPerk();
-    renderPerkStrip(); renderStatsGrid();
-    openLevelUp();
+    for (const pk of PERKS) {
+      if (G.perksTaken.length >= 3) break;
+      if (G.perksTaken.indexOf(pk) < 0) pickPerk(pk);
+    }
+    renderStatsGrid();
+    /* 선택창에 뜨는 3장은 `offerPerks` 의 등급 굴림 결과다 — 카드 문구 길이가 줄수(= 카드 높이)를 바꿔
+       레이아웃 실측까지 흔들리므로, **굴림 동안만** 고정 시드 난수로 바꿔 회차 간 자를 같게 만든다.
+       게임 코드는 한 줄도 안 건드린다(T116 ①) — 원래 `Math.random` 은 곧바로 되돌린다. */
+    const rnd0 = Math.random;
+    let s = 20260904;
+    Math.random = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
+    try { openLevelUp(); } finally { Math.random = rnd0; }
   });
-  await p.waitForTimeout(250);
+  /* ⚑ T122 — 이 두 팝업만 250ms 로는 **등장 애니메이션 도중**을 잰다
+     (배너 `bannerDrop .45s` · 카드 `slideUp .35s` + 카드별 지연 최대 .18s → 최대 .53s).
+     실제로 2회 실행에서 카드 y 가 0.04%p 씩 달라져 «자» 가 회차마다 흔들렸다 — 끝난 뒤에 잰다. */
+  await p.waitForTimeout(700);
   await shot('perk', '특전 획득 팝업');
 
   /* 특전 인포(보유 특전) 팝업 */
   await p.evaluate(() => { document.getElementById('perkBookBtn').click(); });
-  await p.waitForTimeout(250);
+  await p.waitForTimeout(700);
   await shot('perkbook', '특전 인포 팝업');
 
   fs.writeFileSync(path.join(OUT, 'layout.json'), JSON.stringify(layout, null, 1));
