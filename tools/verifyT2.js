@@ -91,7 +91,7 @@ else {
    그래서 «102 인가» 가 아니라 «두 파일이 같은가 + 등급별 편차 ≤ PERK_RAR_GAP» 을 본다.
    T48 이 각 등급 33종(총 132)까지 채웠고, T77(주인 확정 «전투 무관 특전 4종 삭제»)이
    일반 2종(c_gold30·c_walk20)·신화 2종(m_gold2·m_sage)을 빼 31/33/33/31 = 128종, 편차 2 가 됐다. */
-const PERK_TOTAL = 77;   /* ⚑⚑⚑ T121 — 주인 확정 «풀 77종(일반 35 · 희귀 25 · 전설 17)». T119 의 32종(15/8/9)에서 신규 45종이 더 붙었다(16:0X ~ 17:4X) */
+const PERK_TOTAL = 99;   /* ⚑⚑⚑ T121 3차 — 주인 확정 «풀 99종(일반 39 · 희귀 32 · 전설 28)». 77종(16:0X~17:4X)에서 22종이 더 붙었다(17:5X ~ 18:4X) */
 console.log(`\n[② 특전 ${PERK_TOTAL}종 — id·순서·ap 본문 두 엔진 대조]`);
 const S = simPerks(), H = htmlPerks();
 if (!H) { bad('index.html 에서 const PERKS=[...] 를 찾지 못했다'); }
@@ -176,7 +176,7 @@ const FORMULAS = [
   /* ⚑⚑⚑ T119 — 등급 굴림 확률·등급 이름이 두 엔진에서 같은 배열인가 (값 대조는 verifyPerkOrder ① 가 한다) */
   ['등급 굴림 확률(PERK_GRADE_RATE)', /const PERK_GRADE_RATE=\[60,25,15\];/, /const PERK_GRADE_RATE=\[60,25,15\];/],
   /* ⚑ T121 (주인 확정 16:2X·16:3X) — 기존 4종이 내려가 상수 줄이 통째로 바뀌었다(1.20/10/10 → 1.15/8/8). */
-  ['특전 소환 확률 상수', /const PERK_ATK_M=1\.15, PERK_DEF_M=1\.10/, /const PERK_ATK_M=1\.15, PERK_DEF_M=1\.10/],
+  ['특전 소환 확률 상수', /const PERK_ATK_M=1\.15, PERK_DEF_M=1\.08/, /const PERK_ATK_M=1\.15, PERK_DEF_M=1\.08/],
   ['경험치 요구식', /expNeed:lv=>5\*lv\+1/, /expNeed=lv=>5\*lv\+1/],   /* ⚑⚑⚑ T100 — 4+3*lv → 5*lv+1 */
 ];
 /* ⚑ T1 회귀2 R02 — 세 번째 칸이 «함수» 면 sim.js 에서 뽑은 값을 넣어 index.html 쪽 정규식을 만든다.
@@ -1456,12 +1456,15 @@ console.log('\n[㉕ 횟수형 방어막 (PLAN §3.0, T48 3단계)]');
     !/wardCap|WARD_CAP/.test(body)
       ? ok(`${who}: 방어막 장수에 상한이 없다 (주인 확정 «무한»)`)
       : bad(`${who}: 방어막 장수 상한이 되살아났다 — 주인 확정 «무한» 위반`);
-    /const warded=p\.ward>0;/.test(body) && /p\.ward--/.test(body)
-      ? ok(`${who}: 방어막 소모 판정(warded)이 피격 1회당 1장이다`)
-      : bad(`${who}: 방어막 소모 판정(warded)이 없다`);
-    /const nulled=warded;/.test(body)
-      ? ok(`${who}: 막은 타격은 데미지가 완전 무효다 (방어력·실드·체력 무손실)`)
-      : bad(`${who}: 막은 타격이 완전 무효가 아니다`);
+    /* ⚑⚑⚑ T121 3차 (주인 확정 18:2X) — 판정 순서가 **회피 → 방어막 → 피해 무시 → 피해** 로 못 박히고,
+       막힌 타격은 «피격» 이 아니게 됐다(트리거·가시갑옷 없음). 그래서 종전의 `const warded` / `const nulled`
+       두 갈래가 «1장 소모하고 그 자리에서 끝난다» 한 줄로 합쳐졌다 — 그 모양을 여기서 못 박는다. */
+    /if\(p\.ward>0\)\{[\s\S]{0,200}?p\.ward--;[\s\S]{0,200}?return;/.test(body)
+      ? ok(`${who}: 방어막이 피격 1회당 1장을 소모하고 그 타격은 «피격» 이 아니다 (⚑ 주인 18:2X)`)
+      : bad(`${who}: 방어막 소모·조기 종료 판정이 없다`);
+    /const ign1=px\.p_ignoreN&&pkk\(p,PERK_IGN_N\);/.test(body) && /const ign2=p\.sh>0&&px\.p_shWallL&&pkk\(p,PERK_SHWALL_L\);/.test(body)
+      ? ok(`${who}: «피해 무시»·«실드 방벽» 이 방어막 «뒤» 에서 각각 따로 굴고, 걸리면 피해도 «피격» 도 없다`)
+      : bad(`${who}: «피해 무시»·«실드 방벽» 판정이 방어막 뒤에 없다`);
   }
   /ward-ic/.test(HTML) ? ok('index.html: 버프바에 남은 장수 뱃지(.ward-ic)') : bad('index.html: 방어막 장수 뱃지가 없다');
   /function wardFx\(/.test(HTML) ? ok('index.html: 막을 때 전용 이펙트(wardFx)') : bad('index.html: 방어막 전용 이펙트가 없다');

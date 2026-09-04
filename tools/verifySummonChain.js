@@ -257,5 +257,71 @@ console.log('\n=== ⑤ ⚑ T119 처치 축 연쇄 (처치 시 소환 4종) ===')
   }
 }
 
+/* ---------- ⑥ ⚑⚑⚑ T121 3차 치명 축 연쇄 (주인 확정 2026-09-04 17:5X · 18:4X) ----------
+   «치명 시 창»(희귀 33% · 전설 66%)·«치명 시 번개»(전설 66%)가 «치명타 시» 축에 **소환을 처음** 붙였다.
+   소환 적중도 «공격» 이라(주인 15:3X · T45) 소환 → 치명타 → 새 소환이 자기를 다시 부른다. 번개는 즉발이라
+   한 호출 안에서 재귀하므로, 두 엔진 모두 이 셋을 **소환 적중 트리거와 같은 틱 예산**(PROC_TICK_CAP)으로
+   묶어 재귀를 끊는다(주인 명시 허용 성능 가드 · 데미지는 그대로).
+   주인 지시대로 여기서는 **재기만 하고 확률·발수는 깎지 않는다** — 임계를 넘으면 승인 대기에 등재한다.
+   ⚑ 최악 조합은 «광전사 빼고 전부» 다 — 광전사는 치확을 0 으로 고정해 이 축을 통째로 죽이기 때문에
+     «전부 보유» 로 재면 B_crit = 0 이 나와 검사가 조용히 죽는다. */
+console.log('\n=== ⑥ ⚑ T121 3차 치명 축 연쇄 (치명 시 창·번개) ===');
+{
+  const CAP_CRIT = 0.8;        /* 주인 확정 임계 (표시만 — ③④ 와 같은 규약) */
+  const BASE_B_CRIT = 8.0;     /* 등재 기준선 — 아래 실측(웨이브 10마리)을 올림한 값. 이 위로 가면 불합격 */
+  const WAVE = 10;
+  const CUT3 = "const mode=process.argv[2]||'all';";
+  const at3 = SIM.indexOf(CUT3);
+  const ctx = { console: { log() { } }, process, Math, JSON, Number, String, Array, Set, Map, Object, Date, parseInt, parseFloat, isFinite, isNaN, require };
+  vm.createContext(ctx);
+  vm.runInContext(SIM.slice(0, at3) + '\n;globalThis.__C={summonHit,PERKS,basePx,PROC_TICK_CAP,PERK_CRITSP_R,PERK_CRITSP_L,PERK_CRITBOLT_L,ENEMY_EVADE};', ctx);
+  const C = ctx.__C || ctx.globalThis.__C;
+  /* 두 엔진이 같은 가드·같은 확률을 쓰는가 (정적) */
+  const guard = /if\(\(px\.p_critSpearR\|\|px\.p_critSpearL\|\|px\.p_critBoltL\)&&G\.procN<PROC_TICK_CAP\)/;
+  (guard.test(SIM.replace(/\s+/g, '')) || guard.test(SIM)) && (guard.test(HTML.replace(/\s+/g, '')) || guard.test(HTML))
+    ? pass('두 엔진의 치명 축 소환이 같은 틱 예산(PROC_TICK_CAP) 가드 안에 있다 — 즉발 번개의 무한 재귀 차단')
+    : fail('치명 축 소환이 틱 예산 가드 밖에 있다 — 번개가 자기를 무한히 다시 부른다(스택 폭주)');
+  const mk = () => {
+    const nd = { type: 'wave', x: 0, done: false, enemies: [] };
+    for (let j = 0; j < WAVE; j++) nd.enemies.push({ worldX: 100 + j * 40, hp: 1e15, maxHp: 1e15, dmg: 1, ranged: false, atkTimer: 1, stun: 0, slow: 0, wave: nd, dead: false, isBoss: false, exp: 0 });
+    const p = {
+      worldX: 0, dmg: 100, aspd: 1, critR: 0, critF: 150, def: 0, counter: 0, evade: 0, steal: 0, killHeal: 0,
+      misfire: 0, goldMul: 1, walkMul: 1, healAmp: 0, repairAmp: 0, nextCrit: false, nextAtk: 0, ward: 0,
+      maxHp: 1e9, hp: 1e9, maxSh: 0, sh: 0, level: 1, exp: 0, critStk: 0, nhit: {}, collHpF: 1,
+      sureCrit: false, bsStk: 0, dash: false,
+      buffs: { atk: [], aspd: [], critR: [], critF: [], def: [], evade: [] }, px: C.basePx(),
+    };
+    const G = { chapter: 1, player: p, nodes: [nd], pprojs: [], arrows: [], gold: 0, kills: 0, procN: 0,
+      perkChances: 0, taken: [], overBoltCd: 0, autoBoltT: 3, autoSumT: 2, rampT: 3, stuns: 0, misses: 0,
+      dead: false, cleared: false, t: 0, atkTries: 0, miss: 0, noPerk: false };
+    p.G = G;
+    for (const k of C.PERKS) { if (k.id === 'p_berserk') continue; k.ap(p); G.taken.push(k); }   /* 광전사만 뺀다 */
+    return { G, e: nd.enemies[0] };
+  };
+  const N = 20000; let s2 = 0;
+  for (let i = 0; i < N; i++) {
+    const { G, e } = mk();
+    G.procN = C.PROC_TICK_CAP - 1;      /* 1세대 격리 — 바깥 적중의 치명 소환만 굴고 손자 세대는 예산에서 막힌다 */
+    C.summonHit(G, e, 0.75);
+    s2 += G.pprojs.length + (G.atkTries - 1);
+  }
+  const bc = s2 / N;
+  const pHit = 1 - C.ENEMY_EVADE;
+  const want = pHit * (C.PERK_CRITSP_R + C.PERK_CRITSP_L + C.PERK_CRITBOLT_L * WAVE);   /* 치확은 이 조합에서 100% */
+  console.log(`    분석 B_crit ≈ ${want.toFixed(3)} = 적중 ${pct(pHit)} × (창 ${C.PERK_CRITSP_R} + 창 ${C.PERK_CRITSP_L} + 번개 ${C.PERK_CRITBOLT_L}×${WAVE})`);
+  console.log(`    실측(${N.toLocaleString('en-US')}회 · 웨이브 ${WAVE}마리) B_crit = ${bc.toFixed(3)}`);
+  bc <= BASE_B_CRIT
+    ? pass(`실측 ${bc.toFixed(3)} ≤ 등재 기준선 ${BASE_B_CRIT} — 치명 축 연쇄가 더 세지지 않았다`)
+    : fail(`실측 ${bc.toFixed(3)} > 등재 기준선 ${BASE_B_CRIT} — 치명 축이 더 세졌다. 확률·발수를 올렸다면 되돌리고, 주인이 승인한 상향이면 BASE_B_CRIT 를 갱신할 것`);
+  Math.abs(bc - want) <= Math.max(0.5, want * 0.15)
+    ? pass(`분석 ${want.toFixed(3)} ≈ 실측 ${bc.toFixed(3)} — 확률·대상 수가 확정표대로다`)
+    : note(`분석 ${want.toFixed(3)} vs 실측 ${bc.toFixed(3)} — 전장 조건 차이(관통·랜덤 타겟). 단언은 실측 쪽이 정본이다`);
+  bc > CAP_CRIT
+    ? note(`B_crit ${bc.toFixed(3)} > 주인 확정 임계 ${CAP_CRIT} — **주인이 직접 정한 33/66 확률이라 워커가 깎지 않는다.** ` +
+           `처치 축(⑤)과 달리 이 축은 «한 적은 한 번만 죽는다» 같은 구조적 유한성이 없어 B > 1 이면 발산한다 — ` +
+           `지금은 두 엔진의 틱 예산 가드(PROC_TICK_CAP)가 한 프레임당 트리거 수를 끊는 것이 유일한 수렴 장치다. PROGRESS «주인 승인 대기» 참조`)
+    : pass(`B_crit ${bc.toFixed(3)} ≤ 주인 확정 임계 ${CAP_CRIT}`);
+}
+
 console.log(`\n결과: ${okN} 통과 · ${bad} 실패`);
 process.exit(bad ? 1 : 0);

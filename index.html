@@ -1907,9 +1907,12 @@ function effDmg(p){
   const px=p.px; let m=1+bsum(p,'atk');
   if(px.rage&&p.sh<=0) m*=1.5;                       /* 장비 옵션 */
   if(px.p_collAtk) m*=1+PERK_COLL_ATK*perkCountOf(p);   /* ⚑ T121 수집가·공격 — 보유 특전 하나당 +4% (곱연산) */
+  /* ⚑ T121 3차 «실드 없을 때 공격력»(주인 확정 18:2X) — 실드가 0 인 동안만, 실드가 다시 생기면 꺼진다 */
+  if(px.p_noShAtk&&p.sh<=0) m*=PERK_NOSH_ATK;
   return p.dmg*m;
 }
-function effAspd(p){ return p.aspd*(1+bsum(p,'aspd')); }
+/* ⚑ T121 3차 «실드 없을 때 공속» — 위와 같은 상시 조건부(곱연산) */
+function effAspd(p){ return p.aspd*(1+bsum(p,'aspd'))*(p.px.p_noShAspd&&p.sh<=0?PERK_NOSH_ASPD:1); }
 /* ⚑ T119 광전사(전설 6) — 치명타 확률을 **0 으로 고정**한다(치확 +10 특전·버프·장비 옵션이 있어도 0).
    sim.js effCritR 와 1:1 — 여기 한 자리에서 막으므로 «치명타 시» 트리거도 함께 죽는다. */
 /* ⚑ T121 — 수집가·치명(보유 특전 하나당 +2, 가산)과 치명 스택(평타 적중 누적)이 여기서 합쳐진다.
@@ -1964,8 +1967,10 @@ function heal(p,amt,noBoost){
    (게이트가 두 엔진 + PLAN 을 대조한다). 등급이 없으므로 카드 색은 한 가지다. */
 /* ⚑⚑⚑ T121 (주인 확정 2026-09-04 16:2X·16:3X) — 기존 일반 4종 하향 + 9번 치피 +50 → +30.
    sim.js 와 같은 이름·같은 값(게이트가 두 엔진을 대조한다). 적 스탯 재적합은 없다(T120 ④ 상시 규칙). */
-const PERK_ATK_M=1.15, PERK_DEF_M=1.10, PERK_EVADE_A=8, PERK_COUNTER_A=8,
-      PERK_CRITR_A=8, PERK_CRITF_A=30, PERK_EVHEAL_CH=0.10, PERK_EVHEAL_F=0.06, PERK_SUMMON_CH=1.00;
+/* ⚑ 18:1X·18:2X 주인 재정정 — 1번 «회피 시 회복» 10 → 8% · 10번 «방어력 증가» +10 → +8%.
+   ⚑ 17:5X — `PERK_SUMMON_CH`(단일 100%)는 이제 «반격 시 창» 하나만 쓴다(주인 언급 없어 100% 유지). */
+const PERK_ATK_M=1.15, PERK_DEF_M=1.08, PERK_EVADE_A=8, PERK_COUNTER_A=8,
+      PERK_CRITR_A=8, PERK_CRITF_A=30, PERK_EVHEAL_CH=0.08, PERK_EVHEAL_F=0.06, PERK_SUMMON_CH=1.00;
 /* ⚑⚑⚑ T119 신규 상수 (주인 확정 2026-09-04 13:0X) — sim.js 와 같은 이름·같은 값(게이트가 두 엔진을 대조).
    처치 시 소환 33/66/100 은 주인이 직접 정한 값이라 «10% 단위» 규칙 밖이다. 가시갑옷은 «100% = 1배». */
 const PERK_KILL_N=0.33, PERK_KILL_R=0.66, PERK_KILL_L=1.00,
@@ -1982,7 +1987,7 @@ const PERK_KILLEV_A=40, PERK_KILLEV_T=2,                       /* 처치 시 회
       PERK_ASPDATK_A=0.07, PERK_ASPDATK_T=7,                   /* 공격 시 공속 +7% 7초 (중첩) */
       PERK_EXEC_N=0.05, PERK_EXEC_R=0.10, PERK_EXEC_L=0.15,    /* 회피 시 즉사 I/II/III — 각각 따로 굴린다 */
       PERK_STUNC_N=0.10, PERK_STUNC_R=0.20, PERK_STUNC_L=0.30, PERK_STUNC_T=3,  /* 치명타 시 스턴 I/II/III */
-      PERK_NHEAL_F=0.05,                                       /* 4타 회복 — 최대 체력 5% */
+      PERK_NHEAL_F=0.06,                                       /* 5타 회복 — 최대 체력 6% (⚑ 18:0X 재정정) */
       PERK_CRITF_R=60, PERK_CRITR_R=16, PERK_COUNTER_R=16, PERK_EVADE_R=16, PERK_ATK_R=1.30,  /* 희귀 «II» 5종 */
       PERK_GIANT_M=3.00, PERK_GIANT_ASPD=2/3;                  /* 거인의 힘 — 공 ×3 · 공속 ×2/3 (둘 다 곱연산) */
 /* ⚑⚑⚑ T121 2차 추가 상수 (주인 확정 16:5X · 17:0X · 17:2X · 17:4X) — sim.js 와 같은 이름·같은 값. */
@@ -1994,7 +1999,19 @@ const PERK_EVSTUN_CH=0.30,                                       /* 회피 시 �
       PERK_CLEAVE_N=0.33, PERK_CLEAVE_R=0.66, PERK_CLEAVE_L=1.00;/* 관통 베기 I/II/III — 셋 다 따로 굴린다 */
 /* «N타마다» 주기 — 평타 횟수 기준(빗나감 포함 · 반격·소환 제외 · 특전마다 자기 카운터).
    ⚑ 17:3X 주인 정정 — 화살 3타 → **2타** · 도끼/번개/창/회복 4타 → **3타**. */
-const PERK_NHIT_ARROW=2, PERK_NHIT_AXE=3, PERK_NHIT_BOLT=3, PERK_NHIT_SPEAR=3, PERK_NHIT_HEAL=3;
+const PERK_NHIT_ARROW=2, PERK_NHIT_AXE=3, PERK_NHIT_BOLT=3, PERK_NHIT_SPEAR=3, PERK_NHIT_HEAL=5;
+/* ⚑⚑⚑ T121 3차 추가 상수 (주인 확정 17:5X · 18:0X · 18:2X · 18:4X) — 신규 22종이 쓰는 수치.
+   sim.js 와 같은 이름·같은 값(게이트가 두 엔진을 대조한다). */
+const PERK_SUMMON_N=0.33, PERK_SUMMON_R=0.66, PERK_SUMMON_L=1.00, /* 회피 시 화살 · 피격 시 도끼 I/II/III */
+      PERK_SUMMON_SP=0.33,                                       /* 회피 시 창 · 피격 시 창 (전설) */
+      PERK_CRITSP_R=0.33, PERK_CRITSP_L=0.66, PERK_CRITBOLT_L=0.66, /* 치명 시 창(희귀 33 · 전설 66) · 치명 시 번개(전설 66) */
+      PERK_EVHEAL_R=0.15,                                        /* 회피 시 회복 II — 15% · 최대 체력 6%(PERK_EVHEAL_F) */
+      PERK_EVREP_R=0.15, PERK_EVREP_L=0.25, PERK_EVREP_F=0.06,    /* 회피 시 수리 I/II — 15/25% · 최대 실드 6% */
+      PERK_DEF_R=1.16, PERK_DEF_L=1.24,                          /* 방어력 증가 II/III — 곱연산(상한 80 은 엔진 규칙) */
+      PERK_IGN_N=0.20,                                           /* 피해 무시 — 피격 20% (회피·방어막 «뒤») */
+      PERK_SHWALL_L=0.50, PERK_SHREF_L=0.50,                     /* 실드 방벽 · 실드 반사 — 실드 > 0 일 때 각 50% */
+      PERK_NOSH_ATK=1.50, PERK_NOSH_ASPD=1.30,                   /* 실드 0 인 동안 공격력 +50% · 공속 +30% */
+      PERK_WARD_N=0.10, PERK_WARD_R=0.20, PERK_WARD_L=0.30;      /* 피격 시 방어막 I/II/III — 스택형·장수 무제한 */
 const PERK_GRADE_RATE=[60,25,15];                      /* 일반 60 / 희귀 25 / 전설 15 (⚑ 13:2X 주인 정정) */
 const PERK_GRADE_NAME=['일반','희귀','전설'];
 /* 등급 테두리 색 부활 (위임 기본값 — 주인 «등급 테두리 색 부활»): 일반 회색 · 희귀 파랑 · 전설 금색 */
@@ -2006,16 +2023,16 @@ const PERK_GRADE_COLOR=['#9EA3AC','#4FA3F7','#FFB92E'];
    ⚑ «처치 시 X» 4계열은 등급이 확률만 갱신(최댓값)하고, 가시갑옷만 가산 중첩이다(주인 확정). */
 const kmax=(p,k,v)=>{ p.px[k]=Math.max(p.px[k]||0,v); };
 const PERKS=[
-  {id:'p_evadeHeal',g:0,nm:'회피 시 회복',    ic:'🍀',  tx:'회피 시 <b>10%</b> 확률로 최대 체력 <b>6%</b> 회복', ap:p=>p.px.p_evadeHeal=1},
+  {id:'p_evadeHeal',g:0,nm:'회피 시 회복',    ic:'🍀',  tx:'회피 시 <b>8%</b> 확률로 최대 체력 <b>6%</b> 회복', ap:p=>p.px.p_evadeHeal=1},
   {id:'p_atk',     g:0,nm:'공격력 증가',      ic:'⚔️',  tx:'공격력 <b>+15%</b>',                  ap:p=>{p.px.p_atk=1; p.dmg*=PERK_ATK_M;}},
   {id:'p_evade',   g:0,nm:'회피율 증가',      ic:'💨',  tx:'회피율 <b>+8</b>',                    ap:p=>{p.px.p_evade=1; p.evade+=PERK_EVADE_A;}},
-  {id:'p_arrowEv', g:0,nm:'회피 시 화살',     ic:'🏹',  tx:'회피 시 화살 <b>1개</b>',             ap:p=>p.px.p_arrowEv=1},
-  {id:'p_axeHit',  g:0,nm:'피격 시 도끼',     ic:'🪓',  tx:'피격 시 도끼 <b>1개</b>',             ap:p=>p.px.p_axeHit=1},
+  {id:'p_arrowEv', g:0,nm:'회피 시 화살',     ic:'🏹',  tx:'회피 시 <b>33%</b> 확률로 화살 <b>1개</b>', ap:p=>p.px.p_arrowEv=1},
+  {id:'p_axeHit',  g:0,nm:'피격 시 도끼',     ic:'🪓',  tx:'피격 시 <b>33%</b> 확률로 도끼 <b>1개</b>', ap:p=>p.px.p_axeHit=1},
   {id:'p_counter', g:0,nm:'반격률 증가',      ic:'🔁',  tx:'반격률 <b>+8</b>',                    ap:p=>{p.px.p_counter=1; p.counter+=PERK_COUNTER_A;}},
   {id:'p_spearCt', g:0,nm:'반격 시 창',       ic:'🔱',  tx:'반격 시 창 <b>1개</b>',               ap:p=>p.px.p_spearCt=1},
   {id:'p_critR',   g:0,nm:'치명타 확률 증가', ic:'🎯',  tx:'치명타 확률 <b>+8</b>',               ap:p=>{p.px.p_critR=1; p.critR+=PERK_CRITR_A;}},
   {id:'p_critF',   g:0,nm:'치명타 피해 증가', ic:'💥',  tx:'치명타 피해 <b>+30</b>',              ap:p=>{p.px.p_critF=1; p.critF+=PERK_CRITF_A;}},
-  {id:'p_def',     g:0,nm:'방어력 증가',      ic:'🛡️',  tx:'방어력 <b>+10%</b>',                  ap:p=>{p.px.p_def=1; p.def*=PERK_DEF_M;}},
+  {id:'p_def',     g:0,nm:'방어력 증가',      ic:'🛡️',  tx:'방어력 <b>+8%</b>',                   ap:p=>{p.px.p_def=1; p.def*=PERK_DEF_M;}},
   /* ===== ⚑ T119 신규 일반 5종 ===== */
   {id:'p_killSpearN',g:0,nm:'처치 시 창',   ic:'🔱',  tx:'처치 시 <b>33%</b> 확률로 창 <b>1개</b>',   ap:p=>{p.px.p_killSpearN=1; kmax(p,'p_killSpear',PERK_KILL_N);}},
   {id:'p_killBoltN', g:0,nm:'처치 시 번개', ic:'⚡',  tx:'처치 시 <b>33%</b> 확률로 보이는 적 전부에게 번개 <b>1회</b>씩', ap:p=>{p.px.p_killBoltN=1; kmax(p,'p_killBolt',PERK_KILL_N);}},
@@ -2037,13 +2054,18 @@ const PERKS=[
   {id:'p_nArrowN',   g:0,nm:'2타 화살',       ic:'🏹',  tx:'<b>2타</b>마다 무작위 적에게 화살 <b>1개</b>', ap:p=>p.px.p_nArrowN=1},
   {id:'p_nAxeN',     g:0,nm:'3타 도끼',       ic:'🪓',  tx:'<b>3타</b>마다 무작위 적에게 도끼 <b>1개</b>', ap:p=>p.px.p_nAxeN=1},
   {id:'p_nBoltN',    g:0,nm:'3타 번개',       ic:'⚡',  tx:'<b>3타</b>마다 무작위 적에게 번개 <b>1회</b>', ap:p=>p.px.p_nBoltN=1},
-  {id:'p_nHealN',    g:0,nm:'3타 회복',       ic:'❣️',  tx:'<b>3타</b>마다 최대 체력 <b>5%</b> 회복',  ap:p=>p.px.p_nHealN=1},
+  {id:'p_nHealN',    g:0,nm:'5타 회복',       ic:'❣️',  tx:'<b>5타</b>마다 최대 체력 <b>6%</b> 회복',  ap:p=>p.px.p_nHealN=1},
   /* ===== ⚑⚑⚑ T121 2차 신규 일반 5종 (주인 확정 16:5X · 17:0X ×2 · 17:2X · 17:4X) ===== */
   {id:'p_evadeStun', g:0,nm:'회피 시 스턴',   ic:'💫',  tx:'회피 시 <b>30%</b> 확률로 공격한 적 <b>3초</b> 스턴', ap:p=>p.px.p_evadeStun=1},
   {id:'p_ctCritN',   g:0,nm:'반격 치명',      ic:'🔁',  tx:'반격 시 치명타 확률 <b>+20</b>',           ap:p=>p.px.p_ctCritN=1},
   {id:'p_ctDmgN',    g:0,nm:'반격 강화',      ic:'🔁',  tx:'반격 데미지 <b>+30%</b>',                  ap:p=>p.px.p_ctDmgN=1},
   {id:'p_killSureCrit',g:0,nm:'처치 시 확정 치명',ic:'🎯',tx:'처치 시 다음 공격은 반드시 치명타',      ap:p=>p.px.p_killSureCrit=1},
   {id:'p_cleaveN',   g:0,nm:'관통 베기',      ic:'🗡️',  tx:'공격 시 <b>33%</b> 확률로 바로 뒤 적도 같은 데미지', ap:p=>p.px.p_cleaveN=1},
+  /* ===== ⚑⚑⚑ T121 3차 신규 일반 4종 (주인 확정 18:2X — 실드·방어막 축) ===== */
+  {id:'p_ignoreN',   g:0,nm:'피해 무시',      ic:'🚫',  tx:'피격 시 <b>20%</b> 확률로 그 피격 데미지 무시', ap:p=>p.px.p_ignoreN=1},
+  {id:'p_noShAtk',   g:0,nm:'실드 없을 때 공격력',ic:'💢',tx:'실드가 <b>0</b> 인 동안 공격력 <b>+50%</b>', ap:p=>p.px.p_noShAtk=1},
+  {id:'p_noShAspd',  g:0,nm:'실드 없을 때 공속',ic:'💨',tx:'실드가 <b>0</b> 인 동안 공격속도 <b>+30%</b>', ap:p=>p.px.p_noShAspd=1},
+  {id:'p_wardHitN',  g:0,nm:'피격 시 방어막',  ic:'🔰',  tx:'피격 시 <b>10%</b> 확률로 방어막 <b>1장</b>', ap:p=>p.px.p_wardHitN=1},
   /* ===== ⚑ T119 희귀 8종 ===== */
   {id:'p_fullHp',    g:1,nm:'풀피 적 강타', ic:'🎯',  tx:'체력이 가득 찬 적 공격 시 데미지 <b>+100%</b>', ap:p=>p.px.p_fullHp=1},
   {id:'p_repairUp',  g:1,nm:'수리 증폭',    ic:'🔧',  tx:'실드 수리량 <b>+100%</b>',                ap:p=>{p.px.p_repairUp=1; p.repairAmp+=PERK_AMP;}},
@@ -2072,6 +2094,14 @@ const PERKS=[
   {id:'p_ctCritR',   g:1,nm:'반격 치명 II',   ic:'🔁',  tx:'반격 시 치명타 확률 <b>+40</b>',           ap:p=>p.px.p_ctCritR=1},
   {id:'p_ctDmgR',    g:1,nm:'반격 강화 II',   ic:'🔁',  tx:'반격 데미지 <b>+60%</b>',                  ap:p=>p.px.p_ctDmgR=1},
   {id:'p_cleaveR',   g:1,nm:'관통 베기 II',   ic:'🗡️',  tx:'공격 시 <b>66%</b> 확률로 바로 뒤 적도 같은 데미지', ap:p=>p.px.p_cleaveR=1},
+  /* ===== ⚑⚑⚑ T121 3차 신규 희귀 7종 (주인 확정 17:5X · 18:0X · 18:2X · 18:4X) ===== */
+  {id:'p_arrowEvR',  g:1,nm:'회피 시 화살 II', ic:'🏹',  tx:'회피 시 <b>66%</b> 확률로 화살 <b>1개</b>', ap:p=>p.px.p_arrowEvR=1},
+  {id:'p_axeHitR',   g:1,nm:'피격 시 도끼 II', ic:'🪓',  tx:'피격 시 <b>66%</b> 확률로 도끼 <b>1개</b>', ap:p=>p.px.p_axeHitR=1},
+  {id:'p_evHealR',   g:1,nm:'회피 시 회복 II', ic:'🍀',  tx:'회피 시 <b>15%</b> 확률로 최대 체력 <b>6%</b> 회복', ap:p=>p.px.p_evHealR=1},
+  {id:'p_evRepairR', g:1,nm:'회피 시 수리',    ic:'🔧',  tx:'회피 시 <b>15%</b> 확률로 최대 실드 <b>6%</b> 수리', ap:p=>p.px.p_evRepairR=1},
+  {id:'p_defR',      g:1,nm:'방어력 증가 II',  ic:'🛡️',  tx:'방어력 <b>+16%</b>',                  ap:p=>{p.px.p_defR=1; p.def*=PERK_DEF_R;}},
+  {id:'p_wardHitR',  g:1,nm:'피격 시 방어막 II',ic:'🔰', tx:'피격 시 <b>20%</b> 확률로 방어막 <b>1장</b>', ap:p=>p.px.p_wardHitR=1},
+  {id:'p_critSpearR',g:1,nm:'치명 시 창',      ic:'🔱',  tx:'치명타 시 <b>33%</b> 확률로 창 <b>1개</b>', ap:p=>p.px.p_critSpearR=1},
   /* ===== ⚑ T119 전설 9종 ===== */
   {id:'p_killSpearL',g:2,nm:'처치 시 창',   ic:'🔱',  tx:'처치 시 창 <b>1개</b>',                   ap:p=>{p.px.p_killSpearL=1; kmax(p,'p_killSpear',PERK_KILL_L);}},
   {id:'p_killBoltL', g:2,nm:'처치 시 번개', ic:'⚡',  tx:'처치 시 보이는 적 전부에게 번개 <b>1회</b>씩', ap:p=>{p.px.p_killBoltL=1; kmax(p,'p_killBolt',PERK_KILL_L);}},
@@ -2092,6 +2122,18 @@ const PERKS=[
   {id:'p_nSpearL',   g:2,nm:'3타 창',         ic:'🔱',  tx:'<b>3타</b>마다 창 <b>1개</b>',             ap:p=>p.px.p_nSpearL=1},
   /* ===== ⚑⚑⚑ T121 2차 신규 전설 1종 (주인 확정 17:4X) ===== */
   {id:'p_cleaveL',   g:2,nm:'관통 베기 III',  ic:'🗡️',  tx:'공격 시 바로 뒤 적도 같은 데미지',         ap:p=>p.px.p_cleaveL=1},
+  /* ===== ⚑⚑⚑ T121 3차 신규 전설 11종 (주인 확정 17:5X · 18:0X · 18:2X) ===== */
+  {id:'p_critSpearL',g:2,nm:'치명 시 창',      ic:'🔱',  tx:'치명타 시 <b>66%</b> 확률로 창 <b>1개</b>', ap:p=>p.px.p_critSpearL=1},
+  {id:'p_critBoltL', g:2,nm:'치명 시 번개',    ic:'⚡',  tx:'치명타 시 <b>66%</b> 확률로 보이는 적 전부에게 번개 <b>1회</b>씩', ap:p=>p.px.p_critBoltL=1},
+  {id:'p_arrowEvL',  g:2,nm:'회피 시 화살 III',ic:'🏹',  tx:'회피 시 화살 <b>1개</b>',             ap:p=>p.px.p_arrowEvL=1},
+  {id:'p_axeHitL',   g:2,nm:'피격 시 도끼 III',ic:'🪓',  tx:'피격 시 도끼 <b>1개</b>',             ap:p=>p.px.p_axeHitL=1},
+  {id:'p_spearEvL',  g:2,nm:'회피 시 창',      ic:'🔱',  tx:'회피 시 <b>33%</b> 확률로 창 <b>1개</b>', ap:p=>p.px.p_spearEvL=1},
+  {id:'p_spearHitL', g:2,nm:'피격 시 창',      ic:'🔱',  tx:'피격 시 <b>33%</b> 확률로 창 <b>1개</b>', ap:p=>p.px.p_spearHitL=1},
+  {id:'p_evRepairL', g:2,nm:'회피 시 수리 II', ic:'🔧',  tx:'회피 시 <b>25%</b> 확률로 최대 실드 <b>6%</b> 수리', ap:p=>p.px.p_evRepairL=1},
+  {id:'p_defL',      g:2,nm:'방어력 증가 III', ic:'🛡️',  tx:'방어력 <b>+24%</b>',                  ap:p=>{p.px.p_defL=1; p.def*=PERK_DEF_L;}},
+  {id:'p_shWallL',   g:2,nm:'실드 방벽',       ic:'🛡️',  tx:'실드가 있으면 피격 시 <b>50%</b> 확률로 데미지 무시', ap:p=>p.px.p_shWallL=1},
+  {id:'p_shRefL',    g:2,nm:'실드 반사',       ic:'🪞',  tx:'실드가 있으면 피격 시 <b>50%</b> 확률로 그 데미지를 반사', ap:p=>p.px.p_shRefL=1},
+  {id:'p_wardHitL',  g:2,nm:'피격 시 방어막 III',ic:'🔰',tx:'피격 시 <b>30%</b> 확률로 방어막 <b>1장</b>', ap:p=>p.px.p_wardHitL=1},
 ];
 /* ⚑ 주인 방향(2026-09-03) — 한 런 획득 수를 «풀 크기(PERKS.length)» 와 분리한 상수. sim.js 와 같은 값·같은 뜻.
    지금은 풀도 10·획득도 10 이라 동작 불변이고, 나중에 풀만 늘려도 «한 런 = 10개» 면 파워 총량이 그대로다.
@@ -3026,6 +3068,17 @@ function dealPlayerDamage(e,ratio,icon){
     if(px.p_stunCritN&&pkk(p,PERK_STUNC_N)) applyStun(e,PERK_STUNC_T);
     if(px.p_stunCritR&&pkk(p,PERK_STUNC_R)) applyStun(e,PERK_STUNC_T);
     if(px.p_stunCritL&&pkk(p,PERK_STUNC_L)) applyStun(e,PERK_STUNC_T);
+    /* ⚑⚑⚑ T121 3차 «치명 시 창»(희귀 33% · 전설 66%)·«치명 시 번개»(전설 66%) — 주인 확정 17:5X·18:4X.
+       셋 다 따로 굴린다. 광전사면 치명타 자체가 안 뜨므로 함께 죽는다(«처치 시 확정 치명» 한 방은 예외).
+       sim.js dealDmg 와 1:1 — 소환 연쇄 B 는 `verifySummonChain` ⑥ 이 잰다. */
+    /* ⚑ 성능 가드 — 소환 적중 트리거와 같은 틱 예산(PROC_TICK_CAP). 이 셋은 «소환 → 치명타 → 새 소환» 으로
+       자기를 다시 부를 수 있는 첫 축이라 재귀를 여기서 끊는다(데미지는 그대로 · sim.js 와 1:1). */
+    if((px.p_critSpearR||px.p_critSpearL||px.p_critBoltL)&&G.procN<PROC_TICK_CAP){
+      G.procN++;
+      if(px.p_critSpearR&&pkk(p,PERK_CRITSP_R)) fireSpear(p,1);
+      if(px.p_critSpearL&&pkk(p,PERK_CRITSP_L)) fireSpear(p,1);
+      if(px.p_critBoltL&&pkk(p,PERK_CRITBOLT_L)) fireBoltsAll(p,e.wave);
+    }
     gainWard(p,0.12*px.wardCrit);
   }
   if(px.execKill&&!e.isBoss&&e.hp>0&&e.hp<=e.maxHp*0.25){       /* 장비 옵션 */
@@ -3175,8 +3228,17 @@ function hitPlayer(dmg,isMelee,src){
     /* ⚑⚑⚑ T104 — 1번 특전 «회피 시 회복»: 회피 성공마다 10% 굴려서 최대 체력 6% 회복.
        heal(...,true) 로 회복 증폭·오버킬 수리 분기를 안 타므로 실드는 안 채운다(위임 기본값 · sim.js 와 1:1). */
     if(px.p_evadeHeal&&pkk(p,PERK_EVHEAL_CH)){ heal(p,p.maxHp*PERK_EVHEAL_F,true); addText('🍀 +'+fmt(p.maxHp*PERK_EVHEAL_F),'#7ED957'); }
-    /* ④ 회피 시 화살 — 회피 1회당 화살 1발, 확정 발동 (sim.js 와 1:1 · ⚑ T108 로 50% → 100%) */
-    if(px.p_arrowEv&&pkk(p,PERK_SUMMON_CH)) fireArrows(p,1);
+    /* ④ 회피 시 화살 I/II/III — ⚑ 17:5X 주인 정정으로 I 이 100% → 33% 가 되고 II(66%)·III(100%)가 생겼다.
+       셋은 서로 다른 특전이라 각각 따로 굴린다(sim.js hitPlayer 와 1:1). «회피 시 창»(전설 33%)도 같은 축. */
+    if(px.p_arrowEv&&pkk(p,PERK_SUMMON_N)) fireArrows(p,1);
+    if(px.p_arrowEvR&&pkk(p,PERK_SUMMON_R)) fireArrows(p,1);
+    if(px.p_arrowEvL&&pkk(p,PERK_SUMMON_L)) fireArrows(p,1);
+    if(px.p_spearEvL&&pkk(p,PERK_SUMMON_SP)) fireSpear(p,1);
+    /* ⚑ T121 3차 «회피 시 회복 II»(희귀 15%)·«회피 시 수리 I/II»(희귀 15% · 전설 25%) — ⚑ 18:0X·18:1X 정정값.
+       II 는 주인이 «회복 증폭 적용» 이라 적어 일반 1번(noBoost)과 달리 증폭 분기를 탄다. */
+    if(px.p_evHealR&&pkk(p,PERK_EVHEAL_R)){ heal(p,p.maxHp*PERK_EVHEAL_F); addText('🍀 +'+fmt(p.maxHp*PERK_EVHEAL_F),'#7ED957'); }
+    if(px.p_evRepairR&&pkk(p,PERK_EVREP_R)){ repair(p,p.maxSh*PERK_EVREP_F); addText('🔧 실드 수리','#6CC0F0'); }
+    if(px.p_evRepairL&&pkk(p,PERK_EVREP_L)){ repair(p,p.maxSh*PERK_EVREP_F); addText('🔧 실드 수리','#6CC0F0'); }
     /* ⚑⚑⚑ T121 회피 시 즉사 I/II/III (주인 확정 16:0X ①) — 셋은 서로 다른 특전이라 **각각 따로 굴린다**
        (5+10+15 을 합쳐 한 번 굴리지 않는다 — 주인 명시). 근접·원거리 둘 다이고 **보스도 포함**한다
        (옛 «사신의 낫» 관례를 잇는 위임 기본값). 즉사도 «내 처치» 라 `onKill` 을 거치므로
@@ -3189,24 +3251,27 @@ function hitPlayer(dmg,isMelee,src){
     return;
   }
   /* ===== 맞았다 ===== */
-  /* 횟수형 방어막 — 이 타격 «1회» 를 통째로 무효화하고 1장 소모한다 (수치형 실드보다 먼저).
-     데미지만 완전 무효이고 «맞은 사건» 은 일어난 것이라 아래 피격 트리거들은 그대로 굴린다.
+  /* ⚑⚑⚑ T121 3차 (주인 확정 18:2X) — 판정 순서는 **회피 → 방어막 → 피해 무시 → 피해** 다.
+     방어막으로 막았거나 «피해 무시»(일반 20%)·«실드 방벽»(전설 · 실드 > 0 일 때 50%)에 걸린 타격은
+     주인 문면대로 «피격» 이 아니다 — 피격 트리거·가시갑옷·원거리 피격 축·반격까지 전부 굴리지 않는다.
      sim.js hitPlayer 와 같은 순서·같은 조건. */
-  const warded=p.ward>0;
-  if(warded){
+  if(p.ward>0){
     p.ward--;
     wardFx();
-    /* ===== 방어막 방어 트리거 ===== */
     renderBuffBar();
+    return;
   }
-  const nulled=warded;
-  let d=nulled?0:dmg*(1-effDef(p)/100);
-  if(!nulled&&px.guardCrystal&&p.sh>0) d*=0.80;
+  const ign1=px.p_ignoreN&&pkk(p,PERK_IGN_N);
+  const ign2=p.sh>0&&px.p_shWallL&&pkk(p,PERK_SHWALL_L);
+  if(ign1||ign2){ addText('🚫','#B9C6D4'); return; }
+  const hadSh=p.sh>0;                             /* 실드 반사 조건 — 실드 흡수 «전» 상태로 본다 */
+  let d=dmg*(1-effDef(p)/100);
+  if(px.guardCrystal&&p.sh>0) d*=0.80;
   /* ⚑⚑⚑ T119 가시갑옷 — 기준은 «이 공격이 나에게 실제로 준 피해»(방어 적용 후 · 실드로 받은 양 포함 ·
      회피/방어막 무효화면 0)라 실드 흡수 «앞» 값이다. sim.js hitPlayer 의 thornBase 와 1:1. */
   const thornBase=d;
   p.hitT=0.15;
-  if(!nulled&&p.sh>0){
+  if(p.sh>0){
     const ab=Math.min(p.sh,d); p.sh-=ab; d-=ab;
     sparks(p.worldX,-40,'#6CC0F0',5,120);
     if(d<=0) AU.play('shield');
@@ -3245,8 +3310,19 @@ function hitPlayer(dmg,isMelee,src){
   if(px.thorns&&pkk(p,0.60*px.thorns)) reflect(src,dmg*1.5,'🌵');
   if(px.thornsKing) reflect(src,dmg*1.5,'🌵👑');
   if(px.p_thorns&&isMelee&&src) reflect(src,thornBase*px.p_thorns,'🌵');   /* ⚑ T119 가시갑옷 — 근접만 · 가산 중첩(최대 +600%) */
-  /* ⑤ 피격 시 도끼 — 피격 1회당 도끼 1개, 확정 발동 (sim.js 와 1:1 · ⚑ T108 로 50% → 100%) */
-  if(px.p_axeHit&&pkk(p,PERK_SUMMON_CH)) fireAxe(p,1);
+  /* ⚑⚑⚑ T121 3차 «실드 반사»(전설 · 주인 확정 18:2X) — 실드가 있으면 피격 시 50% 로 그 데미지를 되갚는다.
+     기준값은 가시갑옷과 같다(방어 «후» · 실드로 받은 양 포함). 근접·원거리 둘 다 · 피해는 그대로 받는다. */
+  if(px.p_shRefL&&hadSh&&src&&pkk(p,PERK_SHREF_L)) reflect(src,thornBase,'🪞');
+  /* ⚑⚑⚑ T121 3차 «피격 시 방어막» I/II/III — 스택형·장수 무제한, 셋 다 따로 굴린다. */
+  gainWard(p,px.p_wardHitN?PERK_WARD_N:0);
+  gainWard(p,px.p_wardHitR?PERK_WARD_R:0);
+  gainWard(p,px.p_wardHitL?PERK_WARD_L:0);
+  /* ⑤ 피격 시 도끼 I/II/III — ⚑ 17:5X 정정으로 I 이 33% · II 66% · III 100% (각각 따로 굴린다).
+     «피격 시 창»(전설 33%)도 같은 축이다. sim.js 와 1:1. */
+  if(px.p_axeHit&&pkk(p,PERK_SUMMON_N)) fireAxe(p,1);
+  if(px.p_axeHitR&&pkk(p,PERK_SUMMON_R)) fireAxe(p,1);
+  if(px.p_axeHitL&&pkk(p,PERK_SUMMON_L)) fireAxe(p,1);
+  if(px.p_spearHitL&&pkk(p,PERK_SUMMON_SP)) fireSpear(p,1);
   /* 원거리 피격 축 — 위 «피격 시» 트리거를 전부 굴린 «뒤» 에 추가로 굴린다 (별개 축, 주인 16:1X) */
   if(!isMelee) procOnRanged(src,dmg);
   if(isMelee&&src&&src.hp>0){

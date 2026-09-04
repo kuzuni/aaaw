@@ -209,7 +209,12 @@ const KNOWN_PROB = ['장비 plate옵4',
   '특전 p_killSpearR', '특전 p_killBoltR', '특전 p_killArrowR', '특전 p_killAxeR',
   '특전 p_killAtkStk', '특전 p_killEvStk', '특전 p_killHealN', '특전 p_killRepair',
   /* ⚑ T121 2차 (주인 확정 17:4X) — «관통 베기» I/II 도 주인이 직접 33/66 으로 적었다(III 는 100% 라 대상 아님). */
-  '특전 p_cleaveN', '특전 p_cleaveR'];
+  '특전 p_cleaveN', '특전 p_cleaveR',
+  /* ⚑⚑⚑ T121 3차 (주인 확정 17:5X · 18:1X · 18:4X) — 같은 33/66 어법이 «회피/피격/치명 시» 소환으로 번졌고,
+     1번 «회피 시 회복» 은 주인이 10 → **8%** 로 직접 내렸다. 전부 주인 원문값이라 **워커 수정 금지**
+     (5의 배수로 깎으면 I/II/III 3단의 간격 설계가 통째로 바뀐다). III(100%)는 5의 배수라 대상 아님. */
+  '특전 p_evadeHeal', '특전 p_arrowEv', '특전 p_axeHit', '특전 p_arrowEvR', '특전 p_axeHitR',
+  '특전 p_critSpearR', '특전 p_critSpearL', '특전 p_critBoltL', '특전 p_spearEvL', '특전 p_spearHitL'];
 
 /* Ⓔ 지속시간 0.5초 단위 — 잔여 0건(전면 강제). 여기에 뭐가 추가되면 그건 규칙 위반이다. */
 const KNOWN_DUR = [];
@@ -224,6 +229,11 @@ const KNOWN_COEF = [
      5% 단위로 깎으면 «하나당» 설계(특전 10장에 +40%/+70%)와 등급 간 간격이 통째로 바뀐다. */
   '특전 p_collAtk', '특전 p_collHp', '특전 p_killAtkStk', '특전 p_killHealN',
   '특전 p_killRepair', '특전 p_aspdAtk',
+  /* ⚑⚑⚑ T121 3차 주인 확정 예외 (2026-09-04 18:0X·18:1X·18:2X) — 주인이 직접 적은 계수라 워커 수정 금지.
+     방어력 **+8 / +16 / +24%** 3단 · «최대 체력·실드 6%» 회복·수리(회피 15/25%) · «5타마다 6%».
+     5% 단위로 깎으면 8/16/24 의 등차 설계와 등급 간 간격이 통째로 바뀐다. */
+  '특전 p_def', '특전 p_defR', '특전 p_defL', '특전 p_nHealN',
+  '특전 p_evHealR', '특전 p_evRepairR', '특전 p_evRepairL',
   /* ⚑ T104 정리 — 종전 132종 시절의 c_evadePerm / c_collAtk / c_collEvade / c_collCounter / c_collDef / c_atkPerm 6종은
      T96 특전 폐지 지시로 사라졌으므로 등재 목록에서도 지웠다(래칫 안내 «해소분 지울 것» 이행). */
   /* 아래 25건은 전부 장비 옵션 — 특전이 아니다. */
