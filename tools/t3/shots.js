@@ -26,7 +26,7 @@ const VP = { width: 390, height: 844 };
 /* 화면별로 «프레임 % 로 잴 요소» — 이름은 docs/ui/ref-layout.md 의 행 이름과 1:1 이다. */
 const MEASURE = {
   lobby: {
-    '상단 바': '.lobby-top', '아바타': '#avatar', '전투력 pill': '#powerPill',
+    '상단 바(참고·컨테이너)': '.lobby-top', '아바타': '#avatar', '전투력 pill': '#powerPill',
     '재화 pill 끝칸': '.lobby-top .pill:last-of-type',
     '챕터 제목': '#lobbyChapName', '챕터 밑줄': '.chap-underline',
     '챕터 카드': '#dioCard', '좌 화살표': '#chPrev', '우 화살표': '#chNext',
@@ -35,20 +35,30 @@ const MEASURE = {
     '탭5': '#lobby .bottomNav .nav-tab:nth-child(5)', '사운드 버튼': '#sndBtnL',
   },
   battle: {
-    '전투 캔버스': '#cvWrap', '상단 HUD 줄': '#topbar', '킬 pill': '#topbar .pill:nth-child(1)',
-    '챕터 표시': '#chapHud', '진행 바': '#progOut', '배속 버튼': '#speedBtn',
+    '전투 캔버스': '#cvWrap', '상단 HUD 줄(참고·컨테이너)': '#topbar', '킬 pill': '#topbar .pill:nth-child(1)',
+    /* ⚑ U03 정정 — `#chapHud` 는 `left:0;right:0` 짜리 가운데 정렬 컨테이너라 늘 x0 w100 이다.
+     *   ref ② 의 «챕터 제목 36/11/28/2.6» 이 가리키는 것은 그 안의 글자 상자(`.nm`)다. 둘 다 낸다. */
+    '챕터 표시(참고·컨테이너)': '#chapHud', '챕터 제목': '#chapHud .nm',
+    '진행 바': '#progOut', '배속 버튼': '#speedBtn',
     '하단 패널': '#hud', '바 줄': '#hud .bars', 'EXP 바': '#expBar', 'HP 바': '#hpBar', '실드 바': '#shBar',
     '스탯 그리드': '#stats', '스탯칸1': '#stats .st:nth-child(1)', '스탯칸2': '#stats .st:nth-child(2)',
     '하단 발': '#hudFoot', 'Info 버튼': '#infoBtn', '특전 미리보기 줄': '#perkStrip',
     '우하단 원형 버튼': '#hudRound',
   },
   gear: {
-    '상단 바': '#gear .top-bar', '아바타': '#gear .avatar-box',
+    '상단 바(참고·컨테이너)': '#gear .top-bar', '아바타': '#gear .avatar-box',
     '재화 pill 첫칸': '#gear .top-bar .pill:nth-of-type(1)', '재화 pill 끝칸': '#gear .top-bar .pill:last-of-type',
     '장비 무대': '#gearHero', '좌 슬롯열': '#gearColL', '우 슬롯열': '#gearColR',
     '슬롯1(좌)': '#gearColL .slot-card:nth-child(1)', '슬롯3(좌)': '#gearColL .slot-card:nth-child(3)',
-    '캐릭터': '#gearAvatar', '스탯 요약줄': '#gearStats', '액션바': '.gear-actionbar', '합성 버튼': '#fuseBtn',
-    '인벤 그리드': '#invGrid', '인벤칸1': '#invGrid .inv-cell:nth-child(1)', '인벤칸5': '#invGrid .inv-cell:nth-child(5)',
+    '캐릭터': '#gearAvatar',
+    /* ⚑ U03 정정 — `#gearStats`·`.gear-actionbar`·`#invGrid` 는 좌우 여백을 품은 **컨테이너**라 늘 x0 w100 이다
+     *   (`ref-layout.md` ⚑U01 정정 표가 «안쪽 요소로 판정할 것» 이라고 적어 둔 바로 그 행들인데
+     *   하니스가 컨테이너만 내고 있었다). 컨테이너는 «(참고)» 로 남기고 판정 행을 따로 낸다.
+     *   ③ 표의 «액션바(Forge) 70/42.3/27/4.2» 가 가리키는 것은 줄이 아니라 **버튼**이다. */
+    '스탯 요약줄(참고·컨테이너)': '#gearStats',
+    '스탯 요약칸1': '#gearStats .gs:nth-child(1)', '스탯 요약칸3': '#gearStats .gs:nth-child(3)',
+    '액션바(참고·컨테이너)': '.gear-actionbar', '액션바(Forge 버튼)': '#fuseBtn', '합성 버튼': '#fuseBtn',
+    '인벤 그리드(참고·컨테이너)': '#invGrid', '인벤칸1': '#invGrid .inv-cell:nth-child(1)', '인벤칸5': '#invGrid .inv-cell:nth-child(5)',
     '인벤칸6': '#invGrid .inv-cell:nth-child(6)', '인벤칸2': '#invGrid .inv-cell:nth-child(2)', '하단 탭바': '#gear .bottomNav',
   },
   gearpop: {
@@ -66,38 +76,46 @@ const MEASURE = {
   shop: {
     /* ⚑ U02 정정 — 섹션 헤더는 `.shop-sec:first-child` 가 CSS 로 숨겨져 있어 첫 칸을 재면 «없음» 이다.
      *   보이는 헤더 2개(장비 뽑기·다이아)를 자식 순번으로 잰다. */
-    '상단 바': '#shop .top-bar', '아바타': '#shop .avatar-box',
+    '상단 바(참고·컨테이너)': '#shop .top-bar', '아바타': '#shop .avatar-box',
     '재화 pill 첫칸': '#shop .top-bar .pill:nth-of-type(1)', '재화 pill 끝칸': '#shop .top-bar .pill:last-of-type',
-    '본문': '#shopBody',
+    '본문(참고·컨테이너)': '#shopBody',
     '섹션 헤더1': '#shopBody > div:nth-child(3)', '섹션 헤더2': '#shopBody > div:nth-child(5)',
     '무료 줄': '#shopBody .free-row', '무료 카드1': '#shopBody .free-row .gem-card:nth-child(1)',
     '무료 카드2': '#shopBody .free-row .gem-card:nth-child(2)',
     '뽑기 카드': '#shopBody .gacha-card',
-    '뽑기 버튼줄': '#shopBody .gacha-btns', '다이아 그리드': '#shopBody .gem-grid',
+    '뽑기 버튼줄': '#shopBody .gacha-btns', '다이아 그리드(참고·컨테이너)': '#shopBody .gem-grid',
     '상품 카드1': '#shopBody .gem-grid .gem-card:nth-child(1)', '상품 카드2': '#shopBody .gem-grid .gem-card:nth-child(2)',
     '상품 카드3': '#shopBody .gem-grid .gem-card:nth-child(3)',
     '상품 카드4(2행)': '#shopBody .gem-grid .gem-card:nth-child(4)', '하단 탭바': '#shop .bottomNav',
   },
   forge: {
-    '상단 바': '#forge .top-bar', '대장간 무대': '#forgeStage', '결과 슬롯': '#fgResult', '화살표': '.fg-up',
+    /* ⚑ U03 정정 — `ref-layout.md` ⑥ 표에 **대장간 상단 바 행이 없다**(무대가 y0 부터 화면을 꽉 채운다).
+     *   게임도 상단 바가 없으므로 이 행은 늘 «없음» = 근거 없는 X 였다. 지웠다. */
+    '대장간 무대': '#forgeStage', '결과 슬롯': '#fgResult', '화살표': '.fg-up',
     /* ⚑ U02 — 레퍼런스는 재료가 «1칸(w17)» 인데 게임은 규칙상 «3칸 합성»(PLAN)이라 줄 폭이 구조적으로 안 맞는다.
      *   줄과 칸을 둘 다 내서 U03 비평가가 무엇이 구조 차이인지 볼 수 있게 한다. */
     '재료 줄': '#fgMats', '재료 칸1': '#fgMats .fg-cell:nth-child(1)',
     '안내 배너': '#fgBanner', '액션바': '.forge-actionbar',
-    '자동 버튼': '#fgAuto', '합성 버튼': '#fgFuse', '인벤 그리드': '#fgGrid',
-    '인벤칸1': '#fgGrid .inv-cell:nth-child(1)', '뒤로 줄': '.forge-back',
+    '자동 버튼': '#fgAuto', '합성 버튼': '#fgFuse', '인벤 그리드(참고·컨테이너)': '#fgGrid',
+    '인벤칸1': '#fgGrid .inv-cell:nth-child(1)',
+    '뒤로 줄(참고·컨테이너)': '.forge-back', '뒤로 버튼': '#fgBack',
   },
   perk: {
-    '팝업 박스': '#overlay .ov-inner', '배너': '#overlay .ov-banner', '부제': '#overlay .ov-sub',
+    /* ⚑ U03 정정 — 레퍼런스 «선택창»(perks.jpg)에는 **팝업 상자가 없다**(`ref-layout.md` ⚑U01 정정 · ⑦ 표에도
+     *   «(인포 팝업) 박스» 행만 있다). `ov-full` 의 `.ov-inner` 는 상자가 아니라 «배경 없는 세로 흐름 상자» 라
+     *   ref 에 대응 행이 없다 — 참고로만 남긴다(판정 행 아님). */
+    '팝업 박스(참고·대응 ref 없음)': '#overlay .ov-inner', '배너': '#overlay .ov-banner', '부제': '#overlay .ov-sub',
     '특전 카드': '#overlay .perk-card', '카드 아이콘': '#overlay .perk-card .ic', '카드 문구': '#overlay .perk-card .tx',
     '확인 버튼': '#luOk', '보유 특전 버튼': '#perkBookBtn',
   },
   perkbook: {
     '팝업 박스': '#overlay .ov-inner', '배너': '#overlay .ov-banner', '부제': '#overlay .ov-sub',
-    '목록': '#overlay .perk-list', '목록 카드1': '#overlay .perk-list .perk-card:nth-child(1)',
+    '목록(참고·컨테이너)': '#overlay .perk-list', '목록 카드1': '#overlay .perk-list .perk-card:nth-child(1)',
     /* 이 하니스는 «선택창에서 연 책» 상태를 찍으므로 하단 줄이 `.tap-close` 가 아니라 `#pbBack` 이다
-     *   (레퍼런스의 «닫기 안내 y91.5» 자리 — 둘 다 상자 밖 아래 줄이다). 둘 다 잰다. */
-    '닫기 안내': '#overlay .tap-close', '뒤로 버튼': '#pbBack',
+     *   (레퍼런스의 «닫기 안내 y91.5» 자리 — 둘 다 상자 밖 아래 줄이다).
+     *   ⚑ U03 정정 — 이 상태에서 `.tap-close` 는 **존재하지 않는다**(HUD 📘 로 연 책에만 있다).
+     *   늘 «없음» 이라 근거 없는 X 였다 — 판정 행은 `#pbBack` 하나다. */
+    '닫기 안내(= 뒤로 버튼)': '#pbBack',
   },
 };
 
@@ -107,10 +125,23 @@ async function measure(p, map) {
   return await p.evaluate(m => {
     const f = document.getElementById('frame').getBoundingClientRect();
     const out = {};
+    /* ⚑ U03 — 선택자 앞의 `⊕` 는 «맞는 요소 전부의 합집합 상자» 를 뜻한다.
+     *   레퍼런스 표의 «…줄(N칸)» 행은 컨테이너(좌우 여백 포함)가 아니라 **칸들이 실제로 차지한 폭**이라
+     *   그것을 그대로 재려면 합집합이 필요하다(예: 장비 «스탯 요약줄 x10 w79» = 3칸의 합집합). */
     for (const [name, sel] of Object.entries(m)) {
-      const el = document.querySelector(sel);
-      if (!el) { out[name] = null; continue; }
-      const r = el.getBoundingClientRect();
+      let r;
+      if (sel[0] === '⊕') {
+        const els = [...document.querySelectorAll(sel.slice(1))].map(e => e.getBoundingClientRect())
+          .filter(b => b.width || b.height);
+        if (!els.length) { out[name] = null; continue; }
+        const l = Math.min(...els.map(b => b.left)), t = Math.min(...els.map(b => b.top));
+        const rg = Math.max(...els.map(b => b.right)), bt = Math.max(...els.map(b => b.bottom));
+        r = { left: l, top: t, width: rg - l, height: bt - t };
+      } else {
+        const el = document.querySelector(sel);
+        if (!el) { out[name] = null; continue; }
+        r = el.getBoundingClientRect();
+      }
       if (r.width === 0 && r.height === 0) { out[name] = null; continue; }
       out[name] = {
         x: (r.left - f.left) / f.width * 100, y: (r.top - f.top) / f.height * 100,

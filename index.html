@@ -182,8 +182,11 @@
   #fuseBtn{position:relative; width:27%; padding:8px 4px; border-radius:12px; font-size:14px; background:linear-gradient(#FFCB4D,#F5A623); color:#4A2E00; box-shadow:0 3px 0 #C77E12;}
   #fuseBtn:disabled{filter:grayscale(.8); opacity:.55; box-shadow:none;}
   /* ⚑ T116 U01 — 인벤 그리드는 장비 탭·대장간 모두 y 47.5 · x 3 · w 94 · 5열이고 칸은 «가로가 세로의 1.18배» 다. */
+  /* ⚑ T116 U03 — 칸의 부위 태그(`.ptag`)는 `top:-6px` 로 칸 «위» 로 삐져나오는데 이 상자가 `overflow-y:auto` 라
+     **첫 행의 라벨이 통째로 잘려 나갔다**. 위 여백 8px 을 주고 같은 값만큼 상자를 끌어올려
+     칸의 자리(y47.9 · ref 47.5)는 그대로 두면서 라벨만 살린다. */
   #invGrid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(5,1fr);
-    gap:6px; padding:0 3% 10px; align-content:start;}
+    gap:6px; padding:8px 3% 10px; margin-top:-8px; align-content:start;}
   /* 인벤 칸 — `docs/ref/캐릭터 장비.jpg`·`장비 합성 업글창.jpg` 구도: 등급색 타일 + 좌상단 부위 태그 + 하단 «장착» 띠 + 금색 +N */
   .inv-cell{position:relative; aspect-ratio:1.18; border-radius:11px; overflow:visible;
     border:2.5px solid #55555F; display:flex; align-items:center; justify-content:center; font-size:22px; padding:0;
@@ -245,8 +248,9 @@
   .forge-actionbar button:disabled{filter:grayscale(.8); opacity:.55; box-shadow:none;}
   .bang{position:absolute; top:-6px; right:-4px; width:16px; height:16px; border-radius:99px; background:#E8483F;
     font-size:11px; line-height:16px; color:#fff;}
+  /* ⚑ T116 U03 — 장비 탭 `#invGrid` 와 같은 잘림(부위 태그 `top:-6px` ↔ `overflow-y:auto`). 같은 방식으로 고친다. */
   #fgGrid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(5,1fr);
-    gap:6px; padding:0 3% 10px; align-content:start;}
+    gap:6px; padding:8px 3% 10px; margin-top:-8px; align-content:start;}
   #fgGrid .inv-cell.sel{border-color:#5CD65C; box-shadow:0 0 12px rgba(92,214,92,.55);}
   #fgGrid .inv-cell.off{opacity:.32; filter:grayscale(.7);}
   /* 뒤로 버튼 — 레퍼런스는 좌하단의 폭 17% 짜리 작은 버튼이다(종전 전폭). */
@@ -342,7 +346,9 @@
   #topbar #sndBtnG{margin-left:auto;}
   #chapHud{position:absolute; top:calc(var(--fh)*.108); left:0; right:0; text-align:center; pointer-events:none;}
   /* ⚑ T116 U02 — 인게임 제목도 ref 는 «x36 w28 h2.6» 이다(종전 x30.1 w39.5 — 자간 2px 이 폭을 벌렸다). */
-  #chapHud .nm{font-size:17px; line-height:1.25; letter-spacing:1px; text-shadow:0 2px 3px rgba(0,0,0,.5);}
+  /* ⚑ T116 U03 — 블록이라 상자가 늘 «x0 w100»(부모 폭) 이었다. `inline-block` 으로 글자를 감싸야
+     자(ref ② 챕터 제목 x36 w28)가 재는 대상과 실제 상자가 같아진다. 가운데 정렬은 부모 `text-align` 이 준다. */
+  #chapHud .nm{display:inline-block; font-size:17px; line-height:1.25; letter-spacing:1px; text-shadow:0 2px 3px rgba(0,0,0,.5);}
   #progOut{width:56%; height:9px; margin:5px auto 0; background:rgba(20,20,24,.8); border-radius:99px; overflow:hidden;}
   #progIn{height:100%; width:0%; background:var(--gold); border-radius:99px; transition:width .3s;}
   /* ⚑ T116 U01 — 배속 버튼은 레퍼런스에서 하단 패널 «바로 위»(y 65 · 11×4)다. 종전은 패널에서 12px 띄워 y 59 였다. */
@@ -552,7 +558,10 @@
   #overlay.ov-full #perkBookBtn{width:10.1%; height:calc(var(--fh)*.06); font-size:17px;}
   #overlay.ov-book .ov-banner{width:61.5%; margin-top:calc(var(--fh)*-.0304); margin-bottom:0;}
   #overlay.ov-book .ov-sub{font-size:12px; margin-bottom:0;}
-  #overlay.ov-book .perk-list{padding:4px 4px 2px; max-height:none; flex:1 1 auto; min-height:0;}
+  /* ⚑ T116 U03 — 카드의 «N/10» 배지(`.perk-card .tag`)는 `top:-11px` 로 카드 «위» 로 걸치는데 이 상자가
+     `overflow-y:auto` 라 **첫 카드의 배지가 잘리고 부제 글자와 겹쳐 보였다**. 위 여백 13px 을 주고
+     같은 값만큼 상자를 끌어올려 목록 카드 자리(y28.1 · ref 26.5)는 그대로 두면서 배지 자리를 만든다. */
+  #overlay.ov-book .perk-list{padding:13px 4px 2px; margin-top:-9px; max-height:none; flex:1 1 auto; min-height:0;}
   .up-row{display:flex; align-items:center; gap:10px; background:var(--panel2); border-radius:14px; padding:10px 12px; margin-bottom:8px; width:100%; text-align:left; animation:slideUp .4s cubic-bezier(.2,1.4,.4,1) backwards;}
   .up-row:nth-child(2){animation-delay:.05s}
   .up-row:nth-child(3){animation-delay:.10s}
@@ -3286,8 +3295,14 @@ function drawScene(){
   cam=p?Math.max(0,p.worldX-150):0;
   const t=G?G.t:0;
   if(G&&G.shake>0){ ctx.translate(rand(-G.shake,G.shake)*0.5,rand(-G.shake,G.shake)*0.5); }
-  const gy=LH*0.615;
-  const pathTop=LH*0.47, pathBot=LH*0.78;
+  /* ⚑ T116 U03 — 레퍼런스(`ref-layout.md` ②)는 지면 띠가 프레임 y30.0 h21.0, 캐릭터 발밑이 y40.0 이다.
+     캔버스는 프레임의 위 69.4% 를 차지하므로 프레임 % ÷ 69.4 가 여기 쓰는 LH 배율이다:
+       지면 위 30.0 → .432 · 지면 아래 51.0 → .735 · 발밑 40.0 → .576.
+     종전 값(.47/.78/.615)은 각각 32.6 / 54.1 / 42.7 이라 띠와 캐릭터가 통째로 2.6%p 내려와 있었다.
+     발밑이 올라가면 체력 라벨 줄(`drawHpBar(x, gy+12)`)도 같이 따라 올라간다 — 두 행이 한 번에 맞는다.
+     ⚠ 이 세 값은 **그리기 전용**이다(`sim.js` 에 없다 · 게이트가 읽지 않는다) — 밸런스와 무관하다. */
+  const gy=LH*0.576;
+  const pathTop=LH*0.432, pathBot=LH*0.735;
 
   ctx.fillStyle='#8CC85E'; ctx.fillRect(-20,-20,LW+40,pathTop+20);
   ctx.fillStyle='#C9A470'; ctx.fillRect(-20,pathTop,LW+40,pathBot-pathTop);
