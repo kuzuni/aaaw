@@ -2020,7 +2020,7 @@ const PERKS=[
   {id:'p_collCrit',  g:0,nm:'수집가·치명',   ic:'🃏',  tx:'보유 특전 하나당 치명타 확률 <b>+2</b>',   ap:p=>p.px.p_collCrit=1},
   {id:'p_killAtkStk',g:0,nm:'처치 시 공격력 스택',ic:'⚔️',tx:'처치 시 <b>33%</b> 확률로 공격력 <b>+1%</b>(이 판 동안 누적)', ap:p=>p.px.p_killAtkStk=1},
   {id:'p_killEvStk', g:0,nm:'처치 시 회피 스택',ic:'💨',tx:'처치 시 <b>33%</b> 확률로 회피율 <b>+1</b>(이 판 동안 누적)',  ap:p=>p.px.p_killEvStk=1},
-  {id:'p_killHeal6', g:0,nm:'처치 시 회복',   ic:'❣️',  tx:'처치 시 <b>33%</b> 확률로 최대 체력 <b>6%</b> 회복', ap:p=>p.px.p_killHeal6=1},
+  {id:'p_killHealN', g:0,nm:'처치 시 회복',   ic:'❣️',  tx:'처치 시 <b>33%</b> 확률로 최대 체력 <b>6%</b> 회복', ap:p=>p.px.p_killHealN=1},
   {id:'p_collHp',    g:0,nm:'수집가·체력',   ic:'🃏',  tx:'보유 특전 하나당 최대 체력 <b>+7%</b>',    ap:p=>p.px.p_collHp=1},
   {id:'p_critStack', g:0,nm:'치명 스택',     ic:'🎯',  tx:'평타 적중마다 치명타 확률 <b>+1</b>(치명타 시 초기화)', ap:p=>p.px.p_critStack=1},
   {id:'p_aspdAtk',   g:0,nm:'공격 시 공속 버프',ic:'⚡',tx:'공격 시 공격속도 <b>+7%</b> <b>7초</b>(중첩)', ap:p=>p.px.p_aspdAtk=1},
@@ -2042,16 +2042,16 @@ const PERKS=[
   /* ===== ⚑⚑⚑ T121 신규 희귀 12종 (앞 8종 = 16:0X ① · 뒤 4종 «II» = 16:2X ⑤) ===== */
   {id:'p_healRepair',g:1,nm:'회복 시 수리',   ic:'🔧',  tx:'체력 회복 시 같은 양만큼 실드 수리',       ap:p=>p.px.p_healRepair=1},
   {id:'p_killRepair',g:1,nm:'처치 시 수리',   ic:'🔧',  tx:'처치 시 <b>66%</b> 확률로 최대 실드 <b>6%</b> 수리', ap:p=>p.px.p_killRepair=1},
-  {id:'p_critF2',    g:1,nm:'치명타 피해 증가 II',ic:'💥',tx:'치명타 피해 <b>+60</b>',                ap:p=>{p.px.p_critF2=1; p.critF+=PERK_CRITF_R;}},
+  {id:'p_critFR',    g:1,nm:'치명타 피해 증가 II',ic:'💥',tx:'치명타 피해 <b>+60</b>',                ap:p=>{p.px.p_critFR=1; p.critF+=PERK_CRITF_R;}},
   {id:'p_execEvR',   g:1,nm:'회피 시 즉사 II',ic:'☠️',  tx:'회피 시 <b>10%</b> 확률로 그 적 즉사',     ap:p=>p.px.p_execEvR=1},
   {id:'p_stunCritR', g:1,nm:'치명타 시 기절 II',ic:'💫',tx:'치명타 시 <b>20%</b> 확률로 <b>3초</b> 기절', ap:p=>p.px.p_stunCritR=1},
   {id:'p_nArrowR',   g:1,nm:'3타 화살 II',    ic:'🏹',  tx:'<b>3타</b>마다 무작위 적에게 화살 <b>2개</b>', ap:p=>p.px.p_nArrowR=1},
   {id:'p_nAxeR',     g:1,nm:'4타 도끼 II',    ic:'🪓',  tx:'<b>4타</b>마다 무작위 적에게 도끼 <b>2개</b>', ap:p=>p.px.p_nAxeR=1},
   {id:'p_nBoltR',    g:1,nm:'4타 번개 II',    ic:'⚡',  tx:'<b>4타</b>마다 무작위 적에게 번개 <b>2회</b>', ap:p=>p.px.p_nBoltR=1},
-  {id:'p_critR2',    g:1,nm:'치명타 확률 증가 II',ic:'🎯',tx:'치명타 확률 <b>+16</b>',                ap:p=>{p.px.p_critR2=1; p.critR+=PERK_CRITR_R;}},
-  {id:'p_counter2',  g:1,nm:'반격률 증가 II', ic:'🔁',  tx:'반격률 <b>+16</b>',                        ap:p=>{p.px.p_counter2=1; p.counter+=PERK_COUNTER_R;}},
-  {id:'p_atk2',      g:1,nm:'공격력 증가 II', ic:'⚔️',  tx:'공격력 <b>+30%</b>',                       ap:p=>{p.px.p_atk2=1; p.dmg*=PERK_ATK_R;}},
-  {id:'p_evade2',    g:1,nm:'회피율 증가 II', ic:'💨',  tx:'회피율 <b>+16</b>',                        ap:p=>{p.px.p_evade2=1; p.evade+=PERK_EVADE_R;}},
+  {id:'p_critRR',    g:1,nm:'치명타 확률 증가 II',ic:'🎯',tx:'치명타 확률 <b>+16</b>',                ap:p=>{p.px.p_critRR=1; p.critR+=PERK_CRITR_R;}},
+  {id:'p_counterR',  g:1,nm:'반격률 증가 II', ic:'🔁',  tx:'반격률 <b>+16</b>',                        ap:p=>{p.px.p_counterR=1; p.counter+=PERK_COUNTER_R;}},
+  {id:'p_atkR',      g:1,nm:'공격력 증가 II', ic:'⚔️',  tx:'공격력 <b>+30%</b>',                       ap:p=>{p.px.p_atkR=1; p.dmg*=PERK_ATK_R;}},
+  {id:'p_evadeR',    g:1,nm:'회피율 증가 II', ic:'💨',  tx:'회피율 <b>+16</b>',                        ap:p=>{p.px.p_evadeR=1; p.evade+=PERK_EVADE_R;}},
   /* ===== ⚑ T119 전설 9종 ===== */
   {id:'p_killSpearL',g:2,nm:'처치 시 창',   ic:'🔱',  tx:'처치 시 창 <b>1개</b>',                   ap:p=>{p.px.p_killSpearL=1; kmax(p,'p_killSpear',PERK_KILL_L);}},
   {id:'p_killBoltL', g:2,nm:'처치 시 번개', ic:'⚡',  tx:'처치 시 보이는 적 전부에게 번개 <b>1회</b>씩', ap:p=>{p.px.p_killBoltL=1; kmax(p,'p_killBolt',PERK_KILL_L);}},
@@ -2861,7 +2861,7 @@ function onKill(e,over){
   if(px.p_killEvBuff) refreshBuff(p,'evade',PERK_KILLEV_A,PERK_KILLEV_T,'p_killEvBuff');
   if(px.p_killAtkStk&&pkk(p,PERK_KSTACK_CH)){ p.dmg*=1+PERK_KSTACK_ATK; renderStatsGrid(); }
   if(px.p_killEvStk&&pkk(p,PERK_KSTACK_CH)){ p.evade+=PERK_KSTACK_EV; renderStatsGrid(); }
-  if(px.p_killHeal6&&pkk(p,PERK_KHEAL_CH)){ heal(p,p.maxHp*PERK_KHEAL_F); addText('❣️','#7ED957'); }
+  if(px.p_killHealN&&pkk(p,PERK_KHEAL_CH)){ heal(p,p.maxHp*PERK_KHEAL_F); addText('❣️','#7ED957'); }
   if(px.p_killRepair&&pkk(p,PERK_KREPAIR_CH)){ repair(p,p.maxSh*PERK_KREPAIR_F); addText('🔧','#6CC0F0'); }
   if(e.wave.enemies.every(x=>x.hp<=0)){
     e.wave.done=true;

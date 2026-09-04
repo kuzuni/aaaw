@@ -367,7 +367,7 @@ function mkPerks(){
     {id:'p_collCrit',  g:0,nm:'수집가·치명',      d:'보유 특전 하나당 치명타 확률 +2',  ap:p=>p.px.p_collCrit=1},
     {id:'p_killAtkStk',g:0,nm:'처치 시 공격력 스택',d:'처치 시 33% 확률로 공격력 +1%(이 판 동안 누적)', ap:p=>p.px.p_killAtkStk=1},
     {id:'p_killEvStk', g:0,nm:'처치 시 회피 스택',d:'처치 시 33% 확률로 회피율 +1(이 판 동안 누적)',  ap:p=>p.px.p_killEvStk=1},
-    {id:'p_killHeal6', g:0,nm:'처치 시 회복',     d:'처치 시 33% 확률로 최대 체력 6% 회복', ap:p=>p.px.p_killHeal6=1},
+    {id:'p_killHealN', g:0,nm:'처치 시 회복',     d:'처치 시 33% 확률로 최대 체력 6% 회복', ap:p=>p.px.p_killHealN=1},
     {id:'p_collHp',    g:0,nm:'수집가·체력',      d:'보유 특전 하나당 최대 체력 +7%',   ap:p=>p.px.p_collHp=1},
     {id:'p_critStack', g:0,nm:'치명 스택',        d:'평타 적중마다 치명타 확률 +1(치명타 시 초기화)', ap:p=>p.px.p_critStack=1},
     {id:'p_aspdAtk',   g:0,nm:'공격 시 공속 버프',d:'공격 시 공격속도 +7% 7초(중첩)',   ap:p=>p.px.p_aspdAtk=1},
@@ -389,16 +389,16 @@ function mkPerks(){
     /* ===== ⚑⚑⚑ T121 신규 희귀 12종 (앞 8종 = 16:0X ① · 뒤 4종 «II» = 16:2X ⑤) ===== */
     {id:'p_healRepair',g:1,nm:'회복 시 수리',     d:'체력 회복 시 같은 양만큼 실드 수리', ap:p=>p.px.p_healRepair=1},
     {id:'p_killRepair',g:1,nm:'처치 시 수리',     d:'처치 시 66% 확률로 최대 실드 6% 수리', ap:p=>p.px.p_killRepair=1},
-    {id:'p_critF2',    g:1,nm:'치명타 피해 증가 II',d:'치명타 피해 +60',                ap:p=>{p.px.p_critF2=1;p.critF+=PERK_CRITF_R;}},
+    {id:'p_critFR',    g:1,nm:'치명타 피해 증가 II',d:'치명타 피해 +60',                ap:p=>{p.px.p_critFR=1;p.critF+=PERK_CRITF_R;}},
     {id:'p_execEvR',   g:1,nm:'회피 시 즉사 II',  d:'회피 시 10% 확률로 그 적 즉사',    ap:p=>p.px.p_execEvR=1},
     {id:'p_stunCritR', g:1,nm:'치명타 시 기절 II',d:'치명타 시 20% 확률로 3초 기절',    ap:p=>p.px.p_stunCritR=1},
     {id:'p_nArrowR',   g:1,nm:'3타 화살 II',      d:'3타마다 무작위 적에게 화살 2개',   ap:p=>p.px.p_nArrowR=1},
     {id:'p_nAxeR',     g:1,nm:'4타 도끼 II',      d:'4타마다 무작위 적에게 도끼 2개',   ap:p=>p.px.p_nAxeR=1},
     {id:'p_nBoltR',    g:1,nm:'4타 번개 II',      d:'4타마다 무작위 적에게 번개 2회',   ap:p=>p.px.p_nBoltR=1},
-    {id:'p_critR2',    g:1,nm:'치명타 확률 증가 II',d:'치명타 확률 +16',                ap:p=>{p.px.p_critR2=1;p.critR+=PERK_CRITR_R;}},
-    {id:'p_counter2',  g:1,nm:'반격률 증가 II',   d:'반격률 +16',                       ap:p=>{p.px.p_counter2=1;p.counter+=PERK_COUNTER_R;}},
-    {id:'p_atk2',      g:1,nm:'공격력 증가 II',   d:'공격력 +30%',                      ap:p=>{p.px.p_atk2=1;p.dmg*=PERK_ATK_R;}},
-    {id:'p_evade2',    g:1,nm:'회피율 증가 II',   d:'회피율 +16',                       ap:p=>{p.px.p_evade2=1;p.evade+=PERK_EVADE_R;}},
+    {id:'p_critRR',    g:1,nm:'치명타 확률 증가 II',d:'치명타 확률 +16',                ap:p=>{p.px.p_critRR=1;p.critR+=PERK_CRITR_R;}},
+    {id:'p_counterR',  g:1,nm:'반격률 증가 II',   d:'반격률 +16',                       ap:p=>{p.px.p_counterR=1;p.counter+=PERK_COUNTER_R;}},
+    {id:'p_atkR',      g:1,nm:'공격력 증가 II',   d:'공격력 +30%',                      ap:p=>{p.px.p_atkR=1;p.dmg*=PERK_ATK_R;}},
+    {id:'p_evadeR',    g:1,nm:'회피율 증가 II',   d:'회피율 +16',                       ap:p=>{p.px.p_evadeR=1;p.evade+=PERK_EVADE_R;}},
     /* ===== 전설 9종 ===== */
     {id:'p_killSpearL',g:2,nm:'처치 시 창',       d:'처치 시 창 1개',                  ap:p=>{p.px.p_killSpearL=1;kmax(p,'p_killSpear',PERK_KILL_L);}},
     {id:'p_killBoltL', g:2,nm:'처치 시 번개',     d:'처치 시 보이는 적 전부에게 번개 1회씩', ap:p=>{p.px.p_killBoltL=1;kmax(p,'p_killBolt',PERK_KILL_L);}},
@@ -1000,7 +1000,7 @@ function onKill(G,e,over){
   if(px.p_killEvBuff)refreshBuff(p,'evade',PERK_KILLEV_A,PERK_KILLEV_T,'p_killEvBuff');
   if(px.p_killAtkStk&&pkk(p,PERK_KSTACK_CH))p.dmg*=1+PERK_KSTACK_ATK;
   if(px.p_killEvStk&&pkk(p,PERK_KSTACK_CH))p.evade+=PERK_KSTACK_EV;
-  if(px.p_killHeal6&&pkk(p,PERK_KHEAL_CH))heal(p,p.maxHp*PERK_KHEAL_F);
+  if(px.p_killHealN&&pkk(p,PERK_KHEAL_CH))heal(p,p.maxHp*PERK_KHEAL_F);
   if(px.p_killRepair&&pkk(p,PERK_KREPAIR_CH))repair(p,p.maxSh*PERK_KREPAIR_F);
   /* 웨이브 전멸 실드 충전 폐지 (PLAN §2.3 주인 지시) — 실드 충전은 특전으로만 */
   if(e.isBoss)G.cleared=true;   /* 클리어 확정을 먼저 — 보스 경험치로 레벨업해도 특전 3택 없음 (PLAN §2.4 주인 지시) */

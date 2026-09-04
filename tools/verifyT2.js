@@ -91,7 +91,7 @@ else {
    그래서 «102 인가» 가 아니라 «두 파일이 같은가 + 등급별 편차 ≤ PERK_RAR_GAP» 을 본다.
    T48 이 각 등급 33종(총 132)까지 채웠고, T77(주인 확정 «전투 무관 특전 4종 삭제»)이
    일반 2종(c_gold30·c_walk20)·신화 2종(m_gold2·m_sage)을 빼 31/33/33/31 = 128종, 편차 2 가 됐다. */
-const PERK_TOTAL = 32;   /* ⚑⚑⚑ T119 — 주인 확정 «풀 32종(일반 15 · 희귀 8 · 전설 9) · 등급 부활 · 3택 1». T96 의 «고정 10종» 은 이 지시로 확장됐다 */
+const PERK_TOTAL = 66;   /* ⚑⚑⚑ T121 — 주인 확정 «풀 66종(일반 30 · 희귀 20 · 전설 16)». T119 의 32종(15/8/9)에서 신규 34종이 더 붙었다 */
 console.log(`\n[② 특전 ${PERK_TOTAL}종 — id·순서·ap 본문 두 엔진 대조]`);
 const S = simPerks(), H = htmlPerks();
 if (!H) { bad('index.html 에서 const PERKS=[...] 를 찾지 못했다'); }
@@ -175,7 +175,8 @@ const FORMULAS = [
   ['제시 장수 상수(PERK_OFFER=3)', /const PERK_OFFER=3;/, /const PERK_OFFER=3;/],
   /* ⚑⚑⚑ T119 — 등급 굴림 확률·등급 이름이 두 엔진에서 같은 배열인가 (값 대조는 verifyPerkOrder ① 가 한다) */
   ['등급 굴림 확률(PERK_GRADE_RATE)', /const PERK_GRADE_RATE=\[60,25,15\];/, /const PERK_GRADE_RATE=\[60,25,15\];/],
-  ['특전 소환 확률 상수', /const PERK_ATK_M=1\.20, PERK_DEF_M=1\.10/, /const PERK_ATK_M=1\.20, PERK_DEF_M=1\.10/],
+  /* ⚑ T121 (주인 확정 16:2X·16:3X) — 기존 4종이 내려가 상수 줄이 통째로 바뀌었다(1.20/10/10 → 1.15/8/8). */
+  ['특전 소환 확률 상수', /const PERK_ATK_M=1\.15, PERK_DEF_M=1\.10/, /const PERK_ATK_M=1\.15, PERK_DEF_M=1\.10/],
   ['경험치 요구식', /expNeed:lv=>5\*lv\+1/, /expNeed=lv=>5\*lv\+1/],   /* ⚑⚑⚑ T100 — 4+3*lv → 5*lv+1 */
 ];
 /* ⚑ T1 회귀2 R02 — 세 번째 칸이 «함수» 면 sim.js 에서 뽑은 값을 넣어 index.html 쪽 정규식을 만든다.
