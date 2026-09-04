@@ -146,7 +146,9 @@ console.log('\n[Ⓐ «%p» 표기 금지 — 주인 지시 «게이트의 금지
      주인이 표에 그 어법 그대로 적은 문면이라 워커가 «+8%» 로 고치면 안 된다 — 여기 등재로 명시한다. */
   const OWNER_TX = ['회피율 +8', '반격률 +8', '치명타 확률 +8', '치명타 피해 +30',
     '보유 특전 하나당 치명타 확률 +2', '평타 적중마다 치명타 확률 +1(치명타 시 초기화)',
-    '치명타 확률 +16', '반격률 +16', '회피율 +16', '치명타 피해 +60'];
+    '치명타 확률 +16', '반격률 +16', '회피율 +16', '치명타 피해 +60',
+    /* ⚑ T121 2차 (주인 확정 17:0X) — «반격 시 치명타 확률 +20/+40» 도 같은 어법의 주인 원문이다. */
+    '반격 시 치명타 확률 +20', '반격 시 치명타 확률 +40'];
   const barePerk = perks.filter(x => BARE.test(strip(x.t)) && !OWNER_TX.includes(strip(x.t)))
     .map(x => `${x.k}: «${strip(x.t)}»`);
   barePerk.length ? bad(`특전 tx 에 단위 없는 스탯 표기 ${barePerk.length}건 — ${barePerk.join(' / ')}`)
@@ -205,7 +207,9 @@ const KNOWN_DECIMAL = ['장비 greatsword옵7', '장비 robe옵7', '장비 gaunt
 const KNOWN_PROB = ['장비 plate옵4',
   '특전 p_killSpearN', '특전 p_killBoltN', '특전 p_killArrowN', '특전 p_killAxeN',
   '특전 p_killSpearR', '특전 p_killBoltR', '특전 p_killArrowR', '특전 p_killAxeR',
-  '특전 p_killAtkStk', '특전 p_killEvStk', '특전 p_killHealN', '특전 p_killRepair'];
+  '특전 p_killAtkStk', '특전 p_killEvStk', '특전 p_killHealN', '특전 p_killRepair',
+  /* ⚑ T121 2차 (주인 확정 17:4X) — «관통 베기» I/II 도 주인이 직접 33/66 으로 적었다(III 는 100% 라 대상 아님). */
+  '특전 p_cleaveN', '특전 p_cleaveR'];
 
 /* Ⓔ 지속시간 0.5초 단위 — 잔여 0건(전면 강제). 여기에 뭐가 추가되면 그건 규칙 위반이다. */
 const KNOWN_DUR = [];

@@ -37,7 +37,7 @@ const chk = (n, c, d) => { R.push({ n, c }); console.log(`  ${c ? '✓' : '✗'}
      ⓐ 기존 5종의 **수치가 내려갔다**: 공격력 +20% → +15% · 회피율/반격률/치확 +10 → +8 · 치피 +50 → +30.
        사다리 «기준 플레이어» 의 특전이라 기준이 약해지지만 **적 스탯 재적합은 없다**(T120 ④ 상시 규칙).
      ⓑ 신규 34종(일반 15 · 희귀 12 · 전설 7)이 각 등급 «기존 것 뒤에» 붙는다. 같은 이름의 I/II/III 는
-       **서로 다른 특전**이라 한 판에 여럿 얻을 수 있고 각각 따로 굴린다(즉사·기절·N타 소환).
+       **서로 다른 특전**이라 한 판에 여럿 얻을 수 있고 각각 따로 굴린다(즉사·스턴·N타 소환).
      ⓒ id 는 종전 규약대로 등급 접미 N/R/L 을 쓴다 — 이 게이트의 id regex 가 `p_[A-Za-z]+`(숫자 없음)라
        «II» 를 `2` 로 적으면 그 행이 통째로 안 보인다(실제로 한 번 걸렸다: 66종이 60종으로 읽혔다). */
 const WANT = [
@@ -66,11 +66,16 @@ const WANT = [
   { id: 'p_critStack', g: 0, nm: '치명 스택', tx: '평타 적중마다 치명타 확률 +1(치명타 시 초기화)' },
   { id: 'p_aspdAtk', g: 0, nm: '공격 시 공속 버프', tx: '공격 시 공격속도 +7% 7초(중첩)' },
   { id: 'p_execEvN', g: 0, nm: '회피 시 즉사', tx: '회피 시 5% 확률로 그 적 즉사' },
-  { id: 'p_stunCritN', g: 0, nm: '치명타 시 기절', tx: '치명타 시 10% 확률로 3초 기절' },
-  { id: 'p_nArrowN', g: 0, nm: '3타 화살', tx: '3타마다 무작위 적에게 화살 1개' },
-  { id: 'p_nAxeN', g: 0, nm: '4타 도끼', tx: '4타마다 무작위 적에게 도끼 1개' },
-  { id: 'p_nBoltN', g: 0, nm: '4타 번개', tx: '4타마다 무작위 적에게 번개 1회' },
-  { id: 'p_nHealN', g: 0, nm: '4타 회복', tx: '4타마다 최대 체력 5% 회복' },
+  { id: 'p_stunCritN', g: 0, nm: '치명타 시 스턴', tx: '치명타 시 10% 확률로 3초 스턴' },
+  { id: 'p_nArrowN', g: 0, nm: '2타 화살', tx: '2타마다 무작위 적에게 화살 1개' },
+  { id: 'p_nAxeN', g: 0, nm: '3타 도끼', tx: '3타마다 무작위 적에게 도끼 1개' },
+  { id: 'p_nBoltN', g: 0, nm: '3타 번개', tx: '3타마다 무작위 적에게 번개 1회' },
+  { id: 'p_nHealN', g: 0, nm: '3타 회복', tx: '3타마다 최대 체력 5% 회복' },
+  { id: 'p_evadeStun', g: 0, nm: '회피 시 스턴', tx: '회피 시 30% 확률로 공격한 적 3초 스턴' },
+  { id: 'p_ctCritN', g: 0, nm: '반격 치명', tx: '반격 시 치명타 확률 +20' },
+  { id: 'p_ctDmgN', g: 0, nm: '반격 강화', tx: '반격 데미지 +30%' },
+  { id: 'p_killSureCrit', g: 0, nm: '처치 시 확정 치명', tx: '처치 시 다음 공격은 반드시 치명타' },
+  { id: 'p_cleaveN', g: 0, nm: '관통 베기', tx: '공격 시 33% 확률로 바로 뒤 적도 같은 데미지' },
   { id: 'p_fullHp', g: 1, nm: '풀피 적 강타', tx: '체력이 가득 찬 적 공격 시 데미지 +100%' },
   { id: 'p_repairUp', g: 1, nm: '수리 증폭', tx: '실드 수리량 +100%' },
   { id: 'p_healUp', g: 1, nm: '회복 증폭', tx: '체력 회복량 +100%' },
@@ -83,14 +88,19 @@ const WANT = [
   { id: 'p_killRepair', g: 1, nm: '처치 시 수리', tx: '처치 시 66% 확률로 최대 실드 6% 수리' },
   { id: 'p_critFR', g: 1, nm: '치명타 피해 증가 II', tx: '치명타 피해 +60' },
   { id: 'p_execEvR', g: 1, nm: '회피 시 즉사 II', tx: '회피 시 10% 확률로 그 적 즉사' },
-  { id: 'p_stunCritR', g: 1, nm: '치명타 시 기절 II', tx: '치명타 시 20% 확률로 3초 기절' },
-  { id: 'p_nArrowR', g: 1, nm: '3타 화살 II', tx: '3타마다 무작위 적에게 화살 2개' },
-  { id: 'p_nAxeR', g: 1, nm: '4타 도끼 II', tx: '4타마다 무작위 적에게 도끼 2개' },
-  { id: 'p_nBoltR', g: 1, nm: '4타 번개 II', tx: '4타마다 무작위 적에게 번개 2회' },
+  { id: 'p_stunCritR', g: 1, nm: '치명타 시 스턴 II', tx: '치명타 시 20% 확률로 3초 스턴' },
+  { id: 'p_nArrowR', g: 1, nm: '2타 화살 II', tx: '2타마다 무작위 적에게 화살 2개' },
+  { id: 'p_nAxeR', g: 1, nm: '3타 도끼 II', tx: '3타마다 무작위 적에게 도끼 2개' },
+  { id: 'p_nBoltR', g: 1, nm: '3타 번개 II', tx: '3타마다 무작위 적에게 번개 2회' },
   { id: 'p_critRR', g: 1, nm: '치명타 확률 증가 II', tx: '치명타 확률 +16' },
   { id: 'p_counterR', g: 1, nm: '반격률 증가 II', tx: '반격률 +16' },
   { id: 'p_atkR', g: 1, nm: '공격력 증가 II', tx: '공격력 +30%' },
   { id: 'p_evadeR', g: 1, nm: '회피율 증가 II', tx: '회피율 +16' },
+  { id: 'p_killDash', g: 1, nm: '처치 시 대시', tx: '처치 시 같은 웨이브의 다음 적까지 대시' },
+  { id: 'p_berserkStk', g: 1, nm: '버서커', tx: '처치 시 스택 1 · 평타마다 1 소모하고 그 공격 +100%' },
+  { id: 'p_ctCritR', g: 1, nm: '반격 치명 II', tx: '반격 시 치명타 확률 +40' },
+  { id: 'p_ctDmgR', g: 1, nm: '반격 강화 II', tx: '반격 데미지 +60%' },
+  { id: 'p_cleaveR', g: 1, nm: '관통 베기 II', tx: '공격 시 66% 확률로 바로 뒤 적도 같은 데미지' },
   { id: 'p_killSpearL', g: 2, nm: '처치 시 창', tx: '처치 시 창 1개' },
   { id: 'p_killBoltL', g: 2, nm: '처치 시 번개', tx: '처치 시 보이는 적 전부에게 번개 1회씩' },
   { id: 'p_overkill', g: 2, nm: '오버킬 회복', tx: '처치 시 남은 데미지만큼 체력 회복' },
@@ -102,14 +112,15 @@ const WANT = [
   { id: 'p_thornsL', g: 2, nm: '가시갑옷', tx: '가시갑옷 +300%' },
   { id: 'p_giant', g: 2, nm: '거인의 힘', tx: '공격력 +200% 대신 공격속도 2/3' },
   { id: 'p_execEvL', g: 2, nm: '회피 시 즉사 III', tx: '회피 시 15% 확률로 그 적 즉사' },
-  { id: 'p_stunCritL', g: 2, nm: '치명타 시 기절 III', tx: '치명타 시 30% 확률로 3초 기절' },
-  { id: 'p_nArrowL', g: 2, nm: '3타 화살 III', tx: '3타마다 무작위 적에게 화살 3개' },
-  { id: 'p_nAxeL', g: 2, nm: '4타 도끼 III', tx: '4타마다 무작위 적에게 도끼 3개' },
-  { id: 'p_nBoltL', g: 2, nm: '4타 번개 III', tx: '4타마다 무작위 적에게 번개 3회' },
-  { id: 'p_nSpearL', g: 2, nm: '4타 창', tx: '4타마다 창 1개' },
+  { id: 'p_stunCritL', g: 2, nm: '치명타 시 스턴 III', tx: '치명타 시 30% 확률로 3초 스턴' },
+  { id: 'p_nArrowL', g: 2, nm: '2타 화살 III', tx: '2타마다 무작위 적에게 화살 3개' },
+  { id: 'p_nAxeL', g: 2, nm: '3타 도끼 III', tx: '3타마다 무작위 적에게 도끼 3개' },
+  { id: 'p_nBoltL', g: 2, nm: '3타 번개 III', tx: '3타마다 무작위 적에게 번개 3회' },
+  { id: 'p_nSpearL', g: 2, nm: '3타 창', tx: '3타마다 창 1개' },
+  { id: 'p_cleaveL', g: 2, nm: '관통 베기 III', tx: '공격 시 바로 뒤 적도 같은 데미지' },
 ];
 const GRADE_NAME = ['일반', '희귀', '전설'];
-const GRADE_N = [30, 20, 16];        /* 주인 확정 등급별 개수 (⚑ T121 — T119 의 15/8/9 에서) */
+const GRADE_N = [35, 25, 17];        /* 주인 확정 등급별 개수 (⚑ T121 2차 — 16:2X 의 30/20/16 에서 11종 더) */
 const GRADE_RATE = [60, 25, 15];     /* ⚑ 13:2X 주인 정정 (처음 50/30/20) */
 /* ⚑ T104 — `PERK_STEAL` 은 폐기됐다(특전에서 흡혈 축이 사라졌다). 자리에 `PERK_EVHEAL_CH`·`PERK_EVHEAL_F` 신설.
    ⚑ T119 — 신규 22종이 쓰는 상수 9종 추가(두 엔진 같은 이름·같은 값). */
@@ -130,7 +141,12 @@ const CONST = { PERK_ATK_M: '1.15', PERK_DEF_M: '1.10', PERK_EVADE_A: '8', PERK_
   PERK_NHEAL_F: '0.05',
   PERK_CRITF_R: '60', PERK_CRITR_R: '16', PERK_COUNTER_R: '16', PERK_EVADE_R: '16', PERK_ATK_R: '1.30',
   PERK_GIANT_M: '3.00', PERK_GIANT_ASPD: '2/3',
-  PERK_NHIT_ARROW: '3', PERK_NHIT_AXE: '4', PERK_NHIT_BOLT: '4', PERK_NHIT_SPEAR: '4', PERK_NHIT_HEAL: '4' };
+  /* ⚑ 17:3X 주인 정정 — 화살 3타 → 2타 · 도끼/번개/창/회복 4타 → 3타 */
+  PERK_NHIT_ARROW: '2', PERK_NHIT_AXE: '3', PERK_NHIT_BOLT: '3', PERK_NHIT_SPEAR: '3', PERK_NHIT_HEAL: '3',
+  /* ⚑ T121 2차 신규 상수 9종 (주인 확정 16:5X · 17:0X · 17:4X) */
+  PERK_EVSTUN_CH: '0.30', PERK_CTCRIT_N: '20', PERK_CTCRIT_R: '40',
+  PERK_CTDMG_N: '1.30', PERK_CTDMG_R: '1.60', PERK_BSTK_M: '2.00', DASH_MUL: '5',
+  PERK_CLEAVE_N: '0.33', PERK_CLEAVE_R: '0.66', PERK_CLEAVE_L: '1.00' };
 
 function run(simSrc, htmSrc, planSrc) {
   R.length = 0;
@@ -160,8 +176,8 @@ function run(simSrc, htmSrc, planSrc) {
   chk('PLAN §3.1 표의 등급이 주인 표와 같다', planRows.map(r => r.g).join() === wantG.join(),
     planRows.map(r => r.g).join('') || '-');
   const cnt = g => WANT.filter(w => w.g === g).length;
-  chk('⚑ T121 등급별 개수 = 일반 30 · 희귀 20 · 전설 16 (합 66)',
-    [0, 1, 2].every(g => cnt(g) === GRADE_N[g]) && N === 66, `${[0, 1, 2].map(cnt).join('/')} = ${N}`);
+  chk('⚑ T121 등급별 개수 = 일반 35 · 희귀 25 · 전설 17 (합 77)',
+    [0, 1, 2].every(g => cnt(g) === GRADE_N[g]) && N === 77, `${[0, 1, 2].map(cnt).join('/')} = ${N}`);
   const planTxBad = planRows.filter((r, i) => WANT[i] && !(r.nm === WANT[i].nm && r.tx.replace(/\*/g, '') === WANT[i].tx));
   chk('PLAN 표의 이름·효과 문장이 주인 확정 문면 그대로다', planRows.length === N && planTxBad.length === 0,
     planTxBad.map(r => r.id).join(',') || `${N}/${N}`);
@@ -306,15 +322,15 @@ function run(simSrc, htmSrc, planSrc) {
     `풀 ${S.PERKS.length} ≥ 획득 ${S.PERK_PICKS}`);
   /* ⚑⚑⚑ T119 — «풀 = 획득 수 = 10» 이던 T102 의 등식이 드디어 갈라졌다(풀 32 · 한 런 상한 10).
      이제 이 자리가 지키는 것은 «풀이 상한보다 넉넉한가» 다 — 풀을 도로 줄이면 빨개진다. */
-  chk('⚑ T121 풀 66종 · 한 런 상한 10 (T102 가 예고한 분리가 더 벌어졌다)',
-    S.PERKS.length === 66 && S.PERK_PICKS === 10, `풀 ${S.PERKS.length} · 획득 ${S.PERK_PICKS}`);
+  chk('⚑ T121 풀 77종 · 한 런 상한 10 (T102 가 예고한 분리가 더 벌어졌다)',
+    S.PERKS.length === 77 && S.PERK_PICKS === 10, `풀 ${S.PERKS.length} · 획득 ${S.PERK_PICKS}`);
   chk('⚑ T117 풀 ≥ 제시 장수 (풀이 3보다 작으면 남은 만큼만 제시된다 — ⓐ 가 실측)',
     S.PERKS.length >= S.PERK_OFFER, `풀 ${S.PERKS.length} ≥ 제시 ${S.PERK_OFFER}`);
   /* ⚑ T107 — 종전엔 «보스 전 공급으로 오르는 레벨 + 악마 앞당김 1 = PERK_PICKS» 를 못 박았지만,
      적 수가 챕터마다 달라져 그 항등식이 사라졌다. 남은 단언은 주인 확정 «풀 10종 · 한 런 상한 10» 이다
      (챕터별 실제 획득 수는 `verifyChapterFixed` ⓓ 가 표와 대조한다 — 여기서 두 번 재지 않는다). */
   chk('⚑ PERK_PICKS 가 주인 확정 «한 런 상한 10» 과 같다', S.PERK_PICKS === 10,
-    `PERK_PICKS=${S.PERK_PICKS} · 풀 66종 · 챕터별 실제 획득 6~9 (T107)`);
+    `PERK_PICKS=${S.PERK_PICKS} · 풀 77종 · 챕터별 실제 획득 6~9 (T107)`);
   /* 수치 — 획득 순서대로 하나씩 붙이며 실효 스탯 변화를 잰다.
      ⚑ T104 — 순서가 바뀌었고, 1번 특전은 스탯을 안 건드리는 트리거형(회피 시 회복)이라 스탯 델타 0 이다. */
   const G0 = { taken: [], player: null, perkChances: 0 };
@@ -400,7 +416,7 @@ function run(simSrc, htmSrc, planSrc) {
      소환 «적중» 이 새 소환을 낳지 않는다. 즉 «공격 시»·«치명타 시» 축에 특전 소환이 0건이어야 한다. */
   const atkAxis = simSrc.slice(simSrc.indexOf('function procOnAttack'), simSrc.indexOf('function doCounter'));
   const critAxis = simSrc.slice(simSrc.indexOf('if(crit){'), simSrc.indexOf('if(px.execKill'));
-  /* ⚑⚑⚑ T121 — 이 축에 특전이 «생겼다»(공격 시 공속 버프 · 치명타 시 기절 3종). 셋 다 소환이 아니라서
+  /* ⚑⚑⚑ T121 — 이 축에 특전이 «생겼다»(공격 시 공속 버프 · 치명타 시 스턴 3종). 셋 다 소환이 아니라서
      B 는 그대로 0 이지만, 종전 단언은 «특전 키가 한 개도 없을 것» 이라 소환이든 아니든 빨개졌다.
      이제 재는 것은 «그 줄이 소환을 부르는가» 다 — 특전 키가 있는 줄에 `fire*` 가 붙으면 B > 0 이 된다.
      (그 축에 소환을 붙일 땐 이 게이트를 고치지 말고 `verifySummonChain` 으로 B 를 다시 재야 한다.) */
@@ -412,6 +428,32 @@ function run(simSrc, htmSrc, planSrc) {
   chk('⚑ «공격/치명타 시» 축에는 여전히 특전 **소환**이 없다 (그 축의 B = 0 · ⚑ T121 로도 안 바뀐다)',
     perkSummonOnAtk.length === 0,
     perkSummonOnAtk.join(',') || `공격 축 B = 0 (소환 아닌 특전 ${perkNonSummonOnAtk.length}종: ${perkNonSummonOnAtk.join(',') || '없음'})`);
+  /* ===== ⚑⚑⚑ T121 ⑥ 용어 통일 — «기절» 이 아니라 «스턴» (주인 지시 2026-09-04 16:4X) =====
+     주인 원문 취지: «스턴으로 해야 이해하기 쉬울 것 같다». 유저에게 보이는 글자 전부가 대상이다 —
+     특전 이름·설명, 카드·인포 팝업, 전투 중 팝 문구, 장비 옵션 문구, PLAN §3.0/§3.1 문면.
+     엔진 이름(`applyStun`·`e.stun`·`STUN_BOSS_MUL`)은 이미 stun 이라 그대로 둔다.
+     ⚑ 주인이 «한 파일에 두 표기가 섞이지 않게 정적 단언 1개» 를 직접 지시했다 — 이 자리가 그것이다.
+     따옴표 안의 문자열과 PLAN 본문만 보므로, 게이트 소스의 주석에 남은 «기절» 은 대상이 아니다. */
+  console.log('\n=== ③-d ⚑ T121 ⑥ 용어 «스턴» 통일 (유저 노출 문자열에 «기절» 0건) ===');
+  {
+    const userStrings = src => {
+      const out = [];
+      for (const m of src.matchAll(/'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"/g)) out.push(m[1] || m[2] || '');
+      return out;
+    };
+    for (const [nm, src] of both) {
+      const hits = userStrings(src).filter(t => t.includes('기절'));
+      chk(`${nm} 의 유저 노출 문자열에 «기절» 이 0건이다`, hits.length === 0,
+        hits.slice(0, 3).map(t => `«${t.slice(0, 40)}»`).join(' · ') || '0건');
+    }
+    const planHits = planSrc.split('\n').filter(l => l.includes('기절'));
+    chk('PLAN 문면에도 «기절» 이 0건이다', planHits.length === 0,
+      planHits.slice(0, 2).map(l => l.trim().slice(0, 50)).join(' · ') || '0건');
+    /* 반대 방향 — «스턴» 이 실제로 쓰이고 있는가(전부 지워 버린 것이 아니라 갈아탄 것인가) */
+    chk('두 엔진과 PLAN 이 «스턴» 을 실제로 쓴다 (지운 게 아니라 갈아탄 것)',
+      both.every(([, src]) => userStrings(src).some(t => t.includes('스턴'))) && /스턴/.test(planSrc));
+  }
+
   /* ⚑⚑⚑ T119 — 새로 생긴 «처치 시» 축은 `onKill` 에 있고, 그 축의 연쇄 기대값은
      `tools/verifySummonChain.js` ⑤ 가 따로 잰다(여기서 두 번 재지 않는다). 여기서는 «네 소환이 그 자리에 있는가» 만 본다. */
   console.log('\n=== ③-b ⚑ T119 신규 22종의 엔진 키·수치 대조 ===');

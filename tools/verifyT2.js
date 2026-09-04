@@ -91,7 +91,7 @@ else {
    그래서 «102 인가» 가 아니라 «두 파일이 같은가 + 등급별 편차 ≤ PERK_RAR_GAP» 을 본다.
    T48 이 각 등급 33종(총 132)까지 채웠고, T77(주인 확정 «전투 무관 특전 4종 삭제»)이
    일반 2종(c_gold30·c_walk20)·신화 2종(m_gold2·m_sage)을 빼 31/33/33/31 = 128종, 편차 2 가 됐다. */
-const PERK_TOTAL = 66;   /* ⚑⚑⚑ T121 — 주인 확정 «풀 66종(일반 30 · 희귀 20 · 전설 16)». T119 의 32종(15/8/9)에서 신규 34종이 더 붙었다 */
+const PERK_TOTAL = 77;   /* ⚑⚑⚑ T121 — 주인 확정 «풀 77종(일반 35 · 희귀 25 · 전설 17)». T119 의 32종(15/8/9)에서 신규 45종이 더 붙었다(16:0X ~ 17:4X) */
 console.log(`\n[② 특전 ${PERK_TOTAL}종 — id·순서·ap 본문 두 엔진 대조]`);
 const S = simPerks(), H = htmlPerks();
 if (!H) { bad('index.html 에서 const PERKS=[...] 를 찾지 못했다'); }
@@ -1292,16 +1292,20 @@ console.log('\n[㉒ 스턴 · 빗맞음 축 (PLAN §3.0·§4, T48 1단계)]');
     .forEach(([src, who, re]) => re.test(src)
       ? ok(`${who}: 스턴 중 적은 공격 루프를 건너뛴다 (근접·화살 공통, 타이머 정지)`)
       : bad(`${who}: 스턴이 적 공격을 실제로 막는 자리가 없다 — 표시만 뜨고 효과가 없다`));
-  /* (4) 빗맞음은 procOnMiss 한 곳으로 모으고, «MISS» 가 뜨는 두 자리 전부에서 불러야 한다 */
+  /* (4) 빗맞음은 procOnMiss 한 곳으로 모으고, «MISS» 가 뜨는 **모든** 자리에서 불러야 한다.
+     ⚑⚑⚑ T121 2차 — «관통 베기»(주인 확정 17:4X)로 빗맞음 자리가 2 → **3곳**이 됐다.
+     주인 문면이 «뒤 적의 회피 10% 는 따로 굴린다» 라 뒤 적도 자기 회피 판정을 하고, 빗맞으면 그 자리에서도
+     빗맞음 축이 굴러야 한다(안 부르면 `missAtk`·`missSpear` 같은 축이 그 타격만 조용히 건너뛴다).
+     그래서 기대값을 3 으로 올리되 **«회피 분기 안» 조항은 그대로**다 — 세 곳 다 분기 안이어야 한다. */
   for (const [src, who] of [[SIM, 'sim.js'], [HTML, 'index.html']]) {
     const body = src.replace(/\/\*[\s\S]*?\*\//g, '');
     /function procOnMiss\(/.test(body) ? ok(`${who}: procOnMiss 존재`) : bad(`${who}: procOnMiss 가 없다`);
     const calls = (body.match(/procOnMiss\(/g) || []).length - 1;   /* 정의부 1건 제외 */
-    calls === 2 ? ok(`${who}: procOnMiss 호출 2곳 (기본·소환 타격 + 반격)`)
-                : bad(`${who}: procOnMiss 호출이 ${calls}곳 — 빗맞음이 일어나는 두 자리(dealDmg·doCounter) 전부여야 한다`);
+    calls === 3 ? ok(`${who}: procOnMiss 호출 3곳 (기본·소환 타격 + 반격 + ⚑ 관통 베기의 뒤 적)`)
+                : bad(`${who}: procOnMiss 호출이 ${calls}곳 — 빗맞음이 일어나는 세 자리(dealDmg·doCounter·cleave) 전부여야 한다`);
     /* 회피 분기 안에서 불러야 한다 — 분기 밖이면 적중에도 굴러간다 */
     const evadeBlocks = (body.match(/Math\.random\(\)<ENEMY_EVADE[\s\S]{0,220}?procOnMiss\(/g) || []).length;
-    evadeBlocks === 2 ? ok(`${who}: 두 호출 다 적 회피 분기 안에 있다`)
+    evadeBlocks === 3 ? ok(`${who}: 세 호출 다 적 회피 분기 안에 있다`)
                       : bad(`${who}: 적 회피 분기 안의 procOnMiss 가 ${evadeBlocks}곳 — 적중에도 굴러가면 축이 무너진다`);
   }
   /* ⚑⚑ T96 — (5)(5-b)(6) 은 대상이 사라졌다.
