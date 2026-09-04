@@ -43,7 +43,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       chapTxt: document.getElementById('lobbyChapName')?.textContent.trim(),
       saveKey: (() => { try { save.gold = save.gold; persist(); } catch (e) {} return Object.keys(localStorage).join(','); })(),
     }));
-    chk('⚑ T121 특전 77종 로드 (일반 35 · 희귀 25 · 전설 17)', boot.perks === 77 && boot.perkGrades === '35/25/17',
+    chk('⚑ T121 3차 특전 99종 로드 (일반 39 · 희귀 32 · 전설 28)', boot.perks === 99 && boot.perkGrades === '39/32/28',
       `PERKS=${boot.perks} · 등급별 ${boot.perkGrades}`);   /* ⚑ T119 — 풀 확장 + 등급 부활 (T96 의 «고정 10종» 은 확장됐다) */
     chk('챕터 상한 420', boot.maxChapter === 420, `maxChapter=${boot.maxChapter}`);   /* ⚑ T103 — 600 → 420 (주인 정정) */
     chk('로비 화면이 켜져 있다', boot.screen === 'lobby', boot.screen);
