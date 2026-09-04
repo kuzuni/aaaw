@@ -416,12 +416,24 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       n: G.nodes.flatMap(n => n.type === 'wave' ? n.enemies : []).filter(e => e.ranged).length,
     };
   }, c);
-  const r3a = await rangedRun(3), r3b = await rangedRun(3), r4 = await rangedRun(4);
-  chk('⚑ 같은 챕터를 두 번 시작하면 원거리 자리가 완전히 같다', r3a.pat === r3b.pat && r3a.pat.length > 0,
-    `챕터 3 원거리 ${r3a.n}마리 · 두 번째 ${r3b.n}마리`);
-  chk('다른 챕터는 다른 자리다 (고정이 «전 챕터 동일» 로 뭉개지지 않았다)', r3a.pat !== r4.pat,
-    `ch3 ${r3a.n}마리 / ch4 ${r4.n}마리`);
-  chk('웨이브 첫 마리는 원거리가 아니다', r3a.pat.split('|').every(w => w[0] === '0'));
+  /* ⚑⚑⚑ T114 — 챕터 1~4 는 원거리가 0마리라 «다른 챕터는 다른 자리» 를 거기서 재면 둘 다 전부 0 이라
+     항상 같다. 과녁을 원거리가 실제로 서는 챕터(7·8 = 램프 구간 3·4마리)로 옮긴다. */
+  const r7a = await rangedRun(7), r7b = await rangedRun(7), r8 = await rangedRun(8);
+  chk('⚑ 같은 챕터를 두 번 시작하면 원거리 자리가 완전히 같다', r7a.pat === r7b.pat && r7a.pat.length > 0,
+    `챕터 7 원거리 ${r7a.n}마리 · 두 번째 ${r7b.n}마리`);
+  chk('다른 챕터는 다른 자리다 (고정이 «전 챕터 동일» 로 뭉개지지 않았다)', r7a.pat !== r8.pat,
+    `ch7 ${r7a.n}마리 / ch8 ${r8.n}마리`);
+  chk('웨이브 첫 마리는 원거리가 아니다', r7a.pat.split('|').every(w => w[0] === '0'));
+  /* ⚑⚑⚑ T114 마릿수 곡선 실측 — 주인 «챕터 4까지는 원거리 아예 없고 5부터 원거리 1마리씩 추가».
+     정적 게이트는 `chapterLayout` 을 보지만, 게임이 그 마릿수대로 실제 적을 세우는지는 여기서만 확인된다. */
+  const zeroN = [];
+  for (const c of [1, 2, 3, 4]) zeroN.push((await rangedRun(c)).n);
+  chk('⚑ 챕터 1~4 는 원거리가 한 마리도 안 선다 (주인 «챕터 4까지는 원거리 아예 없고»)',
+    zeroN.every(n => n === 0), `ch1~4 = ${zeroN.join('/')}마리`);
+  const ramp = [];
+  for (const c of [5, 6, 7, 8]) ramp.push((await rangedRun(c)).n);
+  chk('⚑ 챕터 5~8(램프)은 1·2·3·4마리로 한 마리씩 는다 (주인 «5부터 1마리씩 추가»)',
+    ramp.join('/') === '1/2/3/4', `ch5~8 = ${ramp.join('/')}마리`);
 
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();

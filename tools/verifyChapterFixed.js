@@ -34,10 +34,16 @@ const wantN = c => c <= 5 ? WANT.curve.early : Math.min(WANT.curve.cap, WANT.cur
 /* 웨이브 크기 기대값 — 일반 적 N−1 을 5개에 균등 분배, 나머지는 앞 웨이브부터 */
 const wantSizes = c => { const n = wantN(c) - 1, b = Math.floor(n / WANT.waves), r = n % WANT.waves;
   return Array.from({ length: WANT.waves }, (_, i) => b + (i < r ? 1 : 0)); };
-/* ⚑ T105 — 주인 확정 원거리 비율 40%(웨이브 첫 마리 제외). 밴드는 주인 지시대로 36~44%.
-   ⚑ T107 — 웨이브 크기가 챕터마다 3~10 으로 달라져 «적 전체 대비» 비율은 구조적으로 흔들린다
-   (작은 웨이브일수록 굴림에서 빠지는 첫 마리 몫이 크다). 그래서 밴드는 «굴림 대상» 모집단에 건다. */
-const RANGED_BAND = [36, 44];
+/* ⚑⚑⚑ T114 — 주인 확정 «원거리 마릿수 곡선». 이 세 값과 아래 세 함수가 이 게이트의 독립 구현이다
+   (엔진이 아니라 «주인 지시» 를 그대로 옮긴 것 — 엔진과 대조하는 것이 게이트의 일).
+     E(c) = N(c) − 1 − 웨이브 5 · B(c) = round(0.30·E) · j ∈ {−2..+2}
+     R(c) = c ≤ 4 ? 0 : (c−4 ≤ B(c) ? c−4 : max(0, B(c)+j))     — 램프 구간은 흔들림 없이 정확히 +1
+   T105 의 «각 적 40% 독립 굴림» 과 그 36~44% 밴드는 이 곡선으로 폐기됐다. */
+const WANT_R = { zeroUntil: 4, rate: 0.30, jitter: 2 };
+const wantPool = c => wantN(c) - 1 - WANT.waves;
+const wantBase = c => Math.round(WANT_R.rate * wantPool(c));
+/* 램프 끝 — «c−4 가 기준값을 따라잡는» 마지막 챕터. 곡선 상수만으로 결정되므로 리터럴로 박지 않는다. */
+const rampEndOf = maxc => { let e = WANT_R.zeroUntil; for (let c = WANT_R.zeroUntil + 1; c <= maxc; c++) { if (c - WANT_R.zeroUntil > wantBase(c)) break; e = c; } return e; };
 /* ⚑ T105 ⓙ — 이벤트 배치 순서(챕터 1~`TUNE.maxChapter`, 웨이브 뺀 나열)의 골든 지문. T105 «이전» 트리에서 잰 값이고,
    원거리 굴림을 이벤트 셔플 뒤에 넣었으므로 T105 뒤에도 같아야 한다. 이 숫자가 바뀌면 시드 스트림
    소비 순서를 건드린 것이다 — 챕터마다 정해져 있던 쉼터·악마·천사 자리가 통째로 이사한다.
@@ -178,14 +184,16 @@ function run(simSrc, htmSrc) {
     chk(`${nm}: 시드 셔플이 «이벤트 순서» 에만 남아 있다`, /evs\[i\]=evs\[j\]/.test(body));
   }
 
-  /* ===== ⚑⚑⚑ ⓔ~ⓙ T105 — 원거리 자리도 챕터별 고정 ===== */
-  console.log('\n=== ⓔ~ⓙ 원거리 자리 챕터별 고정 (⚑ T105 주인 확정) ===');
+  /* ===== ⚑⚑⚑ ⓔ~ⓙ T105(자리 고정) + T114(마릿수 곡선) ===== */
+  console.log('\n=== ⓔ~ⓙ 원거리 — 자리 챕터별 고정(T105) · 마릿수 곡선(⚑⚑⚑ T114 주인 확정) ===');
   const LS = loadLayout(simSrc), LH = loadLayout(htmSrc);
+  const RAMP_END = rampEndOf(MAXC);
   if (!LS || !LH) {
     chk('chapterLayout 추출 (sim.js · index.html)', false, `${!LS ? 'sim.js ' : ''}${!LH ? 'index.html' : ''} 실패 — 게이트를 갱신할 것`);
   } else {
     let same = true, cross = true, firstOk = true, ord = 0;
     let rTot = 0, eTot = 0, aTot = 0, rMin = 1e9, rMax = 0, badC = [];
+    let zeroBad = [], rampBad = [], bandBad = [], poolBad = [], prevR = 0, dec = 0, decMax = 0;
     for (let c = 1; c <= MAXC; c++) {
       const A = LS(c), A2 = LS(c), B = LH(c);
       const kA = rangedKey(A);
@@ -195,11 +203,17 @@ function run(simSrc, htmSrc) {
       for (const n of A.filter(x => x.t === 'wave')) {
         if (!n.ranged || n.ranged.length !== n.size) { same = false; if (badC.length < 3) badC.push(`ch${c} ranged 길이 이상`); continue; }
         if (n.ranged[0]) firstOk = false;
-        /* ⚑ T107 — 웨이브 첫 마리는 굴림 대상이 아니다. 웨이브 크기가 챕터마다 다르니(3~10)
-           «전체 대비 비율» 은 구조적으로 흔들린다(작은 웨이브일수록 첫 마리 몫이 크다).
-           주인 확정 상수 40% 는 «굴림 대상» 위의 확률이므로 밴드도 그 모집단에 건다. */
         for (let j = 0; j < n.ranged.length; j++) { aTot++; if (j > 0) ec++; if (n.ranged[j]) rc++; }
       }
+      /* ⚑ T114 ⓗ — 곡선 전수 대조. 세 구간을 따로 본다(«평균이 맞으면 통과» 를 막는다). */
+      if (ec !== wantPool(c) && poolBad.length < 3) poolBad.push(`ch${c} 굴림 대상 ${ec} ≠ ${wantPool(c)}`);
+      if (c <= WANT_R.zeroUntil) { if (rc !== 0 && zeroBad.length < 4) zeroBad.push(`ch${c} ${rc}마리`); }
+      else if (c <= RAMP_END) { if (rc !== c - WANT_R.zeroUntil && rampBad.length < 4) rampBad.push(`ch${c} ${rc} ≠ ${c - WANT_R.zeroUntil}`);
+        if (rc !== prevR + 1 && rampBad.length < 4) rampBad.push(`ch${c} 램프 +1 아님 (${prevR}→${rc})`); }
+      else if (Math.abs(rc - wantBase(c)) > WANT_R.jitter && bandBad.length < 4)
+        bandBad.push(`ch${c} R=${rc} B=${wantBase(c)} 차 ${rc - wantBase(c)}`);
+      if (c > 1 && rc < prevR) { dec++; decMax = Math.max(decMax, prevR - rc); }
+      prevR = rc;
       rTot += rc; eTot += ec; rMin = Math.min(rMin, rc); rMax = Math.max(rMax, rc);
       const k = orderKey(A);
       for (let i = 0; i < k.length; i++) ord = (ord * 31 + k.charCodeAt(i)) >>> 0;
@@ -209,16 +223,25 @@ function run(simSrc, htmSrc) {
     chk('ⓔ 같은 챕터를 두 번 생성하면 원거리 패턴이 완전히 같다', same, badC.join(' / ') || `챕터 1~${MAXC} 전수`);
     chk('ⓕ sim.js ↔ index.html 원거리 패턴이 전 챕터 동일하다', cross, badC.join(' / ') || `챕터 1~${MAXC} 전수`);
     chk('ⓖ 웨이브 첫 마리는 전 챕터 원거리가 아니다', firstOk);
-    chk(`ⓗ 전 챕터 합산 원거리 비율(웨이브 첫 마리 제외 모집단)이 ${RANGED_BAND[0]}~${RANGED_BAND[1]}% 다`,
-      pct >= RANGED_BAND[0] && pct <= RANGED_BAND[1],
-      `${pct.toFixed(2)}% (${rTot}/${eTot}) · 적 전체 대비 ${pctAll.toFixed(2)}% · 챕터당 최소 ${rMin} · 최대 ${rMax} · 평균 ${(rTot / MAXC).toFixed(2)}마리`);
+    chk(`ⓗ 굴림 대상 모집단이 E(c) = N(c) − 1 − 웨이브 ${WANT.waves} 와 전수 일치한다`, poolBad.length === 0,
+      poolBad.join(' / ') || `ch1 E=${wantPool(1)} · ch38+ E=${wantPool(38)}`);
+    chk(`ⓗ 챕터 1~${WANT_R.zeroUntil} 는 원거리 0마리다 (주인 «챕터 4까지는 원거리 아예 없고»)`, zeroBad.length === 0, zeroBad.join(' / '));
+    chk(`ⓗ 챕터 ${WANT_R.zeroUntil + 1}~${RAMP_END}(램프)는 정확히 +1/챕터 로 오른다 (주인 «5부터 1마리씩 추가»)`,
+      rampBad.length === 0, rampBad.join(' / ') || `ch${WANT_R.zeroUntil + 1}=1 … ch${RAMP_END}=${RAMP_END - WANT_R.zeroUntil}`);
+    chk(`ⓗ 챕터 ${RAMP_END + 1} 이후는 기준값 B(c)=round(${WANT_R.rate}·E) 의 ± ${WANT_R.jitter} 안이다 (주인 «30퍼에서 플러스 마이너스 2로 묶으까»)`,
+      bandBad.length === 0, bandBad.join(' / ') || `B: ch15=${wantBase(15)} · ch28=${wantBase(28)} · ch38+=${wantBase(38)}`);
+    chk(`ⓗ 전 챕터 합산 원거리 비율(굴림 대상 대비)이 ${(WANT_R.rate * 100).toFixed(0)}% 근방이다`,
+      Math.abs(pct - WANT_R.rate * 100) <= 3,
+      `${pct.toFixed(2)}% (${rTot}/${eTot}) · 적 전체 대비 ${pctAll.toFixed(2)}% · 챕터당 최소 ${rMin} · 최대 ${rMax} · 평균 ${(rTot / MAXC).toFixed(2)}마리 · 앞 챕터보다 줄어드는 챕터 ${dec}개(최대 ${decMax}마리)`);
     chk('ⓙ 이벤트 배치 순서가 T105 이전과 한 챕터도 안 바뀌었다 (원거리를 셔플 «뒤» 에 굴린 증명)',
       ord === ORDER_FP, `지문 ${ord} (기준 ${ORDER_FP})`);
   }
-  /* ⓘ 정적 — 웨이브 생성부에서 다시 굴리면 «챕터별 고정» 이 그 자리에서 깨진다 */
+  /* ⓘ 정적 — 웨이브 생성부에서 다시 굴리거나 «각 적 독립 굴림»(T114 로 폐기)이 남아 있으면 곡선이 그 자리에서 깨진다 */
   for (const [nm, src] of [['sim.js', simSrc], ['index.html', htmSrc]]) {
     chk(`ⓘ ${nm}: 웨이브 생성부에 매판 굴림(Math.random()<0.4)이 남아 있지 않다`,
-      !/Math\.random\(\)\s*<\s*0?\.4\s*&&\s*j\s*>\s*0/.test(src));
+      !/Math\.random\(\)\s*<\s*0?\.[34]\s*&&\s*j\s*>\s*0/.test(src));
+    chk(`ⓘ ${nm}: «각 적 독립 굴림»(RANGED_P·<0.4·<0.3) 잔재가 없다 — T114 로 폐기`,
+      !/RANGED_P/.test(src) && !/rnd\(\)\s*<\s*0?\.[34]/.test(src));
   }
 
   const bad = R.filter(x => !x.c).length;
@@ -264,18 +287,38 @@ if (process.argv.includes('--self')) {
       s => s.replace('const ranged=node.ranged[j];', 'const ranged=Math.random()<0.4&&j>0;'), null],
     ['원거리를 매판 굴림으로 되돌리면 (게임)',
       null, s => s.replace('const ranged=nl.ranged[j];', 'const ranged=Math.random()<0.4 && j>0;')],
-    ['챕터 시드 대신 매판 난수로 패턴을 만들면',
-      s => s.replace('r.push(rnd()<RANGED_P&&j>0)', 'r.push(Math.random()<RANGED_P&&j>0)'), null],
-    ['게임만 원거리 비율이 다르면 (40% → 20%)',
-      null, s => s.replace('const RANGED_P=0.40;', 'const RANGED_P=0.20;')],
-    ['원거리 비율을 밴드 밖으로 밀면 (40% → 70%)',
-      s => s.replace('const RANGED_P=0.40;', 'const RANGED_P=0.70;'),
-      s => s.replace('const RANGED_P=0.40;', 'const RANGED_P=0.70;')],
+    ['챕터 시드 대신 매판 난수로 자리를 뽑으면',
+      s => s.replace('const k=Math.floor(rnd()*(i+1)); const t=pool[i];', 'const k=Math.floor(Math.random()*(i+1)); const t=pool[i];'), null],
+    /* ⚑⚑⚑ T114 — 마릿수 곡선이 흔들리는 갈래 */
+    ['게임만 원거리 비율이 다르면 (30% → 20%)',
+      null, s => s.replace('RANGED_CURVE={zeroUntil:4, rate:0.30', 'RANGED_CURVE={zeroUntil:4, rate:0.20')],
+    ['원거리 비율을 두 엔진 다 0.30 → 0.50 으로 올리면',
+      s => s.replace('rate:0.30', 'rate:0.50'), s => s.replace('rate:0.30', 'rate:0.50')],
+    ['원거리 0 구간을 4 → 2 챕터로 줄이면 (주인 «챕터 4까지는 아예 없고» 위반)',
+      s => s.replace('RANGED_CURVE={zeroUntil:4', 'RANGED_CURVE={zeroUntil:2'),
+      s => s.replace('RANGED_CURVE={zeroUntil:4', 'RANGED_CURVE={zeroUntil:2')],
+    ['흔들림을 ± 2 → ± 5 로 키우면 (± 2 묶기 위반)',
+      s => s.replace('jitter:2}', 'jitter:5}'), s => s.replace('jitter:2}', 'jitter:5}')],
+    ['램프에도 흔들림을 태우면 (주인 «1마리씩 추가» 단조 위반 — 위임 원문의 min() 형태)',
+      s => s.replace('return ramp<=B ? ramp : Math.max(0,B+jit);', 'return Math.min(ramp, Math.max(0,B+jit));'),
+      s => s.replace('return ramp<=B ? ramp : Math.max(0,B+jit);', 'return Math.min(ramp, Math.max(0,B+jit));')],
+    ['램프를 +2/챕터 로 가파르게 하면',
+      s => s.replace('const ramp=c-RANGED_CURVE.zeroUntil,', 'const ramp=2*(c-RANGED_CURVE.zeroUntil),'),
+      s => s.replace('const ramp=c-RANGED_CURVE.zeroUntil,', 'const ramp=2*(c-RANGED_CURVE.zeroUntil),')],
+    ['굴림 대상을 «일반 적 전체»(E = N−1)로 넓히면',
+      s => s.replace('return chapterEnemyCount(c)-1-LAYOUT_WAVES;', 'return chapterEnemyCount(c)-1;'),
+      s => s.replace('return chapterEnemyCount(c)-1-LAYOUT_WAVES;', 'return chapterEnemyCount(c)-1;')],
+    ['T105 의 «각 적 40% 독립 굴림» 으로 되돌리면',
+      s => s.replace(/  for\(const nd of out\) if\(nd\.t==='wave'\) nd\.ranged=new Array\(nd\.size\)\.fill\(false\);[\s\S]*?for\(let q=0;q<want&&q<pool\.length;q\+\+\)\{ const\[i,j\]=pool\[q\]; out\[i\]\.ranged\[j\]=true; \}/,
+        "  for(const nd of out){ if(nd.t!=='wave') continue; const r=[]; for(let j=0;j<nd.size;j++) r.push(rnd()<0.40&&j>0); nd.ranged=r; }"), null],
     ['웨이브 첫 마리도 원거리가 될 수 있게 하면',
-      s => s.replace('r.push(rnd()<RANGED_P&&j>0)', 'r.push(rnd()<RANGED_P)'),
-      s => s.replace('r.push(rnd()<RANGED_P&&j>0)', 'r.push(rnd()<RANGED_P)')],
+      s => s.replace('for(let j=1;j<nd.size;j++) pool.push([i,j]);', 'for(let j=0;j<nd.size;j++) pool.push([i,j]);'),
+      s => s.replace('for(let j=1;j<nd.size;j++) pool.push([i,j]);', 'for(let j=0;j<nd.size;j++) pool.push([i,j]);')],
     /* ⚑ 핵심 — 원거리 굴림을 이벤트 셔플 «앞» 으로 옮기면 시드 스트림이 밀려 쉼터·악마·천사 자리가
        챕터마다 이사한다. 두 엔진이 똑같이 밀리므로 ⓕ 는 초록인 채라, ⓙ 골든 지문만이 이걸 잡는다. */
+    ['흔들림 j 를 램프 구간에서 굴리지 않으면 (챕터마다 소비 수가 달라져 자리가 밀린다)',
+      s => s.replace('const jit=Math.floor(rnd()*(2*RANGED_CURVE.jitter+1))-RANGED_CURVE.jitter;',
+        'const jit=c>RANGED_CURVE.zeroUntil+5?Math.floor(rnd()*(2*RANGED_CURVE.jitter+1))-RANGED_CURVE.jitter:0;'), null],
     ['원거리 굴림을 이벤트 셔플 «앞» 으로 옮기면',
       s => s.replace("const evs=['devil','angel'];", "const _pre=[]; for(let q=0;q<50;q++) _pre.push(rnd());\n  const evs=['devil','angel'];"),
       s => s.replace("const evs=['devil','angel'];", "const _pre=[]; for(let q=0;q<50;q++) _pre.push(rnd());\n  const evs=['devil','angel'];")],

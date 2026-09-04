@@ -1809,7 +1809,7 @@ const expNeed=lv=>5*lv+1;
 const TUNE={
   /* ⚑⚑⚑ T97 (2026-09-03 / 워커 C) — 주인 확정 과녁 2점 재적합. 기저 ×1.015 (40.0/7.44 → 40.6/7.55).
      과녁 B(노장비·챕터 4) 33.6% → 29.8%. 챕터 4 는 구간0 만 지나므로 노브가 기저뿐이다. sim.js 와 1:1. */
-  eBaseHp:46.780464, eBaseDmg:8.699327,
+  eBaseHp:50.174688, eBaseDmg:9.330519,
   /* ⚑ T35: 단일 성장률 `eHpG 1.185`·`eDmgG 1.08` 폐기 → PLAN §11.7 «구간별 성장률» 표.
      적 HP 는 플레이어 «공격력» 축, 적 DMG 는 «체력+실드» 축에서 주인 확정 스탯 사다리로부터 역산된 값이다.
      [하한, 성장률] — 챕터 c 에서 c+1 로 갈 때 적용할 배수를 c 로 찾는다.
@@ -1843,8 +1843,8 @@ const TUNE={
         잔차가 1 아래로 나오고, 주인 지시 ④가 «잔차가 1 아래면 벽을 끄고 률만으로 잇는다» 로 정해 두었다.
      ⚠ 적 HP·DMG 는 `Math.round` 라 초반 칸의 계단이 크다(2칸 챕터 15: 적 HP 51 → 52 가 14.5% → 5.5%).
         0.5% 단위보다 잘게 움직이지 말 것. 근거·실측표 `docs/balance/T103/result.md`. */
-  eHpSeg:[[0,1.0292],[5,1.010082],[15,1.062254],[28,1.082263],[40,1.052733],[70,1.024105],[150,1.02317],[380,1.013863]],
-  eDmgSeg:[[0,1.0265],[5,1.010082],[15,1.058603],[28,1.065726],[40,1.025283],[70,1.026021],[150,1.02264],[380,1.013863]],
+  eHpSeg:[[0,1.0292],[5,1.003143],[15,1.071776],[28,1.077458],[40,1.05304],[70,1.023291],[150,1.023071],[380,1.014651]],
+  eDmgSeg:[[0,1.0265],[5,1.003143],[15,1.068093],[28,1.060994],[40,1.025582],[70,1.025206],[150,1.022541],[380,1.014651]],
   /* ⚑⚑ 「벽 예산」 — T1 R02 가 «사다리 유지 + 벽 존재» 를 동시에 만족시킨 방법 (T35 가 남긴 숙제의 답).
      T35 는 «구간별 성장률이 사다리 7점에서 역산된 값이라 벽을 얹으면 사다리가 어긋난다» 며 벽 4종을 전부 껐다.
      하지만 어긋나는 건 «혼동» 이 아니라 **예산**이다: 과녁 7개 중 5 만 벽 밖(c<10)이고 15·30·50·70·120·260 은 전부 벽 안이라
@@ -1926,9 +1926,20 @@ function chapterWaveSizes(c){
   for(let i=0;i<LAYOUT_WAVES;i++) out.push(b+(i<r?1:0));   /* 나머지는 앞 웨이브부터 */
   return out;
 }
-/* ⚑⚑⚑ T105 (주인 확정 2026-09-03 17:0X) — 원거리 적 비율 40%(웨이브 첫 마리 제외). 비율은 종전 그대로이고
-   바뀐 것은 «자리가 챕터별로 고정» 이라는 점뿐이다. `chapterLayout` 안에서만 쓴다. sim.js 와 같은 값. */
-const RANGED_P=0.40;
+/* ⚑⚑⚑ T114 (주인 확정 2026-09-04 03:4X) — **원거리 마릿수 곡선** (sim.js 와 같은 이름·같은 값·같은 순서).
+   주인 원문: «챕터 4까지는 원거리 아예 없고 5부터 원거리 1마리씩 추가하고 30퍼 비율 될 때까지 한 마리씩
+   늘린 다음에 30퍼에서 플러스 마이너스 2로 묶으까?» — T105 의 «각 적 40% 독립 굴림» 은 폐기됐다.
+     E(c) = N(c) − 6(굴림 대상) · B(c) = round(0.30·E) · j ∈ {−2..+2}(챕터 시드)
+     R(c) = c ≤ 4 ? 0 : (c−4 ≤ B(c) ? c−4 : max(0, B(c)+j(c)))   — 램프(5~9)는 흔들림 없이 정확히 +1
+   `chapterLayout` 안에서만 쓴다 — 웨이브 생성부에서 다시 굴리면 챕터별 고정이 깨진다. */
+const RANGED_CURVE={zeroUntil:4, rate:0.30, jitter:2};
+function chapterRangedPool(c){ return chapterEnemyCount(c)-1-LAYOUT_WAVES; }
+function chapterRangedBase(c){ return Math.round(RANGED_CURVE.rate*chapterRangedPool(c)); }
+function chapterRangedCount(c,jit){
+  if(c<=RANGED_CURVE.zeroUntil) return 0;
+  const ramp=c-RANGED_CURVE.zeroUntil, B=chapterRangedBase(c);
+  return ramp<=B ? ramp : Math.max(0,B+jit);
+}
 /* ⚑ 쉼터 보상 (PLAN §2.4 · 주인 확정 2026-09-02 17:1X · T49) — «❤️ 체력 260 회복(고정값)» vs «🌟 경험치 +26».
    고정값이라 최대체력 비율로 되돌리지 말 것. sim.js 와 이름·값이 같아야 한다(게이트 verifyRestPolicy). */
 const REST_HEAL=260, REST_EXP=26;
@@ -1961,15 +1972,17 @@ function chapterLayout(c){
   /* 웨이브 5 · 이벤트 4 — «웨이브 뒤 이벤트» 를 이벤트가 떨어질 때까지 반복하면 마지막 웨이브가 보스 앞에 붙는다 */
   for(let i=0;i<waveCount;i++){ out.push({t:'wave',size:sizes[i]}); if(i<evs.length) out.push({t:evs[i]}); }
   out.push({t:'boss'});
-  /* ⚑⚑⚑ T105 (주인 확정 2026-09-03 17:0X) — «같은 챕터 = 같은 원거리 자리». 매판 굴리던
-     `Math.random()<0.4` 를 챕터 시드 RNG 로 옮겨 노드에 `ranged[]` 로 싣는다.
+  /* ⚑⚑⚑ T105(자리 고정) + ⚑⚑⚑ T114(마릿수 곡선) — ① 마릿수를 `chapterRangedCount` 로 정하고
+     ② 그만큼을 굴림 대상(웨이브 첫 마리 제외)에서 챕터 시드로 뽑는다. sim.js 와 1:1.
      ⚑ 이벤트 셔플이 끝난 «뒤» 에 굴려야 기존 쉼터·악마·천사 순서가 안 바뀐다.
-     ⚑ `j>0` 와 무관하게 마리마다 한 번씩 굴림을 소비한다. 보스는 원거리 아님. sim.js 와 1:1. */
-  for(const nd of out){
-    if(nd.t!=='wave') continue;
-    const r=[]; for(let j=0;j<nd.size;j++) r.push(rnd()<RANGED_P&&j>0);
-    nd.ranged=r;
-  }
+     ⚑ 흔들림 j 는 램프 구간에서도 항상 한 번 소비한다(소비 수가 챕터마다 달라지면 자리가 밀린다). */
+  for(const nd of out) if(nd.t==='wave') nd.ranged=new Array(nd.size).fill(false);
+  const jit=Math.floor(rnd()*(2*RANGED_CURVE.jitter+1))-RANGED_CURVE.jitter;
+  const want=chapterRangedCount(c,jit);
+  const pool=[];
+  out.forEach((nd,i)=>{ if(nd.t==='wave') for(let j=1;j<nd.size;j++) pool.push([i,j]); });
+  for(let i=pool.length-1;i>0;i--){ const k=Math.floor(rnd()*(i+1)); const t=pool[i]; pool[i]=pool[k]; pool[k]=t; }
+  for(let q=0;q<want&&q<pool.length;q++){ const[i,j]=pool[q]; out[i].ranged[j]=true; }
   return out;
 }
 const ENEMY_SKINS=[

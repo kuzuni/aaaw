@@ -22,7 +22,7 @@ const TUNE={
      노브가 «기저» 아니면 «구간0 성장률» 뿐이다. 구간0 을 그대로 두고 기저만 올려 챕터 1~4 의 상대 형상을 보존했다.
      ⚠ 이 축은 매우 예민하다 — ×1.015 = 30.5% · ×1.020 = 24.2%(각 2,000판×3시드). 적 HP 가 정수 반올림이라
      «한 대 더 때려야 하나» 가 계단으로 바뀌는 탓이다. 0.5% 단위보다 잘게 움직이지 말 것. 근거 docs/balance/T97/raw.md. */
-  eBaseHp:46.780464, eBaseDmg:8.699327,
+  eBaseHp:50.174688, eBaseDmg:9.330519,
   /* ⚑ T35: 단일 성장률 `eHpG 1.185`·`eDmgG 1.08` 폐기 → PLAN §11.7 «구간별 성장률» 표.
      적 HP 는 플레이어 «공격력» 축, 적 DMG 는 «체력+실드» 축에서 주인 확정 스탯 사다리로부터 역산된 값이다.
      [하한, 성장률] — 챕터 c 에서 c+1 로 갈 때 적용할 배수를 c 로 찾는다.
@@ -79,8 +79,8 @@ const TUNE={
         잔차가 1 아래로 나오고, 주인 지시 ④가 «잔차가 1 아래면 벽을 끄고 률만으로 잇는다» 로 정해 두었다.
      ⚠ 적 HP·DMG 는 `Math.round` 라 초반 칸의 계단이 크다(2칸 챕터 15: 적 HP 51 → 52 가 14.5% → 5.5%).
         0.5% 단위보다 잘게 움직이지 말 것. 근거·실측표 `docs/balance/T103/result.md`. */
-  eHpSeg:[[0,1.0292],[5,1.010082],[15,1.062254],[28,1.082263],[40,1.052733],[70,1.024105],[150,1.02317],[380,1.013863]],
-  eDmgSeg:[[0,1.0265],[5,1.010082],[15,1.058603],[28,1.065726],[40,1.025283],[70,1.026021],[150,1.02264],[380,1.013863]],
+  eHpSeg:[[0,1.0292],[5,1.003143],[15,1.071776],[28,1.077458],[40,1.05304],[70,1.023291],[150,1.023071],[380,1.014651]],
+  eDmgSeg:[[0,1.0265],[5,1.003143],[15,1.068093],[28,1.060994],[40,1.025582],[70,1.025206],[150,1.022541],[380,1.014651]],
   /* ⚑⚑ 「벽 예산」 — T1 R02 가 «사다리 유지 + 벽 존재» 를 동시에 만족시킨 방법 (T35 가 남긴 숙제의 답).
      T35 는 «구간별 성장률이 사다리 7점에서 역산된 값이라 벽을 얹으면 사다리가 어긋난다» 며 벽 4종을 전부 껐다.
      하지만 어긋나는 건 «혼동» 이 아니라 **예산**이다: 과녁 7개 중 5 만 벽 밖(c<10)이고 15·30·50·70·120·260 은 전부 벽 안이라
@@ -175,10 +175,26 @@ function chapterWaveSizes(c){
   for(let i=0;i<LAYOUT_WAVES;i++) out.push(b+(i<r?1:0));   /* 나머지는 앞 웨이브부터 */
   return out;
 }
-/* ⚑⚑⚑ T105 (주인 확정 2026-09-03 17:0X) — 원거리 적 비율. «자리» 는 챕터 시드로 고정되지만 «비율» 은
-   종전 그대로 40% 다(주인이 바꾼 것은 자리의 고정이지 비율이 아니다). 웨이브 첫 마리는 원거리 제외.
-   이 상수는 `chapterLayout` 안에서만 쓴다 — 웨이브 생성부에서 다시 굴리면 챕터별 고정이 깨진다. */
-const RANGED_P=0.40;
+/* ⚑⚑⚑ T114 (주인 확정 2026-09-04 03:4X) — **원거리 마릿수 곡선**. 주인 원문: «챕터 4까지는 원거리 아예 없고
+   5부터 원거리 1마리씩 추가하고 30퍼 비율 될 때까지 한 마리씩 늘린 다음에 30퍼에서 플러스 마이너스 2로 묶으까?»
+   T105 의 «각 적 40% 독립 굴림» 은 폐기됐다 — 이제 «마릿수 결정 → 자리 추첨» 두 단계다.
+     굴림 대상 E(c) = 일반 적 − 웨이브 첫 마리 5 = N(c) − 6   (첫 마리 비원거리 규칙은 그대로)
+     기준값   B(c) = round(0.30 · E(c))                        — 챕터 1~5 = 3 · 15 = 6 · 28 = 10 · 38+ = 13
+     흔들림   j(c) ∈ {−2..+2} — 챕터 시드로 고른다 (이벤트 셔플 «뒤» · 자리 굴림 «앞» 에서 소비)
+     원거리 수 R(c) = c ≤ 4 ? 0 : (c−4 ≤ B(c) ? c−4 : max(0, B(c)+j(c)))
+   ⚑ 램프 구간(챕터 5~9)에는 흔들림을 태우지 않는다 — 주인 지시의 게이트 조건 ⓗ 가 «5~램프 끝 정확히 +1»
+     을 요구하므로, 위임 원문의 `min(c−4, B+j)` 형태로는 램프 중간에 j=−2 가 들어가 +1 단조가 깨진다
+     (실제로 챕터 7 이 3 → 2 로 내려갔다). 램프를 우선하고, 램프가 B 를 따라잡은 «뒤» 부터 B ± 2 로 묶는다.
+     주인이 원문 형태를 원하시면 이 세 줄만 `Math.min(ramp, Math.max(0,B+jit))` 로 되돌리면 된다.
+   ⚑ 이 상수·함수는 `chapterLayout` 안에서만 쓴다 — 웨이브 생성부에서 다시 굴리면 챕터별 고정이 깨진다. */
+const RANGED_CURVE={zeroUntil:4, rate:0.30, jitter:2};
+function chapterRangedPool(c){ return chapterEnemyCount(c)-1-LAYOUT_WAVES; }   /* E(c) = N − 1 − 웨이브 첫 마리 5 */
+function chapterRangedBase(c){ return Math.round(RANGED_CURVE.rate*chapterRangedPool(c)); }
+function chapterRangedCount(c,jit){
+  if(c<=RANGED_CURVE.zeroUntil) return 0;
+  const ramp=c-RANGED_CURVE.zeroUntil, B=chapterRangedBase(c);
+  return ramp<=B ? ramp : Math.max(0,B+jit);
+}
 /* ⚑ 쉼터 보상 (PLAN §2.4 · 주인 확정 2026-09-02 17:1X · T49) — «❤️ 체력 260 회복(고정값)» vs «🌟 경험치 +26».
    고정값이라 최대체력 비율로 되돌리지 말 것. index.html 과 이름·값이 같아야 한다(게이트 verifyRestPolicy). */
 const REST_HEAL=260, REST_EXP=26;
@@ -221,18 +237,19 @@ function chapterLayout(c){
      그 마지막 웨이브가 보스 직전에 붙는다(웨이브가 처음과 끝을 모두 차지한다). */
   for(let i=0;i<waveCount;i++){ out.push({t:'wave',size:sizes[i]}); if(i<evs.length) out.push({t:evs[i]}); }
   out.push({t:'boss'});
-  /* ⚑⚑⚑ T105 (주인 확정 2026-09-03 17:0X) — «같은 챕터 = 같은 원거리 자리».
-     종전에는 웨이브 생성부가 매판 `Math.random()<0.4` 를 굴려 같은 챕터라도 판마다 원거리 자리·마릿수가
-     달랐다. 그 굴림을 여기(챕터 시드 RNG)로 옮겨 노드에 `ranged[]` 로 실어 보낸다.
+  /* ⚑⚑⚑ T105 (자리 고정) + ⚑⚑⚑ T114 (마릿수 곡선) — «같은 챕터 = 같은 원거리 자리·같은 마릿수».
+     ① 마릿수를 먼저 정하고(`chapterRangedCount`) ② 그만큼을 굴림 대상에서 챕터 시드로 뽑는다.
      ⚑ 스트림 소비 순서를 지킬 것 — **이벤트 셔플이 끝난 뒤에** 굴린다. 그래야 챕터마다 이미 정해져 있는
        쉼터·악마·천사 순서가 한 챕터도 안 바뀐다(verifyT2 레이아웃 전수 대조가 그 불변을 지킨다).
-     ⚑ `j>0` 여부와 무관하게 굴림 자체는 마리마다 한 번씩 소비한다(첫 마리에서 굴림을 건너뛰면
-       뒤 마리들의 자리가 통째로 밀린다). 보스는 원거리가 아니라 굴리지 않는다. */
-  for(const nd of out){
-    if(nd.t!=='wave') continue;
-    const r=[]; for(let j=0;j<nd.size;j++) r.push(rnd()<RANGED_P&&j>0);
-    nd.ranged=r;
-  }
+     ⚑ 흔들림 j 는 램프 구간에서도 «항상 한 번» 소비한다 — 챕터마다 소비 수가 달라지면 자리 추첨이 밀린다.
+     ⚑ 굴림 대상은 «웨이브 첫 마리를 뺀 일반 적» 이고 보스는 원거리가 아니다. */
+  for(const nd of out) if(nd.t==='wave') nd.ranged=new Array(nd.size).fill(false);
+  const jit=Math.floor(rnd()*(2*RANGED_CURVE.jitter+1))-RANGED_CURVE.jitter;
+  const want=chapterRangedCount(c,jit);
+  const pool=[];
+  out.forEach((nd,i)=>{ if(nd.t==='wave') for(let j=1;j<nd.size;j++) pool.push([i,j]); });
+  for(let i=pool.length-1;i>0;i--){ const k=Math.floor(rnd()*(i+1)); const t=pool[i]; pool[i]=pool[k]; pool[k]=t; }
+  for(let q=0;q<want&&q<pool.length;q++){ const[i,j]=pool[q]; out[i].ranged[j]=true; }
   return out;
 }
 /* ⚑ T35: 구간별 성장률 누적 배수. 챕터 1 을 1.0 으로 두고 1→c 까지 각 스텝의 구간 배수를 곱한다.
