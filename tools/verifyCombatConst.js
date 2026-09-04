@@ -86,6 +86,16 @@ const CHECKS=[
      신화 m_spear200 은 데미지만 올리고 관통 수는 건드리지 않으므로 이 값은 상수 하나로 족하다. */
   /* ⚑ P1(T83) — 창 관통은 상수 SPEAR_PIERCE 로 올라갔고 PLAN 문면도 §3.0 «일직선 최대 8마리» 로 바뀌었다 */
   ['창 관통 상한',          /const R_AXE=[\d.]+[^\n]*\n[^\n]*SPEAR_PIERCE=(\d+);/, /일직선 최대 \*\*(\d+)마리\*\* 관통/, '§3.0'],
+  /* ⚑⚑⚑ T118 (주인 확정 2026-09-04 12:4X) — 소환 데미지 계수 5종은 «주인 확정 상수» 인데
+     종전에는 이 게이트가 그 줄에서 SPEAR_PIERCE 만 읽고 계수 자체는 한 항목도 안 봤다.
+     그래서 주인이 화살 50→30% · 도끼 30→50% 를 지시했을 때 «엔진만 바꾸고 PLAN 문면은 옛 값»
+     (또는 그 반대)이 되어도 18종이 전부 초록이었다. 다섯 계수를 전부 PLAN §3.0 문장과 직접 대조한다.
+     PLAN 은 %(50), 엔진은 비율(0.50)이라 mul=100 — 적 회피율 항목과 같은 수법. */
+  ['소환 계수 도끼',        /const R_AXE=([\d.]+),/,                    /계수 변경 금지[^\n]*\): 도끼 \*\*(\d+)%\*\*/, '§3.0', 100],
+  ['소환 계수 화살',        /const R_AXE=[\d.]+, R_ARROW=([\d.]+),/,    /· 화살 \*\*(\d+)%\*\*\(발당\)/,               '§3.0', 100],
+  ['소환 계수 검기',        /R_ARROW=[\d.]+, R_WAVE=([\d.]+),/,         /검기 \*\*(\d+)%\*\* · 번개/,                  '§3.0', 100],
+  ['소환 계수 번개',        /R_WAVE=[\d.]+, R_BOLT=([\d.]+),/,          /번개 \*\*(\d+)%\*\*\(회당\)/,                 '§3.0', 100],
+  ['소환 계수 창',          /R_BOLT=[\d.]+, R_SPEAR=([\d.]+);/,         /창 \*\*(\d+)%\*\*\(마리당/,                   '§3.0', 100],
   /* ⚑ 주인 확정(2026-09-02 15:4X, T43): 적 전원 회피 10%. 튜닝 노브가 아니라 «주인 확정 상수» 라
      TUNE 밖 최상위 const 로 둔다 — 여기서 PLAN §2.3 문장과 직접 대조한다(엔진 0.10 ↔ PLAN 10%). */
   ['적 회피율',             /const ENEMY_EVADE=([\d.]+);/,             /적 전원 회피율 (\d+)% 고정/,                 '§2.3', 100],
@@ -160,6 +170,58 @@ console.log('\n=== ②-b 기본 스탯 단일 출처 (mkPlayer ↔ TUNE) ===');
   const a=SIM.match(line), b=HTML2.match(line);
   (a&&b&&a[0]===b[0]) ? pass(`두 파일 기본 스탯 줄 일치 — ${a?a[0]:''}`)
                       : fail(`두 파일 기본 스탯 줄이 다르다 — sim «${a?a[0]:'없음'}» / index.html «${b?b[0]:'없음'}»`);
+}
+
+/* ---------- ②-c 소환 데미지 계수 — 두 엔진 동일 + 음성 검사 (⚑⚑⚑ T118) ---------- */
+/* 왜 — ① 은 sim.js 만 읽는다. 주인 확정 상수인데 index.html 만 옛 값으로 남으면
+   시뮬은 새 값으로 사다리를 재고 게임은 옛 값으로 도는 «두 엔진 분기» 가 조용히 생긴다
+   (T108 이 PERK_SUMMON_CH 에서 같은 함정을 겪어 verifyPerkOrder 에 두 엔진 대조를 넣었다).
+   음성 검사는 «이 게이트가 정말 값을 보는가» 를 증명한다 — 넣지 않으면 ① 의 정규식이
+   빗나가 무조건 통과하는 상태를 아무도 못 잡는다(T114 가 ⓗ 에서 겪은 «평균만 맞으면 통과»). */
+console.log('\n=== ②-c 소환 데미지 계수 (T118) — 두 엔진 동일 · 음성 검사 ===');
+{
+  const HTML3=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const RLINE=/const R_AXE=([\d.]+), R_ARROW=([\d.]+), R_WAVE=([\d.]+), R_BOLT=([\d.]+), R_SPEAR=([\d.]+);/;
+  const a=SIM.match(RLINE), b=HTML3.match(RLINE);
+  if(!a||!b) fail(`소환 계수 줄을 못 찾았다 (sim ${a?'OK':'✗'} · index.html ${b?'OK':'✗'}) — 코드 모양이 바뀌었나`);
+  else if(a[0]!==b[0]) fail(`두 엔진 소환 계수 줄이 다르다 — sim «${a[0]}» / index.html «${b[0]}»`);
+  else pass(`두 엔진 소환 계수 줄 일치 — ${a[0]}`);
+  /* 주인 확정 값 자체를 못 박는다 — ① 은 PLAN 문면과의 «일치» 만 보므로 둘이 같이 틀리면 통과한다 */
+  const WANT={R_AXE:'0.50', R_ARROW:'0.30', R_WAVE:'0.50', R_BOLT:'0.75', R_SPEAR:'1.00'};
+  if(a){
+    const got={R_AXE:a[1], R_ARROW:a[2], R_WAVE:a[3], R_BOLT:a[4], R_SPEAR:a[5]};
+    for(const k of Object.keys(WANT)){
+      got[k]===WANT[k] ? pass(`${k} = ${got[k]} (주인 확정 · T118)`)
+                       : fail(`${k} = ${got[k]} — 주인 확정값은 ${WANT[k]} 다 (T118 · 튜닝으로 바꾸지 말 것)`);
+    }
+  }
+  /* 음성 검사 — 소스를 일부러 어긋나게 만들었을 때 ① 의 다섯 항목이 실제로 잡아내는가.
+     ① 과 같은 정규식 쌍을 그대로 다시 돌린다(엔진 캡처 ↔ PLAN 캡처 ×100 비교). */
+  const R_CHECKS=CHECKS.filter(c=>c[0].startsWith('소환 계수'));
+  const NEG=[
+    ['화살·도끼를 T118 이전 값으로 되돌리면',
+     s=>s.replace('R_AXE=0.50, R_ARROW=0.30','R_AXE=0.30, R_ARROW=0.50'), null],
+    ['엔진만 화살을 30 → 40% 로 흔들면',
+     s=>s.replace('R_ARROW=0.30','R_ARROW=0.40'), null],
+    ['PLAN 문면만 도끼를 옛 30% 로 되돌리면',
+     null, p=>p.replace('계수 변경 금지 — 값은 주인만 바꾼다): 도끼 **50%**','계수 변경 금지 — 값은 주인만 바꾼다): 도끼 **30%**')],
+    ['창 계수를 100 → 90% 로 낮추면',
+     s=>s.replace('R_SPEAR=1.00','R_SPEAR=0.90'), null],
+  ];
+  for(const [why,mutS,mutP] of NEG){
+    const sim2 = mutS ? mutS(SIM) : SIM;
+    const plan2= mutP ? mutP(PLAN): PLAN;
+    if(mutS && sim2===SIM){ fail(`음성 «${why}» — 소스 치환이 안 먹었다 (게이트를 고칠 것)`); continue; }
+    if(mutP && plan2===PLAN){ fail(`음성 «${why}» — PLAN 치환이 안 먹었다 (문면이 바뀌었나)`); continue; }
+    let caught=0;
+    for(const [nm,engRe,planRe,,mul] of R_CHECKS){
+      const em=sim2.match(engRe), pm=plan2.match(planRe);
+      if(!em||!pm){ caught++; continue; }
+      if(Math.abs(Number(pm[1]) - Number(em[1])*(mul||1)) > 1e-9) caught++;
+    }
+    caught>0 ? pass(`음성 «${why}» → ${caught}건 잡힘`)
+             : fail(`음성 «${why}» → 아무것도 안 잡혔다 (① 의 소환 계수 단언이 죽었다)`);
+  }
 }
 
 /* ---------- ③ 소환 적중 = «공격» 트리거 — 실행 단언 (주인 확정 15:3X · T45) ---------- */
