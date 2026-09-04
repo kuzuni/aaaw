@@ -1,0 +1,204 @@
+/* T116 UI 회차 하니스 — 390×844 스크린샷 + «요소 rect 를 프레임 % 로» 낸다
+ *
+ * 사용: PW_CORE=<경로>/node_modules/playwright-core T3_OUT=<레포 밖 경로> node tools/t3/shots.js
+ * 전제: T3 하니스(boot/battle/gear/fx)와 같은 크로미움(/opt/pw-browsers). playwright-core 는 스크래치패드에 깔고
+ *       PW_CORE 로 넘긴다 — **리포에 커밋 금지**(ROUTINE §1 대용량 바이너리 금지).
+ * 출력: T3_OUT/shot-<키>.png (커밋 금지) + T3_OUT/layout.json (요소별 프레임 % · 비평가용 자)
+ *       stdout 에는 같은 표를 사람이 읽는 형태로 찍는다.
+ *
+ * ⚑ 이 파일은 «화면을 만들고 재는» 도구일 뿐이다 — 게임 수치·규칙은 한 줄도 건드리지 않는다(T116 ①).
+ *   상태는 재현 가능해야 하므로 시드·장비 구성·챕터를 여기서 고정한다(난수 장비 뽑기 금지).
+ */
+const path = require('path');
+const fs = require('fs');
+let chromium;
+try { ({ chromium } = require(process.env.PW_CORE || 'playwright-core')); }
+catch (e) {
+  console.error('playwright-core 를 찾지 못했다. 스크래치패드에 설치한 뒤 PW_CORE=<경로> 로 지정할 것 (리포에 커밋 금지).');
+  process.exit(2);
+}
+const EXE = process.env.PW_CHROME || ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+  '/opt/pw-browsers/chromium/chrome-linux/chrome'].find(f => fs.existsSync(f));
+const URL = 'file://' + path.join(__dirname, '..', '..', 'index.html');
+const OUT = process.env.T3_OUT || require('os').tmpdir();
+const VP = { width: 390, height: 844 };
+
+/* 화면별로 «프레임 % 로 잴 요소» — 이름은 docs/ui/ref-layout.md 의 행 이름과 1:1 이다. */
+const MEASURE = {
+  lobby: {
+    '상단 바': '.lobby-top', '아바타': '#avatar', '전투력 pill': '#powerPill',
+    '챕터 제목': '#lobbyChapName', '챕터 밑줄': '.chap-underline',
+    '챕터 카드': '#dioCard', '좌 화살표': '#chPrev', '우 화살표': '#chNext',
+    'START 버튼': '#startBtn', '하단 탭바': '#lobby .bottomNav',
+    '탭1': '#lobby .bottomNav .nav-tab:nth-child(1)', '탭3': '#lobby .bottomNav .nav-tab:nth-child(3)',
+    '탭5': '#lobby .bottomNav .nav-tab:nth-child(5)', '사운드 버튼': '#sndBtnL',
+  },
+  battle: {
+    '전투 캔버스': '#cvWrap', '상단 HUD 줄': '#topbar', '킬 pill': '#topbar .pill:nth-child(1)',
+    '챕터 표시': '#chapHud', '진행 바': '#progOut', '배속 버튼': '#speedBtn',
+    '하단 패널': '#hud', '바 줄': '#hud .bars', 'EXP 바': '#expBar', 'HP 바': '#hpBar', '실드 바': '#shBar',
+    '스탯 그리드': '#stats', '스탯칸1': '#stats .st:nth-child(1)', '스탯칸2': '#stats .st:nth-child(2)',
+    '하단 발': '#hudFoot', 'Info 버튼': '#infoBtn', '특전 미리보기 줄': '#perkStrip',
+  },
+  gear: {
+    '상단 바': '#gear .top-bar', '장비 무대': '#gearHero', '좌 슬롯열': '#gearColL', '우 슬롯열': '#gearColR',
+    '슬롯1(좌)': '#gearColL .slot-card:nth-child(1)', '슬롯3(좌)': '#gearColL .slot-card:nth-child(3)',
+    '캐릭터': '#gearAvatar', '스탯 요약줄': '#gearStats', '액션바': '.gear-actionbar', '합성 버튼': '#fuseBtn',
+    '인벤 그리드': '#invGrid', '인벤칸1': '#invGrid .inv-cell:nth-child(1)', '인벤칸5': '#invGrid .inv-cell:nth-child(5)',
+    '인벤칸6': '#invGrid .inv-cell:nth-child(6)', '인벤칸2': '#invGrid .inv-cell:nth-child(2)', '하단 탭바': '#gear .bottomNav',
+  },
+  gearpop: {
+    '팝업 박스': '#overlay .ov-inner', '이름 배너': '#overlay .ov-banner', '부제줄': '#overlay .ov-sub',
+    '아이템 아이콘': '#overlay .gd-ic', '기여 표': '#overlay .gd-contrib', '옵션 목록': '#overlay .gd-opts',
+    '비용줄': '#overlay .gd-cost', '버튼줄': '#overlay .gd-row',
+    '버튼1': '#overlay .gd-row button:nth-child(1)', '버튼2': '#overlay .gd-row button:nth-child(2)',
+    '닫기 버튼': '#gdClose',
+  },
+  shop: {
+    '상단 바': '#shop .top-bar', '본문': '#shopBody', '섹션 헤더1': '#shopBody .shop-sec:nth-child(1)',
+    '무료 카드': '#shopBody .gem-card', '뽑기 카드': '#shopBody .gacha-card',
+    '뽑기 버튼줄': '#shopBody .gacha-btns', '다이아 그리드': '#shopBody .gem-grid',
+    '상품 카드1': '#shopBody .gem-grid .gem-card:nth-child(1)', '상품 카드2': '#shopBody .gem-grid .gem-card:nth-child(2)',
+    '상품 카드3': '#shopBody .gem-grid .gem-card:nth-child(3)', '하단 탭바': '#shop .bottomNav',
+  },
+  forge: {
+    '상단 바': '#forge .top-bar', '대장간 무대': '#forgeStage', '결과 슬롯': '#fgResult', '화살표': '.fg-up',
+    '재료 줄': '#fgMats', '안내 배너': '#fgBanner', '액션바': '.forge-actionbar',
+    '자동 버튼': '#fgAuto', '합성 버튼': '#fgFuse', '인벤 그리드': '#fgGrid',
+    '인벤칸1': '#fgGrid .inv-cell:nth-child(1)', '뒤로 줄': '.forge-back',
+  },
+  perk: {
+    '팝업 박스': '#overlay .ov-inner', '배너': '#overlay .ov-banner', '부제': '#overlay .ov-sub',
+    '특전 카드': '#overlay .perk-card', '카드 아이콘': '#overlay .perk-card .ic', '카드 문구': '#overlay .perk-card .tx',
+    '확인 버튼': '#luOk', '보유 특전 버튼': '#perkBookBtn',
+  },
+  perkbook: {
+    '팝업 박스': '#overlay .ov-inner', '배너': '#overlay .ov-banner', '부제': '#overlay .ov-sub',
+    '목록': '#overlay .perk-list', '목록 카드1': '#overlay .perk-list .perk-card:nth-child(1)',
+    '닫기 안내': '#overlay .tap-close',
+  },
+};
+
+const pct = (v, base) => Math.round(v / base * 1000) / 10;
+
+async function measure(p, map) {
+  return await p.evaluate(m => {
+    const f = document.getElementById('frame').getBoundingClientRect();
+    const out = {};
+    for (const [name, sel] of Object.entries(m)) {
+      const el = document.querySelector(sel);
+      if (!el) { out[name] = null; continue; }
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) { out[name] = null; continue; }
+      out[name] = {
+        x: (r.left - f.left) / f.width * 100, y: (r.top - f.top) / f.height * 100,
+        w: r.width / f.width * 100, h: r.height / f.height * 100,
+      };
+    }
+    return out;
+  }, map);
+}
+
+/* 재현 가능한 장비 구성 — 뽑기 난수를 쓰지 않고 직접 만든다 (T116 ③-1 «재현 가능하게 스크립트에 고정») */
+const SEED_GEAR = () => {
+  save.inv = []; save.eq = {}; save.uid = 1;
+  const plan = [
+    ['weapon', 'greatsword', 4, 2], ['helm', 'helmet', 3, 1], ['armor', 'plate', 3, 0],
+    ['glove', 'gauntlet', 2, 1], ['boot', 'boots', 2, 0], ['neck', 'pendant', 1, 0],
+    ['weapon', 'axe', 2, 0], ['weapon', 'bow', 1, 0], ['helm', 'crown', 1, 0],
+    ['armor', 'chain', 1, 0], ['glove', 'leather', 0, 0], ['boot', 'sandal', 0, 0],
+    ['neck', 'amulet', 0, 0], ['weapon', 'greatsword', 0, 0], ['helm', 'hood', 0, 0],
+    ['armor', 'robe', 0, 0], ['glove', 'handwrap', 0, 0], ['boot', 'greave', 0, 0],
+  ];
+  for (const [pt, ty, rar, plus] of plan) save.inv.push(newGear(pt, ty, rar, plus));
+  for (const pt of GT.parts) { const g = save.inv.find(x => x.part === pt); if (g) save.eq[pt] = g.u; }
+  save.gold = 11540; save.gem = 543; save.chapter = 22; save.maxChapter = 22;
+  persist();
+};
+
+(async () => {
+  const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
+  const ctx = await b.newContext({ viewport: VP, deviceScaleFactor: 2 });
+  const p = await ctx.newPage();
+  const errs = [];
+  p.on('pageerror', e => errs.push(String(e)));
+  await p.goto(URL);
+  await p.waitForTimeout(700);
+  await p.evaluate(SEED_GEAR);
+  await p.evaluate(() => { showScreen('lobby'); });
+  await p.waitForTimeout(300);
+
+  const layout = {};
+  const shot = async (key, note) => {
+    await p.screenshot({ path: path.join(OUT, `shot-${key}.png`) });
+    layout[key] = await measure(p, MEASURE[key] || {});
+    console.log(`\n=== ${key}${note ? ' — ' + note : ''} ===`);
+    for (const [n, r] of Object.entries(layout[key])) {
+      console.log(r ? `  ${n.padEnd(16)} x ${r.x.toFixed(1)}% y ${r.y.toFixed(1)}% w ${r.w.toFixed(1)}% h ${r.h.toFixed(1)}%`
+        : `  ${n.padEnd(16)} (없음)`);
+    }
+  };
+
+  await shot('lobby', '로비');
+
+  /* 장비 탭 (6부위 장착) */
+  await p.evaluate(() => showScreen('gear'));
+  await p.waitForTimeout(250);
+  await shot('gear', '장비 탭');
+
+  /* 장비 세부 팝업 — 장착 중인 무기 */
+  await p.evaluate(() => { openGearDetail(save.inv[0].u); });
+  await p.waitForTimeout(250);
+  await shot('gearpop', '장비 세부 팝업');
+  await p.evaluate(() => closeOverlay());
+
+  /* 상점 */
+  await p.evaluate(() => showScreen('shop'));
+  await p.waitForTimeout(250);
+  await shot('shop', '상점');
+
+  /* 대장간 */
+  await p.evaluate(() => openForge());
+  await p.waitForTimeout(250);
+  await shot('forge', '대장간/합성');
+
+  /* 전투 — 챕터 22, 전진 중 */
+  await p.evaluate(() => { startChapter(22); });
+  await p.waitForTimeout(1200);
+  await shot('battle', '전투 (전진)');
+
+  /* 전투 — 적 발견 (첫 웨이브에 닿을 때까지 돌린다) */
+  await p.evaluate(() => new Promise(res => {
+    const t0 = Date.now();
+    const tick = () => {
+      const seen = G && G.nodes.some(n => n.type === 'wave' && n.enemies.some(e => e.aggro && !e.dead));
+      if (seen || Date.now() - t0 > 20000) res(seen); else setTimeout(tick, 100);
+    };
+    tick();
+  }));
+  await p.waitForTimeout(120);
+  layout.battleFoe = await measure(p, MEASURE.battle);
+  await p.screenshot({ path: path.join(OUT, 'shot-battleFoe.png') });
+  console.log('\n=== battleFoe — 전투 (적 발견) === (요소는 battle 과 같은 자를 쓴다)');
+
+  /* 특전 획득 팝업 — 3개 획득 상태에서 4번째를 받는 순간 */
+  await p.evaluate(() => {
+    G.paused = true;
+    while (G.perksTaken.length < 3) grantNextPerk();
+    renderPerkStrip(); renderStatsGrid();
+    openLevelUp();
+  });
+  await p.waitForTimeout(250);
+  await shot('perk', '특전 획득 팝업');
+
+  /* 특전 인포(보유 특전) 팝업 */
+  await p.evaluate(() => { document.getElementById('perkBookBtn').click(); });
+  await p.waitForTimeout(250);
+  await shot('perkbook', '특전 인포 팝업');
+
+  fs.writeFileSync(path.join(OUT, 'layout.json'), JSON.stringify(layout, null, 1));
+  console.log(`\npageerror ${errs.length}건${errs.length ? ': ' + errs.join(' | ') : ''}`);
+  console.log(`PNG 9장 + layout.json → ${OUT}`);
+  await b.close();
+  process.exit(errs.length ? 1 : 0);
+})();
