@@ -167,7 +167,12 @@ const FORMULAS = [
   /* ⚑ P1(T83) — 신화 폐지로 «충격파(m_stunKill)»·«👼 전설이상»·4단 굴림이 사라졌다. 3단 배열 대조로 교체. */
   /* ⚑ T96 — 등급 확률 배열·등급 굴림은 폐지됐다(그 부재는 verifyPerkOrder ③ 이 감시).
      대신 «순서 지급 동사» 가 두 엔진에서 같은 자리에 있는지를 여기서 본다. */
-  ['순서 지급 동사(grantNextPerk)', /function grantNextPerk\(G\)\{/, /function grantNextPerk\(\)\{/],
+  /* ⚑⚑⚑ T117 — 3택이 돌아오면서 «지급 동사» 가 둘로 나뉘었다: 제시(offerPerks) + 확정(pickPerk).
+     index.html 은 유저가 고르므로 sim.js 의 `grantNextPerk`(정책 선택까지 하는 시뮬 전용 동사)를 안 쓴다 —
+     두 엔진이 공유해야 하는 것은 «3장을 어떻게 뽑는가»(offerPerks)와 «고른 것을 어떻게 붙이는가»(pickPerk)다. */
+  ['제시 동사(offerPerks)', /function offerPerks\(taken\)\{/, /function offerPerks\(taken\)\{/],
+  ['확정 동사(pickPerk)', /function pickPerk\(G,perk\)\{/, /function pickPerk\(perk\)\{/],
+  ['제시 장수 상수(PERK_OFFER=3)', /const PERK_OFFER=3;/, /const PERK_OFFER=3;/],
   ['특전 소환 확률 상수', /const PERK_ATK_M=1\.20, PERK_DEF_M=1\.10/, /const PERK_ATK_M=1\.20, PERK_DEF_M=1\.10/],
   ['경험치 요구식', /expNeed:lv=>5\*lv\+1/, /expNeed=lv=>5\*lv\+1/],   /* ⚑⚑⚑ T100 — 4+3*lv → 5*lv+1 */
 ];
@@ -192,17 +197,20 @@ const DIRECTIVES = [
   ['웨이브 전멸 실드 무료충전 폐지 (06:5X·08:5X)', () => !/wave\.done=true;[\s\S]{0,120}p\.sh=p\.maxSh/.test(HTML)],
   /* ⚑⚑ T96 — «선택지 등급 통일»·«선택지 3개 고정» 은 선택창 자체가 폐지되어 대상이 사라졌다.
      그 자리에 새 체제의 관측 가능 동작 3건을 넣는다. */
-  ['⚑ 레벨업 = 순서 지급 (선택창 폐지 · 2026-09-03)', () => {
+  /* ⚑⚑⚑ T117 (주인 확정 2026-09-04 12:3X) — 레벨업이 «3택 1» 로 돌아왔다.
+     되살아난 것은 선택창뿐이고 등급·무료 새로고침·전지의 눈은 그대로 폐지다(그 부재는 아래 두 줄이 함께 잠근다). */
+  ['⚑ T117 레벨업 = 3택 선택창 (등급·새로고침은 그대로 폐지)', () => {
     const m = HTML.match(/function openLevelUp\(\)\{[\s\S]*?\n\}/);
-    return !!m && /grantNextPerk\(\)/.test(m[0]) && !/rollPerks|perkPool|refreshLeft/.test(m[0]);
+    return !!m && /offerPerks\(G\.perksTaken\)/.test(m[0]) && /perkCardHTML\(p,i,'pick'\)/.test(m[0])
+      && /pickPerk\(p\)/.test(m[0]) && !/rollPerks|perkPool|refreshLeft|rollRarity/.test(m[0]);
   }],
-  ['⚑ 10종을 다 얻으면 레벨업 팝업이 안 뜬다', () => {
+  ['⚑ T117 줄 특전이 없으면 레벨업 팝업이 안 뜬다', () => {
     const m = HTML.match(/function openLevelUp\(\)\{[\s\S]*?\n\}/);
-    return !!m && /if\(!nextPerk\(\)\)\{[^}]*afterPerk\(\);\s*return;\s*\}/.test(m[0]);
+    return !!m && /if\(!hasPerkLeft\(\)\)\{[^}]*afterPerk\(\);\s*return;\s*\}/.test(m[0]);
   }],
-  ['⚑ 순번은 «진짜 특전 수» 로 센다 (천사의 축복이 순번을 건너뛰지 않는다)',
+  ['⚑ 남은 풀은 «진짜 특전 수» 로 센다 (천사의 축복이 한 자리를 먹지 않는다)',
     () => /function perkOrderN\(\)\{[\s\S]{0,160}PERKS\.includes\(q\)/.test(HTML)
-       && /function nextPerk\(\)\{\s*const n=perkOrderN\(\);/.test(HTML)],
+       && /function hasPerkLeft\(\)\{\s*return perkOrderN\(\)<PERK_PICKS\s*&&\s*perksLeftN\(\)>0;\s*\}/.test(HTML)],
   ['챕터 종료 보스 킬 = 특전 스킵 (06:3X)', () => /G\.cleared=true/.test(HTML) && /lev>0\s*&&\s*!G\.over\s*&&\s*!G\.cleared/.test(HTML)],
   ['레벨업 회복·최대치 보정 없음 (06:4X)', () => {
     const m = HTML.match(/function gainExp\(n\)\{[\s\S]*?\n\}/);
@@ -680,8 +688,8 @@ console.log('\n[⑬ 인게임 UI — 발동 중 버프 아이콘 · 얻은 특�
     /slice\(order\.length-\(?cap/.test(rp[0]) ? ok('넘칠 때 «최신 것들» 이 보인다') : bad('넘칠 때 최신이 아니라 앞쪽이 남는다 (주인 지시: 최신 것들이 보이게)');
   }
   /* 특전을 얻는 두 경로(레벨업·천사의 축복) 모두에서 줄이 갱신돼야 한다 */
-  const tp = HTML.match(/function takePerk\(perk\)\{[\s\S]*?\n\}/);
-  (tp && /renderPerkStrip\(\)/.test(tp[0])) ? ok('takePerk 가 미리보기 줄을 갱신') : bad('takePerk 후 미리보기 줄이 갱신되지 않는다');
+  const tp = HTML.match(/function pickPerk\(perk\)\{[\s\S]*?\n\}/);   /* ⚑ T117 — takePerk → pickPerk (두 엔진 공용 동사명) */
+  (tp && /renderPerkStrip\(\)/.test(tp[0])) ? ok('pickPerk 가 미리보기 줄을 갱신') : bad('pickPerk 후 미리보기 줄이 갱신되지 않는다');
   /천사의 축복[\s\S]{0,220}renderPerkStrip\(\)/.test(HTML) ? ok('천사의 축복도 미리보기 줄에 반영') : bad('천사의 축복 획득 시 미리보기 줄이 갱신되지 않는다');
 
   /* (5) T36 — 챕터 300 이동 UI */
@@ -2282,9 +2290,10 @@ console.log('\n[㊵ 레벨업 팝업 «보유 특전» 버튼 (T89 · ⚑ T96 �
     /\$\('perkBookBtn'\)\.onclick\s*=\s*e\s*=>\s*\{\s*e\.stopPropagation\(\);\s*openPerkBook\(\s*paint\s*\);?\s*\}/.test(choice)
       ? ok('③ 📘 버튼이 stopPropagation 후 openPerkBook(paint) — 복귀 콜백을 넘긴다')
       : bad('③ 📘 버튼이 복귀 콜백(paint)을 안 넘기거나 stopPropagation 이 빠졌다 — 책이 열리자마자 되돌아가거나 복귀가 끊긴다');
-    /* ④ ⚑ 핵심(T96 판): 지급(grantNextPerk)은 paint «밖» 에서 딱 한 번. paint 안에 있으면
-       책을 드나들 때마다 특전이 하나씩 더 지급된다(종전의 «재굴림» 문제가 «중복 지급» 으로 바뀐 것). */
-    const grantN = (choice.match(/grantNextPerk\s*\(/g) || []).length;
+    /* ④ ⚑ 핵심(⚑ T117 판): 굴림(offerPerks)은 paint «밖» 에서 딱 한 번이다. paint 안에 있으면
+       책을 드나들 때마다 선택지가 다시 굴려져 «무료 무한 새로고침» 이 된다 — T89 가 못 박은 실패 경로 ② 그대로다
+       (T96 순서 지급 시절에는 같은 자리가 «중복 지급» 으로 나타났다). */
+    const grantN = (choice.match(/offerPerks\s*\(/g) || []).length;
     const paintM = /const paint\s*=\s*\(\)\s*=>\s*\{/.exec(choice);
     let paintBody = '';
     if (paintM) {
@@ -2299,9 +2308,9 @@ console.log('\n[㊵ 레벨업 팝업 «보유 특전» 버튼 (T89 · ⚑ T96 �
       }
     }
     if (!paintM) bad('④ openLevelUp 안에 paint(다시 그리기) 가 없다 — 복귀가 곧 재지급이 된다');
-    else if (grantN !== 1) bad(`④ openLevelUp 안의 grantNextPerk 호출이 ${grantN}곳 (1곳이어야 한다)`);
-    else if (/grantNextPerk\s*\(/.test(paintBody)) bad('④ paint 가 grantNextPerk 를 부른다 — 책을 닫고 돌아올 때마다 특전이 더 지급된다');
-    else ok('④ 지급은 paint 밖 한 곳뿐 — 책을 드나들어도 특전이 두 번 지급되지 않는다');
+    else if (grantN !== 1) bad(`④ openLevelUp 안의 offerPerks 호출이 ${grantN}곳 (1곳이어야 한다)`);
+    else if (/offerPerks\s*\(/.test(paintBody)) bad('④ paint 가 offerPerks 를 부른다 — 책을 닫고 돌아올 때마다 선택지가 다시 굴려진다(무료 새로고침)');
+    else ok('④ 굴림은 paint 밖 한 곳뿐 — 책을 드나들어도 선택지가 안 바뀐다');
     /* ⑤ ⚑ 복귀 모드에서는 closeOverlay 를 부르지 않는다 (부르면 레벨업 특전이 통째로 날아간다) */
     const closeCalls = [...book.matchAll(/closeOverlay\s*\(\s*\)/g)];
     const guarded = closeCalls.every(m => /ret\s*\?\s*ret\(\)\s*:\s*$/.test(book.slice(Math.max(0, m.index - 24), m.index)));

@@ -116,8 +116,22 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   await p.waitForTimeout(300);
   const devil = await p.evaluate(() => { openDevil(); return { on: document.getElementById('overlay').classList.contains('on'), yes: !!document.getElementById('dYes'), no: !!document.getElementById('dNo'), txt: document.getElementById('overlay').textContent.replace(/\s+/g, ' ').slice(0, 50) }; });
   chk('악마 — 체력 지불/거절 2택', devil.on && devil.yes && devil.no, devil.txt);
-  const devilPay = await p.evaluate(() => { const hp0 = G.player.hp, n0 = G.perksTaken.length; document.getElementById('dYes').click(); return { paid: G.player.hp < hp0, got: G.perksTaken.length > n0 }; });
-  chk('악마 거래 — 체력 지불하고 특전 획득', devilPay.paid && devilPay.got);
+  /* ⚑⚑⚑ T117 — 악마가 «다음 순번 앞당김» 에서 **«즉시 3택 1»** 로 바뀌었다: 수락하면 그 자리에서
+     특전이 붙는 게 아니라 «미리 보여준 3장» 으로 선택창이 뜨고, 카드를 눌러야 획득이 확정된다. */
+  const devilPay = await p.evaluate(() => {
+    const hp0 = G.player.hp, n0 = G.perksTaken.length;
+    const pre = [...document.querySelectorAll('#overlay .perk-card .tx')].map(c => c.textContent);
+    document.getElementById('dYes').click();
+    const cards = [...document.querySelectorAll('#overlay .perk-card.pick')];
+    const mid = { paid: G.player.hp < hp0 || G.player.maxHp < hp0 / 0.7 + 1, n: cards.length,
+      same: cards.map(c => c.querySelector('.tx').textContent).join('|') === pre.join('|'), gotYet: G.perksTaken.length > n0 };
+    if (cards.length) cards[0].click();
+    return Object.assign(mid, { got: G.perksTaken.length > n0 });
+  });
+  chk('악마 거래 — 체력 지불하고 3택 1 로 특전 획득 (⚑ T117)', devilPay.paid && devilPay.n > 0 && devilPay.got,
+    `제시 ${devilPay.n}장 · 지불 ${devilPay.paid} · 획득 ${devilPay.got}`);
+  chk('⚑ T117 지불 «전» 미리 보여준 카드가 그대로 선택창에 뜬다 (수락 뒤 재굴림 없음)', devilPay.same);
+  chk('⚑ T117 카드를 누르기 전에는 아직 안 받았다', devilPay.gotYet === false);
   await p.waitForTimeout(400);
   await p.evaluate(() => closeOverlay());
   const angel = await p.evaluate(() => { openAngel(); return { on: document.getElementById('overlay').classList.contains('on'), free: !!document.getElementById('aFree'), ad: !!document.getElementById('aAd') }; });

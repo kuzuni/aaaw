@@ -7,8 +7,11 @@
  *
  * 보는 것은 셋이다:
  *   ① **3자 대조 (정적)** — PLAN §3.1 표 ↔ sim.js ↔ index.html 의 id·순서·수치·표시 텍스트가 같은가.
- *   ② **순서·상한 (실행)** — 실제로 «순서대로 하나씩», 중복 없이, 10개에서 멈추는가.
- *   ③ **폐지분 (구조)** — 등급·선택창·새로고침·전지의 눈이 정말 사라졌는가 + 소환 연쇄 기대값 B = 0.
+ *   ② **3택 1 (실행)** — ⚑⚑⚑ T117 로 «순서대로 하나씩» 이 «3장 중 1장» 으로 바뀌었다:
+ *        제시 3장(남은 것이 3 미만이면 그만큼) · 카드 안 중복 0 · 이미 얻은 것 제외 · 무작위 ·
+ *        시뮬 측정 정책(제시 3장 중 §3.1 표 순서가 가장 앞선 것) · 한 런 상한(PERK_PICKS)에서 멈춤.
+ *   ③ **폐지분 (구조)** — 등급·새로고침·전지의 눈이 정말 사라졌는가(⚑ T117 로 «선택창» 만 돌아왔다) +
+ *        소환 연쇄 기대값 B = 0.
  *
  * 사용: node tools/verifyPerkOrder.js        (exit 0 = 통과, 1 = 불합격)
  *      node tools/verifyPerkOrder.js --self  (음성 검사 — 일부러 깨뜨린 사본이 전부 빨개지는지)
@@ -76,33 +79,78 @@ function run(simSrc, htmSrc, planSrc) {
   }
   chk('엔진 상수 8종이 두 파일에서 같고 확정값이다', cBad.length === 0, cBad.join(' · ') || Object.keys(CONST).length + '종');
 
-  /* ===== ② 순서·상한 (실행 단언) ===== */
-  console.log('\n=== ② 순서·상한 — sim.js 를 실제로 돌려서 ===');
+  /* ===== ② 3택 1 — 제시·중복·상한·시뮬 정책 (실행 단언 · ⚑⚑⚑ T117) =====
+     T96 의 «표 앞에서부터 순서대로» 단언은 3택 복구로 대상이 사라졌다. 그 자리에 주인 지시 ① 의 네 조항
+     (제시 3장 · 중복 0 · 아직 안 얻은 것만 · 남은 것이 3 미만이면 그만큼)과 시뮬 측정 정책을 넣는다. */
+  console.log('\n=== ② 3택 1 — 제시·중복·상한·시뮬 정책 (⚑ T117) ===');
   const S = loadSim(simSrc);
   const b = S.mkBuild(1, 0, 0);
-  let orderBad = 0, dupBad = 0, over = 0, maxN = 0, runs = 0;
+  chk('제시 장수 상수 PERK_OFFER = 3', S.PERK_OFFER === 3, `PERK_OFFER=${S.PERK_OFFER}`);
+  const htmOffer = (htmSrc.match(/const PERK_OFFER\s*=\s*(\d+)/) || [])[1];
+  chk('두 엔진의 PERK_OFFER 가 같다', Number(htmOffer) === S.PERK_OFFER, `sim ${S.PERK_OFFER} / html ${htmOffer}`);
+  /* ⓐ offerPerks 를 직접 두들긴다 — 남은 풀 크기별로 «몇 장 · 중복 · 이미 얻은 것 섞임» 을 전수로 본다. */
+  {
+    let cntBad = 0, dupBad = 0, takenBad = 0, poolBad = 0;
+    for (let t = 0; t <= S.PERKS.length; t++) {
+      const taken = S.PERKS.slice(0, t);
+      for (let i = 0; i < 300; i++) {
+        const off = S.offerPerks(taken);
+        if (off.length !== Math.min(S.PERK_OFFER, S.PERKS.length - t)) cntBad++;
+        if (new Set(off).size !== off.length) dupBad++;
+        if (off.some(p => taken.indexOf(p) >= 0)) takenBad++;
+        if (off.some(p => S.PERKS.indexOf(p) < 0)) poolBad++;
+      }
+    }
+    chk('⚑ 제시 장수 = min(3, 남은 것) — 남은 것이 3 미만이면 남은 만큼만 (0이면 0장)', cntBad === 0, `위반 ${cntBad}건`);
+    chk('⚑ 같은 카드 3장 안에 중복이 없다', dupBad === 0, `위반 ${dupBad}건`);
+    chk('⚑ 이미 얻은 특전은 절대 제시되지 않는다', takenBad === 0, `위반 ${takenBad}건`);
+    chk('⚑ 제시는 언제나 풀(PERKS) 안에서만 나온다', poolBad === 0, `위반 ${poolBad}건`);
+    /* 무작위인가 — 「고정 3장」으로 퇴화하면 여기서 잡힌다(순서 지급으로 되돌아간 형태) */
+    const seen = new Set();
+    for (let i = 0; i < 400; i++) seen.add(S.offerPerks([]).map(p => p.id).sort().join());
+    chk('⚑ 제시가 실제로 무작위다 (같은 3장으로 고정되지 않는다)', seen.size > 5, `서로 다른 조합 ${seen.size}종`);
+  }
+  /* ⓑ 시뮬 측정 정책 — «제시 3장 중 §3.1 표 순서가 가장 앞선 것» (주인 지시 ① · 재현성) */
+  {
+    let polBad = 0;
+    for (let i = 0; i < 500; i++) {
+      const off = S.offerPerks(S.PERKS.filter(() => Math.random() < 0.3));
+      if (!off.length) continue;
+      const want = off.slice().sort((x, y) => S.PERKS.indexOf(x) - S.PERKS.indexOf(y))[0];
+      if (S.simPickPerk(off) !== want) polBad++;
+    }
+    chk('⚑ 시뮬 정책 = 제시 3장 중 표 순서가 가장 앞선 것', polBad === 0, `위반 ${polBad}건`);
+  }
+  /* ⓒ 챕터를 실제로 굴려서 — 중복 0 · 상한 · «순서 지급이 아니다» */
+  let dupRun = 0, over = 0, maxN = 0, runs = 0, fixedOrder = 0, variety = new Set();
   for (let i = 0; i < 200; i++) {
     const r = S.runChapter(20, b);
     runs++;
     maxN = Math.max(maxN, r.taken.length);
-    if (r.taken.length > S.PERKS.length) over++;
-    if (new Set(r.taken).size !== r.taken.length) dupBad++;
-    for (let k = 0; k < r.taken.length; k++) if (r.taken[k] !== S.PERKS[k].id) orderBad++;
+    if (r.taken.length > S.PERK_PICKS) over++;
+    if (new Set(r.taken).size !== r.taken.length) dupRun++;
+    if (r.taken.every((id, k) => id === S.PERKS[k].id)) fixedOrder++;
+    variety.add(r.taken.join());
   }
-  chk('획득 목록이 언제나 «표의 앞에서부터» 다 (무작위 없음)', orderBad === 0, `${runs}판 · 위반 ${orderBad}건`);
-  chk('한 판에서 같은 특전을 두 번 얻지 않는다', dupBad === 0, `위반 ${dupBad}판`);
-  chk('한 판 획득이 10종을 넘지 않는다', over === 0, `한 판 최대 획득 ${maxN}개 (상한 ${S.PERKS.length})`);
+  chk('한 판에서 같은 특전을 두 번 얻지 않는다', dupRun === 0, `위반 ${dupRun}판`);
+  chk('한 판 획득이 한 런 상한(PERK_PICKS)을 넘지 않는다', over === 0, `한 판 최대 획득 ${maxN}개 (상한 ${S.PERK_PICKS})`);
+  chk('⚑ T117 획득 목록이 «표 앞에서부터 고정» 이 아니다 (순서 지급 회귀 방지)',
+    fixedOrder < runs, `${runs}판 중 표 순서와 완전히 같은 판 ${fixedOrder}판 · 서로 다른 획득열 ${variety.size}종`);
   /* ⚑ 상한은 «한 챕터의 경험치 예산» 으로는 도달하지 않는다(실측 최대 8~9종) — 지급 동사를 직접
-     15번 불러 «10에서 멈추는가» 를 잰다. 챕터 실행으로만 재면 이 검사가 조용히 죽는다(음성 검사로 확인). */
+     15번 불러 «상한에서 멈추는가» 를 잰다. 챕터 실행으로만 재면 이 검사가 조용히 죽는다(음성 검사로 확인). */
   {
     const Gx = { taken: [], player: null, perkChances: 0 };
     const px = S.mkPlayer(S.mkBuild(1, 0, 0), Gx); Gx.player = px; px.G = Gx;
     let nulls = 0;
     for (let i = 0; i < 15; i++) if (!S.grantNextPerk(Gx)) nulls++;
-    chk('⚑ 지급 동사를 15번 불러도 10종에서 멈춘다', Gx.taken.length === 10 && nulls === 5,
+    chk('⚑ 지급 동사를 15번 불러도 상한(PERK_PICKS)에서 멈춘다', Gx.taken.length === S.PERK_PICKS && nulls === 15 - S.PERK_PICKS,
       `획득 ${Gx.taken.length}종 · 빈 지급 ${nulls}회 · 기회 ${Gx.perkChances}회`);
-    chk('⚑ 그 10종이 표 전체·순서대로다',
-      Gx.taken.map(x => x.id).join() === S.PERKS.map(x => x.id).join(), Gx.taken.map(x => x.id).join('>'));
+    chk('⚑ 그 획득분에 중복이 없다',
+      new Set(Gx.taken).size === Gx.taken.length, Gx.taken.map(x => x.id).join('>'));
+    /* ⚑ 풀 크기 = 상한(10) 인 동안은 «상한을 지웠는가» 를 실측으로 구별할 수 없다(풀이 마르면 어차피 멈춘다).
+       그래서 상한 가드가 두 엔진에 **문장으로** 살아 있는지 함께 본다 — 풀을 늘리는 순간 실측 차이가 생기는 자리다. */
+    chk('⚑ 한 런 획득 상한 가드가 두 엔진에 살아 있다 (PERK_PICKS)',
+      /G\.taken\.length>=PERK_PICKS\)return null;/.test(simSrc) && /perkOrderN\(\)<PERK_PICKS/.test(htmSrc));
   }
   /* ===== ②-b PERK_PICKS 분리 (⚑ 주인 방향 2026-09-03 · T102) =====
      «풀 크기(PERKS.length)» 와 «한 런 획득 수(PERK_PICKS)» 를 분리해 뒀는지 본다.
@@ -120,6 +168,8 @@ function run(simSrc, htmSrc, planSrc) {
     `풀 ${S.PERKS.length} ≥ 획득 ${S.PERK_PICKS}`);
   chk('⚑ 지금은 풀 크기 = 한 런 획득 수 = 10 (동작 불변 — 나중에 풀만 늘린다)',
     S.PERKS.length === 10 && S.PERK_PICKS === 10, `풀 ${S.PERKS.length} · 획득 ${S.PERK_PICKS}`);
+  chk('⚑ T117 풀 ≥ 제시 장수 (풀이 3보다 작으면 남은 만큼만 제시된다 — ⓐ 가 실측)',
+    S.PERKS.length >= S.PERK_OFFER, `풀 ${S.PERKS.length} ≥ 제시 ${S.PERK_OFFER}`);
   /* ⚑ T107 — 종전엔 «보스 전 공급으로 오르는 레벨 + 악마 앞당김 1 = PERK_PICKS» 를 못 박았지만,
      적 수가 챕터마다 달라져 그 항등식이 사라졌다. 남은 단언은 주인 확정 «풀 10종 · 한 런 상한 10» 이다
      (챕터별 실제 획득 수는 `verifyChapterFixed` ⓓ 가 표와 대조한다 — 여기서 두 번 재지 않는다). */
@@ -167,14 +217,17 @@ function run(simSrc, htmSrc, planSrc) {
   /* 주석에 «폐지됐다» 고 적는 것은 괜찮다 — 실제 버튼·핸들러·CSS 가 사라졌는지만 본다 */
   chk('index.html 에 새로고침 버튼·핸들러·CSS 가 없다',
     !/id="refBtn"/.test(htmSrc) && !/#refBtn\{/.test(htmSrc) && !/getElementById\('refBtn'\)/.test(htmSrc));
-  chk('레벨업 지급 동사가 두 엔진에 하나씩 있다',
-    /function grantNextPerk\(/.test(simSrc) && /function grantNextPerk\(/.test(htmSrc));
-  /* 악마 = «다음 순번 앞당김». 두 엔진 모두 비용을 낸 «뒤» 같은 지급 동사를 부르고, 전설 풀 뽑기가 없다 */
+  chk('⚑ T117 제시·확정 동사가 두 엔진에 한 벌씩 있다 (offerPerks · pickPerk)',
+    /function offerPerks\(taken\)\{/.test(simSrc) && /function offerPerks\(taken\)\{/.test(htmSrc) &&
+    /function pickPerk\(G,perk\)\{/.test(simSrc) && /function pickPerk\(perk\)\{/.test(htmSrc));
+  /* ⚑ T117 악마 = «즉시 3택 1». 두 엔진 모두 비용을 낸 «뒤» 특전이 붙고, 전설 풀 뽑기는 없다.
+     시뮬은 유저가 없으므로 정책 동사(grantNextPerk)로 대신 고르고, 게임은 같은 3장을 카드로 띄운다. */
   const devilSim = simSrc.slice(simSrc.indexOf("n.type==='devil'"), simSrc.indexOf('SIM_ANGEL_POLICY'));
   const devilHtm = htmSrc.slice(htmSrc.indexOf('function openDevil'), htmSrc.indexOf('function openAngel'));
-  chk('악마도 같은 지급 동사를 쓴다 (전설 확정 폐기)',
+  chk('악마도 같은 획득 경로를 쓴다 (전설 확정 폐기 · ⚑ T117 3택)',
     /payDevilCost\([^)]*\)[\s\S]{0,200}grantNextPerk\(/.test(devilSim) &&
-    /payDevilCost\([^)]*\)[\s\S]{0,200}grantNextPerk\(/.test(devilHtm) &&
+    /payDevilCost\([^)]*\)[\s\S]{0,900}pickPerk\(/.test(devilHtm) &&
+    /offerPerks\(/.test(devilHtm) &&
     !/perkPool|pick\(pool\)/.test(devilSim + devilHtm));
   /* ⚑ 소환 연쇄 기대값 B — 새 10종의 소환 3종은 트리거가 «피격/회피/반격» 이라
      소환 «적중» 이 새 소환을 낳지 않는다. 즉 «공격 시»·«치명타 시» 축에 특전 소환이 0건이어야 한다. */
@@ -185,13 +238,13 @@ function run(simSrc, htmSrc, planSrc) {
     perkSummonOnAtk.length === 0, perkSummonOnAtk.join(',') || 'B = 0 (임계 0.8 구조적 만족)');
 
   const bad = R.filter(x => !x.c).length;
-  console.log(`\n[T96 특전 순서 게이트] 통과 ${R.length - bad} · 불합격 ${bad}`);
+  console.log(`\n[T96·T117 특전 3택 게이트] 통과 ${R.length - bad} · 불합격 ${bad}`);
   return bad;
 }
 
 /* sim.js 를 모드 실행 없이 로드한다 (맨 아래 러너를 잘라 내고 필요한 것만 내보낸다) */
 function loadSim(src) {
-  const body = src.replace(/const mode=process\.argv[\s\S]*$/, 'module.exports={runChapter,PERKS,PERK_PICKS,mkBuild,mkPlayer,grantNextPerk,TUNE};');
+  const body = src.replace(/const mode=process\.argv[\s\S]*$/, 'module.exports={runChapter,PERKS,PERK_PICKS,PERK_OFFER,offerPerks,simPickPerk,pickPerk,mkBuild,mkPlayer,grantNextPerk,TUNE};');
   const m = { exports: {} };
   vm.runInNewContext(body, { module: m, exports: m.exports, process, console: { log() {} }, require });
   return m.exports;
@@ -204,7 +257,7 @@ const planSrc = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
 if (process.argv.includes('--self')) {
   /* 음성 검사 — 일부러 깨뜨린 사본마다 «빨개지는지» 만 본다. 통과하면 그 항목이 죽은 검사라는 뜻이다. */
   const cases = [
-    ['sim 순서를 뒤집으면', s => s.replace("{id:'p_evade'", "{id:'zz_evade'"), null, null],
+    ['sim 표 순서(id)를 흐트러뜨리면', s => s.replace("{id:'p_evade'", "{id:'zz_evade'"), null, null],
     ['sim 공격력 배수를 1.30 으로', s => s.replace('PERK_ATK_M=1.20', 'PERK_ATK_M=1.30'), null, null],
     /* ⚑ T108 신설 — 소환 3종이 다시 «50% 확률» 로 돌아가는 세 갈래 (상수 · 두 엔진 불일치 · 문면 잔재) */
     ['⚑ T108 소환 확률을 50% 로 되돌리면', s => s.replace('PERK_SUMMON_CH=1.00', 'PERK_SUMMON_CH=0.50'), null, null],
@@ -219,7 +272,20 @@ if (process.argv.includes('--self')) {
     ['game 표시 텍스트를 바꾸면', null, s => s.replace('회피율 <b>+10</b>', '회피율 <b>+20</b>'), null],
     ['PLAN 표의 효과를 바꾸면', null, null, s => s.replace('| 공격력 **+20%** |', '| 공격력 **+30%** |')],
     ['등급 굴림을 되살리면', s => s + '\nfunction rollRarity(){return 0;}\n', null, null],
-    ['새로고침을 되살리면', null, s => s.replace('function takePerk(perk){', 'function takePerk(perk){ G.refreshLeft=1;'), null],
+    ['새로고침을 되살리면', null, s => s.replace('function pickPerk(perk){', 'function pickPerk(perk){ G.refreshLeft=1;'), null],
+    /* ⚑ T117 신설 — 3택의 네 조항과 시뮬 정책이 각각 죽지 않았는지 */
+    ['⚑ T117 제시가 «이미 얻은 것» 을 섞으면',
+      s => s.replace('const rest=PERKS.filter(p=>taken.indexOf(p)<0);', 'const rest=PERKS.slice();'), null, null],
+    ['⚑ T117 제시 장수를 1장으로 줄이면', s => s.replace('const PERK_OFFER=3;', 'const PERK_OFFER=1;'), null, null],
+    ['⚑ T117 게임만 제시 장수가 다르면', null, s => s.replace('const PERK_OFFER=3;', 'const PERK_OFFER=2;'), null],
+    ['⚑ T117 시뮬 정책이 «표 순서 뒤쪽» 을 고르면',
+      s => s.replace('if(PERKS.indexOf(p)<PERKS.indexOf(b)) b=p;', 'if(PERKS.indexOf(p)>PERKS.indexOf(b)) b=p;'), null, null],
+    ['⚑ T117 순서 지급으로 되돌리면 (3택 폐기)',
+      s => s.replace('return pickPerk(G,simPickPerk(offer));', 'return pickPerk(G,PERKS[G.taken.length]);'), null, null],
+    ['⚑ T117 한 런 상한 가드를 게임에서 지우면',
+      null, s => s.replace('return perkOrderN()<PERK_PICKS && perksLeftN()>0;', 'return perksLeftN()>0;'), null],
+    ['⚑ T117 게임 악마가 3택 대신 딴 짓을 하면',
+      null, s => s.replace('offer.forEach((p,i)=>{ $(\'perkPick\'+i).onclick=()=>{ AU.play(\'click\'); pickPerk(p); renderStatsGrid(); updateBars(); closeOverlay(); }; });', ''), null],
     ['⚑ T104 회피 시 회복이 회복 증폭을 타게 하면 (noBoost=true 제거)',
       s => s.replace('heal(p,p.maxHp*PERK_EVHEAL_F,true)', 'heal(p,p.maxHp*PERK_EVHEAL_F)'), null, null],
     ['«공격 시» 축에 특전 소환을 달면', s => s.replace('  if(px.c_waveAtk', '  if(px.p_axeHit&&pkk(p,0.5))fireAxe(p,1);\n  if(px.c_waveAtk')
@@ -245,5 +311,5 @@ if (process.argv.includes('--self')) {
   process.exit(caught === cases.length ? 1 : 0);   /* 음성 검사는 «전부 잡히면» exit 1 이 정상이다 */
 }
 
-console.log('⚑⚑⚑ T96 게이트 — 특전 고정 10종 · 순서 획득');
+console.log('⚑⚑⚑ T96·T117 게이트 — 특전 고정 10종 · 3택 1 획득');
 process.exit(run(simSrc, htmSrc, planSrc) ? 1 : 0);

@@ -551,9 +551,11 @@
      .ov-foot 는 게이트 ⑧ 이 흐름 배치·오른쪽 정렬을 요구하므로 그대로 두고, 음수 margin 으로 같은 줄에 올린다
      (절대 배치가 아니라 흐름 안이라 좁은 폭에서도 카드 위로 올라타지 않는다). */
   #overlay.ov-full #luOk{width:42.7%; padding:calc(var(--fh)*.021) 14px;}
-  /* 음수 margin 으로 «계속 전진» 과 같은 줄에 올린 탓에 줄 전체(폭 100%)가 그 버튼을 덮는다 —
-     줄은 클릭을 통과시키고 버튼만 받게 한다(그러지 않으면 «계속 전진» 이 안 눌린다 · T3 battle 이 잡았다). */
-  #overlay.ov-full .ov-foot{margin-top:calc(var(--fh)*-.069); pointer-events:none;}
+  /* ⚑ T117 — 3택이 돌아오면서 «계속 전진»(#luOk)이 사라졌다: 카드를 누르는 것이 곧 확정이라 확인 버튼이
+     할 일이 없다(레퍼런스의 가운데 하단 버튼 자리는 게임에 대응물이 없는 «무료 새로고침» 이라 비운다).
+     그래서 종전의 «음수 margin 으로 버튼과 같은 줄에 올리기» 대신 `margin-top:auto` 로 줄을 상자 바닥에
+     붙인다 — 하단 여백(.135fh)이 레퍼런스의 인포 버튼 y(79.5)를 만든다. 줄은 클릭을 통과시키고 버튼만 받는다. */
+  #overlay.ov-full .ov-foot{margin-top:auto; pointer-events:none;}
   #overlay.ov-full .ov-foot > *{pointer-events:auto;}
   #overlay.ov-full #perkBookBtn{width:10.1%; height:calc(var(--fh)*.06); font-size:17px;}
   #overlay.ov-book .ov-banner{width:61.5%; margin-top:calc(var(--fh)*-.0304); margin-bottom:0;}
@@ -1957,23 +1959,29 @@ const PERKS=[
    지금은 풀도 10·획득도 10 이라 동작 불변이고, 나중에 풀만 늘려도 «한 런 = 10개» 면 파워 총량이 그대로다.
    ⚑ 챕터 레벨업 횟수(T100 = 10)와 반드시 같아야 한다. */
 const PERK_PICKS=10;
+/* ⚑⚑⚑ T117 (주인 확정 2026-09-04 12:3X) — 레벨업 특전이 «3개 중 1개 선택» 으로 돌아왔다.
+   T96 이 폐지한 것 중 **선택창만** 돌아오고 등급·등장 확률·무료 새로고침·전지의 눈은 그대로 폐지다.
+   sim.js 와 같은 이름·같은 값·같은 동사(게이트가 두 엔진을 대조한다). */
+const PERK_OFFER=3;
 /* 등급이 폐지돼 카드 색·태그가 하나다. 천사의 축복처럼 «특전이 아닌 획득물» 도 같은 카드를 쓴다. */
 const PERK_COLOR='#FFB92E';
-/* 다음 순번 특전 1개를 지급한다 — 지급했으면 그 특전을, 남은 게 없으면 null.
-   레벨업과 악마의 거래가 **같은 동사**를 거친다(sim.js grantNextPerk 와 1:1). */
 /* ⚑ 순번은 «획득 목록의 길이» 가 아니라 «그중 진짜 특전의 수» 다 — 천사의 축복처럼 PERKS 밖의 항목도
    같은 목록에 쌓이므로(미리보기 줄·책이 함께 보여 준다) 길이로 세면 축복 한 번에 특전 하나를 건너뛴다.
    sim.js 는 `G.taken` 에 특전만 넣으므로 그쪽은 길이로 세도 같은 결과다. */
 function perkOrderN(){ let n=0; for(const q of G.perksTaken) if(PERKS.includes(q)) n++; return n; }
-function nextPerk(){ const n=perkOrderN(); return n<PERK_PICKS?PERKS[n]:null; }   /* ⚑ 한 런 상한 = PERK_PICKS (풀 ≥ 획득 수) */
-function grantNextPerk(){
-  G.perkChances++;
-  const perk=nextPerk();
-  if(!perk) return null;
-  takePerk(perk);
-  return perk;
+/* ⚑ T117 — 제시 카드 3장: «아직 안 얻은 것만 · 한 장 안에서 중복 없음 · 남은 것이 3 미만이면 그만큼».
+   sim.js offerPerks(taken) 와 1:1(같은 이름·같은 규칙 — 게이트가 두 엔진을 대조한다). */
+function offerPerks(taken){
+  const rest=PERKS.filter(p=>taken.indexOf(p)<0);
+  const out=[];
+  for(let i=0;i<PERK_OFFER&&rest.length;i++) out.push(rest.splice(Math.floor(Math.random()*rest.length),1)[0]);
+  return out;
 }
-function takePerk(perk){
+/* 이번 레벨업에 줄 것이 남아 있는가 — 한 런 상한(PERK_PICKS)과 남은 풀을 함께 본다.
+   ⚑ 난수를 쓰지 않는다 — «있나» 를 묻는 자리에서 카드를 뽑아 버리면 굴림이 두 번 일어난다. */
+function perksLeftN(){ let n=0; for(const p of PERKS) if(G.perksTaken.indexOf(p)<0) n++; return n; }
+function hasPerkLeft(){ return perkOrderN()<PERK_PICKS && perksLeftN()>0; }
+function pickPerk(perk){
   const before=Object.assign({},G.player.px);
   perk.ap(G.player);
   /* ap 가 올린 px 키를 이 특전으로 기록 — 버프 아이콘이 «어느 특전의 버프인가» 를 이걸로 안다.
@@ -2312,32 +2320,37 @@ function closeOverlay(){ ov.className=''; ov.innerHTML=''; ov.onclick=null; if(G
 /* ⚑ 화면에 뜨는 특전 문구는 **여기 한 곳**에서만 만든다 — PLAN §3.1 «효과» 열이 확정 스펙이고
    `tx` 가 그 문장이다(`<b>` 태그를 걷어내면 글자까지 같아야 한다 — 게이트가 두 엔진 + PLAN 을 대조).
    ⚑ T96 — 등급이 폐지돼 카드에 등급 태그·등급색이 없다. 대신 **획득 순번**(1/10)을 태그로 보여준다:
-   순서 획득 체제에서 유저에게 의미 있는 정보는 «몇 번째를 받았고 몇 개 남았나» 이기 때문이다. */
+   순서 획득 체제에서 유저에게 의미 있는 정보는 «몇 번째를 받았고 몇 개 남았나» 이기 때문이다.
+   ⚑ T117 — 3택이 돌아오면서 선택 카드에는 `id="perkPickN"` 이 붙는다(고를 수 있는 카드 = `.pick`).
+   보유 목록·악마 미리보기의 카드는 종전대로 `static` 이라 id 가 없다(누를 것이 아니다). */
 const perkText=p=>p.tx;
 function perkCardHTML(p,i,extra){
   const n=PERKS.indexOf(p);
   const tag=n>=0?`${n+1}/${PERK_PICKS}`:'축복';   /* «몇 번째 / 한 런에 얻는 총수» — 풀 크기 아님(⚑ PERK_PICKS) */
-  return `<button class="perk-card ${extra||''}" data-i="${i}" style="--pc:${PERK_COLOR}">
+  const id=extra==='pick'?` id="perkPick${i}"`:'';
+  return `<button class="perk-card ${extra||''}"${id} data-i="${i}" style="--pc:${PERK_COLOR}">
     <span class="tag">${tag}</span><span class="ic">${p.ic}</span><span class="tx">${perkText(p)}</span></button>`;
 }
-/* ⚑⚑ T96 — 레벨업 «3택 선택창» 은 폐지됐다. 레벨업하면 **다음 순번 특전을 그 자리에서 받는다**.
-   선택도 새로고침도 없으므로 이 팝업이 하는 일은 «무엇을 받았는지 보여주고 확인받는» 것뿐이다.
-   📘 보유 특전 버튼은 T89 주인 지시대로 남긴다 — 고를 것은 없어졌지만 «지금 내가 뭘 갖고 있나» 는
-   그대로 필요하고, 책은 `openOverlay` 로 내용만 갈아끼우므로 T79 «팝업 중 시간 완전 정지» 가 유지된다.
-   10개를 다 얻은 뒤의 레벨업은 팝업조차 뜨지 않는다(줄 것이 없다 — 게임 시간을 멈출 이유가 없다). */
+/* ⚑⚑⚑ T117 (주인 확정 2026-09-04 12:3X) — 레벨업 «3택 선택창» 이 돌아왔다.
+   레벨업하면 «아직 안 얻은» 특전 중 최대 3장을 뽑아 카드로 보여주고 **유저가 하나를 고른다**.
+   남은 것이 3개 미만이면 남은 만큼만, 0개면 팝업조차 뜨지 않는다(줄 것이 없다 — 시간을 멈출 이유가 없다).
+   등급 테두리·무료 새로고침·전지의 눈은 T96 대로 그대로 없다.
+   📘 보유 특전 버튼(T89)은 «고르기 전에 내가 뭘 갖고 있나» 를 보는 자리라 3택 복구로 제 뜻을 되찾았다 —
+   책은 `openOverlay` 로 내용만 갈아끼우므로 T79 «팝업 중 시간 완전 정지» 가 유지된다.
+   ⚑ 굴림(offerPerks)은 **paint 밖에서 딱 한 번**이다. paint 안에서 굴리면 책을 드나들 때마다 선택지가
+   다시 굴려져 «무료 무한 새로고침» 이 된다(T89 가 못 박은 실패 경로 ②). */
 function openLevelUp(){
-  if(!nextPerk()){ G.perkChances++; afterPerk(); return; }   /* 10개를 다 얻었다 — 팝업 없이 그냥 진행 */
+  if(!hasPerkLeft()){ G.perkChances++; afterPerk(); return; }   /* 줄 것이 없다 — 팝업 없이 그냥 진행 */
   AU.play('levelup');
-  const perk=grantNextPerk();
-  renderStatsGrid(); updateBars();
+  G.perkChances++;
+  const offer=offerPerks(G.perksTaken);   /* ⚑ 이 줄이 이번 레벨업의 유일한 굴림이다 */
   const paint=()=>{
     openOverlay(`<div class="ov-banner">🎉 레벨 업!</div>
-      <div class="ov-sub">특전을 획득했습니다</div>
-      ${perkCardHTML(perk,0,'static')}
-      <button class="choice-btn gold" id="luOk">계속 전진</button>
+      <div class="ov-sub">특전 하나를 고르세요</div>
+      ${offer.map((p,i)=>perkCardHTML(p,i,'pick')).join('')}
       <div class="ov-foot"><button id="perkBookBtn">📘<b>${G.perksTaken.length}</b><span class="sr-lbl">보유 특전</span></button></div>`,
       {rays:true,cls:'ov-full'});
-    $('luOk').onclick=()=>{ AU.play('click'); afterPerk(); };
+    offer.forEach((p,i)=>{ $('perkPick'+i).onclick=()=>{ AU.play('click'); pickPerk(p); renderStatsGrid(); updateBars(); afterPerk(); }; });
     /* ⚑ stopPropagation 필수 — 이 클릭이 오버레이까지 거품처럼 올라가면 책이 깔아 둔 ov.onclick(=복귀)에
        걸려 열자마자 되돌아간다(T89 가 T3 실측으로 잡은 버그). */
     $('perkBookBtn').onclick=e=>{ e.stopPropagation(); openPerkBook(paint); };
@@ -2388,29 +2401,35 @@ function openRest(){
   $('rExp').onclick=()=>{ closeOverlay(); addText('EXP +'+REST_EXP,'#FFD54A'); gainExp(REST_EXP); };
 }
 function openDevil(){
-  /* ⚑⚑ T96 — 악마가 주는 것 = **다음 순번 특전을 하나 앞당겨 준다** (주인 위임 기본값. 순서가 고정이라
-     «전설 확정» 이 의미를 잃었다). 줄 특전이 남아 있지 않으면 거래 자체가 성립하지 않으므로
-     비용도 안 받고 그냥 지나간다(위임). 비용(최대체력 30% 차감)은 T90 그대로다. */
-  const perk=nextPerk();
-  if(!perk){ closeOverlay(); return; }
+  /* ⚑⚑⚑ T117 (주인 확정 2026-09-04 12:3X) — 악마가 주는 것 = **«즉시 3택 1»**. 레벨업과 같은 팝업·같은 동사로,
+     T96 의 «다음 순번 앞당김» 은 3택 복구와 함께 폐기됐다. 줄 특전이 남아 있지 않으면 거래 자체가
+     성립하지 않으므로 비용도 안 받고 그냥 지나간다(위임 그대로). 비용(최대체력 30% 차감)은 T90 그대로다.
+     ⚑ PLAN §2.4 «지불하기 전에 어떤 특전인지 카드로 먼저 보여줌» 은 살아 있다 — 여기서 **미리 굴린 3장을
+     그대로 보여 주고**, 수락하면 같은 3장으로 선택창이 뜬다(수락 뒤 다시 굴리면 미리보기가 거짓이 된다). */
+  if(!hasPerkLeft()){ closeOverlay(); return; }
+  const offer=offerPerks(G.perksTaken);   /* ⚑ 굴림은 여기 한 번뿐 — 미리보기와 선택창이 같은 3장이다 */
   AU.play('devil');
   const cost=Math.round(G.player.maxHp*DEVIL_COST);   /* ⚑ T90 — 최대치에서 깎일 양 (현재체력 차감 아님) */
   openOverlay(`<div class="big-emoji">😈</div>
     <div class="ov-banner" style="color:#E87AA0">악마의 거래</div>
     <div class="ov-sub">"네 생명을 바치면... 이 힘을 주지"</div>
-    <div style="width:100%; margin-bottom:4px">${perkCardHTML(perk,0,'static')}</div>
-    <button class="choice-btn danger" id="dYes">🩸 최대 체력의 30% 지불 (-${fmt(cost)})<small>최대 체력이 줄어든 채 진행 · 다음 특전을 앞당겨 획득</small></button>
+    <div style="width:100%; margin-bottom:4px">${offer.map((p,i)=>perkCardHTML(p,i,'static')).join('')}</div>
+    <button class="choice-btn danger" id="dYes">🩸 최대 체력의 30% 지불 (-${fmt(cost)})<small>최대 체력이 줄어든 채 진행 · 위 ${offer.length}장 중 하나를 즉시 획득</small></button>
     <button class="choice-btn" id="dNo">🚶 조용히 지나간다<small>아무 일도 일어나지 않습니다</small></button>`);
   $('dYes').onclick=()=>{
     payDevilCost(G.player);   /* ⚑ T90 — 최대치에서 30% 차감 + 현재체력 클램프 (sim.js 와 같은 동사) */
     AU.play('hurt');
-    grantNextPerk();          /* 레벨업과 같은 동사 — 순번이 하나 앞당겨진다 */
-    renderStatsGrid(); updateBars();
-    openOverlay(`<div class="big-emoji">${perk.ic}</div>
-      <div class="ov-banner" style="color:${PERK_COLOR}">특전 획득!</div>
-      <div class="ov-sub" style="font-size:16px">${perkText(perk)}</div>
-      <button class="choice-btn gold" id="dOk">계속 전진</button>`,{rays:true});
-    $('dOk').onclick=()=>{ AU.play('click'); closeOverlay(); };
+    G.perkChances++;
+    const paint=()=>{
+      openOverlay(`<div class="ov-banner" style="color:#E87AA0">악마의 선물</div>
+        <div class="ov-sub">특전 하나를 고르세요</div>
+        ${offer.map((p,i)=>perkCardHTML(p,i,'pick')).join('')}
+        <div class="ov-foot"><button id="perkBookBtn">📘<b>${G.perksTaken.length}</b><span class="sr-lbl">보유 특전</span></button></div>`,
+        {rays:true,cls:'ov-full'});
+      offer.forEach((p,i)=>{ $('perkPick'+i).onclick=()=>{ AU.play('click'); pickPerk(p); renderStatsGrid(); updateBars(); closeOverlay(); }; });
+      $('perkBookBtn').onclick=e=>{ e.stopPropagation(); openPerkBook(paint); };
+    };
+    paint();
   };
   $('dNo').onclick=()=>{ AU.play('click'); closeOverlay(); };
 }

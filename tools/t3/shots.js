@@ -105,8 +105,13 @@ const MEASURE = {
      *   «(인포 팝업) 박스» 행만 있다). `ov-full` 의 `.ov-inner` 는 상자가 아니라 «배경 없는 세로 흐름 상자» 라
      *   ref 에 대응 행이 없다 — 참고로만 남긴다(판정 행 아님). */
     '팝업 박스(참고·대응 ref 없음)': '#overlay .ov-inner', '배너': '#overlay .ov-banner', '부제': '#overlay .ov-sub',
-    '특전 카드': '#overlay .perk-card', '카드 아이콘': '#overlay .perk-card .ic', '카드 문구': '#overlay .perk-card .tx',
-    '확인 버튼': '#luOk', '보유 특전 버튼': '#perkBookBtn',
+    /* ⚑ T117 — 3택이 돌아와 카드가 3장이다(ref ⑦ 표의 «특전 카드 1·2·3» 이 그대로 자가 된다).
+     *   «확인 버튼(#luOk)» 은 사라졌다 — 카드를 누르는 것이 곧 확정이라 확인 버튼이 할 일이 없다.
+     *   레퍼런스의 가운데 하단 버튼 자리는 게임에 대응물이 없는 «무료 새로고침» 이라 비워 둔다. */
+    '특전 카드': '#overlay .perk-card', '특전 카드2': '#overlay .perk-card:nth-of-type(2)',
+    '특전 카드3': '#overlay .perk-card:nth-of-type(3)',
+    '카드 아이콘': '#overlay .perk-card .ic', '카드 문구': '#overlay .perk-card .tx',
+    '보유 특전 버튼': '#perkBookBtn',
   },
   perkbook: {
     '팝업 박스': '#overlay .ov-inner', '배너': '#overlay .ov-banner', '부제': '#overlay .ov-sub',

@@ -22,9 +22,9 @@ const OUT = process.env.T3_OUT || require('os').tmpdir();
 const R = [];
 const drain = async (p) => {   /* 전투 중 뜬 레벨업 팝업을 비운다 — 열려 있으면 게임이 멈춰 버프 타이머도 안 흐른다 */
   for (let i = 0; i < 8; i++) {
-    const n = await p.evaluate(() => document.querySelectorAll('#luOk').length);
+    const n = await p.evaluate(() => document.querySelectorAll('.perk-card.pick').length);
     if (!n) break;
-    await p.click('#luOk'); await p.waitForTimeout(350);
+    await p.click('#perkPick0'); await p.waitForTimeout(350);
   }
   await p.evaluate(() => { if (document.getElementById('overlay').classList.contains('on')) closeOverlay(); });
   await p.waitForTimeout(250);
@@ -36,13 +36,13 @@ const drainAll = async (p, max = 16) => {
   let n = 0;
   for (let i = 0; i < max; i++) {
     const st = await p.evaluate(() => ({
-      cards: document.querySelectorAll('#luOk').length,
+      cards: document.querySelectorAll('.perk-card.pick').length,
       choice: document.querySelectorAll('#overlay .choice-btn').length,
       exit: !!document.getElementById('clOk') || !!document.getElementById('deOk'),
       on: document.getElementById('overlay').classList.contains('on'),
     }));
     if (st.exit) return n;
-    if (st.cards) { await p.click('#luOk'); n++; }
+    if (st.cards) { await p.click('#perkPick0'); n++; }
     else if (st.choice) { await p.click('#overlay .choice-btn'); n++; }
     else if (st.on) { await p.evaluate(() => closeOverlay()); n++; }
     else return n;
@@ -82,15 +82,17 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       n: cards.length, tags: cards.map(c => c.querySelector('.tag')?.textContent),
       tx: cards.map(c => c.querySelector('.tx').textContent),
       medal: cards.map(c => getComputedStyle(c.querySelector('.ic')).clipPath !== 'none'),
-      taken: G.perksTaken.map(x => x.id), first: PERKS[0].id, ok: !!document.getElementById('luOk'),
-      noChoice: document.querySelectorAll('#overlay .perk-card[data-i]:not(.static)').length,
+      taken: G.perksTaken.map(x => x.id), first: PERKS[0].id, ok: !!document.getElementById('perkPick0'),
+      pickable: document.querySelectorAll('#overlay .perk-card.pick[data-i]').length,
     };
   });
-  /* ⚑⚑ T96 — 3택 선택창은 폐지됐다. 레벨업하면 «다음 순번 하나» 를 그 자리에서 받는다. */
-  chk('레벨업 = 특전 카드 1장 (선택창 폐지)', pick.n === 1 && pick.noChoice === 0, `카드 ${pick.n}장 · 고를 수 있는 카드 ${pick.noChoice}장`);
-  chk('⚑ 첫 특전이 1번(공격력 증가)이다 — 순서 획득', pick.taken.length === 1 && pick.taken[0] === pick.first, `${pick.taken.join(',')} (1번 = ${pick.first})`);
-  chk('카드 태그가 획득 순번 «1/10»', pick.tags[0] === '1/10', pick.tags.join(','));
-  chk('확인 버튼(계속 전진)이 있다 — 고를 것이 없다', pick.ok);
+  /* ⚑⚑⚑ T117 (주인 확정 2026-09-04 12:3X) — 3택 선택창이 돌아왔다. 레벨업하면 «남은 풀에서 무작위 3장» 이
+     뜨고 **고르기 전에는 아무것도 안 받는다**(순서 지급 시절엔 팝업이 뜨는 순간 이미 받은 상태였다). */
+  chk('⚑ T117 레벨업 = 고를 수 있는 특전 카드 3장', pick.n === 3 && pick.pickable === 3,
+    `카드 ${pick.n}장 · 고를 수 있는 카드 ${pick.pickable}장`);
+  chk('⚑ T117 고르기 «전» 에는 아직 아무것도 안 받았다', pick.taken.length === 0, `보유 ${pick.taken.join(',') || '0종'}`);
+  chk('⚑ T117 세 장이 서로 다르다 (같은 카드 안 중복 금지)', new Set(pick.tx).size === 3, pick.tags.join(','));
+  chk('카드 태그가 표 번호 «N/10»', pick.tags.every(t => /^\d+\/10$/.test(t)), pick.tags.join(','));
   chk('특전 아이콘이 메달리온 구도', pick.medal.every(Boolean));
 
   /* ⚑ T96 — «(고유)» 표기 검사는 폐지. 특전이 10종·순서 획득이라 중복이 구조적으로 불가능하고
@@ -120,7 +122,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     froze0.atkT === froze1.atkT && froze0.boltT === froze1.boltT, `atkT ${froze0.atkT}→${froze1.atkT} · boltT ${froze0.boltT}→${froze1.boltT}`);
   chk('⚑ 적이 한 걸음도 안 움직인다', froze0.ex === froze1.ex, `적 ${froze0.ex.split(',').length}마리`);
 
-  await p.click('#luOk'); await p.waitForTimeout(300);
+  await p.click('#perkPick0'); await p.waitForTimeout(300);
   const resumed = await p.evaluate(async () => {
     const t0 = G.t; await new Promise(r => setTimeout(r, 400)); return { paused: G.paused, moved: G.t > t0, t0, t1: G.t };
   });
@@ -146,7 +148,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     /* 버프 아이콘이 «어느 특전의 버프인가» 를 알려면 px 키를 올리는 특전이 있어야 한다.
        고른 특전이 순수 스탯형이면 G.pxPerk 가 비므로, 정상 경로(takePerk)로 하나 더 얻는다. */
     let key = Object.keys(G.pxPerk)[0] || null;
-    for (let i = 0; !key && i < PERKS.length; i++) { takePerk(PERKS[i]); key = Object.keys(G.pxPerk)[0] || null; }
+    for (let i = 0; !key && i < PERKS.length; i++) { pickPerk(PERKS[i]); key = Object.keys(G.pxPerk)[0] || null; }
     const perk = key ? G.pxPerk[key] : G.perksTaken[0];
     addBuff(G.player, 'atk', 0.2, 4, key);
     addBuff(G.player, 'atk', 0.2, 4, key);   /* 같은 출처 2중첩 → 개수 뱃지 */
@@ -197,12 +199,12 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       return {
         n: mine.length, left: mine.reduce((m, b) => Math.max(m, b.t), 0),
         icons: document.querySelectorAll('#buffBar .buff-ic:not(.ward-ic)').length,
-        cards: document.querySelectorAll('#luOk').length,
+        cards: document.querySelectorAll('.perk-card.pick').length,
         choice: document.querySelectorAll('#overlay .choice-btn').length, paused: !!(G && G.paused) };
     }, buffOn.key);
     if (st.n === 0) { gone = true; tLast = 0; break; }
     tLast = st.left; polls++;
-    if (st.cards) { await p.click('#luOk'); await p.waitForTimeout(250); continue; }
+    if (st.cards) { await p.click('#perkPick0'); await p.waitForTimeout(250); continue; }
     /* 쉼터·악마·천사 이벤트 팝업이 뜨면 그것도 게임을 멈춘다 — 아무 선택지나 눌러 진행시킨다 */
     else if (st.choice) { await p.click('#overlay .choice-btn'); await p.waitForTimeout(250); continue; }
     if (st.left < tPrev - 1e-9) { tPrev = st.left; stall = 0; } else if (!st.paused) stall++;
@@ -225,7 +227,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     G.perksTaken = [...keep.values()];
     renderPerkStrip();
     const same = G.perksTaken[0];
-    takePerk(same); takePerk(same);            /* 같은 특전 3번 → 개수 뱃지 3 */
+    pickPerk(same); pickPerk(same);            /* 같은 특전 3번 → 개수 뱃지 3 */
     /* 같은 특전이 3번이면 칩은 «그 특전 1개 + 뱃지 3» 이어야 한다 (전체 칩 수 = 서로 다른 특전 수) */
     const distinct = new Set(G.perksTaken.map(x => x.id || x.tx)).size;
     const chips0 = [...document.querySelectorAll('#perkStrip .pv-ic')];
@@ -236,7 +238,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     /* ⚑ T96 — PERKS 가 10종뿐이라 «접힘» 을 내려면 합성 획득물이 필요하다.
        천사의 축복처럼 PERKS 밖의 항목도 미리보기 줄에 그대로 쌓이므로 그 경로로 채운다. */
     const had = new Set(G.perksTaken.map(x => x.id || x.tx));
-    for (const q of PERKS.filter(x => !had.has(x.id || x.tx))) takePerk(q);
+    for (const q of PERKS.filter(x => !had.has(x.id || x.tx))) pickPerk(q);
     for (let i = 0; i < 14; i++) { G.perksTaken.push({ ic: '✨', tx: `합성 획득물 ${i}` }); }
     renderPerkStrip();
     const chips = [...document.querySelectorAll('#perkStrip .pv-ic')];
@@ -312,7 +314,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     return {
       paused: G.paused, on: document.getElementById('overlay').classList.contains('on'),
       list: document.querySelectorAll('.perk-list .perk-card').length, taken: G.perksTaken.length,
-      back: !!document.getElementById('pbBack'), choiceGone: !document.getElementById('luOk'),
+      back: !!document.getElementById('pbBack'), choiceGone: !document.getElementById('perkPick0'),
       frozen: G.t === t0 && G.player.hp === hp0, t0, t1: G.t,
     };
   });
@@ -324,7 +326,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   await p.click('#pbBack'); await p.waitForTimeout(260);
   const bk2 = await p.evaluate(() => ({
     cards: [...document.querySelectorAll('.perk-card')].map(c => c.querySelector('.tx').textContent),
-    ok: !!document.getElementById('luOk'), paused: G.paused,
+    ok: !!document.getElementById('perkPick0'), paused: G.paused,
     book: !!document.getElementById('pbBack'), btn: !!document.getElementById('perkBookBtn'),
     taken: G.perksTaken.length,
   }));
@@ -380,13 +382,13 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     const st = await p.evaluate(() => {
       const bn = G.nodes.find(n => n.type === 'boss');
       return {
-        cards: document.querySelectorAll('#luOk').length,
+        cards: document.querySelectorAll('.perk-card.pick').length,
         alive: !!(bn && bn.enemies.some(e => !e.dead && e.hp > 0)),
         cleared: !!(G && G.cleared), ov: document.getElementById('overlay').textContent.slice(0, 40),
       };
     });
     if (st.alive) {
-      if (st.cards) { lateDrain++; await p.click('#luOk'); await p.waitForTimeout(250); continue; }
+      if (st.cards) { lateDrain++; await p.click('#perkPick0'); await p.waitForTimeout(250); continue; }
     } else sawCard = Math.max(sawCard, st.cards);
     if (st.cleared && /클리어/.test(st.ov)) break;
     await p.waitForTimeout(250);

@@ -130,9 +130,17 @@ console.log('\n[⑤] index.html = 유저 자유 선택 2택 유지 (시뮬 정�
     /payDevilCost\(G\.player\)|payDevilCost\(p\)/.test(b)
       ? ok('수락 시 payDevilCost 를 거친다 (sim.js 와 같은 동사)')
       : bad('수락 처리가 payDevilCost 를 안 쓴다');
-    /grantNextPerk\(\)/.test(b)
-      ? ok('게임도 같은 지급 동사(grantNextPerk)를 쓴다 — 다음 순번 앞당김')
-      : bad('게임 악마가 grantNextPerk 를 안 쓴다');
+    /* ⚑⚑⚑ T117 (주인 확정 2026-09-04 12:3X) — 악마가 주는 것이 «다음 순번 앞당김» → **«즉시 3택 1»** 이 됐다.
+       게임 쪽은 유저가 고르므로 시뮬 전용 동사(grantNextPerk)가 아니라 두 엔진 공용 동사 둘을 거친다:
+       ⓐ 제시 = offerPerks ⓑ 확정 = pickPerk. 그리고 **굴림은 지불 «전» 한 번뿐**이어야 한다 —
+       수락 뒤 다시 굴리면 PLAN §2.4 «지불하기 전에 카드로 먼저 보여줌» 이 거짓말이 된다. */
+    const offerN = (b.match(/offerPerks\s*\(/g) || []).length;
+    (offerN === 1 && /pickPerk\(p\)/.test(b))
+      ? ok('게임 악마 = 즉시 3택 1 — 굴림은 지불 전 한 번(offerPerks)뿐이고 확정은 공용 동사(pickPerk)다')
+      : bad(`게임 악마가 «미리 보여준 3장 그대로 3택» 이 아니다 (offerPerks ${offerN}곳 · pickPerk ${/pickPerk\(p\)/.test(b)})`);
+    /nextPerk\(\)|grantNextPerk\(\)/.test(b)
+      ? bad('게임 악마에 폐기된 «다음 순번 앞당김»(nextPerk/grantNextPerk)이 남아 있다 — T117 로 3택 1 이 됐다')
+      : ok('폐기된 «다음 순번 앞당김» 잔재 없음 (⚑ T117)');
     /p\.hp\s*=\s*Math\.max\(\s*1\s*,\s*p\.hp\s*-\s*cost\s*\)/.test(b)
       ? bad('폐기된 «현재체력에서 cost 차감» 이 되살아났다 (주인 확정 위반)')
       : ok('현재체력 직접 차감 없음');
