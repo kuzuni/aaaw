@@ -1724,21 +1724,24 @@
      (⚑ T113 정정 — 예전에 여기 붙어 있던 «한 발동이 1.4초(화살 24발)라 공격 주기를 넘는다 · 승인 대기 8번 / T10» 은 **전제가 소멸**했다. 그 발수는 특전 132종 체제의 신화 다연발이 낸 것이고, 특전이 고정 10종으로 바뀌면서(T96) 소환은 **«1개 = 1발»** 이 됐다. 지금 한 발동의 최대 발수는 장비 옵션까지 켜야 **도끼 3 · 화살 3 · 번개 2**(50~70ms 간격 = 최장 0.18초)라 공격 주기를 넘지 않는다. 승인 목록에서도 8번은 이미 사라졌다.)
   ④ **대장간 수동 3칸 합성**(T2 5단계) 과 **장비 세부 팝업의 옵션 7칸 해금 표시**.
 
-### 배포 상태 (⚑ T113 로 갱신 · sess-0321-13860 / 워커 B · 2026-09-04T03:2XZ · HEAD `86a6486`)
+### 배포 상태 (⚑ T114 뒤 재검증으로 갱신 · sess-0436-16815 / 워커 C · 2026-09-04T04:4XZ · HEAD `1d31910`)
 
 > **이 절은 «지금 HEAD» 를 적는 자리다 — 갱신하지 않으면 다음 워커·주인이 이미 끝난 일을 다시 하게 된다.**
 > 마지막 완료 작업이 바뀔 때마다 여기 숫자를 같이 갱신할 것. (2026-09-02 T4 시점 원문은 아래 «옛 기록» 에 접어 두었다.)
 
 - **커밋·push 확인 완료** — 작업 트리 깨끗, `origin/main` 과 동기화. Pages 가 켜져 있으므로 **push 된 것이 곧 배포본**이다.
   (샌드박스에서 https://kuzuni.github.io/aaaw/ 로 직접 확인하려 했으나 **이 환경의 외부망이 막혀 있어 루틴은 응답을 못 본다** — 위 «HTTP 200» 은 주인 확인분이다.)
-- **현 HEAD 의 검증 상태 (T113 재실행 실측)**: 정적 게이트 **18종 전부 exit 0** —
+- **현 HEAD 의 검증 상태 (T114 뒤 재실행 실측 · 2026-09-04T04:4XZ)**: 정적 게이트 **18종 전부 exit 0** —
   `verifyT2` 411/411 · `verifyPlanConst` 80/80 · `verifyScoreCriteria` 55/55 · `verifyDevilPolicy` 35/35 · `verifyPerkOrder` 34/34 ·
-  `verifyChapterFixed` 27/27 · `verifyScoreExp3` 18/18 · `verifySeedProtocol` 14/14 · `verifyPierceScope` 10/10 · `verifySummonChain` 5/5 ·
+  `verifyChapterFixed` **33/33**(T114 로 27 → 33 · 원거리 마릿수 곡선 단언 추가) · `verifyScoreExp3` 18/18 · `verifySeedProtocol` 14/14 ·
+  `verifyPierceScope` 10/10 · `verifySummonChain` 5/5 ·
   `verifyCombatConst` · `verifyGearEcon` · `verifyLegacyHtml` · `verifyNumClean` · `verifyOptText` · `verifyOptTextSelfTest` · `verifyRestPolicy` · `verifySaturation`.
-  **T3 헤드리스 4스위트 217/217**(boot 84 · battle 50 · gear 64 · fx 19 · pageerror 0).
+  **T3 헤드리스 4스위트 219/219**(boot 84 · battle **52** · gear 64 · fx 19 · pageerror 0 — battle 이 T114 로 50 → 52).
   (⚑ `verifyPerkGearDup`·`verifyPerkPolicy`·`verifyHarness` 는 **특전 132종 체제와 함께 폐지된 게이트**라 리포에 없다 — 옛 기록의 «12종» 은 그 시절 목록이다.)
-- **밸런스는 잡혀 있다** — 주인 확정 과녁인 **난이도 사다리 8점이 8/8 합격**(T107 2단계 `95e5c95` · 시드 11·12·13 × 1,000판, 최대 편차 −1.43%p / 허용 ±2%p).
-  T110 이 **사다리를 자를 때 안 쓴 시드 6벌(21·22·23·31·32·33 × 각 1,000판)로 다시 재서도 8/8** 임을 확인했다(과적합 아님). 근거 `docs/balance/T107/result.md`.
+  (⚑ T3 4스위트는 `playwright-core` 가 있어야 돈다 — 리포에 커밋 금지이므로 **스크래치패드에 `npm i playwright-core` 뒤 `PW_CORE=<경로> PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`** 로 실행한다. 브라우저 바이너리는 환경에 이미 깔려 있어 `playwright install` 은 필요 없다.)
+- **밸런스는 잡혀 있다** — 주인 확정 과녁인 **난이도 사다리 8점이 8/8 합격**(T114 재적합 `f0ae9e0` · 시드 11·12·13 × 1,000판, 최대 편차 +1.93%p / 허용 ±2%p).
+  T114 가 **사다리를 자를 때 안 쓴 시드로 다시 재서도 8/8**(편차 −1.73 ~ +1.28%p — 측정 시드보다 오히려 좁다)임을 확인했다(과적합 아님). 근거 `docs/balance/T114/result.md`.
+  (T107 2단계 `95e5c95` 의 8/8 은 원거리 마릿수 곡선 «전» 값이라 이력이다.)
   **⇒ «밸런스가 아직 안 잡혔다 / 사다리 7점 0/7» 은 2026-09-02 의 옛 상태다. 재적합을 다시 하지 말 것.**
 - **⚠ 그래도 «완성» 이 아니라 «굴러가고 검증된 상태» 다.** 남은 것:
   ① **주인 결정 대기 안건 2건**(«주인 승인 대기» 절 — 43번 «신화 0강 > 전설 9강» 제약 붕괴 · 44번 신화 9강 풀셋 −1.0~1.2%). 둘 다 주인 확정 두 조항의 산술적 충돌이라 루틴이 못 정한다.
