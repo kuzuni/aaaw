@@ -500,6 +500,13 @@ U03 | **9.0 / 9.2** | ⚑ **합격 회차** — 회차 시작 시점 코드(`a93
 
 ## 검증 로그 (선점 가능 작업이 없던 세션)
 
+- **2026-09-04T23:2XZ / sess-2320-14444 · 워커 B — 선점 가능 작업 없음(작업표 전 행 «✅ 완료» · `docs/claims/` 는 `README.md` 뿐 = lock 0건) → §0-5 재검증. 결과: 직전 검증(18:5XZ · 워커 D)과 **숫자 한 개도 다르지 않다** — 정적 게이트 19종 중 **18 초록 · 1 빨강**(`verifyScoreCriteria` 56/8 = 승인 대기 52번 그대로 · 신규 회귀 0) · T3 4스위트 **230/230** pageerror 0 · `shots.js` exit 0 · 엔진·PLAN·게이트·하니스 무수정 · 이 문서 이 항목만 추가**
+  - **선점 판단.** 세션 시작(23:20:51Z)에 `docs/claims/` 는 `README.md` 뿐(lock 0건)이고, 작업표에 «완료» 가 아닌 행이 0개다(T22 는 «✅ 해소»). ROUTINE 최상단 ⚑ 최신 항목(21:2X = T125 자동 장착 폐지)까지 전부 `3fb0c8e`·`f56727d` 로 마감돼 있다. HEAD = **`6543d32`**(워커 D 의 §0-5 로그 · 18:58Z) — **18:58Z 이후 4시간 22분 동안 새 커밋도 새 주인 지시도 없다.** 열린 작업 0건 → §0-5.
+  - **초록 18종** — `verifyChapterFixed` 33/0 · `verifyCombatConst` 42항목·82일치·불일치 0 · `verifyDevilPolicy` 36/0 · `verifyGearEcon` 44/0 · `verifyLegacyHtml` · `verifyNumClean` 14/0 · `verifyOptText`(불일치 0 · PLAN §3 누락 0) · `verifyOptTextSelfTest` 11/11 · `verifyPerkOrder` 90/0 · `verifyPierceScope` 10/0 · `verifyPlanConst` 80/80 · `verifyRestPolicy` 16/0 · `verifySaturation`(신규 포화 0) · `verifyScoreExp3` 18/18 · `verifySeedProtocol` 18/0 · `verifyShotsHarness` 34/0 · `verifySummonChain` 11/0(B_crit 6.801 = 승인 대기 50번 그대로) · `verifyT2` 417/0. **전부 워커 D 가 적은 수치와 동일하다.**
+  - **🔴 빨강 1종 — 그대로다.** `verifyScoreCriteria` 통과 56 / 불합격 8. 불합격은 ⓓ 사다리 여덟 칸(챕터 5·15·28·40·70·150·380·420)이 **전부 실측 0.0%** 로 과녁 10±5%p 밖이라는 것 하나뿐이고, T123 이후 네 번째 세션이 같은 여덟 줄을 그대로 재현했다(신규 회귀 0). **20:5X 상시 규칙대로 게이트도 적 스탯도 한 글자 안 건드렸다** — «승인 대기 52번»(사다리 자를 무엇으로 할지)은 **주인 판정 대기 상태 그대로**이고, 그 판정 전에는 밸런스 측정을 새로 시작하지 않는다.
+  - **T3 헤드리스 4스위트 230/230 · pageerror 0** — boot **84** · battle **53** · gear **72** · fx **21** · `shots.js` exit 0(PNG 9장·layout.json 은 `/tmp` — 리포 무수정).
+  - **무수정 범위.** `sim.js`·`index.html`·`PLAN.md`·`tools/**` 한 글자도 안 고쳤고 lock 도 잡지 않았다 — **밸런스 영향 0.** playwright-core 는 워커 D 기록대로 스크래치패드에 **`@1.55.0`** 을 깔고 `PW_CORE` 로 넘겨 그대로 돌았다(1.47.2 는 구 헤드리스 제거로 죽는다).
+
 - **2026-09-04T18:5XZ / sess-1850-18898 · 워커 D — 선점 가능 작업 없음(작업표 전 행 «✅ 완료» · `docs/claims/` 는 `README.md` 뿐 = lock 0건) → §0-5 재검증. 결과: 정적 게이트 19종 중 **18 초록 · 1 빨강**(`verifyScoreCriteria` = 승인 대기 52번 그대로 · 신규 회귀 0) · T3 4스위트 **230/230** pageerror 0 · 엔진·PLAN·게이트·하니스 무수정 · 이 문서 이 항목만 추가**
   - **선점 판단.** 세션 시작(18:5XZ)에 `docs/claims/` 가 비어 있고(README 만), 작업표 최신 3행(T125 · T124 · T121)이 전부 «✅ 완료» 다 — 최신 주인 지시(21:0X·21:1X·21:2X = T125 뽑기 천장 겹침·천장 문구 2줄·자동 장착 폐지)도 `3fb0c8e` 로 마감돼 있다. HEAD = **`f56727d`**(T125 lock 해제 · 18:25:20Z). 열린 작업 0건 → §0-5.
   - **⚑ 이 세션이 T124·T125 가 들어간 HEAD 를 처음 재검증했다.** 직전 두 검증 로그(sess-1736-C · sess-1720-B)는 T121 3차까지의 트리에서 잰 값이다.
