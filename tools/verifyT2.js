@@ -245,9 +245,19 @@ const DIRECTIVES = [
       const re = /if\(px\.p_evadeHeal\s*&&\s*pkk\(p\s*,\s*(?:PERK_EVHEAL_CH|0?\.10)\s*\)\)[\s\S]{0,80}?heal\(p\s*,\s*p\.maxHp\s*\*\s*(?:PERK_EVHEAL_F|0?\.06)\s*,\s*true\s*\)/;
       return re.test(SIM) && re.test(HTML);
     }],
-  ['스탯 그리드에서 흡혈 행 제거 — 7종 (07:1X)', () => {
-    const m = HTML.match(/const STAT_DEFS=\[[\s\S]*?\n\];/) || HTML.match(/\n\/\* =+ 스탯[\s\S]*?\n\];/);
-    return !/\{ic:'🩸',lb:'흡혈'/.test(HTML);
+  /* ⚑⚑ T154 (주인 지시 2026-09-05 18:3X «전투할 때 하단에 원래 흡혈율 떴어야 했는데 안 뜨더라») —
+     종전 단언 «스탯 그리드에서 흡혈 행 제거 — 7종 (07:1X)» 은 **뒤집혔다**. 07:1X 의 근거는 «흡혈 특전
+     전면 배제로 값이 항상 0» 이었는데 T145 로 장비 옵션 7번이 흡혈 8% 가 되어 값이 움직인다.
+     이제 반대 방향으로 잠근다 — 흡혈 행이 다시 사라지면 빨개진다(0 이어도 «0%» 로 보여야 한다). */
+  ['⚑ T154 — 스탯 그리드에 흡혈 행이 있다 (PLAN §2.3 의 8종 · 0 이어도 «0%»)', () => {
+    const m = HTML.match(/const STAT_DEFS=\[[\s\S]*?\n\];/);
+    if (!m) return false;
+    const row = m[0].match(/\{k:'steal',[^\n]*\}/);
+    return !!row && /lb:'흡혈'/.test(row[0]) && /effSteal\(p\)\.toFixed\(0\)\+'%'/.test(row[0])
+        && /base:\(\)=>statBase\(\)\.steal/.test(row[0])
+        && /function effSteal\(p\)\{ return p\.steal; \}/.test(HTML)
+        && /steal:p\.steal/.test(HTML)     /* statBase() 가 기준값도 같이 캐시한다 — 없으면 초록 판정이 NaN */
+        && !/\{ic:'🩸',lb:'흡혈'/.test(HTML);   /* 옛 이모지 표기로 되돌아가지 않았다 (T2 7단계) */
   }],
   ['소환은 도끼·화살·번개·검기·창 5종만 — 메테오 잔재 0 (PLAN §3.0)', () => !/meteor/i.test(HTML)],
   ['다연발 = 순차 연사 50~70ms (08:3X)', () => /function volley\(/.test(HTML) && /k\*\(50\+Math\.random\(\)\*20\)/.test(HTML)],
@@ -999,11 +1009,11 @@ console.log('\n[⑯ 레벨업 특전 카드 — 메달리온 구도 · 순번 �
   (ch && !/RARITY/.test(ch[0])) ? ok('카드가 옛 132종 등급 상수(RARITY)를 참조하지 않는다') : bad('카드가 아직 RARITY 를 참조한다');
 }
 
-/* ---------- ⑰ UI 아이콘 — 스탯 그리드 7 + 하단 5탭 (참고: docs/ref/메인 게임화면.jpg · 메인로비.jpg · T2 7단계) ---------- */
+/* ---------- ⑰ UI 아이콘 — 스탯 그리드 8 + 하단 5탭 (참고: docs/ref/메인 게임화면.jpg · 메인로비.jpg · T2 7단계) ---------- */
 /* 왜 게이트인가 — ⑮ 와 같은 이유다. 아이콘이 «데이터» 라서 한 칸이 비어도 문법 검사에 안 걸린다.
    여기에 더해 이 표는 **스탯 그리드·하단 탭·버프바 폴백 3곳이 공유**하므로, 키가 하나 어긋나면
    한 화면만 조용히 폴백(spark)으로 바뀐다 — 사람 눈으로는 «그냥 그런 아이콘» 으로 보인다. */
-console.log('\n[⑰ UI 아이콘 — 스탯 7 · 하단 탭 5 (인라인 SVG, 이모지 폐지)]');
+console.log('\n[⑰ UI 아이콘 — 스탯 8 · 하단 탭 5 (인라인 SVG, 이모지 폐지)]');
 {
   /* (1) 공용 표·공용 함수 — 그리는 곳이 한 군데인가 */
   /const UI_SVG=\{/.test(HTML) ? ok('UI_SVG — UI 인라인 SVG 아이콘 표 존재') : bad('UI_SVG 가 없다 — 스탯·탭 아이콘이 빈다');
@@ -1025,7 +1035,7 @@ console.log('\n[⑰ UI 아이콘 — 스탯 7 · 하단 탭 5 (인라인 SVG, �
     const EMO = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/u;
     const BLOCKS = [
       ['NAV_TABS(하단 5탭)', /const NAV_TABS=\[[\s\S]*?\n\];/],
-      ['STAT_DEFS(스탯 7칸)', /const STAT_DEFS=\[[\s\S]*?\n\];/],
+      ['STAT_DEFS(스탯 8칸)', /const STAT_DEFS=\[[\s\S]*?\n\];/],
       ['BUFF_STAT_IC(버프 폴백)', /const BUFF_STAT_IC=\{[^}]*\}/],
     ];
     for (const [nm, re] of BLOCKS) {
@@ -1051,12 +1061,15 @@ console.log('\n[⑰ UI 아이콘 — 스탯 7 · 하단 탭 5 (인라인 SVG, �
       const svg = ctx.UI_SVG;
       const statKeys = [...mStat[0].matchAll(/\{k:'([a-zA-Z]+)'/g)].map(m => m[1]);
       const navKeys = [...mNav[0].matchAll(/\{k:'([a-zA-Z]+)'/g)].map(m => m[1]);
-      statKeys.length === 7 ? ok('스탯 7칸 (흡혈 제거 후 — 주인 지시 07:1X)') : bad(`스탯 칸이 7개가 아니다 (${statKeys.length}개)`);
+      /* ⚑⚑ T154 — 7 → **8**. 2026-09-02 07:1X 의 «흡혈 제거» 는 T145(장비 옵션 7번 = 흡혈 8%)로 뒤집혔고,
+         주인이 «전투할 때 하단에 원래 흡혈율 떴어야 했는데 안 뜨더라» 로 복구를 지시했다(PLAN §2.3 도 처음부터 8종). */
+      statKeys.length === 8 ? ok('스탯 8칸 (⚑ T154 흡혈 복구 — PLAN §2.3 의 8종과 일치)') : bad(`스탯 칸이 8개가 아니다 (${statKeys.length}개)`);
+      statKeys[7] === 'steal' ? ok('8번째 칸이 흡혈(steal) — 주인 목록 순서 그대로') : bad(`8번째 스탯 칸이 흡혈이 아니다 (${statKeys[7]})`);
       navKeys.length === 5 ? ok('하단 탭 5개') : bad(`하단 탭이 5개가 아니다 (${navKeys.length}개)`);
       const need = [...statKeys, ...navKeys.map(k => 'nav_' + k), 'spark'];
       const miss = need.filter(k => !svg[k]);
       const extra = Object.keys(svg).filter(k => !need.includes(k));
-      miss.length === 0 ? ok(`필요한 아이콘 ${need.length}종 전부 있다 (스탯 7 · 탭 5 · 폴백 1)`)
+      miss.length === 0 ? ok(`필요한 아이콘 ${need.length}종 전부 있다 (스탯 8 · 탭 5 · 폴백 1)`)
         : bad(`아이콘 없는 키 ${miss.length}종: ${miss.join(',')} — 그 칸이 폴백으로 조용히 바뀐다`);
       extra.length === 0 ? ok('쓰이지 않는 아이콘 없음') : bad(`아무도 안 쓰는 아이콘 ${extra.join(',')}`);
       let broke = 0, spill = 0, emo = 0;
@@ -2686,6 +2699,187 @@ console.log('\n[㊷ T125 ①-b «신화/전설 확정까지 N회» — N 이 실
         ? ok(`  음성 ${caught}/${muts.length} · no-op ${noop} · 양성 대조군 오탐 0`)
         : bad('  양성 대조군이 걸렸다 — 원본에서 ㊷ 가 오탐을 낸다');
     }
+  }
+}
+
+/* ---------- ㊸ 특전 선택창 «상단 스탯 줄» 8칸 + 전투 패널 흡혈 칸 (T154 · 주인 지시 2026-09-05 18:3X) ---------- */
+/* 주인 원문: «이런 식으로 특전 뜰 때 상단에 현재 스탯 옵션들 떠야 함. 공격력 방어력 반격확률 치명타확률
+   치명타데미지 회피율 흡혈율. 그리고 전투할 때 하단에 원래 흡혈율 떴어야 했는데 안 뜨더라.»
+   왜 게이트인가 — 이 줄이 위험한 지점은 «두 화면이 조용히 갈라지는 것» 이다. 상단 줄이 자기 표를 따로
+   들면 전투 패널과 순서·값·초록 규칙이 어긋나고, 그때 유저는 **같은 스탯의 서로 다른 숫자 둘**을 본다.
+   그래서 «STAT_DEFS 한 표를 두 화면이 같이 쓴다» 를 문자열이 아니라 **실행**으로 못박는다. */
+console.log('\n[㊸ 특전 선택창 상단 스탯 줄 8칸 · 흡혈 칸 (T154)]');
+{
+  /* (1) 줄을 만드는 곳이 한 군데인가 — 표를 베끼지 않고 STAT_DEFS 를 그대로 돈다 */
+  const mFn = HTML.match(/function statRowHTML\(\)\{[\s\S]*?\n\}/);
+  if (!mFn) bad('statRowHTML() 이 없다 — 상단 스탯 줄을 만드는 공용 동사가 사라졌다');
+  else {
+    /STAT_DEFS\.map\(/.test(mFn[0])
+      ? ok('상단 줄이 STAT_DEFS 를 그대로 돈다 (전투 패널과 같은 표 — 순서·아이콘·값 동사가 구조로 같다)')
+      : bad('상단 줄이 STAT_DEFS 를 안 쓴다 — 표를 베끼면 두 화면의 숫자가 조용히 갈라진다');
+    /uiIcon\(d\.k\)/.test(mFn[0]) ? ok('칸 아이콘이 uiIcon(d.k) — 전투 패널과 같은 그림')
+      : bad('상단 줄이 전투 패널과 다른 아이콘 경로를 쓴다');
+    /id="ovs\$\{i\}"/.test(mFn[0]) ? ok('칸마다 id="ovsN" (T3 가 값을 집을 손잡이)')
+      : bad('상단 줄 칸에 id 가 없다 — 실측 게이트가 값을 못 집는다');
+    /* 초록 규칙이 전투 패널과 «같은 식» 인가 — 한쪽만 바뀌면 같은 스탯이 한 화면에서만 초록이 된다 */
+    const mGrid = HTML.match(/function renderStatsGrid\(\)\{[\s\S]*?\n\}/);
+    const GREEN = /d\.cur\(p\)\s*>\s*d\.base\(\)\s*\+\s*0\.001/;
+    (mGrid && GREEN.test(mGrid[0]) && GREEN.test(mFn[0]))
+      ? ok('초록 판정식이 두 화면에서 같다 (d.cur(p) > d.base()+0.001)')
+      : bad('상단 줄과 전투 패널의 초록 판정식이 다르다');
+  }
+  /* (2) 흐름 밖에 놓였는가 — `.ov-inner` 안에 넣으면 카드 등장 지연(:nth-child(4·5·6))이 한 칸 밀린다 */
+  {
+    const mOpen = HTML.match(/function openOverlay\(html,opts\)\{[\s\S]*?\n\}/);
+    (mOpen && /opts\.stats\?`<div class="ov-stats">\$\{statRowHTML\(\)\}<\/div>`:''/.test(mOpen[0].replace(/\s+/g, ' ').replace(/ /g, '')
+       .replace(/optsstats/, 'opts.stats')) )
+      ? ok('openOverlay 가 opts.stats 로 줄을 붙인다')
+      : (mOpen && /opts\.stats/.test(mOpen[0]) && /class="ov-stats"/.test(mOpen[0])
+          ? ok('openOverlay 가 opts.stats 로 줄을 붙인다')
+          : bad('openOverlay 에 opts.stats 경로가 없다'));
+    if (mOpen) {
+      const i1 = mOpen[0].indexOf('class="ov-stats"'), i2 = mOpen[0].indexOf('class="ov-inner"');
+      (i1 >= 0 && i2 >= 0 && i1 < i2) ? ok('스탯 줄이 .ov-inner **밖·앞**이다 (카드 :nth-child 지연 불변)')
+        : bad('스탯 줄이 .ov-inner 안이거나 뒤에 있다 — 카드 등장 지연이 밀린다');
+    }
+  }
+  /* (3) 레퍼런스 자리 — ref-layout ⑦ «상단 스탯 줄(8칸) x0 y4 w100 h6» */
+  {
+    const css = HTML.match(/\.ov-stats\{[^}]*\}/);
+    if (!css) bad('.ov-stats CSS 규칙이 없다');
+    else {
+      /position:absolute/.test(css[0]) ? ok('.ov-stats 절대 배치 (배너 y26.5·카드 y36.5 를 안 민다)') : bad('.ov-stats 가 흐름 안에 있다 — 카드가 아래로 밀린다');
+      /top:4%/.test(css[0]) && /height:6%/.test(css[0]) && /width:100%/.test(css[0]) && /left:0/.test(css[0])
+        ? ok('.ov-stats 자리 = ref ⑦ x0 y4 w100 h6') : bad('.ov-stats 자리가 ref-layout ⑦ 행과 다르다 (x0 y4 w100 h6)');
+    }
+    const cell = HTML.match(/\.ov-stats \.sc\{[^}]*\}/);
+    (cell && /flex:1 1 0/.test(cell[0]))
+      ? ok('칸이 8등분(flex:1 1 0) — 390·360px 둘 다 한 줄, 겹침 0')
+      : bad('.ov-stats .sc 가 8등분이 아니다 — 좁은 폭에서 칸이 겹치거나 줄이 넘친다');
+    const upCss = HTML.match(/\.ov-stats \.sc \.vl\.up\{[^}]*\}/);
+    (upCss && /#7ED957/.test(upCss[0])) ? ok('상단 줄 초록색이 전투 패널(.st .vl.up)과 같은 #7ED957')
+      : bad('상단 줄 초록색이 전투 패널과 다르다');
+  }
+  /* (4) 어느 팝업에 붙는가 — 주인 «특전 뜰 때» + 위임(악마 카드 · 📘 보유 특전 목록) */
+  {
+    const SITES = [
+      ['레벨업 3택 팝업', /function openLevelUp\(\)\{[\s\S]*?\n\}/],
+      ['📘 보유 특전 목록', /function openPerkBook\(back\)\{[\s\S]*?\n\}/],
+      ['악마 카드 · 악마의 선물', /function openDevil\(\)\{[\s\S]*?\n\}/],
+    ];
+    for (const [nm, re] of SITES) {
+      const m = HTML.match(re);
+      if (!m) { bad(`${nm} 함수를 찾지 못했다 — 게이트를 갱신할 것`); continue; }
+      /stats:true/.test(m[0]) ? ok(`${nm} 에 상단 스탯 줄이 붙는다`) : bad(`${nm} 에 상단 스탯 줄이 없다`);
+    }
+    /* 악마는 팝업이 둘(카드 제시 · 선물)이라 둘 다여야 한다 — 하나만 붙으면 줄이 깜빡인다 */
+    const mDev = HTML.match(/function openDevil\(\)\{[\s\S]*?\n\}/);
+    (mDev && (mDev[0].match(/stats:true/g) || []).length === 2)
+      ? ok('악마 팝업 2개(제시·선물)에 모두 붙는다 — 줄이 깜빡이지 않는다')
+      : bad('악마 팝업 둘 중 하나에만 붙었다');
+  }
+  /* (5) 실행 대조 — 표를 vm 에서 돌려 «8칸 · 순서 · 흡혈 0% · 흡혈 8 → 8% + 초록» 을 직접 본다.
+     T3 가 실기기에서 보는 것과 같은 단언을 여기서 한 겹 더 잡는다(하니스가 못 도는 환경 대비). */
+  {
+    const mStat = HTML.match(/const STAT_DEFS=\[[\s\S]*?\n\];/);
+    const mFn2 = HTML.match(/function statRowHTML\(\)\{[\s\S]*?\n\}/);
+    if (!mStat || !mFn2) bad('STAT_DEFS / statRowHTML 을 읽지 못했다 — 게이트를 갱신할 것');
+    else {
+      const BASE = { dmg: 25, def: 0, aspd: 1, counter: 0, critR: 0, evade: 0, critF: 150, steal: 0 };
+      const mk = st => Object.assign({}, BASE, { steal: st });
+      const run = st => {
+        const ctx = {
+          fmt: x => String(Math.round(x)),
+          effDmg: p => p.dmg, effDef: p => p.def, effAspd: p => p.aspd, effCounter: p => p.counter,
+          effCritR: p => p.critR, effEvade: p => p.evade, effCritF: p => p.critF, effSteal: p => p.steal,
+          statBase: () => BASE, uiIcon: k => `<i data-k="${k}"></i>`,
+          G: { player: mk(st) },
+        };
+        vm.createContext(ctx);
+        vm.runInContext(mStat[0].replace(/^const /, 'var ') + '\n' + mFn2[0] + '\nvar OUT=statRowHTML();', ctx);
+        return ctx.OUT;
+      };
+      const h0 = run(0), h8 = run(8);
+      const keys = [...mStat[0].matchAll(/\{k:'([a-zA-Z]+)'/g)].map(m => m[1]);
+      const ids = [...h0.matchAll(/id="ovs(\d+)"/g)].map(m => +m[1]);
+      const icons = [...h0.matchAll(/data-k="([a-zA-Z]+)"/g)].map(m => m[1]);
+      ids.length === 8 && ids.every((v, i) => v === i)
+        ? ok('상단 줄이 정확히 8칸 · id ovs0~ovs7 순서대로') : bad(`상단 줄 칸이 8개가 아니거나 id 가 어긋난다 (${ids.join(',')})`);
+      icons.join(',') === keys.join(',')
+        ? ok(`칸 순서 = 전투 패널 순서 (${keys.join(' · ')})`) : bad(`칸 순서가 전투 패널과 다르다 (${icons.join(',')} ↔ ${keys.join(',')})`);
+      keys[7] === 'steal' && /id="ovs7"[^>]*>0%</.test(h0.replace(/ class="vl"/g, ''))
+        ? ok('흡혈 칸이 0 이어도 «0%» 로 뜬다 (레퍼런스도 0% 를 보여준다)')
+        : bad('흡혈 0 일 때 «0%» 가 안 나온다 — 숨기거나 빈칸이 된다');
+      /class="vl up" id="ovs7">8%</.test(h8)
+        ? ok('흡혈을 8 로 두면 «8%» + 초록(up) — 장비 옵션 7번(T145)이 들어오면 그대로 보인다')
+        : bad('흡혈 8 일 때 «8%» + 초록이 안 나온다');
+      !/ up"/.test(h0.match(/id="ovs7"/) ? h0.slice(h0.lastIndexOf('<div class="sc">')) : '')
+        ? ok('흡혈이 기본값(0)일 때는 초록이 아니다 (오탐 0)') : bad('흡혈 0 인데 초록이다');
+    }
+  }
+  /* (6) 표시 전용 — sim.js 는 이 줄을 모른다 (밸런스 영향 0) */
+  /statRowHTML|ov-stats/.test(SIM) ? bad('sim.js 에 상단 스탯 줄이 새어 들어갔다 — 표시 전용이다')
+    : ok('sim.js 무관 (표시 전용 · 엔진·밸런스 무수정)');
+
+  /* ---- 음성 자기검사 (`node tools/verifyT2.js --self`) ---- */
+  if (process.argv.includes('--self')) {
+    console.log('  [음성 자기검사] 심은 고장을 ㊸ 가 잡는가');
+    const mStat = HTML.match(/const STAT_DEFS=\[[\s\S]*?\n\];/)[0];
+    const mFn2 = HTML.match(/function statRowHTML\(\)\{[\s\S]*?\n\}/)[0];
+    const BASE = { dmg: 25, def: 0, aspd: 1, counter: 0, critR: 0, evade: 0, critF: 150, steal: 0 };
+    const render = (statSrc, fnSrc, st) => {
+      const ctx = {
+        fmt: x => String(Math.round(x)),
+        effDmg: p => p.dmg, effDef: p => p.def, effAspd: p => p.aspd, effCounter: p => p.counter,
+        effCritR: p => p.critR, effEvade: p => p.evade, effCritF: p => p.critF, effSteal: p => p.steal,
+        statBase: () => BASE, uiIcon: k => `<i data-k="${k}"></i>`,
+        G: { player: Object.assign({}, BASE, { steal: st }) },
+      };
+      vm.createContext(ctx);
+      vm.runInContext(statSrc.replace(/^const /, 'var ') + '\n' + fnSrc + '\nvar OUT=statRowHTML();', ctx);
+      return ctx.OUT;
+    };
+    /* 심은 고장 → «잡혔다» 의 뜻: 8칸/순서/0%/8%+초록 중 하나가 무너진다 */
+    const check = (statSrc, fnSrc) => {
+      const F = [];
+      let h0, h8;
+      try { h0 = render(statSrc, fnSrc, 0); h8 = render(statSrc, fnSrc, 8); }
+      catch (e) { return ['렌더가 터진다: ' + e.message]; }
+      const keys = [...statSrc.matchAll(/\{k:'([a-zA-Z]+)'/g)].map(m => m[1]);
+      const ids = [...h0.matchAll(/id="ovs(\d+)"/g)].map(m => +m[1]);
+      const icons = [...h0.matchAll(/data-k="([a-zA-Z]+)"/g)].map(m => m[1]);
+      if (!(ids.length === 8 && ids.every((v, i) => v === i))) F.push(`칸/​id 어긋남 (${ids.join(',')})`);
+      if (icons.join(',') !== keys.join(',')) F.push('칸 순서가 표와 다르다');
+      if (keys[7] !== 'steal') F.push('8번째가 흡혈이 아니다');
+      if (!/id="ovs7"[^>]*>0%</.test(h0.replace(/ class="vl"/g, ''))) F.push('흡혈 0 → «0%» 아님');
+      if (!/class="vl up" id="ovs7">8%</.test(h8)) F.push('흡혈 8 → «8%»+초록 아님');
+      return F;
+    };
+    const muts = [
+      ['흡혈 행 삭제 (2026-09-02 07:1X 상태로 되돌림 — 주인이 «안 뜨더라» 한 그 상태)',
+        () => [mStat.replace(/\n\s*\{k:'steal',[^\n]*\n/, '\n'), mFn2]],
+      ['흡혈이 0 이면 칸을 숨긴다 (0% 를 안 보여준다)',
+        () => [mStat, mFn2.replace('STAT_DEFS.map(', 'STAT_DEFS.filter(d=>d.k!==\'steal\'||G.player.steal>0).map(')]],
+      ['상단 줄이 표를 베껴 순서가 갈라진다 (흡혈이 4번째로)',
+        () => [mStat, mFn2.replace('STAT_DEFS.map(', '[STAT_DEFS[0],STAT_DEFS[1],STAT_DEFS[2],STAT_DEFS[7],STAT_DEFS[3],STAT_DEFS[4],STAT_DEFS[5],STAT_DEFS[6]].map(')]],
+      ['초록 규칙 삭제 (특전·장비로 오른 값이 강조되지 않는다)',
+        () => [mStat, mFn2.replace(/d\.cur\(p\)>d\.base\(\)\+0\.001\?' up':''/, "''")]],
+      ['id 를 안 붙인다 (실측 게이트가 값을 못 집는다)',
+        () => [mStat, mFn2.replace(/ id="ovs\$\{i\}"/, '')]],
+      ['흡혈 값을 기본치가 아니라 상수 0 으로 박는다 (장비 옵션이 안 보인다)',
+        () => [mStat.replace("v:p=>effSteal(p).toFixed(0)+'%'", "v:p=>'0%'"), mFn2]],
+    ];
+    let caught = 0, noop = 0;
+    for (const [nm, f] of muts) {
+      const [sSrc, fSrc] = f();
+      if (sSrc === mStat && fSrc === mFn2) { noop++; bad(`  음성 «${nm}» 이 no-op 이다 — 치환 자리가 사라졌으면 게이트를 먼저 고칠 것 (T126)`); continue; }
+      const R = check(sSrc, fSrc);
+      if (R.length) { caught++; console.log(`    ✓ ${nm}: 잡음 (${R[0]})`); }
+      else bad(`  음성 «${nm}» 을 ㊸ 가 못 잡았다`);
+    }
+    check(mStat, mFn2).length === 0
+      ? ok(`  음성 ${caught}/${muts.length} · no-op ${noop} · 양성 대조군 오탐 0`)
+      : bad('  양성 대조군이 걸렸다 — 원본에서 ㊸ 가 오탐을 낸다');
   }
 }
 

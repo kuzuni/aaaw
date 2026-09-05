@@ -470,6 +470,16 @@
      하나로 누른 탓에 U02 채점에서 특전 묶음이 0/13, 장비 팝업이 0/10 이었다(버튼줄 y83.7 = 상자 밖 → 안 보임).
      `openOverlay(html,{cls})` 가 #overlay 에 이 세 클래스 중 하나를 걸고, 나머지 팝업은 종전 규격 그대로다. */
   #overlay > .ov-out{margin-top:auto;}                       /* 상자 «밖» 아래 줄 (레퍼런스 닫기 안내 y91.5) */
+  /* ⚑⚑ T154 — 특전 선택창 «상단 스탯 줄» 8칸 (주인 지시 2026-09-05 18:3X · ref-layout ⑦ x0 y4 w100 h6).
+     흐름 밖(절대 배치)이라 배너 y26.5·카드 y36.5 를 밀지 않는다. 칸은 8등분(`flex:1 1 0`)이라
+     390·360px 둘 다 한 줄에 들고 서로 겹치지 않는다. 아이콘은 전투 하단 패널과 같은 UI_SVG 그림이다. */
+  .ov-stats{position:absolute; left:0; top:4%; width:100%; height:6%; z-index:3; pointer-events:none;
+    display:flex; align-items:center;}   /* 좌우 안여백 0 — 레퍼런스는 8칸이 프레임 폭을 그대로 8등분한다 */
+  .ov-stats .sc{flex:1 1 0; min-width:0; overflow:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;}
+  .ov-stats .sc .ic{font-size:16px; line-height:0; display:block; flex:none;}
+  .ov-stats .sc .vl{font-size:11px; line-height:1.1; color:var(--ink); white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .ov-stats .sc .vl.up{color:#7ED957;}   /* 전투 하단 패널(.st .vl.up)과 같은 초록 규칙 */
   /* ⓐ 전면 — 상자·테두리 없음. 좌우 여백 5.5% 라 카드가 x5.5 w89 로 앉는다. */
   #overlay.ov-full{padding:calc(var(--fh)*.25) 5.5% calc(var(--fh)*.135);}
   #overlay.ov-full .ov-inner{flex:1 1 auto; min-height:0; max-height:none; overflow:visible;
@@ -1259,7 +1269,7 @@ function gearIcon(t){ return svgIcon(GT.typeSvg[t]); }
    크기 노브도 같다 — `.gicon{width:1em;height:1em}` 이 칸의 font-size(스탯 24px · 탭 23px · 버프 18px)를 물려받는다.
    표시 전용이라 sim.js 와 무관하다(밸런스 영향 0). */
 const UI_SVG={
-  /* --- 인게임 스탯 7종 --- */
+  /* --- 인게임 스탯 8종 (⚑ T154 로 «흡혈» 이 돌아와 PLAN §2.3 의 8종과 다시 같아졌다) --- */
   /* 공격력: 대각 한손검(장비 greatsword 의 정면 대검과 실루엣이 갈린다) */
   dmg:'<path d="M21.4 2.6 21.4 6.2 10.8 16.8 7.2 13.2 17.8 2.6Z" fill="#DCE3EC"/>'+
     '<path d="M21.4 2.6 21.4 6.2 10.8 16.8 9 15Z" fill="#A9B4C3" stroke="none"/>'+
@@ -1289,6 +1299,12 @@ const UI_SVG={
   /* 치명타 배율: 불꽃 */
   critF:'<path d="M12 1.8C13.6 6 17.2 6.8 17.2 10.8 17.2 12.4 16.6 13.6 15.6 14.4 16.2 15.2 16.5 16.1 16.5 17.1 16.5 19.7 14.5 21.9 12 21.9S7.5 19.7 7.5 17.1C7.5 13.7 10.6 12.9 10.6 9.3 10.6 7.1 9.6 6.1 9.6 6.1 11.2 5.1 12 3.6 12 1.8Z" fill="#E8483F"/>'+
     '<path d="M12 12.4C13.4 14 14 15.3 14 16.6 14 18.4 13.1 19.6 12 19.6S10 18.4 10 16.6C10 15.3 10.8 14.2 12 12.4Z" fill="#F5C542" stroke="none"/>',
+  /* 흡혈: 핏방울 + 안쪽 하이라이트 (⚑ T154 — 주인 «전투할 때 하단에 원래 흡혈율 떴어야 했는데 안 뜨더라».
+     2026-09-02 07:1X 에 «흡혈 특전 전면 배제» 로 스탯 행이 빠지면서 아이콘도 안 만들어졌는데, T145 로
+     장비 옵션 7번(신화 +6강)이 «흡혈 +8%» 가 되어 다시 0 이 아닌 값이 된다. 레퍼런스도 0% 를 보여준다.) */
+  steal:'<path d="M12 1.8C12 1.8 4.6 10.4 4.6 15.2A7.4 7.4 0 0 0 19.4 15.2C19.4 10.4 12 1.8 12 1.8Z" fill="#E0483F"/>'+
+    '<path d="M12 1.8C12 1.8 19.4 10.4 19.4 15.2A7.4 7.4 0 0 1 12 22.6Z" fill="#B02F2C" stroke="none"/>'+
+    '<path d="M9.2 13.4C8 14.8 7.8 16.6 8.6 18" stroke="#F5C0BC" stroke-width="1.8"/>',
   /* --- 하단 5탭 --- */
   /* 상점: 차양 친 가판대(스크린샷의 빨강·흰 줄무늬) */
   nav_shop:'<path d="M2.4 3.6H21.6L22.6 9.4H1.4Z" fill="#E8E8F0"/>'+
@@ -2108,6 +2124,11 @@ function effEvade(p){
   return Math.min(90,e);
 }
 function effCounter(p){ return p.counter; }
+/* ⚑ T154 — 흡혈은 버프·특전 축이 없고 장비 옵션 7번(신화 +6강 · T145)만 올린다. 그 옵션은 `playerBase()`
+   에서 GOPT 7번 칸이 부위마다 8씩 더해 이미 들어가 있으므로 실효값 = `p.steal` 이다. **표시 전용 별칭이 아니라**,
+   나머지 7종과 같은 이름 규약(`effXxx`)을 지켜 스탯 그리드·특전 선택창 상단 줄이 «같은 동사» 를 쓰게 한다.
+   (전투 회복은 종전대로 `dealDmg` 의 `p.steal` 한 곳에서만 계산한다 — 엔진 무수정.) */
+function effSteal(p){ return p.steal; }
 /* ⚑ 실드 수리 한 곳 — 🔧 «실드 수리 효과 +100%» 가 여기서만 걸린다 (sim.js repair 와 1:1) */
 function repair(p,amt){ if(amt<=0) return; p.sh=Math.min(p.maxSh,p.sh+amt*(1+p.repairAmp)); }
 /* sim.js heal(p,amt,noBoost) 와 1:1 */
@@ -2724,7 +2745,11 @@ const ov=$('overlay');
    아래에 놓이는 줄(레퍼런스의 닫기 안내 y91.5)이다. 둘 다 화면 배치용이고 게임 규칙과 무관하다. */
 function openOverlay(html,opts){
   opts=opts||{};
-  ov.innerHTML=`<div class="ov-inner">${opts.rays?'<div class="rays"></div>':''}${html}</div>`
+  /* ⚑ T154 — `opts.stats` 는 «상단 스탯 줄»(레퍼런스 ⑦ x0 y4 w100 h6). `.ov-inner` **밖**에 둔다:
+     ⓐ 레퍼런스가 상자가 아니라 화면 맨 위에 겹쳐 놓은 줄이고 ⓑ `.ov-inner` 안에 넣으면 카드의
+     `:nth-child(4·5·6)` 등장 지연이 한 칸씩 밀린다. 흐름 밖(절대 배치)이라 배너·카드 y 는 그대로다. */
+  ov.innerHTML=(opts.stats?`<div class="ov-stats">${statRowHTML()}</div>`:'')
+    +`<div class="ov-inner">${opts.rays?'<div class="rays"></div>':''}${html}</div>`
     +(opts.out?`<div class="ov-out">${opts.out}</div>`:'');
   ov.className='';
   if(opts.cls) ov.classList.add(opts.cls);
@@ -2771,7 +2796,7 @@ function openLevelUp(){
       <div class="ov-sub">특전 하나를 고르세요</div>
       ${offer.map((p,i)=>perkCardHTML(p,i,'pick')).join('')}
       <div class="ov-foot"><button id="perkBookBtn">📘<b>${G.perksTaken.length}</b><span class="sr-lbl">보유 특전</span></button></div>`,
-      {rays:true,cls:'ov-full'});
+      {rays:true,cls:'ov-full',stats:true});   /* ⚑ T154 — 상단 스탯 줄 8칸 */
     offer.forEach((p,i)=>{ $('perkPick'+i).onclick=()=>{ AU.play('click'); pickPerk(p); renderStatsGrid(); updateBars(); afterPerk(); }; });
     /* ⚑ stopPropagation 필수 — 이 클릭이 오버레이까지 거품처럼 올라가면 책이 깔아 둔 ov.onclick(=복귀)에
        걸려 열자마자 되돌아간다(T89 가 T3 실측으로 잡은 버그). */
@@ -2799,7 +2824,8 @@ function openPerkBook(back){
   openOverlay(`<div class="ov-banner">📘 PERKS</div>
     <div class="ov-sub">이번 원정에서 얻은 특전 (${G.perksTaken.length})</div>
     <div class="perk-list">${list}</div>`,
-    {cls:'ov-book', out:ret?`<button id="pbBack">← 특전 선택으로</button>`
+    {cls:'ov-book', stats:true,   /* ⚑ T154 — 📘 보유 특전 목록에도 같은 줄 (주인 지시 «위임») */
+     out:ret?`<button id="pbBack">← 특전 선택으로</button>`
         :`<div class="tap-close">— 화면을 탭하면 닫힙니다 —</div>`});
   if(ret) $('pbBack').onclick=e=>{ e.stopPropagation(); AU.play('click'); ret(); };
   ov.onclick=()=>{ AU.play('click'); ret?ret():closeOverlay(); };
@@ -2839,7 +2865,8 @@ function openDevil(){
     <div class="ov-sub">"네 생명을 바치면... 이 힘을 주지"</div>
     <div style="width:100%; margin-bottom:4px">${perkCardHTML(perk,0,'static')}</div>
     <button class="choice-btn danger" id="dYes">🩸 최대 체력의 30% 지불 (-${fmt(cost)})<small>최대 체력이 줄어든 채 진행 · 위 전설 특전 1개를 획득</small></button>
-    <button class="choice-btn" id="dNo">🚶 조용히 지나간다<small>아무 일도 일어나지 않습니다</small></button>`);
+    <button class="choice-btn" id="dNo">🚶 조용히 지나간다<small>아무 일도 일어나지 않습니다</small></button>`,
+    {stats:true});   /* ⚑ T154 — 악마 카드에도 같은 줄 (주인 지시 «위임») */
   $('dYes').onclick=()=>{
     payDevilCost(G.player);   /* ⚑ T90 — 최대치에서 30% 차감 + 현재체력 클램프 (sim.js 와 같은 동사) */
     AU.play('hurt');
@@ -2850,7 +2877,7 @@ function openDevil(){
       <div class="ov-sub">전설 특전을 얻었습니다</div>
       ${perkCardHTML(perk,0,'static')}
       <div class="ov-foot"><button id="dOk">계속</button></div>`,
-      {rays:true,cls:'ov-full'});
+      {rays:true,cls:'ov-full',stats:true});   /* ⚑ T154 — 최대 체력 −30% 가 반영된 값이 바로 보인다 */
     $('dOk').onclick=e=>{ e.stopPropagation(); AU.play('click'); closeOverlay(); };
   };
   $('dNo').onclick=()=>{ AU.play('click'); closeOverlay(); };
@@ -3724,7 +3751,11 @@ const STAT_DEFS=[
   {k:'critR',  lb:'치명타 확률',v:p=>effCritR(p).toFixed(0)+'%',cur:p=>effCritR(p), base:()=>statBase().critR},
   {k:'evade',  lb:'회피',      v:p=>effEvade(p).toFixed(1)+'%',cur:p=>effEvade(p), base:()=>statBase().evade},
   {k:'critF',  lb:'치명타 배율',v:p=>effCritF(p).toFixed(0)+'%',cur:p=>effCritF(p), base:()=>statBase().critF},
-  /* 🩸 흡혈 행 제거 — 주인 지시(2026-09-02 07:1X): 흡혈 특전 전면 배제로 항상 0 이라 7종으로 (엔진 steal 지원은 유지) */
+  /* ⚑⚑ T154 (주인 지시 2026-09-05 18:3X «전투할 때 하단에 원래 흡혈율 떴어야 했는데 안 뜨더라») — 흡혈 행 복구.
+     2026-09-02 07:1X 의 «흡혈 특전 전면 배제 → 항상 0 이라 7종» 은 그때는 맞았지만, T145 로 장비 옵션
+     7번(신화 +6강)이 «흡혈 +8%» 가 되면서 값이 다시 움직인다(풀셋 48%). PLAN §2.3 은 처음부터 8종이었고
+     이 행이 빠져 있던 것이 주인이 본 «안 뜨더라» 다. **0 이어도 «0%» 로 보여준다**(레퍼런스도 0% 를 보여준다). */
+  {k:'steal',  lb:'흡혈',      v:p=>effSteal(p).toFixed(0)+'%',cur:p=>effSteal(p), base:()=>statBase().steal},
 ];
 /* 현재 장비 구성의 전투 시작 스탯 (특전 획득 전) — 전투마다 한 번만 계산해 캐시 */
 let _statBase=null, _statBaseKey='';
@@ -3733,7 +3764,7 @@ function statBase(){
   if(_statBase&&_statBaseKey===key) return _statBase;
   const p=playerBase();
   _statBaseKey=key;
-  return _statBase={dmg:p.dmg, def:p.def, aspd:p.aspd, counter:p.counter, critR:p.critR, evade:p.evade, critF:p.critF};
+  return _statBase={dmg:p.dmg, def:p.def, aspd:p.aspd, counter:p.counter, critR:p.critR, evade:p.evade, critF:p.critF, steal:p.steal};
 }
 function renderStatsGrid(){
   if(!G) return;
@@ -3748,6 +3779,22 @@ function renderStatsGrid(){
     el.textContent=d.v(p);
     el.classList.toggle('up', d.cur(p) > d.base()+0.001);
   });
+}
+/* ⚑⚑ T154 (주인 지시 2026-09-05 18:3X) — 특전 선택창 «상단 스탯 줄» 8칸.
+   주인 원문: «이런 식으로 특전 뜰 때 상단에 현재 스탯 옵션들 떠야 함. 공격력 방어력 반격확률 치명타확률
+   치명타데미지 회피율 흡혈율» + 레퍼런스(`docs/ref/perks.jpg` 상단 줄 · ref-layout ⑦ «상단 스탯 줄(8칸)»
+   x0 y4 w100 h6)에 공격속도가 하나 더 있어 8칸이다.
+   ⚑ **표를 베끼지 않고 `STAT_DEFS` 를 그대로 쓴다** — 전투 하단 패널과 «같은 순서·같은 아이콘·같은 값 동사·
+   같은 초록 규칙» 이 구조로 보장된다(둘이 갈라지면 유저가 두 화면에서 다른 숫자를 본다).
+   값은 팝업을 여는 순간 한 번 찍고 그대로 둔다 — 팝업 중에는 시간이 멈춰 있어(T79) 어차피 안 변하고,
+   특전을 고르면 다음 팝업에서 갱신된다. */
+function statRowHTML(){
+  if(!G||!G.player) return '';
+  const p=G.player;
+  return STAT_DEFS.map((d,i)=>
+    `<div class="sc"><span class="ic">${uiIcon(d.k)}</span>`+
+    `<span class="vl${d.cur(p)>d.base()+0.001?' up':''}" id="ovs${i}">${d.v(p)}</span></div>`
+  ).join('');
 }
 /* ===== ⚑ 주인 지시(2026-09-02 07:0X) 인게임 UI 2건 (PLAN §2.3) =====
    ① 발동 중 버프 아이콘 — 화면 왼쪽 위·챕터 표시보다 아래, 등급색 테두리 + 중첩 수 뱃지, 오래된 것이 위.

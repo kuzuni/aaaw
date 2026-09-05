@@ -1038,6 +1038,150 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('⚑⚑⚑ T151 모든 레벨업에서 테두리색도 하나다', rolls.length >= 3 && mixedC.length === 0,
     `섞인 회차 ${mixedC.length}회`);
 
+  /* =============================================================================
+     ⚑⚑ T154 — 특전 선택창 «상단 스탯 줄» 8칸 + 전투 하단 패널 «흡혈» 칸 (주인 지시 2026-09-05 18:3X)
+     주인 원문: «이런 식으로 특전 뜰 때 상단에 현재 스탯 옵션들 떠야 함. … 그리고 전투할 때 하단에
+     원래 흡혈율 떴어야 했는데 안 뜨더라.» 정적 게이트(verifyT2 ㊸)는 마크업·표를 보지만,
+     **실기기에서 몇 칸이 어디에 뜨고 값이 eff* 와 같은가**는 여기서만 확인된다.
+     ============================================================================= */
+  console.log('\n=== ⚑ T154 특전 선택창 상단 스탯 줄 8칸 · 전투 패널 흡혈 칸 (실측) ===');
+  const readRow = () => p.evaluate(() => {
+    const cells = [...document.querySelectorAll('#overlay .ov-stats .sc')];
+    const fr = document.getElementById('frame').getBoundingClientRect();
+    return cells.map(el => {
+      const v = el.querySelector('.vl'), r = el.getBoundingClientRect();
+      return { id: v ? v.id : '', vl: v ? v.textContent : '', up: v ? v.classList.contains('up') : false,
+        icon: !!el.querySelector('.ic svg'),
+        /* 겹침은 **px 원값**으로 본다 — % 로 반올림하면 이웃한 칸이 소수점에서 겹쳐 보인다 */
+        pxL: r.left, pxR: r.right, pxT: r.top,
+        x: +((r.left - fr.left) / fr.width * 100).toFixed(2), y: +((r.top - fr.top) / fr.height * 100).toFixed(2),
+        w: +(r.width / fr.width * 100).toFixed(2), h: +(r.height / fr.height * 100).toFixed(2),
+        frW: fr.width, frL: fr.left };
+    });
+  });
+  const t154 = await p.evaluate(() => {
+    /* 등장 애니메이션(bannerDrop·slideUp)이 도는 중에 재면 배너·카드가 «아직 제자리가 아니다» —
+       레이아웃을 재는 절이므로 이 절 동안만 애니메이션을 끈다(측정이 끝나면 지운다). */
+    const st = document.createElement('style'); st.id = 't154NoAnim';
+    st.textContent = '*{animation:none!important;transition:none!important}';
+    document.head.appendChild(st);
+    startChapter(1);
+    G.paused = true; G.cleared = true;          /* 팝업이 저절로 뜨지 않게 (측정 중 상태 고정) */
+    const pl = G.player;
+    renderStatsGrid();
+    const panel = [...document.querySelectorAll('#stats .st')].map(el => ({
+      lb: el.querySelector('.lb').textContent, vl: el.querySelector('.vl').textContent,
+      up: el.querySelector('.vl').classList.contains('up'), icon: !!el.querySelector('.ic svg'),
+    }));
+    /* 레퍼런스와 같은 순서·같은 값 동사 — 하니스가 표를 베끼지 않고 게임의 eff* 를 직접 부른다 */
+    const eff = [fmt(effDmg(pl)), effDef(pl).toFixed(1) + '%', effAspd(pl).toFixed(2) + '/s',
+      effCounter(pl).toFixed(1) + '%', effCritR(pl).toFixed(0) + '%', effEvade(pl).toFixed(1) + '%',
+      effCritF(pl).toFixed(0) + '%', effSteal(pl).toFixed(0) + '%'];
+    G.perksTaken = []; openLevelUp();
+    const fr = document.getElementById('frame').getBoundingClientRect();
+    const rowBox = document.querySelector('#overlay .ov-stats').getBoundingClientRect();
+    const cards = [...document.querySelectorAll('#overlay .perk-card')].map(c => c.getBoundingClientRect());
+    const banner = document.querySelector('#overlay .ov-banner').getBoundingClientRect();
+    return { panel, eff, steal0: pl.steal, paused: G.paused, cards: cards.length,
+      row: { x: +((rowBox.left - fr.left) / fr.width * 100).toFixed(2), y: +((rowBox.top - fr.top) / fr.height * 100).toFixed(2),
+             w: +(rowBox.width / fr.width * 100).toFixed(2), h: +(rowBox.height / fr.height * 100).toFixed(2) },
+      /* 줄이 배너·카드를 밀지 않았는가 (흐름 밖 배치) */
+      bannerY: +((banner.top - fr.top) / fr.height * 100).toFixed(2),
+      card1Y: cards.length ? +((cards[0].top - fr.top) / fr.height * 100).toFixed(2) : -1,
+      rowBelowCard: cards.length ? rowBox.bottom <= cards[0].top + .5 : false };
+  });
+  const cells390 = await readRow();
+  chk('⚑ T154 ② 전투 하단 패널이 8칸 · 8번째가 «흡혈»',
+    t154.panel.length === 8 && t154.panel[7].lb === '흡혈',
+    `${t154.panel.length}칸 · 8번째 «${t154.panel[7] && t154.panel[7].lb}»`);
+  chk('⚑ T154 ② 흡혈이 0 이어도 «0%» 로 뜬다 (숨기지 않는다 — 레퍼런스도 0%)',
+    t154.panel[7] && t154.panel[7].vl === '0%' && t154.panel[7].icon && !t154.panel[7].up,
+    t154.panel[7] && `«${t154.panel[7].vl}» · 아이콘 ${t154.panel[7].icon} · 초록 ${t154.panel[7].up}`);
+  chk('⚑ T154 ① 특전 선택창 맨 위에 스탯 줄 8칸이 뜬다',
+    cells390.length === 8 && cells390.every((c, i) => c.id === 'ovs' + i && c.icon),
+    `${cells390.length}칸 · id ${cells390.map(c => c.id).join(',')}`);
+  chk('⚑ T154 ① 8칸 값이 전부 eff* 와 같다 (전투 패널과 같은 숫자)',
+    cells390.length === 8 && cells390.every((c, i) => c.vl === t154.eff[i]),
+    cells390.map((c, i) => `${c.vl}${c.vl === t154.eff[i] ? '' : '≠' + t154.eff[i]}`).join(' · '));
+  chk('⚑ T154 ① 줄이 전투 하단 패널과 같은 값을 보여준다 (두 화면이 안 갈라진다)',
+    cells390.length === 8 && cells390.every((c, i) => c.vl === t154.panel[i].vl),
+    cells390.map(c => c.vl).join(' · '));
+  chk('⚑ T154 ① 줄 자리 = ref-layout ⑦ «상단 스탯 줄(8칸) x0 y4 w100 h6» (±3%p)',
+    Math.abs(t154.row.x - 0) <= 3 && Math.abs(t154.row.y - 4) <= 3 &&
+    Math.abs(t154.row.w - 100) <= 3 && Math.abs(t154.row.h - 6) <= 3,
+    `x${t154.row.x} y${t154.row.y} w${t154.row.w} h${t154.row.h}`);
+  chk('⚑ T154 ① 줄이 배너·카드를 밀지 않았다 (배너 y26.5 · 카드1 y36.5 그대로 · 줄이 카드 위)',
+    Math.abs(t154.bannerY - 26.5) <= 3 && Math.abs(t154.card1Y - 36.5) <= 3 && t154.rowBelowCard && t154.cards === 3,
+    `배너 y${t154.bannerY} · 카드1 y${t154.card1Y} · 카드 ${t154.cards}장`);
+  {
+    const one = cells390.every(c => Math.abs(c.pxT - cells390[0].pxT) < .6);
+    let ovl = 0;
+    for (let i = 0; i < cells390.length; i++) for (let j = i + 1; j < cells390.length; j++) {
+      const a = cells390[i], b = cells390[j];
+      if (!(a.pxR <= b.pxL + .01 || b.pxR <= a.pxL + .01)) ovl++;
+    }
+    const inFrame = cells390.every(c => c.pxL >= c.frL - .01 && c.pxR <= c.frL + c.frW + .01);
+    chk('⚑ T154 ③ 390px — 8칸이 한 줄 · 겹침 0 · 프레임 안', one && ovl === 0 && inFrame,
+      `한 줄 ${one} · 겹침 ${ovl} · 칸 폭 ${cells390[0].w}%`);
+  }
+  /* 팝업이 열려 있는 동안 값이 고정인가 (T79 시간 정지) */
+  const froze = await p.evaluate(async () => {
+    const before = [...document.querySelectorAll('#overlay .ov-stats .vl')].map(v => v.textContent);
+    const t0 = G.t; await new Promise(r => setTimeout(r, 420));
+    return { same: [...document.querySelectorAll('#overlay .ov-stats .vl')].map(v => v.textContent).join('|') === before.join('|'),
+      paused: G.paused, dt: +(G.t - t0).toFixed(4) };
+  });
+  chk('⚑ T154 ① 팝업이 열려 있는 동안 값이 고정 (시간 정지 · T79)', froze.same && froze.paused === true && froze.dt === 0,
+    `paused=${froze.paused} · Δt ${froze.dt}`);
+  /* 360×800 — 8칸이 그대로 한 줄에 들고 겹치지 않는가 */
+  await p.setViewportSize({ width: 360, height: 800 }); await p.waitForTimeout(220);
+  await p.evaluate(() => { closeOverlay(); G.paused = true; G.perksTaken = []; openLevelUp(); });
+  await p.waitForTimeout(180);
+  const cells360 = await readRow();
+  {
+    const one = cells360.length === 8 && cells360.every(c => Math.abs(c.pxT - cells360[0].pxT) < .6);
+    let ovl = 0;
+    for (let i = 0; i < cells360.length; i++) for (let j = i + 1; j < cells360.length; j++) {
+      const a = cells360[i], b = cells360[j];
+      if (!(a.pxR <= b.pxL + .01 || b.pxR <= a.pxL + .01)) ovl++;
+    }
+    const inFrame = cells360.every(c => c.pxL >= c.frL - .01 && c.pxR <= c.frL + c.frW + .01);
+    chk('⚑ T154 ③ 360px — 8칸이 한 줄 · 겹침 0 · 프레임 안', one && ovl === 0 && inFrame,
+      `${cells360.length}칸 · 한 줄 ${one} · 겹침 ${ovl} · 칸 폭 ${(cells360[0] || {}).w}%`);
+  }
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(220);
+  /* 흡혈을 인위로 8 로 두면 두 화면 다 «8%» + 초록 (T145 장비 옵션 7번이 들어온 상태) */
+  const st8 = await p.evaluate(() => {
+    closeOverlay();
+    G.player.steal = 8; renderStatsGrid();
+    const panel = document.querySelectorAll('#stats .st')[7].querySelector('.vl');
+    G.paused = true; G.perksTaken = []; openLevelUp();
+    const row = document.getElementById('ovs7');
+    return { pv: panel.textContent, pup: panel.classList.contains('up'),
+      rv: row ? row.textContent : '', rup: row ? row.classList.contains('up') : false };
+  });
+  chk('⚑ T154 ③ 흡혈을 8 로 두면 전투 패널·상단 줄 둘 다 «8%» + 초록',
+    st8.pv === '8%' && st8.pup && st8.rv === '8%' && st8.rup,
+    `패널 «${st8.pv}»(초록 ${st8.pup}) · 상단 줄 «${st8.rv}»(초록 ${st8.rup})`);
+  /* 위임 — 악마 카드 · 📘 보유 특전 목록에도 같은 줄 */
+  const alsoOn = await p.evaluate(() => {
+    const n = () => document.querySelectorAll('#overlay .ov-stats .sc').length;
+    closeOverlay(); G.player.steal = 0;
+    G.paused = true; G.perksTaken = [PERKS[0]]; openPerkBook();
+    const book = n();
+    closeOverlay();
+    G.paused = true; G.perksTaken = PERKS.filter(k => k.g !== 2).slice(0, 2); openDevil();
+    const devilCards = document.querySelectorAll('#overlay .perk-card').length;
+    const devil = n(), hasYes = !!document.getElementById('dYes');
+    closeOverlay();
+    const st = document.getElementById('t154NoAnim'); if (st) st.remove();   /* 애니메이션 복구 */
+    return { book, devil, devilCards, hasYes };
+  });
+  chk('⚑ T154 ① 📘 보유 특전 목록에도 같은 줄 8칸 (위임)', alsoOn.book === 8, `${alsoOn.book}칸`);
+  chk('⚑ T154 ① 악마 카드 화면에도 같은 줄 8칸 (위임 · 카드 1장은 T150 그대로)',
+    alsoOn.devil === 8 && alsoOn.devilCards === 1 && alsoOn.hasYes,
+    `${alsoOn.devil}칸 · 카드 ${alsoOn.devilCards}장`);
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);
