@@ -603,6 +603,7 @@ goldGrowth  : 1.185 → 1.22
 1. `git add -A && git commit` (메시지 끝에 `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`) → `git push origin main`
 2. GitHub Pages 활성화: 이 PC에는 gh CLI가 **없음**. 유저에게 https://github.com/kuzuni/aaaw/settings/pages 에서 Branch=main, 폴더=/(root) 로 저장해달라고 안내할 것 (1회만 하면 됨). 활성화되면 https://kuzuni.github.io/aaaw/ 로 서빙됨. (gh를 설치했다면 `gh api repos/kuzuni/aaaw/pages -X POST -f "source[branch]=main" -f "source[path]=/"` 도 가능)
 3. 아티팩트 republish: Artifact 도구, `file_path=index.html`, `url=https://claude.ai/code/artifact/228cba1b-db0b-4aef-b5ef-7aa344890524`
+4. **수치 정본 = `data/`** (⚑⚑⚑ 주인 지시 2026-09-06 00:0X · T170) — 유니티(C#) 이식은 코드가 아니라 수치만 가져가고, 그 수치는 `data/*.json` 하나만 읽는다. 정본은 여전히 `sim.js`·`index.html` 이고 `data/` 는 **뽑아낸 것**이다: `node tools/exportData.js` 로 다시 뽑고, `node tools/verifyExportData.js` 가 «엔진과 어긋났는가» 를 지킨다. **엔진 수치를 바꾼 커밋은 `data/` 를 같이 담는다.** 읽는 법은 `data/README.md`.
 
 ## 10. 작업 방식 (유저가 강하게 요구)
 

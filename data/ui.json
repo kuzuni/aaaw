@@ -1,0 +1,27 @@
+{
+  "_source": "index.html@18bb8494ce8d5a0210eb83367f524b892c05441d",
+  "_generatedAt": "2026-09-05T14:51:06.815Z",
+  "_note": "index.html 에만 있는 그리기 상수(밸런스 무관 · 월드 좌표를 안 바꾼다). 브라우저 DOM 없이 index.html 을 올릴 수 없어 이 파일만 소스에서 상수 이름으로 찾아 읽는다(README ⓐ).",
+  "camera": {
+    "zoom": 1.5,
+    "playerX": 0.16,
+    "_note": "playerX = 플레이어 중심이 놓이는 프레임 폭 비율. zoom 은 그리기만 확대한다(월드 단위 불변)."
+  },
+  "bars": {
+    "footBarW": 0.6666666666666666,
+    "enemyBarW": 37,
+    "bossBarW": 59
+  },
+  "fx": {
+    "axeArc": 0.35,
+    "popShield": "#6CC0F0",
+    "popHp": "#FF8A80",
+    "popShieldDx": -16,
+    "popShieldDy": -88
+  },
+  "frame": {
+    "designWidth": 390,
+    "designHeight": 844,
+    "minWidth": 360
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "_source": "sim.js@0618225abac92cae29a0a351943fdd084aa6dd7d",
+  "_generatedAt": "2026-09-05T14:51:06.808Z",
+  "_note": "뽑기 상자 3종. rate 순서 = 등급 인덱스(0 일반 · 1 희귀 · 2 전설 · 3 신화) · 단위 %. cum = 굴림 임계(높은 등급부터 누적 · toFixed(6)). pityMyth 0 = 천장 없음 · pityLegend 0 = 피티 없음.",
+  "boxes": {
+    "rare": {
+      "key": "rare",
+      "name": "희귀 상자",
+      "cost": 80,
+      "rate": [
+        66.7,
+        33.3,
+        0,
+        0
+      ],
+      "cum": [
+        100,
+        33.3,
+        0,
+        0
+      ],
+      "pityMyth": 0,
+      "pityLegend": 0
+    },
+    "legend": {
+      "key": "legend",
+      "name": "전설 상자",
+      "cost": 200,
+      "rate": [
+        66,
+        30,
+        4,
+        0
+      ],
+      "cum": [
+        100,
+        34,
+        4,
+        0
+      ],
+      "pityMyth": 0,
+      "pityLegend": 10
+    },
+    "myth": {
+      "key": "myth",
+      "name": "신화 상자",
+      "cost": 400,
+      "rate": [
+        65.2,
+        30,
+        4,
+        0.8
+      ],
+      "cum": [
+        100,
+        34.8,
+        4.8,
+        0.8
+      ],
+      "pityMyth": 50,
+      "pityLegend": 10
+    }
+  },
+  "tenPull": {
+    "count": 10,
+    "discount": 0,
+    "note": "10연차 = 1회 가격 ×10 (할인 없음 · 세 상자 공통)"
+  },
+  "pityRule": "신화 상자는 50회 천장(누적 50회째 신화 확정) + 10회 피티(10회당 전설 이상 확정)가 겹친다 — 천장이 먼저 걸리면 피티 카운터도 같이 리셋된다(T125).",
+  "economy": {
+    "pullCost": 400,
+    "dailyGem": 2500,
+    "iapGem": 12000,
+    "runsPerDay": 30
+  }
+}

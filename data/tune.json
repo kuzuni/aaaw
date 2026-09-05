@@ -1,0 +1,135 @@
+{
+  "_source": "sim.js@0618225abac92cae29a0a351943fdd084aa6dd7d",
+  "_generatedAt": "2026-09-05T14:51:06.760Z",
+  "_note": "적 난이도 노브(기저·구간 성장률·벽)와 플레이어 기본치·경제 상수. 단위: 배수(무단위) · 골드/경험치는 점수.",
+  "tune": {
+    "eBaseHp": 60.74137,
+    "eBaseDmg": 11.183669,
+    "eHpSeg": [
+      [
+        0,
+        1.0292
+      ],
+      [
+        3,
+        1.127299
+      ],
+      [
+        7,
+        1.034852
+      ],
+      [
+        15,
+        1.105925
+      ],
+      [
+        30,
+        1.075893
+      ],
+      [
+        60,
+        1.075349
+      ],
+      [
+        100,
+        1.022512
+      ]
+    ],
+    "eDmgSeg": [
+      [
+        0,
+        1.0265
+      ],
+      [
+        3,
+        1.128623
+      ],
+      [
+        7,
+        1.034852
+      ],
+      [
+        15,
+        1.100368
+      ],
+      [
+        30,
+        1.051697
+      ],
+      [
+        60,
+        1.069769
+      ],
+      [
+        100,
+        1.024425
+      ]
+    ],
+    "wallHp": 1.5,
+    "wallDmg": 1.25,
+    "wall2Hp": 1,
+    "wall2Dmg": 1,
+    "waveHp": 0.15,
+    "waveDmg": 0.08,
+    "wall3Hp": 2,
+    "wall3Dmg": 1.5,
+    "wall4Hp": 1,
+    "wall4Dmg": 1,
+    "wall4At": 420,
+    "bossHp": 4,
+    "bossDmg": 1.5,
+    "maxChapter": 420,
+    "pAtk0": 25,
+    "pHp0": 150,
+    "pSh0": 250,
+    "pAspd0": 1,
+    "pCrit0": 0,
+    "pCritF0": 150,
+    "pCounter0": 0,
+    "pDef0": 0,
+    "pEvade0": 0,
+    "goldKillBase": 0.6,
+    "goldKillPer": 0.1,
+    "goldClearPer": 3,
+    "goldGrowth": 1.22,
+    "expKill": 3,
+    "expBoss": 9
+  },
+  "expNeedTable": [
+    {"level":1,"need":6,"cum":6},
+    {"level":2,"need":11,"cum":17},
+    {"level":3,"need":16,"cum":33},
+    {"level":4,"need":21,"cum":54},
+    {"level":5,"need":26,"cum":80},
+    {"level":6,"need":31,"cum":111},
+    {"level":7,"need":36,"cum":147},
+    {"level":8,"need":41,"cum":188},
+    {"level":9,"need":46,"cum":234},
+    {"level":10,"need":51,"cum":285},
+    {"level":11,"need":56,"cum":341},
+    {"level":12,"need":61,"cum":402},
+    {"level":13,"need":66,"cum":468},
+    {"level":14,"need":71,"cum":539},
+    {"level":15,"need":76,"cum":615},
+    {"level":16,"need":81,"cum":696},
+    {"level":17,"need":86,"cum":782},
+    {"level":18,"need":91,"cum":873},
+    {"level":19,"need":96,"cum":969},
+    {"level":20,"need":101,"cum":1070},
+    {"level":21,"need":106,"cum":1176},
+    {"level":22,"need":111,"cum":1287},
+    {"level":23,"need":116,"cum":1403},
+    {"level":24,"need":121,"cum":1524},
+    {"level":25,"need":126,"cum":1650},
+    {"level":26,"need":131,"cum":1781},
+    {"level":27,"need":136,"cum":1917},
+    {"level":28,"need":141,"cum":2058},
+    {"level":29,"need":146,"cum":2204},
+    {"level":30,"need":151,"cum":2355}
+  ],
+  "goldFormula": {
+    "kill": "goldKill(c) = (goldKillBase + goldKillPer*c) * goldGrowth^(c-1) * rand(1,1.8)",
+    "clear": "goldClear(c) = goldClearPer * c * goldGrowth^(c-1)",
+    "expNeed": "expNeed(lv) = 5*lv + 1"
+  }
+}

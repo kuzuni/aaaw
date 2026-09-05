@@ -1151,6 +1151,7 @@
 - 승인 프롬프트가 뜨는 명령을 피하고, 대화형 편집기(`git rebase -i` 등) 금지.
 - 캡처 PNG·대용량 바이너리 커밋 금지. 증거는 md 의 수치로.
 - 작업이 끝나면 lock 삭제 → PROGRESS 갱신 → 커밋 → push. **push 실패 시 `git pull --rebase=false` 말고 `git fetch && git rebase origin/main`** 후 재push (자기 lock 이 사라졌으면 진 것 — 작업 버리고 종료).
+- **엔진 수치를 바꾼 커밋은 `data/` 를 같이 담는다** (⚑⚑⚑ 주인 지시 2026-09-06 00:0X · T170). `sim.js`·`index.html` 의 상수·표·특전 수치·장비/뽑기 값을 건드렸으면 마감 전에 `node tools/exportData.js` 로 `data/*.json` 을 다시 뽑아 같은 커밋에 넣는다. 안 넣으면 `node tools/verifyExportData.js` 가 빨개진다(드리프트 게이트 — 유니티 이식이 낡은 수치를 가져가지 않게 하는 유일한 장치다). 읽는 법은 `data/README.md`.
 - 아티팩트 republish 는 **루틴 금지** (대화형 세션 전용 — PLAN §9-3). GitHub Pages 활성화도 주인 몫(PLAN §9-2). 루틴은 PROGRESS 에 «준비 완료» 표시까지만.
 
 ## 2. 작업 목록 (순서 고정 — lock ID = 아래 번호)

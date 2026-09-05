@@ -1,0 +1,65 @@
+{
+  "_source": "sim.js@0618225abac92cae29a0a351943fdd084aa6dd7d",
+  "_generatedAt": "2026-09-05T14:51:06.809Z",
+  "_note": "전투 규칙 상수. 길이는 월드 px · 시간은 초. ⚑ move·range(근접/원거리)·projectile 속도·enemyAttack·caps 는 엔진에 이름이 없는 리터럴이라 함수 객체 소스에서 뽑았다(README ⓑ) — 값이 바뀌면 --check 가 잡는다.",
+  "move": {
+    "playerSpeed": 132,
+    "stopDistance": 74,
+    "dashMul": 5
+  },
+  "range": {
+    "meleeEnemy": 105,
+    "rangedEnemyMax": 440,
+    "rangedEnemyMin": 40,
+    "enemyGap": 44,
+    "nodeGap": 280,
+    "nodeGapEvent": 470,
+    "spearReach": 352,
+    "waveReach": 176,
+    "waveReachKing": 704
+  },
+  "pierce": {
+    "wave": 2,
+    "waveBig": 8,
+    "spear": 8
+  },
+  "projectile": {
+    "axeSpeed": 430,
+    "spearSpeed": 520,
+    "enemyArrowSpeed": 330,
+    "cap": 200,
+    "procTickCap": 200
+  },
+  "enemyAttack": {
+    "meleeInterval": 1.3,
+    "bossInterval": 1.6,
+    "rangedInterval": 2.1,
+    "slowMul": 2,
+    "bossTripleHitEvery": 3,
+    "bossTripleHitMul": 2.2,
+    "evade": 0.1
+  },
+  "stun": {
+    "boss": 0.3333333333333333,
+    "durations": [
+      3,
+      6
+    ]
+  },
+  "caps": {
+    "def": 80,
+    "evade": 90
+  },
+  "events": {
+    "restHeal": 260,
+    "restExp": 26,
+    "devilCostMaxHp": 0.3
+  },
+  "summonRatio": {
+    "axe": 0.5,
+    "arrow": 0.3,
+    "wave": 0.5,
+    "bolt": 0.75,
+    "spear": 1
+  }
+}
