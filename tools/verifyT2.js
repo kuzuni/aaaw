@@ -454,8 +454,11 @@ function gtConsts(src) {
     else bad(`주인 확정 성장 상수 위반 — slotStep ${GH.slotStep}(0.01) · slotLvMax ${GH.slotLvMax}(150) · 1+plusStep*9 = ${PS9}(20)`);
     if (GH.pullCost === 400 && GH.dailyGem === 2500 && GH.iapGem === 12000) ok('주인 확정 경제 상수 — 뽑기 400 · 일일 2500 · IAP 12000 (PLAN §11.2·§11.5)');
     else bad(`주인 확정 경제 상수 위반 — 뽑기 ${GH.pullCost}(400) · 일일 ${GH.dailyGem}(2500) · IAP ${GH.iapGem}(12000)`);
-    if (GH.legendToMythPlus === 10) ok('전설 +10강 → 신화 0강 변환 임계 10 (PLAN §11.3)');
-    else bad(`전설→신화 변환 임계가 ${GH.legendToMythPlus} (확정: 10)`);
+    /* ⚑⚑⚑ T161 (주인 확정 2026-09-05 20:5X «전설 3강이 되면 3강 대신 신화로») — 임계 10 → **3**.
+       리터럴 3 을 여기 박아 두는 것이 이 항목의 일이다(GT 에서 읽어 오면 «엔진이 곧 정답» 이 되어
+       주인 확정값을 지키지 못한다 — T35 등급 기여표와 같은 방침). 전설의 최대 강화 = 3 − 1 = **+2**. */
+    if (GH.legendToMythPlus === 3) ok('전설 +3강 → 신화 0강 변환 임계 3 · 전설 최대 = +2 (⚑ T161 주인 확정 · PLAN §11.3)');
+    else bad(`전설→신화 변환 임계가 ${GH.legendToMythPlus} (확정: 3)`);
   }
   /* ⚑ T35 주인 확정: 등급별 «절대 기여표» 3종(공/체/실)을 배열 값으로 직접 대조한다.
      종전 «등비 생성식 문자열 대조» 는 rarStep 폐기로 대상 소멸 — PLAN §11.5-a 표와도 맞춘다. */
@@ -572,7 +575,7 @@ console.log('\n[⑪ 장비 엔진 함수 1:1 + 영구강화 4종 폐지 (PLAN §
   const FNS = [
     ['gachaPull (상자별 확률·천장·피티 — ⚑ T153)', /function gachaPull\(st,box\)\{[\s\S]*?\n\}/],
     ['fuseMake (합성 산출물 규칙 — 자동·수동 공용)', /function fuseMake\(base\)\{[\s\S]*?\n\}/],
-    ['fuseAll (3→1 · 전설 +강 · +10강 신화 변환)', /function fuseAll\(inv,equipped\)\{[\s\S]*?\n\}/],
+    ['fuseAll (3→1 · 전설 +강 · +3강 신화 변환)', /function fuseAll\(inv,equipped\)\{[\s\S]*?\n\}/],
     ['autoEquip', /function autoEquip\(inv\)\{[\s\S]*?\n\}/],
     ['buildPower (기본치 + 6부위 × 슬롯 × 강화 × 균등보너스)', /function buildPower\(b\)\{[\s\S]*?\n\}/],
     ['evenBonus (균등 보너스)', /const evenBonus=b=>[^\n]*/],

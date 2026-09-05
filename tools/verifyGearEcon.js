@@ -13,7 +13,10 @@
    아무도 안 본다.** §11.1~§11.4 의 뽑기 천장·피티·합성 체인·옵션 개수·균등 보너스는
    전부 코드 «동작» 이라 상수 대조로는 잡히지 않는다.
 
-   ⚑ 특히 §11.3 의 «신화 +0강 > 전설 +9강» 은 **주인 확정 제약**이다.
+   ⚑ 특히 §11.3 의 «신화 +0강 > 전설 «최대 강화»» 는 **주인 확정 제약**이다.
+   (⚑⚑⚑ T161 — 종전 문면은 «전설 +9강» 이었다. 주인이 2026-09-05 20:5X 에 변환 임계를 10 → 3 으로 내려
+    **전설의 최대 강화가 +2** 가 되면서 이 제약이 다시 성립했다 — T102 면제 해제 · 승인 대기 43번 종결.
+    그래서 아래 ①은 리터럴 9 가 아니라 `GT.legendToMythPlus - 1` 을 잰다.)
    **T35 개편으로 판정 방식이 바뀌었다**: 종전에는 등급 기여가 등비수열(`unit / rarStep^n`)이라
    «`rarStep > 1 + plusStep*9`» 라는 조건식 하나로 전 축을 덮을 수 있었지만,
    주인이 §11.5-a 에서 **등급별·축별 절대 기여값을 직접 확정**하면서 `rarStep` 자체가 폐기됐다.
@@ -50,6 +53,49 @@ let bad = 0, ok = 0;
 function chk(name, pass, detail) {
   if (pass) { ok++; console.log(`  ✓ ${name}${detail ? '  — ' + detail : ''}`); }
   else { bad++; console.log(`  ✗ ${name}  — ${detail}`); }
+}
+
+const T29_WAIVER = false;
+
+/* ⚑⚑⚑ T161 — ①의 판정부를 **함수로 뽑았다**. --self 가 «임계를 되돌린 사본» 으로 이 함수를 그대로 다시
+   돌려 «①이 실제로 빨개지는가» 를 실증하기 위해서다(⑧·⑨ 음성 검사와 같은 규약). Xv = vm 에서 꺼낸 엔진. */
+function ratioChecks(Xv, chkFn) {
+  const G = Xv.GT;
+  const maxPlus = G.legendToMythPlus - 1;              /* 전설이 도달 가능한 최대 강화 (그 위는 신화 0강 변환) */
+  const AX = [['공격력', G.atk], ['체력', G.hp], ['실드', G.sh]];
+  const kM = 1 + G.plusStep * maxPlus;
+  let held = 0;
+  for (const [nm, tbl] of AX) {
+    const m0 = tbl[G.RAR_MYTH], lm = tbl[G.RAR_LEGEND] * kM, margin = m0 / lm;   /* ⚑ T153 — 등급 인덱스 4단 */
+    const pass = m0 > lm;
+    if (pass) held++;
+    const detail = `신화0강 ${m0.toFixed(3)} vs 전설 최대강(+${maxPlus}) ${lm.toFixed(3)} (여유 ${margin.toFixed(3)}배 · +${maxPlus}강 배수 ${kM.toFixed(2)})`;
+    if (!pass && T29_WAIVER) console.log(`  ⚠ ${nm} 기여 — 면제 중(T102 · 주인 승인 대기): ${detail}`);
+    else chkFn(`${nm} 기여`, pass, detail);
+    if (pass && margin < 1.05)
+      console.log(`     ⚠ ${nm} 여유가 ${margin.toFixed(3)}배뿐이다 — plusStep 을 ${((m0 / tbl[G.RAR_LEGEND] - 1) / maxPlus).toFixed(4)} 이상으로 올리면 제약 위반이다.`);
+  }
+  /* 면제가 낡았는지 본다 — 3축이 다시 전부 성립하면 면제를 지워야 한다 (⚑ T161 로 실제로 지웠다) */
+  chkFn('T29 면제가 아직 필요하다 (성립하면 면제를 지울 것)', !T29_WAIVER || held < 3,
+        T29_WAIVER ? `면제 켜짐 · 성립 축 ${held}/3` : '면제 꺼짐 (⚑ T161 — 3축 전부 성립 · 승인 대기 43번 종결)');
+
+  /* ⚑⚑⚑ T161 ①-b — «전설 +3강이 신화 0강을 넘는다» 가 주인이 임계를 내린 근거다. 그 근거의 양쪽 벽을 못박는다:
+     ⓐ 도달 가능한 최대(+2)는 신화 0강에 **진다**   ⓑ 한 칸 위(+3 = 임계)는 신화 0강을 **넘는다**
+     ⓑ 가 깨지면 임계가 필요 이상으로 낮다는 뜻이라 그것도 알려야 한다. */
+  const kT = 1 + G.plusStep * G.legendToMythPlus;
+  const pm = Xv.buildPower(Xv.mkBuild(G.RAR_MYTH, 0, 0));
+  const pMax = Xv.buildPower(Xv.mkBuild(G.RAR_LEGEND, maxPlus, 0));
+  chkFn(`①-b ⓐ 신화 0강 > 전설 최대강(+${maxPlus})`, pm.atk > pMax.atk && pm.hp > pMax.hp && pm.sh > pMax.sh,
+        `풀셋 공 ${pm.atk.toFixed(0)} > ${pMax.atk.toFixed(0)} · 체 ${pm.hp.toFixed(0)} > ${pMax.hp.toFixed(0)} · 실 ${pm.sh.toFixed(0)} > ${pMax.sh.toFixed(0)}`);
+  chkFn(`①-b ⓑ 임계 한 칸 위(전설 +${G.legendToMythPlus})는 신화 0강을 넘는다 — 임계가 여기 있어야 할 이유`,
+        G.atk[G.RAR_LEGEND] * kT > G.atk[G.RAR_MYTH],
+        `전설 +${G.legendToMythPlus} 공 기여 ${(G.atk[G.RAR_LEGEND] * kT).toFixed(3)} vs 신화0강 ${G.atk[G.RAR_MYTH].toFixed(3)}`);
+
+  /* 실제 빌드로도 확인 (옵션·슬롯·균등보너스 전부 포함한 종합 전투력) */
+  const bPass = pm.atk > pMax.atk && pm.hp > pMax.hp && pm.sh > pMax.sh;
+  const bDetail = `신화0강 공 ${pm.atk.toFixed(0)}/체 ${pm.hp.toFixed(0)}/실 ${pm.sh.toFixed(0)} vs 전설 최대강(+${maxPlus}) 공 ${pMax.atk.toFixed(0)}/체 ${pMax.hp.toFixed(0)}/실 ${pMax.sh.toFixed(0)}`;
+  if (!bPass && T29_WAIVER) console.log(`  ⚠ 풀셋 종합 전투력(슬롯 0렙) — 면제 중(T102 · 주인 승인 대기): ${bDetail}`);
+  else chkFn('풀셋 종합 전투력(슬롯 0렙)', bPass, bDetail);
 }
 
 /* ================================================================
@@ -215,63 +261,89 @@ if (SELF) {
   pullCostChecks(SRC, (n, pass) => { if (!pass) ctrl9++; });
   console.log(ctrl9 === 0 ? '  ✓ 양성 대조군: 원본은 ⑨ 전부 통과 (오탐 없음)' : `  ✗ 양성 대조군: 원본이 ${ctrl9}건 불합격 — 오탐이다`);
 
+  /* ⚑⚑⚑ T161 — ① 음성 검사. 주인이 임계를 3 으로 내려 제약이 성립하게 됐으므로, **임계를 되돌리면
+     ①이 실제로 빨개져야** 한다. 그러지 않으면 T102 처럼 «조용히 깨진 제약» 이 다시 생긴다.
+     사본의 `legendToMythPlus` 만 흔들어 엔진을 통째로 다시 평가하고, ① 판정부(`ratioChecks`)를 그대로 돌린다. */
+  console.log('\n=== ① 음성 검사 (T161) — «신화 0강 > 전설 최대강» 단언이 임계 되돌림을 잡는가 ===');
+  const L2M_LINE = 'legendToMythPlus:3,';
+  const MUT1 = [
+    ['임계를 T161 이전(10)으로 되돌린다 — 전설 +9 가 신화 0강을 3.1배 앞선다', L2M_LINE, 'legendToMythPlus:10,'],
+    ['임계를 4 로 한 칸만 올린다 — 전설 +3(2,775)이 신화 0강(2,400)을 넘는다', L2M_LINE, 'legendToMythPlus:4,'],
+    ['임계를 2 로 한 칸 내린다 — 전설 +1 로도 안 넘어 임계가 필요 이상으로 낮다(ⓑ 가 잡는다)', L2M_LINE, 'legendToMythPlus:2,'],
+  ];
+  /* 사본 엔진을 vm 으로 다시 꺼낸다 (본체와 같은 잘림 기준·같은 컨텍스트 구성) */
+  const reEval = src => {
+    const c = { console: { log(){} }, process, Math, JSON, Number, String, Array, Set, Map, Object, Date,
+                parseInt, parseFloat, isFinite, isNaN, require };
+    vm.createContext(c);
+    vm.runInContext(src.slice(0, src.indexOf(CUT)) + '\n;globalThis.__X={mkBuild,buildPower,GT};', c);
+    return c.__X || c.globalThis.__X;
+  };
+  let caught1 = 0, noop1 = 0;
+  for (const [nm, from, to] of MUT1) {
+    if (!SRC.includes(from)) { noop1++; console.log(`  ✗ «${nm}» — 심을 자리(${from})가 sim.js 에 없다: 돌연변이가 no-op 이다`); continue; }
+    let hit = 0;
+    ratioChecks(reEval(SRC.replace(from, to)), (n2, pass) => { if (!pass) hit++; });
+    if (hit) { caught1++; console.log(`  ✓ «${nm}» → ① 불합격 ${hit}건`); }
+    else console.log(`  ✗ «${nm}» → 아무도 안 잡았다`);
+  }
+  let ctrl1 = 0;
+  ratioChecks(X, (n2, pass) => { if (!pass) ctrl1++; });
+  console.log(ctrl1 === 0 ? '  ✓ 양성 대조군: 원본은 ① 전부 통과 (오탐 없음)' : `  ✗ 양성 대조군: 원본이 ${ctrl1}건 불합격 — 오탐이다`);
+
   const good = caught === MUT.length && noop === 0 && ctrl === 0
-            && caught9 === MUT9.length && noop9 === 0 && ctrl9 === 0;
-  console.log(`\n음성 ⑧ ${caught}/${MUT.length} · ⑨ ${caught9}/${MUT9.length} · no-op ${noop + noop9} · 오탐 ${ctrl + ctrl9}`);
+            && caught9 === MUT9.length && noop9 === 0 && ctrl9 === 0
+            && caught1 === MUT1.length && noop1 === 0 && ctrl1 === 0;
+  console.log(`\n음성 ⑧ ${caught}/${MUT.length} · ⑨ ${caught9}/${MUT9.length} · ① ${caught1}/${MUT1.length} · no-op ${noop + noop9 + noop1} · 오탐 ${ctrl + ctrl9 + ctrl1}`);
   process.exit(good ? 0 : 1);
 }
 
 console.log('=== 장비 경제 동작 게이트 (T29) — §11.1~§11.4 규칙을 엔진을 실제로 굴려 확인 ===');
 
 /* ---------------------------------------------------------------- */
-console.log('\n[① §11.3 주인 확정 제약 — 신화 +0강 > 전설 +9강 (공/체/실 3축 · ⚑ T35 등급별 표 대조)]');
-/* ⚑⚑⚑ T102 «면제(waiver)» — 이 제약은 주인 확정 두 조항의 산술로 깨졌다. 숨기지 않고 매 실행 경고로 남긴다.
-     ① «전설→신화 ×6» (2026-09-03 주인 확정, 4배에서 정정)
-     ② «신화→신화+9강 ×20» → plusStep = 19/9 (같은 지시)
-   ②가 전설에도 똑같이 걸리므로 전설 +9강 = 전설 ×20 이고, ①이 ×6 뿐이라 신화 0강이 3.1배 진다.
-   제약이 성립하려면 +9강 배수 < 6, 즉 `plusStep < 5/9 ≈ 0.556` 이어야 한다 — 두 조항과 양립 불가다.
-   **파생 문제**: `legendToMythPlus`(전설 +10강 → 신화 0강 변환)가 큰 손해가 된다 — 주인 승인 대기 등재.
-   면제는 **자기 청소형**이다: 주인이 값을 고쳐 제약이 다시 성립하면 아래 «면제가 낡았다» 가 빨개져
-   이 블록을 지우라고 알린다. 되돌림 = `T29_WAIVER=false` 한 줄. */
-const T29_WAIVER = true;
+console.log('\n[① §11.3 주인 확정 제약 — 신화 +0강 > 전설 «최대 강화» (공/체/실 3축 · ⚑ T35 등급별 표 대조)]');
+/* ⚑⚑⚑ T161 (주인 확정 2026-09-05 20:5X) — **T102 면제(waiver)를 걷었다.**
+   면제의 사연: 주인 확정 두 조항 «전설→신화 ×6» 과 «신화→신화+9강 ×20»(= plusStep 19/9)이 동시에 걸리면
+   전설 +9강 = 전설 ×20 이라 신화 0강이 3.1배 진다 — «신화 0강 > 전설 +9강» 은 산술적으로 성립 불가였다
+   (성립하려면 plusStep < 5/9 ≈ 0.556). 그래서 T102 가 «면제 + 매 실행 경고» 로 두고 주인 승인 대기 43번에 올렸다.
+   **주인이 다른 손잡이로 풀었다**: 강화 배수를 건드리는 대신 **변환 임계를 10 → 3** 으로 내려
+   **전설의 최대 강화를 +2** 로 만들었다. 비교 대상이 +9 에서 +2 로 내려오면서 제약이 그대로 성립한다.
+   그러므로 이 게이트가 재는 자리도 «전설 +9강» 이라는 **리터럴이 아니라 «전설이 실제로 도달 가능한 최대 강화»**
+   = `GT.legendToMythPlus - 1` 이다 — 임계를 다시 올리면 여기가 저절로 빨개진다(그것이 이 축의 일이다). */
+const LEGEND_MAX_PLUS = GT.legendToMythPlus - 1;
 {
   const AX = [['공격력', GT.atk], ['체력', GT.hp], ['실드', GT.sh]];
-  const k9 = 1 + GT.plusStep * 9;
-  let held = 0;
-  for (const [nm, tbl] of AX) {
-    const m0 = tbl[GT.RAR_MYTH], l9 = tbl[GT.RAR_LEGEND] * k9, margin = m0 / l9;   /* ⚑ T153 — 등급 인덱스 4단 */
-    const pass = m0 > l9;
-    if (pass) held++;
-    const detail = `신화0강 ${m0.toFixed(3)} vs 전설9강 ${l9.toFixed(3)} (여유 ${margin.toFixed(3)}배 · +9강 배수 ${k9.toFixed(2)})`;
-    if (!pass && T29_WAIVER) console.log(`  ⚠ ${nm} 기여 — 면제 중(T102 · 주인 승인 대기): ${detail}`);
-    else chk(`${nm} 기여`, pass, detail);
-    if (pass && margin < 1.05)
-      console.log(`     ⚠ ${nm} 여유가 ${margin.toFixed(3)}배뿐이다 — plusStep 을 ${((m0 / tbl[GT.RAR_LEGEND] - 1) / 9).toFixed(4)} 이상으로 올리면 제약 위반이다.`);
+  ratioChecks(X, chk);
+  /* ⚑ T161 — 변환이 손해인지 이득인지를 숫자로 남긴다(판정은 위 ①-b 가 한다).
+     기준은 «변환 직전 = 전설 최대강» 이다 — 유저가 실제로 들고 있다가 바뀌는 물건이 그것이다. */
+  {
+    const gain = ['공격력', '체력', '실드'].map((nm, i) => {
+      const tbl = [GT.atk, GT.hp, GT.sh][i];
+      return `${nm} ${(tbl[GT.RAR_MYTH] / (tbl[GT.RAR_LEGEND] * (1 + GT.plusStep * LEGEND_MAX_PLUS)) * 100).toFixed(1)}%`;
+    });
+    console.log(`     ↳ 전설 +${LEGEND_MAX_PLUS}강 → 신화 0강 변환 후 남는 스탯: ${gain.join(' · ')} (100% 초과 = 이득 · ⚑ T161 로 강등이 아니게 됐다)`);
   }
-  /* 면제가 낡았는지 본다 — 3축이 다시 전부 성립하면 면제를 지워야 한다 */
-  chk('T29 면제가 아직 필요하다 (성립하면 면제를 지울 것)', !T29_WAIVER || held < 3,
-      T29_WAIVER ? `면제 켜짐 · 성립 축 ${held}/3` : '면제 꺼짐');
+
   /* 등급 사다리 단조성: 축마다 일반<희귀<전설<신화 여야 한다 (⚑ T153 — 영웅 폐지 · 표를 손댈 때의 오타 방지) */
   for (const [nm, tbl] of AX) {
     const mono = tbl.every((v, i) => i === 0 || v > tbl[i - 1]);
     chk(`${nm} 등급 단조 증가`, mono, tbl.map(v => v.toFixed(2)).join(' < '));
   }
 
-  /* 실제 빌드로도 확인 (옵션·슬롯·균등보너스 전부 포함한 종합 전투력) — 위와 같은 면제를 받는다 */
-  const pm = X.buildPower(X.mkBuild(GT.RAR_MYTH, 0, 0)), pl = X.buildPower(X.mkBuild(GT.RAR_LEGEND, 9, 0));
+  /* 실제 빌드로도 확인 (옵션·슬롯·균등보너스 전부 포함한 종합 전투력) */
+  const pm = X.buildPower(X.mkBuild(GT.RAR_MYTH, 0, 0)), pl = X.buildPower(X.mkBuild(GT.RAR_LEGEND, LEGEND_MAX_PLUS, 0));
   const bPass = pm.atk > pl.atk && pm.hp > pl.hp && pm.sh > pl.sh;
-  const bDetail = `신화0강 공 ${pm.atk.toFixed(0)}/체 ${pm.hp.toFixed(0)}/실 ${pm.sh.toFixed(0)} vs 전설9강 공 ${pl.atk.toFixed(0)}/체 ${pl.hp.toFixed(0)}/실 ${pl.sh.toFixed(0)}`;
+  const bDetail = `신화0강 공 ${pm.atk.toFixed(0)}/체 ${pm.hp.toFixed(0)}/실 ${pm.sh.toFixed(0)} vs 전설 최대강(+${LEGEND_MAX_PLUS}) 공 ${pl.atk.toFixed(0)}/체 ${pl.hp.toFixed(0)}/실 ${pl.sh.toFixed(0)}`;
   if (!bPass && T29_WAIVER) console.log(`  ⚠ 풀셋 종합 전투력(슬롯 0렙) — 면제 중(T102 · 주인 승인 대기): ${bDetail}`);
   else chk('풀셋 종합 전투력(슬롯 0렙)', bPass, bDetail);
-  /* ⚑ T102 — 면제의 «파생 피해» 를 숫자로 남긴다. 전설 +10강 → 신화 0강 변환(§11.3 `legendToMythPlus`)이
-     지금은 강등이다. 주인이 판단할 수 있게 손실률을 매 실행 찍는다(판정은 안 한다 — 위 면제가 이미 대표한다). */
+  /* ⚑ T161 — 변환이 손해인지 이득인지를 숫자로 남긴다(판정은 위 ①-b 가 한다).
+     기준은 «변환 직전 = 전설 최대강» 이다 — 유저가 실제로 들고 있다가 바뀌는 물건이 그것이다. */
   {
-    const kL = 1 + GT.plusStep * GT.legendToMythPlus;
-    const loss = ['공격력', '체력', '실드'].map((nm, i) => {
+    const gain = ['공격력', '체력', '실드'].map((nm, i) => {
       const tbl = [GT.atk, GT.hp, GT.sh][i];
-      return `${nm} ${(tbl[GT.RAR_MYTH] / (tbl[GT.RAR_LEGEND] * kL) * 100).toFixed(1)}%`;
+      return `${nm} ${(tbl[GT.RAR_MYTH] / (tbl[GT.RAR_LEGEND] * (1 + GT.plusStep * LEGEND_MAX_PLUS)) * 100).toFixed(1)}%`;
     });
-    console.log(`     ↳ 전설 +${GT.legendToMythPlus}강 → 신화 0강 변환 후 남는 스탯: ${loss.join(' · ')} (100% 미만 = 강등)`);
+    console.log(`     ↳ 전설 +${LEGEND_MAX_PLUS}강 → 신화 0강 변환 후 남는 스탯: ${gain.join(' · ')} (100% 초과 = 이득 · ⚑ T161 로 강등이 아니게 됐다)`);
   }
 
   /* ⚑ T35: 확정 스탯 사다리(§11.7) 재현 — 기본치 + 6부위가 주인 표와 맞는지 */

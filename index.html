@@ -875,7 +875,11 @@ const GT={
   gachaRate:[65.2,30,4,0.8],
   pityMyth:50,                   // 50회 천장 (누적 50회째 신화 확정) — 신화 상자
   pityLegend:10,                 // 10회 피티 (10회당 전설 이상 확정) — 신화·전설 상자
-  legendToMythPlus:10,           // 전설 +10강 도달 시 신화 0강으로 변환
+  /* ⚑⚑⚑ T161 (주인 확정 2026-09-05 20:5X «전설 3강이 되면 3강 대신 신화로 바뀌게 하는 게 맞는 듯») —
+     10 → **3**. 근거: 전설 +3강 풀셋 공 2,775 가 신화 0강 2,400 을 넘어서므로 넘기 직전에 변환한다.
+     이로써 전설의 최대 강화는 **+2**(풀셋 공 1,983 < 신화 0강 2,400)이고 승인 대기 43번의 제약
+     «신화 0강 > 전설 최대강» 이 다시 성립한다(게이트 `verifyGearEcon` ①-b). */
+  legendToMythPlus:3,            // 전설 +3강 도달 시 신화 0강으로 변환 (전설 최대 = +2)
   runsPerDay:30,                 // (위임) 하루 플레이 판수 — 실험3/4 의 다이아 적립 환산 기준
 };
 
@@ -1176,7 +1180,7 @@ function fuseMake(base){
   if(base.rar===GT.RAR_LEGEND){
     const np=base.plus+1;
     return np>=GT.legendToMythPlus
-      ? {part:base.part,type:base.type,rar:GT.RAR_MYTH,plus:0}            /* +10강 도달 → 신화 0강 변환 */
+      ? {part:base.part,type:base.type,rar:GT.RAR_MYTH,plus:0}            /* +3강 도달 → 신화 0강 변환 (⚑ T161) */
       : {part:base.part,type:base.type,rar:GT.RAR_LEGEND,plus:np};
   }
   return {part:base.part,type:base.type,rar:GT.RAR_MYTH,plus:base.plus+1};   /* 신화 무한 강화 */
@@ -1439,6 +1443,12 @@ if((save.gearRarV|0) < GEAR_RAR_V){
 save.inv=save.inv.filter(g=>g&&GT.parts.includes(g.part)&&GOPT[g.type]&&g.rar>=0&&g.rar<GT.rarName.length)
   .map(g=>({u:Math.max(0,g.u|0), part:g.part, type:g.type, rar:g.rar|0, plus:Math.max(0,g.plus|0),
     ...(g.nw?{nw:1}:{})}));   /* ⚑ T125 — «NEW» 뱃지는 세이브를 넘어서도 남는다(장착하거나 열어 보면 지워진다) */
+/* ⚑⚑⚑ T161 (주인 확정 20:5X) — 변환 임계가 10 → 3 이 되면서 **전설 +3강 이상은 더 이상 존재할 수 없다.**
+   임계를 내리기 전 세이브에 남아 있는 전설 +3~+9 를 규칙대로 «같은 부위·같은 세트의 신화 0강» 으로 옮긴다
+   (합성이 그 자리에서 만들었을 물건과 같은 것 — 유저 손해 없음: 전설 +3 공 2,775 → 신화 0강 2,400 이지만
+   옵션이 3개 → 4개로 하나 늘고, 그대로 두면 규칙 밖 물건이 남는다). 판 표시를 안 쓰고 **매번 돈다** —
+   조건이 «규칙상 있을 수 없는 상태» 라 멱등이고, 임계가 또 바뀌어도 스스로 낫는다. */
+for(const g of save.inv) if(g.rar===GT.RAR_LEGEND&&g.plus>=GT.legendToMythPlus){ g.rar=GT.RAR_MYTH; g.plus=0; }
 /* ⚑ T68 — uid «유일성» 보정. 종전엔 «uid 가 없는 항목»(`if(!g.u)`)만 봤다. 그래서 ① 같은 uid 가 둘인 세이브와
    ② `save.uid` 가 인벤 최대 uid 보다 뒤처진 세이브(구버전·부분 손상)가 그대로 통과했고, 그 다음 뽑기·합성이
    만든 신품이 **장착 중인 장비의 uid 를 그대로 재사용**했다. uid 는 인벤의 유일 키라(`invById`·`save.eq`·
@@ -1797,7 +1807,11 @@ function renderForge(){
     res.style.borderColor=GT.rarColor[made.rar];
     res.style.boxShadow=`0 0 14px ${GT.rarGlow[made.rar]}`;
     res.innerHTML=`${gearIcon(made.type)}${made.plus?`<span class="plus">+${made.plus}</span>`:''}`;
+    /* ⚑ T161 — 전설 → 신화 변환이 일어나는 합성이면 «+N 강 대신 신화 0강» 이라고 먼저 알려준다
+       (임계는 `GT.legendToMythPlus` 에서 읽는다 — 값이 바뀌면 문구가 따라온다 · 하드코딩 금지). */
+    const conv = base.rar===GT.RAR_LEGEND && made.rar===GT.RAR_MYTH;
     $('fgBanner').innerHTML=`<div><b>${GT.rarName[made.rar]} ${GT.typeName[made.type]}</b>${made.plus?` <b>+${made.plus}</b>`:''}<br>`+
+      (conv?`<span id="fgConv" style="font-size:12px;color:var(--gold)">전설 +${GT.legendToMythPlus}강 대신 <b>신화 0강</b>으로 바뀝니다</span><br>`:'')+
       `<span style="font-size:12px;color:var(--ink-dim)">재료 3개가 사라지고 위 장비 1개가 됩니다</span></div>`;
   }else{
     res.className='fg-slot empty'; res.style.borderColor=''; res.style.boxShadow=''; res.innerHTML='🛠️';

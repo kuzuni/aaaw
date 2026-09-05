@@ -423,6 +423,65 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('합성 횟수 누적 · 재료 칸 비움', f2.fuses === 1 && f2.picked === 0);
   await p.screenshot({ path: `${OUT}/t3-forge.png` });
 
+  /* ---------- ⚑⚑⚑ T161 — 전설 +2 → 합성 → 신화 0강 변환 (주인 확정 2026-09-05 20:5X) ---------- */
+  console.log('\n=== ⚑ T161 전설 +3강 대신 신화 0강 (임계 10 → 3) ===');
+  {
+    /* 임계는 게임에서 읽는다 — 리터럴 3 을 여기 적으면 상수가 바뀌어도 시험이 안 따라온다.
+       («확정값 3» 을 지키는 자리는 정적 게이트 `verifyT2` 다 — 여기는 «규칙대로 도는가» 를 본다.) */
+    const t = await p.evaluate(() => {
+      const L2M = GT.legendToMythPlus, MAX = L2M - 1;
+      /* 전설 최대강(+2) 3개를 쥐어 준다 → 합성하면 규칙상 신화 0강이 나와야 한다 */
+      save.inv = []; save.eq = {}; save.slots = {}; FG.length = 0;
+      for (let i = 0; i < 3; i++) save.inv.push({ part: 'weapon', type: 'crit_weapon', rar: GT.RAR_LEGEND, plus: MAX, u: save.uid++ });
+      persist(); showScreen('forge'); renderForge();
+      return { L2M, MAX, RL: GT.RAR_LEGEND, RM: GT.RAR_MYTH };
+    });
+    await p.evaluate(() => { for (const c of [...document.querySelectorAll('#fgGrid .inv-cell')]) c.click(); });
+    await p.waitForTimeout(400);
+    const pv = await p.evaluate(() => ({
+      conv: !!document.getElementById('fgConv'),
+      convTxt: (document.getElementById('fgConv') || {}).textContent || '',
+      banner: document.getElementById('fgBanner').textContent.replace(/\s+/g, ' ').trim(),
+      picked: FG.length,
+    }));
+    chk(`ⓐ 전설 +${t.MAX} 3개 선택 — 결과 미리보기가 «신화» 라고 알린다`,
+        pv.picked === 3 && /신화/.test(pv.banner), pv.banner.slice(0, 60));
+    /* ② 합성 화면 안내문 (주인 지시 ②) — 임계를 문구에서 읽어 상수와 대조한다(하드코딩 금지 축) */
+    chk('ⓑ 변환 안내문이 뜬다 — «전설 +N강 대신 신화 0강»',
+        pv.conv && pv.convTxt.includes(`전설 +${t.L2M}강 대신`) && pv.convTxt.includes('신화 0강'), pv.convTxt);
+    await p.click('#fgFuse'); await p.waitForTimeout(500);
+    const af = await p.evaluate(() => save.inv.map(g => `${g.rar}:+${g.plus}`).join(','));
+    chk(`ⓒ 합성 실행 — 전설 +${t.MAX} 3개가 신화 0강 1개가 된다`, af === `${t.RM}:+0`, `인벤 [${af}]`);
+
+    /* ⓓ 규칙의 반대편: 전설 +3(= 임계)은 «존재할 수 없다». 합성으로도 안 나오고, 세이브에 있어도 안 남는다. */
+    const reach = await p.evaluate(() => {
+      const L2M = GT.legendToMythPlus, out = [];
+      for (let plus = 0; plus < L2M; plus++)
+        out.push(fuseMake({ part: 'weapon', type: 'crit_weapon', rar: GT.RAR_LEGEND, plus }));
+      return { over: out.filter(g => g.rar === GT.RAR_LEGEND && g.plus >= L2M).length, n: out.length,
+               last: `${out[out.length - 1].rar}:+${out[out.length - 1].plus}` };
+    });
+    chk(`ⓓ 합성으로 전설 +${t.L2M} 이상이 나오는 경로가 없다 (0~${t.MAX} 전수)`,
+        reach.over === 0, `${reach.n}가지 · 마지막(전설 +${t.MAX} 합성) = ${reach.last}`);
+
+    /* ⓔ 세이브 마이그레이션 — 임계를 내리기 전 세이브의 전설 +3~+9 가 신화 0강으로 옮겨진다 */
+    await p.evaluate(() => {
+      const raw = JSON.parse(localStorage.getItem('kkoma-knight-v2'));
+      raw.inv = [{ part: 'weapon', type: 'crit_weapon', rar: GT.RAR_LEGEND, plus: 3, u: 9001 },
+                 { part: 'helm',   type: 'hpsh_helm',   rar: GT.RAR_LEGEND, plus: 9, u: 9002 },
+                 { part: 'armor',  type: 'evade_armor', rar: GT.RAR_LEGEND, plus: 2, u: 9003 }];
+      raw.eq = {}; localStorage.setItem('kkoma-knight-v2', JSON.stringify(raw));
+    });
+    await p.reload(); await p.waitForTimeout(700);
+    const mg = await p.evaluate(() => ({
+      inv: save.inv.map(g => `${g.part}:${g.rar}:+${g.plus}`).sort().join(','),
+      over: save.inv.filter(g => g.rar === GT.RAR_LEGEND && g.plus >= GT.legendToMythPlus).length,
+      RM: GT.RAR_MYTH, RL: GT.RAR_LEGEND,
+    }));
+    chk('ⓔ 세이브의 전설 +3·+9 가 신화 0강으로 마이그레이션 (전설 +2 는 그대로)',
+        mg.over === 0 && mg.inv === `armor:${mg.RL}:+2,helm:${mg.RM}:+0,weapon:${mg.RM}:+0`, mg.inv);
+  }
+
   /* ---------- 저장 v2 왕복 ---------- */
   console.log('\n=== 저장 포맷 v2 왕복 ===');
   const saved = await p.evaluate(() => { save.gold = 12345; save.gem = 678; persist(); return JSON.parse(localStorage.getItem('kkoma-knight-v2')); });
@@ -727,13 +786,14 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
      영웅은 «전설로 승격»(주인 위임), 전설·신화는 인덱스만 당겨진다. 새 판이면 두 번 돌지 않는다. */
   await p.evaluate(() => {
     const raw = {
-      gold: 0, gem: 0, maxChapter: 1, selChapter: 1, muted: false, uid: 9, freeDay: '',
+      gold: 0, gem: 0, maxChapter: 1, selChapter: 1, muted: false, uid: 10, freeDay: '',
       inv: [
         { u: 1, part: 'weapon', type: 'crit_weapon', rar: 0, plus: 0 },
         { u: 2, part: 'helm',   type: 'crit_helm',   rar: 1, plus: 0 },
         { u: 3, part: 'armor',  type: 'crit_armor',  rar: 2, plus: 0 },   /* 영웅 → 전설 승격 */
-        { u: 4, part: 'glove',  type: 'crit_glove',  rar: 3, plus: 4 },   /* 전설 → 전설 (강화 유지) */
+        { u: 4, part: 'glove',  type: 'crit_glove',  rar: 3, plus: 4 },   /* 전설 +4 → ⚑ T161 로 신화 0강 (두 마이그레이션이 겹치는 칸) */
         { u: 5, part: 'boot',   type: 'crit_boot',   rar: 4, plus: 2 },   /* 신화 → 신화 */
+        { u: 6, part: 'neck',   type: 'crit_neck',   rar: 3, plus: 2 },   /* 전설 +2 → 전설 (강화 유지 — T153 의 원래 축) */
       ],
       eq: {}, slots: {}, gacha: { p50: 17, p10: 3, pulls: 20 }, pulls: 20, fuses: 0,
     };
@@ -746,8 +806,11 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     mythPity: save.gachaBoxes.myth ? { p50: save.gachaBoxes.myth.p50, p10: save.gachaBoxes.myth.p10, pulls: save.gachaBoxes.myth.pulls } : null,
     rare: save.gachaBoxes.rare, legend: save.gachaBoxes.legend, legacy: 'gacha' in save,
   }));
-  chk('⚑ T153 마이그레이션 — 영웅은 전설로 승격 · 전설·신화는 강화까지 그대로',
-    migT153.rars.join(' / ') === '일반+0 / 희귀+0 / 전설+0 / 전설+4 / 신화+2', migT153.rars.join(' / '));
+  /* ⚑⚑⚑ T161 — 이 칸은 이제 **마이그레이션 두 개가 겹치는** 자리다: T153 이 등급 인덱스를 당기고(4→3 신화 · 3→2 전설),
+     그 위에서 T161 이 «전설 +3 이상은 없다» 를 적용한다. 그래서 전설 +4 는 **신화 0강**이 되고,
+     전설 +2(u:6)는 그대로 남아 T153 의 원래 축(«전설은 강화까지 그대로»)이 계속 지켜진다. 순서가 뒤바뀌면 여기가 빨개진다. */
+  chk('⚑ T153+T161 마이그레이션 — 영웅은 전설로 승격 · 전설 +2 는 강화까지 그대로 · 전설 +4 는 신화 0강 · 신화는 그대로',
+    migT153.rars.join(' / ') === '일반+0 / 희귀+0 / 전설+0 / 신화+0 / 신화+2 / 전설+2', migT153.rars.join(' / '));
   chk('⚑ T153 마이그레이션 판 표시가 남아 두 번 돌지 않는다 (gearRarV)', migT153.v === 2, `gearRarV=${migT153.v}`);
   chk('⚑ T153 옛 단일 피티 카운터가 «신화 상자» 칸으로 옮겨진다 (진행 보존 · 옛 키 삭제)',
     !!migT153.mythPity && migT153.mythPity.p50 === 17 && migT153.mythPity.p10 === 3 && migT153.mythPity.pulls === 20 && !migT153.legacy,

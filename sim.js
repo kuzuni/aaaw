@@ -708,7 +708,11 @@ const GT={
   gachaRate:[65.2,30,4,0.8],
   pityMyth:50,                   // 50회 천장 (누적 50회째 신화 확정) — 신화 상자
   pityLegend:10,                 // 10회 피티 (10회당 전설 이상 확정) — 신화·전설 상자
-  legendToMythPlus:10,           // 전설 +10강 도달 시 신화 0강으로 변환
+  /* ⚑⚑⚑ T161 (주인 확정 2026-09-05 20:5X «전설 3강이 되면 3강 대신 신화로 바뀌게 하는 게 맞는 듯») —
+     10 → **3**. 근거: 전설 +3강 풀셋 공 2,775 가 신화 0강 2,400 을 넘어서므로 넘기 직전에 변환한다.
+     이로써 전설의 최대 강화는 **+2**(풀셋 공 1,983 < 신화 0강 2,400)이고 승인 대기 43번의 제약
+     «신화 0강 > 전설 최대강» 이 다시 성립한다(게이트 `verifyGearEcon` ①-b). */
+  legendToMythPlus:3,            // 전설 +3강 도달 시 신화 0강으로 변환 (전설 최대 = +2)
   runsPerDay:30,                 // (위임) 하루 플레이 판수 — 실험3/4 의 다이아 적립 환산 기준
 };
 /* 스윕용 오버라이드 — 예: GT_OVERRIDE='{"slotG":1.6}' node sim.js 5 */
@@ -989,7 +993,7 @@ function fuseMake(base){
   if(base.rar===GT.RAR_LEGEND){
     const np=base.plus+1;
     return np>=GT.legendToMythPlus
-      ? {part:base.part,type:base.type,rar:GT.RAR_MYTH,plus:0}            /* +10강 도달 → 신화 0강 변환 */
+      ? {part:base.part,type:base.type,rar:GT.RAR_MYTH,plus:0}            /* +3강 도달 → 신화 0강 변환 (⚑ T161) */
       : {part:base.part,type:base.type,rar:GT.RAR_LEGEND,plus:np};
   }
   return {part:base.part,type:base.type,rar:GT.RAR_MYTH,plus:base.plus+1};   /* 신화 무한 강화 */
