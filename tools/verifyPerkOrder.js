@@ -246,20 +246,33 @@ function run(simSrc, htmSrc, planSrc) {
   chk('제시 장수 상수 PERK_OFFER = 3', S.PERK_OFFER === 3, `PERK_OFFER=${S.PERK_OFFER}`);
   const htmOffer = (htmSrc.match(/const PERK_OFFER\s*=\s*(\d+)/) || [])[1];
   chk('두 엔진의 PERK_OFFER 가 같다', Number(htmOffer) === S.PERK_OFFER, `sim ${S.PERK_OFFER} / html ${htmOffer}`);
-  /* ⓐ offerPerks 를 직접 두들긴다 — 남은 풀 크기별로 «몇 장 · 중복 · 이미 얻은 것 섞임» 을 전수로 본다. */
+  /* ⓐ offerPerks 를 직접 두들긴다 — 남은 풀 크기별로 «몇 장 · 중복 · 이미 얻은 것 섞임» 을 전수로 본다.
+     ⚑⚑⚑ T151 — 장수 기준이 «남은 것 전체» 에서 **«굴린 등급에 남은 것»** 으로 바뀌었다. 3장이 전부 같은
+     등급이므로 남은 특전이 20종이어도 그 등급에 2종뿐이면 2장이 정상이다. 그래서 여기서는 ① 등급이 하나인지
+     ② 장수가 그 등급의 남은 수로 설명되는지 ③ 풀이 남아 있는 한 빈손이 아닌지를 같이 본다. */
   {
-    let cntBad = 0, dupBad = 0, takenBad = 0, poolBad = 0;
+    let cntBad = 0, dupBad = 0, takenBad = 0, poolBad = 0, mixBad = 0, emptyBad = 0;
     for (let t = 0; t <= S.PERKS.length; t++) {
       const taken = S.PERKS.slice(0, t);
+      const left = S.PERKS.filter(p => taken.indexOf(p) < 0);
       for (let i = 0; i < 300; i++) {
         const off = S.offerPerks(taken);
-        if (off.length !== Math.min(S.PERK_OFFER, S.PERKS.length - t)) cntBad++;
+        /* 남은 것이 하나라도 있으면 반드시 1장 이상, 하나도 없으면 반드시 0장 */
+        if ((left.length > 0) !== (off.length > 0)) { emptyBad++; continue; }
+        if (!off.length) continue;
+        /* ⚑ T151 ① — 3장 전부 같은 등급 */
+        if (new Set(off.map(p => p.g)).size !== 1) mixBad++;
+        /* ⚑ T151 ② — 장수 = min(3, 그 등급에 남은 것) */
+        const inG = left.filter(p => p.g === off[0].g).length;
+        if (off.length !== Math.min(S.PERK_OFFER, inG)) cntBad++;
         if (new Set(off).size !== off.length) dupBad++;
         if (off.some(p => taken.indexOf(p) >= 0)) takenBad++;
         if (off.some(p => S.PERKS.indexOf(p) < 0)) poolBad++;
       }
     }
-    chk('⚑ 제시 장수 = min(3, 남은 것) — 남은 것이 3 미만이면 남은 만큼만 (0이면 0장)', cntBad === 0, `위반 ${cntBad}건`);
+    chk('⚑⚑⚑ T151 제시 3장이 언제나 «같은 등급» 이다 (섞이지 않는다)', mixBad === 0, `위반 ${mixBad}건`);
+    chk('⚑ 남은 특전이 있으면 반드시 1장 이상 · 없으면 0장 (재정규화가 빈손을 만들지 않는다)', emptyBad === 0, `위반 ${emptyBad}건`);
+    chk('⚑ T151 제시 장수 = min(3, **굴린 등급에** 남은 것) — 부족하면 그 등급에 남은 만큼만', cntBad === 0, `위반 ${cntBad}건`);
     chk('⚑ 같은 카드 3장 안에 중복이 없다', dupBad === 0, `위반 ${dupBad}건`);
     chk('⚑ 이미 얻은 특전은 절대 제시되지 않는다', takenBad === 0, `위반 ${takenBad}건`);
     chk('⚑ 제시는 언제나 풀(PERKS) 안에서만 나온다', poolBad === 0, `위반 ${poolBad}건`);
@@ -268,28 +281,40 @@ function run(simSrc, htmSrc, planSrc) {
     for (let i = 0; i < 400; i++) seen.add(S.offerPerks([]).map(p => p.id).sort().join());
     chk('⚑ 제시가 실제로 무작위다 (같은 3장으로 고정되지 않는다)', seen.size > 5, `서로 다른 조합 ${seen.size}종`);
   }
-  /* ⓑ 시뮬 측정 정책 — ⚑⚑⚑ T119 로 «표 순서만» 에서 **«등급 높은 것 우선 · 같은 등급이면 표 순서»** 로 바뀌었다
-     (주인 지시 13:0X ② — «실제 유저가 좋은 것을 고르는 것의 근사»). */
+  /* ⓑ 시뮬 측정 정책 — ⚑⚑⚑ T151 로 «등급 높은 것 우선» 절이 죽고 **«§3.1 표 순서 우선»** 만 남았다
+     (주인 지시 17:5X ② — 3장이 같은 등급이라 등급 비교가 구조적으로 한 번도 갈리지 않는다). */
   {
-    let polBad = 0, sawMixed = 0;
+    let polBad = 0, sawMixed = 0, sample = 0;
     for (let i = 0; i < 2000; i++) {
       const off = S.offerPerks(S.PERKS.filter(() => Math.random() < 0.3), false);
       if (!off.length) continue;
+      sample++;
       if (new Set(off.map(p => p.g)).size > 1) sawMixed++;
-      const want = off.slice().sort((x, y) => (y.g - x.g) || (S.PERKS.indexOf(x) - S.PERKS.indexOf(y)))[0];
+      const want = off.slice().sort((x, y) => S.PERKS.indexOf(x) - S.PERKS.indexOf(y))[0];
       if (S.simPickPerk(off) !== want) polBad++;
     }
-    chk('⚑ T119 시뮬 정책 = 등급 높은 것 우선 · 같은 등급이면 표 순서 우선', polBad === 0, `위반 ${polBad}건`);
-    chk('⚑ 그 판정이 실제로 갈리는 표본이 있었다 (등급이 섞인 3장)', sawMixed > 200, `등급 섞인 제시 ${sawMixed}회`);
+    chk('⚑ T151 시뮬 정책 = §3.1 표 순서가 앞선 것 (등급 절은 폐기)', polBad === 0, `위반 ${polBad}건`);
+    chk('⚑ T151 «등급이 섞인 제시» 가 2000판에서 한 번도 없다 (그래서 등급 절이 의미를 잃었다)',
+      sawMixed === 0 && sample > 500, `표본 ${sample}회 · 등급 섞인 제시 ${sawMixed}회`);
+    /* 정책이 실제로 갈리는 표본 — 3장 중 표 순서가 뒤인 것이 섞여 있어야 «앞선 것» 이 판정이 된다 */
+    let sawChoice = 0;
+    for (let i = 0; i < 2000; i++) {
+      const off = S.offerPerks([], false);
+      if (off.length > 1 && S.PERKS.indexOf(off[0]) !== Math.min(...off.map(p => S.PERKS.indexOf(p)))) sawChoice++;
+    }
+    chk('⚑ 그 판정이 실제로 갈리는 표본이 있었다 (제시 순서 ≠ 표 순서인 3장)', sawChoice > 200, `${sawChoice}회`);
   }
   /* ⓑ-2 ⚑ T119 등급 굴림 분포 — 60/25/15 (풀이 넉넉할 때) · 귀족의 눈이면 62.5/37.5 */
   {
-    const roll = (noble, iter) => {
+    /* ⚑ T151 — 등급을 «레벨업마다 1회» 굴리므로 판당 카드 수가 등급마다 같은 한(3장) 카드 단위로 세도
+       굴림 비율과 같다. 아래 표본은 전부 «그 등급에 3장 이상 남은» 상태라 그 조건을 만족한다. */
+    const roll2 = (taken, noble, iter) => {
       const c = [0, 0, 0];
-      for (let i = 0; i < iter; i++) for (const p of S.offerPerks([], noble)) c[p.g]++;
+      for (let i = 0; i < iter; i++) for (const p of S.offerPerks(taken, noble)) c[p.g]++;
       const t = c[0] + c[1] + c[2];
       return c.map(x => x / t * 100);
     };
+    const roll = (noble, iter) => roll2([], noble, iter);
     const d = roll(false, 20000), tol = 1.2;
     chk('⚑ T119 등급 굴림 실측이 60 / 25 / 15 다 (±1.2%p · 6만 장)',
       GRADE_RATE.every((r, g) => Math.abs(d[g] - r) <= tol), d.map(x => x.toFixed(2) + '%').join(' / '));
@@ -306,6 +331,14 @@ function run(simSrc, htmSrc, planSrc) {
     let noneCommon = true;
     for (let i = 0; i < 400; i++) for (const p of S.offerPerks(noCommon, false)) if (p.g === 0) noneCommon = false;
     chk('⚑ T119 일반이 다 떨어지면 희귀·전설로 재정규화된다', noneCommon);
+    /* ⚑⚑⚑ T151 ③ — «그 등급이 0장이면 남은 등급들로 확률을 재정규화해 다시 굴린다» 를 주인이 든 예로 못박는다:
+       전설이 다 떨어지면 60 : 25 → **70.6 : 29.4**. 등급을 카드마다 굴리든 한 번 굴리든 «비율» 은 같지만,
+       이 항목은 «빈 등급이 굴림에서 빠지는가» 를 지키는 자리라 T151 뒤에도 그대로 유효하다. */
+    const noLeg2 = S.PERKS.filter(p => p.g === 2);
+    const dl = roll2(noLeg2, false, 8000);
+    chk('⚑ T151 전설이 다 떨어지면 일반 : 희귀 = 70.6 : 29.4 로 재정규화된다 (±1.5%p)',
+      dl[2] === 0 && Math.abs(dl[0] - 70.59) <= 1.5 && Math.abs(dl[1] - 29.41) <= 1.5,
+      dl.map(x => x.toFixed(2) + '%').join(' / '));
   }
   /* ⓒ 챕터를 실제로 굴려서 — 중복 0 · 상한 · «순서 지급이 아니다» */
   let dupRun = 0, over = 0, maxN = 0, runs = 0, fixedOrder = 0, variety = new Set();
@@ -449,6 +482,29 @@ function run(simSrc, htmSrc, planSrc) {
   chk('⚑ T117·T119 제시·확정 동사가 두 엔진에 한 벌씩 있다 (offerPerks(taken,noble) · pickPerk)',
     /function offerPerks\(taken,noble\)\{/.test(simSrc) && /function offerPerks\(taken,noble\)\{/.test(htmSrc) &&
     /function pickPerk\(G,perk\)\{/.test(simSrc) && /function pickPerk\(perk\)\{/.test(htmSrc));
+  /* ⚑⚑⚑ T151 — offerPerks 본문이 **두 엔진에서 한 글자도 다르지 않은가**. 지금까지는 «있는가» 만 봤는데,
+     굴림 구조가 한쪽에서만 바뀌면(카드마다 굴림 ↔ 등급 1회 굴림) 시뮬과 게임이 다른 게임이 된다.
+     주석·들여쓰기만 빼고 코드 문자열을 비교한다(두 파일의 주석 문면은 원래 다르다). */
+  {
+    const bodyOf = src => {
+      const i = src.indexOf('function offerPerks(taken,noble){');
+      if (i < 0) return null;
+      /* 본문 끝 = 그 뒤 첫 «\n}» (이 동사 안에는 최상위 중괄호가 없다) */
+      const j = src.indexOf('\n}', i);
+      return j < 0 ? null : src.slice(i, j + 2)
+        .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')   /* 주석 제거 */
+        .replace(/\s+/g, ' ').trim();
+    };
+    const bs = bodyOf(simSrc), bh = bodyOf(htmSrc);
+    chk('⚑⚑⚑ T151 offerPerks 본문이 두 엔진에서 문자까지 같다 (등급 1회 굴림이 한쪽에만 들어가는 것을 막는다)',
+      !!bs && bs === bh, bs === bh ? `${bs.length}자 일치` : `sim ${bs && bs.length}자 ≠ game ${bh && bh.length}자`);
+    /* 구조 단언 — «등급 굴림이 카드 루프 밖에 딱 한 번» 인가. 되돌리면(루프 안 굴림) 여기서 걸린다. */
+    const oneRoll = b => b && /const w=PERK_GRADE_RATE\.map\(/.test(b) &&
+      b.indexOf('const w=PERK_GRADE_RATE') < b.indexOf('for(let i=0;i<PERK_OFFER') &&
+      (b.match(/Math\.random\(\)\*tot/g) || []).length === 1;
+    chk('⚑⚑⚑ T151 등급 굴림이 카드 루프 **밖에서 한 번**이다 (두 엔진 · 카드마다 굴림으로 되돌리면 빨강)',
+      oneRoll(bs) && oneRoll(bh));
+  }
   /* ⚑⚑⚑ T150 (주인 확정 2026-09-05 17:4X) 악마 = «전설 특전 1개». 두 엔진 모두 비용을 낸 «뒤» 특전이 붙고,
      제시는 3택 동사(offerPerks)가 아니라 전설 1장 동사(offerDevilPerk)다 — 고르는 것이 없으니 선택창도 없다.
      («어떤 전설이 나오나» 의 실측·음성은 verifyDevilPolicy ⑨~⑪ 이 본다. 여기서는 «경로» 만 못 박는다.) */
@@ -625,6 +681,26 @@ const simSrc = fs.readFileSync(path.join(ROOT, 'sim.js'), 'utf8');
 const htmSrc = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const planSrc = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
 
+/* ⚑⚑⚑ T151 음성 검사용 — «카드 3장 각각 등급 굴림» 이던 T119 판 offerPerks 원문.
+   두 엔진 다 같은 본문이라 한 문자열로 양쪽을 되돌릴 수 있다(주석은 각자 다르지만 본문 밖이다). */
+const OFFER_RE = /function offerPerks\(taken,noble\)\{[\s\S]*?\n\}/;
+const OFFER_T119 = `function offerPerks(taken,noble){
+  const out=[];
+  for(let i=0;i<PERK_OFFER;i++){
+    const cand=PERKS.filter(p=>taken.indexOf(p)<0&&out.indexOf(p)<0);
+    if(!cand.length)break;
+    const w=PERK_GRADE_RATE.map((r,g)=>(cand.some(p=>p.g===g)?r:0));
+    if(noble&&(w[1]||w[2])) w[0]=0;
+    const tot=w[0]+w[1]+w[2];
+    let r=Math.random()*tot, g=0;
+    for(g=0;g<3;g++){ if(r<w[g])break; r-=w[g]; }
+    if(g>2)g=2;
+    const pool=cand.filter(p=>p.g===g);
+    out.push(pool[Math.floor(Math.random()*pool.length)]);
+  }
+  return out;
+}`;
+
 if (process.argv.includes('--self')) {
   /* 음성 검사 — 일부러 깨뜨린 사본마다 «빨개지는지» 만 본다. 통과하면 그 항목이 죽은 검사라는 뜻이다. */
   const cases = [
@@ -644,11 +720,23 @@ if (process.argv.includes('--self')) {
     ['PLAN 표의 효과를 바꾸면', null, null, s => s.replace('| 공격력 **+15%** |', '| 공격력 **+30%** |')],
     ['등급 굴림을 되살리면', s => s + '\nfunction rollRarity(){return 0;}\n', null, null],
     ['새로고침을 되살리면', null, s => s.replace('function pickPerk(perk){', 'function pickPerk(perk){ G.refreshLeft=1;'), null],
-    /* ⚑ T117 신설 — 3택의 네 조항과 시뮬 정책이 각각 죽지 않았는지 */
+    /* ⚑ T117 신설 — 3택의 네 조항과 시뮬 정책이 각각 죽지 않았는지 (⚑ T151 로 문자열 갱신) */
     ['⚑ T117 제시가 «이미 얻은 것» 을 섞으면',
-      s => s.replace('const cand=PERKS.filter(p=>taken.indexOf(p)<0&&out.indexOf(p)<0);', 'const cand=PERKS.filter(p=>out.indexOf(p)<0);'), null, null],
+      s => s.replace('const cand=PERKS.filter(p=>taken.indexOf(p)<0);', 'const cand=PERKS.slice();'), null, null],
     ['⚑ T117 같은 3장 안에서 중복을 허용하면',
-      s => s.replace('const cand=PERKS.filter(p=>taken.indexOf(p)<0&&out.indexOf(p)<0);', 'const cand=PERKS.filter(p=>taken.indexOf(p)<0);'), null, null],
+      s => s.replace('out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);',
+                     'out.push(pool[Math.floor(Math.random()*pool.length)]);'), null, null],
+    /* ⚑⚑⚑ T151 신설 — 주인 확정 «3장 다 같은 등급» 의 세 조항이 각각 죽지 않았는지.
+       ① 카드마다 굴림(T119 판)으로 되돌리기 ② 한쪽 엔진만 되돌리기 ③ 부족한 등급을 딴 등급으로 메우기. */
+    ['⚑⚑⚑ T151 카드마다 등급을 굴리는 T119 판으로 되돌리면 (3장 등급이 섞인다)',
+      s => s.replace(OFFER_RE, OFFER_T119), null, null],
+    ['⚑⚑⚑ T151 게임(index.html)만 카드마다 굴리면 (두 엔진 불일치)',
+      null, s => s.replace(OFFER_RE, OFFER_T119), null],
+    ['⚑⚑⚑ T151 그 등급이 부족할 때 딴 등급으로 3장을 채우면',
+      s => s.replace('const pool=cand.filter(p=>p.g===g), out=[];',
+                     'const pool=cand.filter(p=>p.g===g).concat(cand.filter(p=>p.g!==g)), out=[];'), null, null],
+    ['⚑⚑⚑ T151 등급을 굴리지 않고 남은 것 전체에서 3장을 뽑으면 (T117 판)',
+      s => s.replace('const pool=cand.filter(p=>p.g===g), out=[];', 'const pool=cand.slice(), out=[];'), null, null],
     /* ⚑ T119 신설 — 등급 체제가 죽지 않았는지 */
     ['⚑ T119 등급 확률을 50/30/20 으로 되돌리면', s => s.replace('PERK_GRADE_RATE=[60,25,15]', 'PERK_GRADE_RATE=[50,30,20]'), null, null],
     ['⚑ T119 게임만 등급 확률이 다르면', null, s => s.replace('PERK_GRADE_RATE=[60,25,15]', 'PERK_GRADE_RATE=[50,30,20]'), null],
@@ -690,15 +778,12 @@ if (process.argv.includes('--self')) {
     ['⚑ T121 3차 게임만 회피 시 수리 II 확률이 다르면', null, s => s.replace('PERK_EVREP_L=0.25', 'PERK_EVREP_L=0.30'), null],
     ['⚑ T117 제시 장수를 1장으로 줄이면', s => s.replace('const PERK_OFFER=3;', 'const PERK_OFFER=1;'), null, null],
     ['⚑ T117 게임만 제시 장수가 다르면', null, s => s.replace('const PERK_OFFER=3;', 'const PERK_OFFER=2;'), null],
-    ['⚑ T119 시뮬 정책이 «표 순서 뒤쪽» 을 고르면',
-      s => s.replace('if(p.g>b.g||(p.g===b.g&&PERKS.indexOf(p)<PERKS.indexOf(b))) b=p;',
-                     'if(p.g>b.g||(p.g===b.g&&PERKS.indexOf(p)>PERKS.indexOf(b))) b=p;'), null, null],
-    ['⚑ T119 시뮬 정책이 «낮은 등급 우선» 이면',
-      s => s.replace('if(p.g>b.g||(p.g===b.g&&PERKS.indexOf(p)<PERKS.indexOf(b))) b=p;',
-                     'if(p.g<b.g||(p.g===b.g&&PERKS.indexOf(p)<PERKS.indexOf(b))) b=p;'), null, null],
-    ['⚑ T119 시뮬 정책이 등급을 무시하면 (표 순서만)',
-      s => s.replace('if(p.g>b.g||(p.g===b.g&&PERKS.indexOf(p)<PERKS.indexOf(b))) b=p;',
-                     'if(PERKS.indexOf(p)<PERKS.indexOf(b)) b=p;'), null, null],
+    /* ⚑ T151 — 시뮬 정책이 «표 순서 우선» 하나로 줄면서 T119 의 «등급 우선» 돌연변이 둘은 대상이 사라졌다
+       (같은 등급 3장에는 등급 항이 아예 안 걸리므로 그 돌연변이는 원본과 같은 결과를 낸다 = 죽은 검사).
+       남는 것은 «표 순서를 뒤집으면 빨개지는가» 하나다. */
+    ['⚑ T151 시뮬 정책이 «표 순서 뒤쪽» 을 고르면',
+      s => s.replace('if(PERKS.indexOf(p)<PERKS.indexOf(b)) b=p;',
+                     'if(PERKS.indexOf(p)>PERKS.indexOf(b)) b=p;'), null, null],
     ['⚑ T117 순서 지급으로 되돌리면 (3택 폐기)',
       s => s.replace('return pickPerk(G,simPickPerk(offer));', 'return pickPerk(G,PERKS[G.taken.length]);'), null, null],
     ['⚑ T117 한 런 상한 가드를 게임에서 지우면',

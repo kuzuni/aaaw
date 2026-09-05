@@ -2261,24 +2261,23 @@ const PERK_COLOR='#FFB92E';
    sim.js 는 `G.taken` 에 특전만 넣으므로 그쪽은 길이로 세도 같은 결과다. */
 function perkOrderN(){ let n=0; for(const q of G.perksTaken) if(PERKS.includes(q)) n++; return n; }
 /* ⚑ T117 — 제시 카드 3장: «아직 안 얻은 것만 · 한 장 안에서 중복 없음 · 남은 것이 3 미만이면 그만큼».
-   ⚑⚑⚑ T119 — 카드 3장 **각각** 등급을 PERK_GRADE_RATE(60/25/15)로 굴리고 그 등급의 남은 특전 중 1개.
-   그 등급이 비었으면 남은 등급들로 재정규화해 다시 굴린다. «귀족의 눈»(noble)이면 일반을 뺀다
+   ⚑⚑⚑ T151 (주인 확정 2026-09-05 17:5X) — **3장은 전부 같은 등급이다**(«섞어 뜨지 말고»). 등급은
+   레벨업마다 **딱 한 번** PERK_GRADE_RATE(60/25/15)로 굴리고 그 등급의 남은 특전 중 3장을 뽑는다.
+   T119 의 «카드마다 등급 굴림» 은 폐기됐다. 그 등급에 3장이 안 남았으면 남은 만큼(1~2장)만,
+   0장이면 가중치가 0 이라 남은 등급들로 재정규화돼 다시 굴린다. «귀족의 눈»(noble)이면 일반을 뺀다
    (가중치를 그대로 두고 일반만 빼면 희귀 25/40 = 62.5% · 전설 15/40 = 37.5% 로 자동 재정규화된다).
    sim.js offerPerks(taken,noble) 와 1:1(같은 이름·같은 본문 — 게이트가 두 엔진을 대조한다). */
 function offerPerks(taken,noble){
-  const out=[];
-  for(let i=0;i<PERK_OFFER;i++){
-    const cand=PERKS.filter(p=>taken.indexOf(p)<0&&out.indexOf(p)<0);
-    if(!cand.length) break;
-    const w=PERK_GRADE_RATE.map((r,g)=>(cand.some(p=>p.g===g)?r:0));
-    if(noble&&(w[1]||w[2])) w[0]=0;
-    const tot=w[0]+w[1]+w[2];
-    let r=Math.random()*tot, g=0;
-    for(g=0;g<3;g++){ if(r<w[g]) break; r-=w[g]; }
-    if(g>2) g=2;
-    const pool=cand.filter(p=>p.g===g);
-    out.push(pool[Math.floor(Math.random()*pool.length)]);
-  }
+  const cand=PERKS.filter(p=>taken.indexOf(p)<0);
+  if(!cand.length)return [];
+  const w=PERK_GRADE_RATE.map((r,g)=>(cand.some(p=>p.g===g)?r:0));
+  if(noble&&(w[1]||w[2])) w[0]=0;
+  const tot=w[0]+w[1]+w[2];
+  let r=Math.random()*tot, g=0;
+  for(g=0;g<3;g++){ if(r<w[g])break; r-=w[g]; }
+  if(g>2||!w[g]){ g=2; while(g>0&&!w[g])g--; }
+  const pool=cand.filter(p=>p.g===g), out=[];
+  for(let i=0;i<PERK_OFFER&&pool.length;i++) out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
   return out;
 }
 /* ⚑⚑⚑ T150 (주인 확정 2026-09-05 17:4X) — **악마의 거래는 3택이 아니다.**

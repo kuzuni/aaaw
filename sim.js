@@ -506,29 +506,32 @@ const PERK_PICKS=10;
 const PERK_OFFER=3;
 /* 제시 카드 3장 — «아직 안 얻은 것만 · 한 장 안에서 중복 없음». 뽑기는 **판 난수**(전투 스트림)라
    시드 하니스(SEED=…)에서는 결정적이다(챕터 시드가 아니다 — 주인 지시 ① 시뮬 측정 정책).
-   ⚑⚑⚑ T119 (주인 확정 2026-09-04 13:0X) — **카드 3장 각각** 등급을 `PERK_GRADE_RATE`(60/25/15)로 굴리고
-   그 등급의 «아직 안 얻은» 특전 중 무작위 1개를 뽑는다. 그 등급이 비었으면 **남은 등급들로 재정규화해
-   다시 굴린다**. «귀족의 눈»(p_nobleEye)을 얻었으면 일반을 빼고 굴린다(희귀 62.5 / 전설 37.5 재정규화 —
+   ⚑⚑⚑ T151 (주인 확정 2026-09-05 17:5X) — **3장은 전부 같은 등급이다.** 주인 원문: «특전 뜰 때 3개 다
+   일반 혹은 희귀 혹은 전설로만 떠야 함. 섞어 뜨지 말고». 그래서 등급은 레벨업마다 **딱 한 번**
+   `PERK_GRADE_RATE`(60/25/15)로 굴리고, 그 등급의 «아직 안 얻은» 특전 중 3장을 뽑는다(중복 없음).
+   **T119 의 «카드 3장 각각 등급 굴림» 은 이 지시로 폐기됐다.**
+   그 등급에 3장이 안 남았으면 남은 만큼(1~2장)만 보여주고, 아예 0장이면 그 등급의 가중치가 0 이라
+   **남은 등급들로 재정규화돼 다시 굴린다**(예: 전설이 다 떨어지면 60:25 → 70.6:29.4).
+   «귀족의 눈»(p_nobleEye)을 얻었으면 일반을 빼고 굴린다(희귀 62.5 / 전설 37.5 재정규화 —
    가중치를 그대로 두고 일반만 빼면 자동으로 25:15 = 62.5:37.5 가 된다). 희귀·전설이 다 떨어지면
    일반으로 되돌아간다(재정규화가 «남은 등급» 만 보므로 구조적으로 그렇게 된다).
    `noble` 을 인자로 받는 이유: index.html 은 `G.player.px`, sim.js 는 `G.player.px` 로 경로가 달라
    동사 안에서 플레이어를 찾지 않고 «귀족의 눈을 켰나» 한 비트만 받는다(두 엔진 같은 본문). */
 function offerPerks(taken,noble){
-  const out=[];
-  for(let i=0;i<PERK_OFFER;i++){
-    /* 이 카드가 뽑을 수 있는 후보 = 아직 안 얻었고 이번 3장에도 없는 것 */
-    const cand=PERKS.filter(p=>taken.indexOf(p)<0&&out.indexOf(p)<0);
-    if(!cand.length)break;
-    /* 등급별 가중치 — 비어 있는 등급은 0 이 되어 자동 재정규화된다. 귀족의 눈이면 일반(0)을 뺀다. */
-    const w=PERK_GRADE_RATE.map((r,g)=>(cand.some(p=>p.g===g)?r:0));
-    if(noble&&(w[1]||w[2])) w[0]=0;
-    const tot=w[0]+w[1]+w[2];
-    let r=Math.random()*tot, g=0;
-    for(g=0;g<3;g++){ if(r<w[g])break; r-=w[g]; }
-    if(g>2)g=2;
-    const pool=cand.filter(p=>p.g===g);
-    out.push(pool[Math.floor(Math.random()*pool.length)]);
-  }
+  /* 아직 안 얻은 것 전체 — 이게 비면 팝업 없이 레벨업만 한다(주인 지시 ①). */
+  const cand=PERKS.filter(p=>taken.indexOf(p)<0);
+  if(!cand.length)return [];
+  /* ① 등급 **1회 굴림**. 비어 있는 등급은 가중치 0 이 되어 남은 등급으로 자동 재정규화된다.
+     귀족의 눈이면 일반(0)을 뺀다 — 희귀·전설이 하나라도 남아 있을 때만. */
+  const w=PERK_GRADE_RATE.map((r,g)=>(cand.some(p=>p.g===g)?r:0));
+  if(noble&&(w[1]||w[2])) w[0]=0;
+  const tot=w[0]+w[1]+w[2];
+  let r=Math.random()*tot, g=0;
+  for(g=0;g<3;g++){ if(r<w[g])break; r-=w[g]; }
+  if(g>2||!w[g]){ g=2; while(g>0&&!w[g])g--; }   /* 부동소수 잔여로 흘러넘친 경우만 — 빈 등급으로 떨어지지 않게 */
+  /* ② 그 등급의 남은 특전에서 3장(중복 없음 · 부족하면 남은 만큼). 3장 전부 등급 g 다. */
+  const pool=cand.filter(p=>p.g===g), out=[];
+  for(let i=0;i<PERK_OFFER&&pool.length;i++) out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
   return out;
 }
 /* ⚑⚑⚑ T150 (주인 확정 2026-09-05 17:4X) — **악마의 거래는 3택이 아니다.**
@@ -544,12 +547,14 @@ function offerDevilPerk(taken){
   if(!pool.length)return null;
   return pool[Math.floor(Math.random()*pool.length)];
 }
-/* ⚑ 시뮬 측정 정책 (재현성 · 주인 지시 13:0X ②): 가상 플레이어는 제시 3장 중
-   **등급이 높은 것 우선 · 같은 등급이면 §3.1 표 순서가 앞선 것**을 고른다(실제 유저가 좋은 것을 고르는 것의 근사).
+/* ⚑ 시뮬 측정 정책 (재현성 · 주인 지시 13:0X ②): 가상 플레이어는 제시 3장 중 하나를 결정적으로 고른다.
+   ⚑⚑⚑ T151 (주인 확정 2026-09-05 17:5X ②) — 3장이 **전부 같은 등급**이 되면서 T119 정책의 첫 절
+   («등급 높은 것 우선»)은 **의미가 없어졌다**(비교가 구조적으로 한 번도 갈리지 않는다). 남는 것은
+   두 번째 절 **«§3.1 표 순서가 앞선 것»** 뿐이고, 그래서 비교식에서 등급 항을 걷어냈다.
    실제 게임(index.html)은 유저 자유 선택이므로 이 함수를 쓰지 않는다 — 측정 조건 통일용이다. */
 function simPickPerk(offer){
   let b=offer[0];
-  for(const p of offer) if(p.g>b.g||(p.g===b.g&&PERKS.indexOf(p)<PERKS.indexOf(b))) b=p;
+  for(const p of offer) if(PERKS.indexOf(p)<PERKS.indexOf(b)) b=p;
   return b;
 }
 /* 획득 확정 한 곳 — 레벨업·악마가 같은 동사를 거친다(index.html pickPerk 와 1:1). */

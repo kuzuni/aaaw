@@ -99,6 +99,12 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('⚑ T119 카드 테두리색이 등급색 3종 중 하나다 (일반 회색 · 희귀 파랑 · 전설 금색)',
     pick.pcs.every(c => ['rgb(158, 163, 172)', 'rgb(79, 163, 247)', 'rgb(255, 185, 46)'].includes(c)),
     pick.pcs.join(' / '));
+  /* ⚑⚑⚑ T151 (주인 확정 2026-09-05 17:5X) — «3개 다 일반 혹은 희귀 혹은 전설로만 떠야 함. 섞어 뜨지 말고».
+     등급을 레벨업마다 1회만 굴리므로 화면의 3장은 태그도 테두리색도 하나여야 한다. */
+  chk('⚑⚑⚑ T151 화면의 3장이 전부 같은 등급 태그다 (섞이지 않는다)',
+    new Set(pick.tags).size === 1, pick.tags.join(','));
+  chk('⚑⚑⚑ T151 화면의 3장이 전부 같은 테두리색이다 (등급색 1종)',
+    new Set(pick.pcs).size === 1, pick.pcs.join(' / '));
   chk('특전 아이콘이 메달리온 구도', pick.medal.every(Boolean));
 
   /* ⚑ T96 — «(고유)» 표기 검사는 폐지. 특전이 10종·순서 획득이라 중복이 구조적으로 불가능하고
@@ -137,6 +143,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
 
   const strip1 = await p.evaluate(() => ({ chips: document.querySelectorAll('#perkStrip .pv-ic').length, taken: G.perksTaken.length }));
   chk('⚑ 특전 미리보기 줄에 칩이 쌓인다', strip1.chips === 1 && strip1.taken === 1, `칩 ${strip1.chips} / 획득 ${strip1.taken}`);
+
 
   /* ---------- ⚑ 버프 아이콘 표시/소멸 (주인 지시 07:0X) ---------- */
   console.log('\n=== ⚑ 발동 중 버프 아이콘 (#buffBar) ===');
@@ -980,6 +987,56 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('⚑ T142 평타에만 걸린다 — 소환 적중(🪓)에는 안 걸리고 평타에는 걸린다',
     t142.basic && t142.basic.summon === 0 && t142.basic.basicHit > 0,
     t142.basic ? `소환 ${t142.basic.summon} · 평타 ${t142.basic.basicHit}` : '');
+
+  /* ---------- ⚑⚑⚑ T151 «3장 등급 동일» 을 레벨업 여러 번에 걸쳐 (주인 확정 17:5X ④) ----------
+     한 번만 보면 «우연히 3장이 같은 등급» 일 수 있다(일반이 60% 라 카드마다 굴리던 판에서도 0.6³ ≒ 22% 로
+     일어났다). 그래서 레벨업을 **3회 이상** 열어 매번 태그가 하나인지 본다.
+     ⚑ 이 절은 챕터를 끝까지 흘려 보내므로 **맨 뒤에서 새 판으로** 돈다 — 앞 절들이 쓰던 판을 소모하면
+     «보스 킬 = 특전 스킵»·클리어 검사가 판이 없어 빨개진다(실제로 한 번 그렇게 됐다). */
+  console.log('\n=== ⚑⚑⚑ T151 레벨업 3회 이상 — 3장 태그가 매번 동일 (새 판) ===');
+  await p.goto(URL); await p.waitForTimeout(600);
+  await p.click('#startBtn'); await p.waitForTimeout(500);
+  const rolls = [];
+  let exited = false;
+  /* 한 회차씩 «다음 레벨업이 뜰 때까지» 기다린다 — 레벨업 간격은 경험치가 정하므로 넉넉히 잡는다.
+     기다리는 동안 쉼터·악마·천사 팝업이 뜨면 게임이 멈추므로 아무 선택지나 눌러 흐르게 둔다. */
+  for (let round = 0; round < 4 && !exited; round++) {
+    let got = false;
+    for (let i = 0; i < 160 && !got; i++) {
+      const st = await p.evaluate(() => ({
+        cards: document.querySelectorAll('.perk-card.pick').length,
+        choice: document.querySelectorAll('#overlay .choice-btn').length,
+        /* ⚑ T150 뒤 — 악마 거래를 수락하면 «계속»(#dOk) 한 장짜리 결과 팝업이 한 번 더 뜬다.
+           그건 선택지도 카드도 아니라, 안 눌러 주면 G.paused 인 채로 영영 멈춘다(실제로 여기서 한 번 멈췄다). */
+        foot: document.querySelectorAll('#overlay .ov-foot button').length,
+        on: document.getElementById('overlay').classList.contains('on'),
+        exit: !!document.getElementById('clOk') || !!document.getElementById('deOk'),
+      }));
+      if (st.exit) { exited = true; break; }               /* 클리어·사망 화면은 누르면 로비로 나간다 */
+      if (st.cards) {
+        rolls.push(await p.evaluate(() => {
+          const cs = [...document.querySelectorAll('.perk-card.pick')];
+          return { tags: cs.map(c => c.querySelector('.tag')?.textContent),
+                   pcs: cs.map(c => getComputedStyle(c).borderTopColor) };
+        }));
+        await p.click('#perkPick0'); got = true;
+      } else if (st.choice) await p.click('#overlay .choice-btn');  /* 쉼터·악마·천사 팝업 */
+      else if (st.foot) await p.click('#overlay .ov-foot button');  /* 악마 결과 «계속» 등 */
+      else if (st.on) await p.evaluate(() => closeOverlay());       /* 그 밖의 팝업 */
+      await p.waitForTimeout(250);
+    }
+    if (!got) break;
+  }
+  const diag = await p.evaluate(() => ({ t: +G.t.toFixed(1), taken: G.perksTaken.length,
+    left: G.nodes.reduce((s, n) => s + (n.enemies || []).filter(e => !e.dead).length, 0) }));
+  chk('⚑ T151 레벨업 표본을 3회 이상 모았다', rolls.length >= 3,
+    `${rolls.length}회 · t=${diag.t}s · 보유 ${diag.taken}종 · 남은 적 ${diag.left}마리${exited ? ' · 챕터 종료' : ''}`);
+  const mixed = rolls.filter(r => new Set(r.tags).size !== 1);
+  chk('⚑⚑⚑ T151 모든 레벨업에서 제시 카드의 등급 태그가 하나다', rolls.length >= 3 && mixed.length === 0,
+    `${rolls.length}회 중 섞인 회차 ${mixed.length}회 · ${rolls.map(r => r.tags.join('/')).join(' | ')}`);
+  const mixedC = rolls.filter(r => new Set(r.pcs).size !== 1);
+  chk('⚑⚑⚑ T151 모든 레벨업에서 테두리색도 하나다', rolls.length >= 3 && mixedC.length === 0,
+    `섞인 회차 ${mixedC.length}회`);
 
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
