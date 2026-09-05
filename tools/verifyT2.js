@@ -2985,10 +2985,12 @@ console.log('\n[㊻ 전투 카메라 줌 CAM_ZOOM (T159)]');
     v === 1.5 ? ok('① `const CAM_ZOOM=1.5` 가 index.html 에 한 번만 선언돼 있다')
               : bad(`① CAM_ZOOM 값이 ${v} 다 — 주인 확정은 1.5(레퍼런스 % 가 우선이라 바꿀 땐 ref-layout ② 인게임 행도 같이)`);
   }
-  const px = /const\s+PLAYER_SCREEN_X\s*=\s*(\d+)\s*;/.exec(SCRIPT);
-  (px && +px[1] === 150)
-    ? ok('①-b 카메라 기준점 `PLAYER_SCREEN_X=150` (화면 왼쪽 27.8% — 종전 `worldX-150` 과 같은 자리)')
-    : bad('①-b `PLAYER_SCREEN_X=150` 이 없다 — 줌 기준점이 플레이어 발밑에서 어긋나면 화면이 통째로 밀린다');
+  /* ⚑ T164 ② — 기준점이 «150 리터럴» 에서 «프레임 폭의 CAM_PLAYER_X» 로 바뀌었다(주인 지시 22:3X · 16%).
+     여기서는 «줌 기준점 = 그 상수 한 곳» 만 지키고, 값 0.16 과 잘림은 아래 Ⓐ 절이 본다. */
+  const px = /const\s+PLAYER_SCREEN_X\s*=\s*Math\.round\(LW\s*\*\s*CAM_PLAYER_X\)\s*;/.test(SCRIPT);
+  px
+    ? ok('①-b 카메라 기준점이 `PLAYER_SCREEN_X=Math.round(LW*CAM_PLAYER_X)` 한 곳에서 나온다 (T164)')
+    : bad('①-b `PLAYER_SCREEN_X` 가 `Math.round(LW*CAM_PLAYER_X)` 가 아니다 — 기준점이 상수 밖에서 정해지면 화면이 통째로 밀린다');
   /cam\s*=\s*p\s*\?\s*Math\.max\(0,\s*p\.worldX\s*-\s*PLAYER_SCREEN_X\)/.test(draw)
     ? ok('①-c `cam` 이 그 상수로 잡힌다 — 플레이어는 줌 전후로 같은 화면 x 에 남는다')
     : bad('①-c `cam` 이 `p.worldX-PLAYER_SCREEN_X` 가 아니다 — 기준점과 카메라가 따로 논다');
@@ -3385,6 +3387,145 @@ console.log('\n[㊿ 실드 피격 파란 데미지 팝 (T166 · 주인 지시)]'
     const clean = seeds.every(([, , detect]) => !detect(S0));
     clean ? ok(`  양성 대조군 — 원본은 ${seeds.length}개 검출자 어디에도 안 걸린다 (오탐 0)`)
           : bad('  양성 대조군이 걸렸다 — 원본에서 ㊿ 가 오탐을 낸다');
+  }
+}
+
+/* ⚑⚑⚑ T164 — 발밑 바 폭 2/3 + 플레이어 화면 위치 16% + «0 이면 채움 없음» (주인 지시 2026-09-05 22:3X·22:4X)
+   여기는 **정적**으로 «상수가 한 곳뿐인가 · 부르는 자리가 전부 그 상수를 거치는가 · 그리기만 바뀌었는가» 만 본다.
+   실제 화면 x %·바 폭 비·잘림·픽셀은 `tools/t3/battle.js` 가 브라우저에서 잰다(정적으로는 못 재는 축이다). */
+console.log('\n[Ⓐ 발밑 바 2/3 · 플레이어 16% · 실드 0 찌꺼기 (T164)]');
+{
+  const SCRIPT = (/<script>([\s\S]*)<\/script>/.exec(HTML) || [, ''])[1];
+  const draw = (/function drawScene\(\)\{([\s\S]*?)\n\}/.exec(SCRIPT) || [, ''])[1];
+
+  /* ① 플레이어 화면 위치 — 상수 한 곳 · 값 0.16 · 프레임 폭에서 파생 */
+  const cpx = SCRIPT.match(/const\s+CAM_PLAYER_X\s*=\s*([0-9.]+)\s*;/g) || [];
+  if (cpx.length !== 1) bad(`① \`const CAM_PLAYER_X=…\` 선언이 ${cpx.length}개다 — 오프셋은 **한 상수 한 곳**이어야 한다`);
+  else {
+    const v = parseFloat(/=\s*([0-9.]+)/.exec(cpx[0])[1]);
+    (Math.abs(v - 0.16) < 1e-9)
+      ? ok('① `const CAM_PLAYER_X=0.16` 한 곳 — 플레이어 중심이 프레임 폭 16% (주인 레퍼런스 실측)')
+      : bad(`① CAM_PLAYER_X 가 ${v} 다 — 주인 지시는 0.16(±0.03 은 실측 허용 폭이지 상수 값이 아니다)`);
+  }
+  /\bconst\s+PLAYER_SCREEN_X\s*=\s*Math\.round\(LW\s*\*\s*CAM_PLAYER_X\)\s*;/.test(SCRIPT)
+    ? ok('①-b `PLAYER_SCREEN_X` 가 `LW*CAM_PLAYER_X` 에서 나온다 (프레임 폭이 바뀌어도 % 가 유지된다)')
+    : bad('①-b `PLAYER_SCREEN_X` 가 상수에서 파생되지 않는다');
+  (SCRIPT.match(/PLAYER_SCREEN_X\s*=/g) || []).length === 1
+    ? ok('①-c `PLAYER_SCREEN_X` 대입은 한 곳뿐이다 (중간에 덮어쓰는 자가 없다)')
+    : bad('①-c `PLAYER_SCREEN_X` 에 대입하는 자리가 둘 이상이다');
+
+  /* ② 발밑 바 폭 — 상수 한 곳 · 값 2/3 · **필드 바 3자리 전부** 그 상수를 곱한다 (HUD 는 대상 아님) */
+  const fbw = SCRIPT.match(/const\s+FOOT_BAR_W\s*=\s*2\s*\/\s*3\s*;/g) || [];
+  fbw.length === 1
+    ? ok('② `const FOOT_BAR_W=2/3` 한 곳 (주인 지시 «3분의 2로 줄이기 가로»)')
+    : bad(`② \`const FOOT_BAR_W=2/3\` 선언이 ${fbw.length}개다`);
+  const calls = draw.match(/drawHpBar\([^;]*?\);/g) || [];
+  calls.length === 3
+    ? ok('②-b 발밑 바를 그리는 자리는 셋이다 (적 1 · 플레이어 HP/실드 2)')
+    : bad(`②-b \`drawHpBar\` 호출이 ${calls.length}개다 — 폭 축소가 빠진 자리가 생긴다`);
+  /* ⚑ 적 바는 T163 이 «간격에서 뺀 상수»(HPBAR_W)로 묶어 놨다 — 곱을 덧대면 2/3 가 두 번 걸린다.
+     그래서 적 1자리는 그 상수를 거치는지만 보고(값의 2/3 여부는 ②-d 가 상수에서 계산해 본다),
+     플레이어 2자리만 `FOOT_BAR_W` 를 곱한다. */
+  const noScale = calls.filter(c => !/FOOT_BAR_W|HPBAR_W/.test(c));
+  noScale.length === 0
+    ? ok('②-c 세 호출 전부 폭이 상수를 거친다 (적 = HPBAR_W · 플레이어 2단 = ×FOOT_BAR_W · 높이·글자 불변)')
+    : bad(`②-c 폭 상수가 안 걸린 호출 ${noScale.length}개 — 예: ${noScale[0].slice(0, 60)}`);
+  {
+    /* ②-d 적 바의 «값» 이 종전(잡몹 56 · 보스 88)의 2/3 인가 — T163 형태(ENEMY_GAP-n)를 그대로 두고 값만 본다 */
+    const gap = +((/const\s+ENEMY_GAP\s*=\s*(\d+)\s*;/.exec(SCRIPT) || [, 0])[1]);
+    const m = /const\s+HPBAR_W\s*=\s*ENEMY_GAP\s*-\s*(\d+),\s*HPBAR_W_BOSS\s*=\s*ENEMY_GAP\s*\*\s*2\s*-\s*(\d+)\s*;/.exec(SCRIPT);
+    const w = m ? gap - +m[1] : null, wb = m ? gap * 2 - +m[2] : null;
+    const okW = w !== null && Math.abs(w - 56 * 2 / 3) <= 1.5 && Math.abs(wb - 88 * 2 / 3) <= 1.5;
+    const used = /drawHpBar\(x,gy\+12,e\.isBoss\?HPBAR_W_BOSS:HPBAR_W,/.test(draw);
+    (okW && used)
+      ? ok(`②-d 적 발밑 바 = 잡몹 ${w} · 보스 ${wb} — 종전 56·88 의 2/3(37.3·58.7)이고 간격 ${gap} 보다 좁다`)
+      : bad(`②-d 적 발밑 바 폭이 종전의 2/3 가 아니다 (잡몹 ${w} vs 37.3 · 보스 ${wb} vs 58.7 · 상수 사용 ${used})`);
+  }
+  ((draw.match(/drawHpBar\(px2,gy\+(?:12|29),62\*FOOT_BAR_W/g) || []).length === 2)
+    ? ok('②-e 플레이어 2단 바 = 62 × 2/3 두 줄 (y 12·29 · 높이 불변)')
+    : bad('②-e 플레이어 2단 바가 «62*FOOT_BAR_W» 두 줄이 아니다');
+  /\.bar\s*\{[^}]*height:28px/.test(HTML)
+    ? ok('②-f 하단 HUD 바(`.bar` 28px)는 손대지 않았다 — 주인이 «대상 아님» 이라 적은 축')
+    : bad('②-f 하단 HUD 바의 높이 규칙이 사라졌다 (T164 대상 아님)');
+
+  /* ③ «0 이면 채움을 아예 안 그린다» — 캔버스 · HUD 양쪽 */
+  const hbRaw = (/function drawHpBar\([\s\S]*?\n\}/.exec(SCRIPT) || [, ''])[0];
+  const hb = hbRaw.replace(/\/\*[\s\S]*?\*\//g, '');   /* 주석은 «종전엔 Math.max(3,…) 였다» 처럼 옛 코드를 인용한다 — 코드만 본다 */
+  /Math\.max\(3\s*,/.test(hb)
+    ? bad('③ 발밑 바에 `Math.max(3, …)` 최소 폭이 남아 있다 — 0 인데 3px 짜리 파란 조각이 그려진다')
+    : ok('③ 발밑 바에서 «최소 3px 채움» 이 사라졌다 (주인 버그 22:4X)');
+  /const\s+fw\s*=\s*w\s*\*\s*clamp\(frac,0,1\)\s*;\s*if\s*\(\s*fw\s*>\s*0\s*\)/.test(hb)
+    ? ok('③-b 발밑 바 채움이 `fw>0` 안에서만 그려진다 (0 이면 빈 홈만)')
+    : bad('③-b 발밑 바 채움이 «비율 > 0» 가드 안에 있지 않다');
+  /Math\.max\(1\s*,\s*fw\)/.test(hb)
+    ? ok('③-c 0 보다 크면 최소 1px 는 남는다 (실드 1 이 사라지지 않는다)')
+    : bad('③-c 발밑 바에 «0 초과면 최소 1px» 가 없다');
+  const sbf = (/function setBarFill\([\s\S]*?\n\}/.exec(SCRIPT) || [, ''])[0];
+  /pct\s*>\s*0/.test(sbf) && /display\s*=\s*'none'/.test(sbf)
+    ? ok('③-d HUD 채움도 0 이면 `display:none` 으로 내려간다 (하단 실드바 · 같은 규칙)')
+    : bad('③-d `setBarFill` 이 0 에서 채움을 내리지 않는다');
+  ((SCRIPT.match(/setBarFill\('#(?:hp|sh)Bar \.fill'/g) || []).length === 2)
+    ? ok('③-e HUD HP·실드 두 바가 그 동사를 거친다 (EXP 바는 대상 아님)')
+    : bad('③-e HUD HP·실드 바가 `setBarFill` 을 안 거친다');
+  /\.bar\s+\.fill\s*\{[^}]*min-width:2px/.test(HTML)
+    ? ok('③-f HUD 채움에 `min-width:2px` — 0 초과면 보이고, 0 은 위 ③-d 가 내린다')
+    : bad('③-f HUD 채움의 `min-width:2px` 가 없다');
+
+  /* ④ 그리기만 바뀌었다 — 시뮬 무수정 · 월드 상수 불변 */
+  /CAM_PLAYER_X|FOOT_BAR_W/.test(SIM)
+    ? bad('④ `sim.js` 에 T164 그리기 상수가 들어갔다 — 시뮬엔 그림이 없다')
+    : ok('④ `sim.js` 에 `CAM_PLAYER_X`·`FOOT_BAR_W` 가 한 글자도 없다 (밸런스 영향 0)');
+  const W164 = [['전진 속도 132', /worldX\s*\+=\s*132\s*\*\s*p\.walkMul/], ['근접 사거리 74', /dist\s*>\s*74/], ['원거리 사거리 440', /d\s*<\s*440/]];
+  const wb = W164.filter(([, re]) => !(re.test(SCRIPT) && re.test(SIM)));
+  wb.length === 0
+    ? ok('④-b 월드 상수 3종(전진 132 · 근접 74 · 원거리 440)이 두 엔진에 그대로다 — 위치는 그리기만 옮겼다')
+    : bad(`④-b 월드 상수 «${wb[0][0]}» 가 흔들렸다`);
+
+  /* ⑤ 음성 — 심은 고장을 이 절이 잡는가 */
+  if (process.argv.includes('--self')) {
+    const S0 = SCRIPT, H0 = HTML;
+    const seeds = [
+      ['플레이어를 종전 27.8% 로 되돌림', s => s.replace(/const CAM_PLAYER_X=0\.16;/, 'const CAM_PLAYER_X=0.278;'),
+        s => !/const\s+CAM_PLAYER_X\s*=\s*0\.16\s*;/.test(s)],
+      ['기준점을 리터럴로 되돌림', s => s.replace(/const PLAYER_SCREEN_X=Math\.round\(LW\*CAM_PLAYER_X\);/, 'const PLAYER_SCREEN_X=150;'),
+        s => !/const\s+PLAYER_SCREEN_X\s*=\s*Math\.round\(LW\s*\*\s*CAM_PLAYER_X\)\s*;/.test(s)],
+      ['적 발밑 바만 폭 축소를 빠뜨림 (T163 값 그대로)', s => s.replace(/const HPBAR_W=ENEMY_GAP-7, HPBAR_W_BOSS=ENEMY_GAP\*2-29;/, 'const HPBAR_W=ENEMY_GAP-4, HPBAR_W_BOSS=ENEMY_GAP*2-4;'),
+        s => {
+          const gap = +((/const\s+ENEMY_GAP\s*=\s*(\d+)\s*;/.exec(s) || [, 0])[1]);
+          const m = /const\s+HPBAR_W\s*=\s*ENEMY_GAP\s*-\s*(\d+),\s*HPBAR_W_BOSS\s*=\s*ENEMY_GAP\s*\*\s*2\s*-\s*(\d+)\s*;/.exec(s);
+          if (!m) return true;
+          return !(Math.abs((gap - +m[1]) - 56 * 2 / 3) <= 1.5 && Math.abs((gap * 2 - +m[2]) - 88 * 2 / 3) <= 1.5);
+        }],
+      ['플레이어 바만 폭 축소를 빠뜨림', s => s.replace(/62\*FOOT_BAR_W,G\.player\.hp/, '62,G.player.hp'),
+        s => ((/function drawScene\(\)\{([\s\S]*?)\n\}/.exec(s) || [, ''])[1].match(/drawHpBar\(px2[^;]*?\);/g) || []).some(c => !/FOOT_BAR_W/.test(c))],
+      ['비율을 2/3 아닌 값으로', s => s.replace(/const FOOT_BAR_W=2\/3;/, 'const FOOT_BAR_W=0.9;'),
+        s => (s.match(/const\s+FOOT_BAR_W\s*=\s*2\s*\/\s*3\s*;/g) || []).length !== 1],
+      ['최소 3px 채움을 되살림', s => s.replace(/const dw=Math\.max\(1,fw\);/, 'const dw=Math.max(3,fw);'),
+        s => /Math\.max\(3\s*,/.test(((/function drawHpBar\([\s\S]*?\n\}/.exec(s) || [, ''])[0]).replace(/\/\*[\s\S]*?\*\//g, ''))],
+      ['0 가드를 없앰 (찌꺼기 복귀)', s => s.replace(/if\(fw>0\)\{/, 'if(fw>=0){'),
+        s => !/const\s+fw\s*=\s*w\s*\*\s*clamp\(frac,0,1\)\s*;\s*if\s*\(\s*fw\s*>\s*0\s*\)/.test(s)],
+      ['HUD 0 가드를 없앰', s => s.replace(/if\(pct>0\)\{ el\.style\.display=''; el\.style\.width=pct\+'%'; \}/, "el.style.width=pct+'%';"),
+        s => { const f = (/function setBarFill\([\s\S]*?\n\}/.exec(s) || [, ''])[0]; return !(/pct\s*>\s*0/.test(f) && /display\s*=\s*'none'/.test(f)); }],
+    ];
+    let caught = 0;
+    for (const [nm, mut, detect] of seeds) {
+      const s1 = mut(S0);
+      if (s1 === S0) { bad(`  음성 «${nm}» 이 아무것도 안 바꿨다 — 심는 자리가 옮겨졌다(게이트를 갱신할 것)`); continue; }
+      detect(s1) ? (caught++, ok(`  음성 «${nm}» 을 Ⓐ 가 잡는다`)) : bad(`  음성 «${nm}» 을 Ⓐ 가 못 잡았다`);
+    }
+    /* HTML 쪽 음성 2종 (CSS·HUD 규칙은 SCRIPT 밖이라 따로 심는다) */
+    const hseeds = [
+      ['HUD min-width 제거', h => h.replace(/min-width:2px; /, ''), h => !/\.bar\s+\.fill\s*\{[^}]*min-width:2px/.test(h)],
+      ['HUD 바 높이 규칙 제거', h => h.replace(/\.bar\{position:relative; flex:1; height:28px;/, '.bar{position:relative; flex:1;'), h => !/\.bar\s*\{[^}]*height:28px/.test(h)],
+    ];
+    for (const [nm, mut, detect] of hseeds) {
+      const h1 = mut(H0);
+      if (h1 === H0) { bad(`  음성 «${nm}» 이 아무것도 안 바꿨다`); continue; }
+      detect(h1) ? (caught++, ok(`  음성 «${nm}» 을 Ⓐ 가 잡는다`)) : bad(`  음성 «${nm}» 을 Ⓐ 가 못 잡았다`);
+    }
+    const clean = seeds.every(([, , d]) => !d(S0)) && hseeds.every(([, , d]) => !d(H0));
+    clean ? ok(`  양성 대조군 — 원본은 ${seeds.length + hseeds.length}개 검출자 어디에도 안 걸린다 (오탐 0)`)
+          : bad('  양성 대조군이 걸렸다 — 원본에서 Ⓐ 가 오탐을 낸다');
   }
 }
 

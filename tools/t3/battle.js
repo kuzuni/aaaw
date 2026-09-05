@@ -1743,6 +1743,129 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('⚑ T169 ④-b 이벤트 → 다음 웨이브 거리(NODE_GAP_EVENT)는 470 그대로다 (주인 지시 밖)',
     GAP.nodeGapEv === 470, `NODE_GAP_EVENT ${GAP.nodeGapEv}`);
 
+  /* ===== ⚑ T164 — 발밑 바 폭 2/3 · 플레이어 화면 16% · «실드 0 이면 파란 찌꺼기 0» (주인 지시 22:3X·22:4X) =====
+     정적 게이트(`verifyT2` Ⓐ)는 «상수와 부르는 자리» 만 본다 — 화면에서 실제로 몇 % 에 서고 바가 몇 배로
+     좁아졌고 0 일 때 파란 픽셀이 정말 0개인지는 여기서 캔버스·DOM 을 읽어 잰다. */
+  console.log('\n=== ⚑ T164 발밑 바 2/3 · 플레이어 16% · 실드 0 (실측) ===');
+  const T164 = await p.evaluate(() => {
+    closeOverlay();
+    G.paused = true; G.shake = 0; G.over = false;
+    G.pprojs = []; G.arrows = []; G.bolts = []; G.parts = []; G.texts = []; G.reaps = [];
+    const pl = G.player; pl.hitT = 0; pl.strikeT = 0; pl.walking = false;
+    pl.worldX = 400;                                  /* cam>0 (따라가는 상태) — 그리기 전용 위치 지정 */
+    const node = G.nodes.find(n => n.enemies.length) || G.nodes[0];
+    for (const n of G.nodes) for (const e of n.enemies) e.hp = 0;
+    const e0 = node.enemies[0];
+    e0.hp = e0.maxHp; e0.hitT = 0; e0.strikeT = 0; e0.stun = 0; e0.isBoss = false;
+    e0.skin = { body: '#6B7F5A', hat: 'bald', weapon: 'sword' };
+    e0.worldX = pl.worldX + 150;
+    pl.maxHp = 1000; pl.hp = 1000; pl.maxSh = 500;
+
+    const dpr = cv.width / cv.clientWidth, scLay = cv.clientWidth / LW;
+    const toCssX = lx => (PLAYER_SCREEN_X + (lx - PLAYER_SCREEN_X) * CAM_ZOOM) * scLay;
+    /* 창(cx±half CSS px) 안에서 특정 색 픽셀의 가로 범위·개수를 잰다 */
+    const span = (cols, cxCss, halfCss) => {
+      const x0 = Math.max(0, Math.round((cxCss - halfCss) * dpr));
+      const x1 = Math.min(cv.width, Math.round((cxCss + halfCss) * dpr));
+      if (x1 <= x0) return { n: 0, w: 0, l: null, r: null };
+      const w = x1 - x0, d = ctx.getImageData(x0, 0, w, cv.height).data;
+      const set = new Set(cols);
+      let l = 1e9, r = -1e9, n = 0;
+      for (let y = 0; y < cv.height; y++) for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (d[i + 3] < 250) continue;
+        const hex = ((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]).toString(16).padStart(6, '0').toUpperCase();
+        if (!set.has(hex)) continue;
+        n++; if (x < l) l = x; if (x > r) r = x;
+      }
+      return n ? { n, w: (r - l + 1) / dpr, l: (x0 + l) / dpr, r: (x0 + r) / dpr } : { n: 0, w: 0, l: null, r: null };
+    };
+
+    pl.sh = 500; drawScene(); updateBars();
+    const pCss = toCssX(pl.worldX - cam), eCss = toCssX(e0.worldX - cam);
+    const pBody = span(['5E6A75', 'F6D7A7', '3E6FD8'], pCss, 60);   /* 플레이어 스프라이트 */
+    const pHp = span(['E8483F'], pCss, 60);                          /* 플레이어 발밑 HP바(빨강) */
+    const pSh = span(['38A6E8'], pCss, 60);                          /* 플레이어 발밑 실드바(파랑) */
+    const eHp = span(['E8483F'], eCss, 60);                          /* 적 발밑 HP바 */
+    const f = document.getElementById('frame').getBoundingClientRect();
+    const cvr = cv.getBoundingClientRect();
+    const cvLeft = cvr.left - f.left;
+    /* 종전(폭 축소 전) CSS px = 기저 폭 × scLay × CAM_ZOOM — 실측을 이 값으로 나누면 «몇 배로 줄었나» 가 나온다 */
+    const preP = 62 * scLay * CAM_ZOOM, preE = 56 * scLay * CAM_ZOOM;
+
+    /* ①-b 실드 0 — 캔버스 파란 픽셀 0개 · HUD 채움 폭 0 */
+    pl.sh = 0; drawScene(); updateBars();
+    const sh0 = span(['38A6E8'], pCss, 60);
+    const hudFill = document.querySelector('#shBar .fill');
+    const hud0 = hudFill.getBoundingClientRect().width;
+    const hud0Disp = getComputedStyle(hudFill).display;
+    const hpFill = document.querySelector('#hpBar .fill');
+    /* 실드 1 — 최소 1px 는 남는다(사라지지 않는다) */
+    pl.sh = 1; drawScene(); updateBars();
+    const sh1 = span(['38A6E8'], pCss, 60);
+    const hud1 = hudFill.getBoundingClientRect().width;
+    /* HP 0 도 같은 규칙 */
+    pl.hp = 0; drawScene(); updateBars();
+    const hp0 = span(['E8483F'], pCss, 60);
+    const hudHp0 = hpFill.getBoundingClientRect().width;
+    pl.hp = 1000; pl.sh = 500; drawScene(); updateBars();
+
+    return { scLay, dpr, zoom: CAM_ZOOM, camPlayerX: CAM_PLAYER_X, footW: FOOT_BAR_W,
+      psx: PLAYER_SCREEN_X, frameW: f.width, cvLeft,
+      pBody, pHp, pSh, eHp, preP, preE,
+      sh0n: sh0.n, sh1n: sh1.n, hp0n: hp0.n, hud0, hud0Disp, hud1, hudHp0 };
+  });
+  const pCenterPct = T164.pBody.n ? (T164.cvLeft + (T164.pBody.l + T164.pBody.r) / 2) / T164.frameW * 100 : -1;
+  chk('⚑ T164 ② 플레이어 중심 x 가 프레임 폭 16% ±3%p', Math.abs(pCenterPct - 16) <= 3,
+    `실측 ${pCenterPct.toFixed(1)}% (레퍼런스 «메인 게임화면_전투중.jpg» 16% · PLAYER_SCREEN_X ${T164.psx}/${540})`);
+  const rP = T164.preP ? T164.pHp.w / T164.preP : 0, rE = T164.preE ? T164.eHp.w / T164.preE : 0;
+  chk('⚑ T164 ① 플레이어 발밑 HP바 폭 = 종전 ×2/3 (±0.05)', Math.abs(rP - 2 / 3) <= 0.05,
+    `${T164.preP.toFixed(1)} → ${T164.pHp.w.toFixed(1)}px (×${rP.toFixed(3)})`);
+  chk('⚑ T164 ① 적 발밑 HP바 폭 = 종전 ×2/3 (±0.05)', Math.abs(rE - 2 / 3) <= 0.05,
+    `${T164.preE.toFixed(1)} → ${T164.eHp.w.toFixed(1)}px (×${rE.toFixed(3)})`);
+  const rS = T164.preP ? T164.pSh.w / T164.preP : 0;
+  chk('⚑ T164 ① 플레이어 발밑 실드바도 같은 폭 (±0.05)', Math.abs(rS - 2 / 3) <= 0.05,
+    `${T164.pSh.w.toFixed(1)}px (×${rS.toFixed(3)})`);
+  chk('⚑ T164 ② 390×844 — 캐릭터·발밑 바가 화면 왼쪽으로 안 잘린다',
+    T164.pBody.l > 0.5 && T164.pHp.l > 0.5 && T164.pSh.l > 0.5,
+    `스프라이트 왼끝 ${(T164.pBody.l || -1).toFixed(1)}px · HP바 ${(T164.pHp.l || -1).toFixed(1)}px · 실드바 ${(T164.pSh.l || -1).toFixed(1)}px`);
+  chk('⚑ T164 ①-b 실드 0 — 발밑 실드바에 파란 픽셀 0개', T164.sh0n === 0,
+    `실드 0 에서 #38A6E8 픽셀 ${T164.sh0n}개 (종전엔 최소 3px 조각이 남았다)`);
+  chk('⚑ T164 ①-b 실드 0 — 하단 HUD 실드바 채움 폭 0', T164.hud0 === 0 && T164.hud0Disp === 'none',
+    `HUD 채움 ${T164.hud0.toFixed(1)}px · display ${T164.hud0Disp}`);
+  chk('⚑ T164 ①-b HP 0 — 발밑 HP바에 빨간 픽셀 0개 · HUD 도 0', T164.hp0n === 0 && T164.hudHp0 === 0,
+    `발밑 ${T164.hp0n}개 · HUD ${T164.hudHp0.toFixed(1)}px`);
+  chk('⚑ T164 ①-b 실드 1 — 최소 1px 는 보인다 (사라지지 않는다)', T164.sh1n > 0 && T164.hud1 > 0,
+    `발밑 파란 픽셀 ${T164.sh1n}개 · HUD 채움 ${T164.hud1.toFixed(1)}px`);
+
+  /* 360 폭에서도 왼쪽 잘림 0 */
+  await p.setViewportSize({ width: 360, height: 800 }); await p.waitForTimeout(240);
+  const T164b = await p.evaluate(() => {
+    drawScene();
+    const dpr = cv.width / cv.clientWidth, scLay = cv.clientWidth / LW;
+    const cx = (PLAYER_SCREEN_X + (G.player.worldX - cam - PLAYER_SCREEN_X) * CAM_ZOOM) * scLay;
+    const x0 = Math.max(0, Math.round((cx - 60) * dpr)), x1 = Math.min(cv.width, Math.round((cx + 60) * dpr));
+    const w = x1 - x0, d = ctx.getImageData(x0, 0, w, cv.height).data;
+    const set = new Set(['5E6A75', 'F6D7A7', '3E6FD8', 'E8483F', '38A6E8']);
+    let l = 1e9, n = 0;
+    for (let y = 0; y < cv.height; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] < 250) continue;
+      const hex = ((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]).toString(16).padStart(6, '0').toUpperCase();
+      if (!set.has(hex)) continue;
+      n++; if (x < l) l = x;
+    }
+    const f = document.getElementById('frame').getBoundingClientRect();
+    const cvr = cv.getBoundingClientRect();
+    return { l: n ? (x0 + l) / dpr : -1, n, cvLeft: cvr.left - f.left, frameW: f.width };
+  });
+  chk('⚑ T164 ② 360×800 — 캐릭터·발밑 바가 왼쪽으로 안 잘린다', T164b.n > 0 && T164b.l > 0.5,
+    `왼끝 ${T164b.l.toFixed(1)}px (캔버스 기준 · 픽셀 ${T164b.n}개)`);
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(220);
+  console.log(`  [T164 전후표] 플레이어 중심 x ${pCenterPct.toFixed(1)}% (종전 27.8%) · ` +
+    `발밑 HP바 ${T164.preP.toFixed(1)} → ${T164.pHp.w.toFixed(1)}px · 적 바 ${T164.preE.toFixed(1)} → ${T164.eHp.w.toFixed(1)}px · ` +
+    `실드 0 파란 픽셀 ${T164.sh0n}개`);
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);

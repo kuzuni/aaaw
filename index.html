@@ -419,7 +419,7 @@
   #hud{flex:0 0 auto; background:var(--panel); padding:4px 12px; border-top:3px solid #17171a;}
   .bars{display:flex; gap:8px; align-items:center; margin-bottom:6px;}
   .bar{position:relative; flex:1; height:28px; background:#141418; border-radius:99px; overflow:hidden;}
-  .bar .fill{position:absolute; inset:0; width:100%; border-radius:99px; transition:width .15s;}
+  .bar .fill{position:absolute; inset:0; width:100%; min-width:2px; border-radius:99px; transition:width .15s;}   /* ⚑ T164 ①-b — 0 은 JS 가 display:none 으로 내리고, 0 보다 크면 이 min-width 로 최소 2px 는 보인다 */
   .bar .txt{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12.5px; text-shadow:0 1px 2px rgba(0,0,0,.6); font-variant-numeric:tabular-nums;}
   /* ⚑ 경험치 바 (주인 지시 2026-09-03 — 캡은 «레벨» 이 아니라 «EXP»). 캡이 ❤️·🛡️ 한 글자보다 넓어서
      «절대배치 캡 + 바 전체 가운데 숫자» 로는 둘이 겹친다 — 이 바만 가로 flex(캡 → 남은 폭 가운데 숫자)로 깐다.
@@ -981,8 +981,12 @@ const ENEMY_GAP=44;
    sim.js 와 같은 이름·같은 값(게이트가 두 파일을 대조한다). */
 const NODE_GAP=280, NODE_GAP_EVENT=470;
 const SPEAR_REACH=ENEMY_GAP*SPEAR_PIERCE, WAVE_REACH=ENEMY_GAP*4, WAVE_REACH_KING=ENEMY_GAP*16;
-/* 적 발밑 HP바 폭 — 간격보다 좁아야 옆 적과 안 겹친다(주인 ② «HP바 폭을 간격에 맞춘다»). */
-const HPBAR_W=ENEMY_GAP-4, HPBAR_W_BOSS=ENEMY_GAP*2-4;
+/* 적 발밑 HP바 폭 — 간격보다 좁아야 옆 적과 안 겹친다(T163 주인 ② «HP바 폭을 간격에 맞춘다»).
+   ⚑ T164 (주인 22:3X «hp바 실드바도 3분의 2로 줄이기 가로») — 그 뒤 주인이 **폭을 종전의 2/3** 로 정했다.
+   두 지시가 싸우지 않게 **형태는 T163(간격에서 뺀다) · 값은 T164(종전 56·88 의 2/3 = 37.3·58.7)** 로 맞춘다:
+   `ENEMY_GAP-7`=37 · `ENEMY_GAP*2-29`=59. 둘 다 간격(44)·두 칸(88) 보다 좁아 겹침 조건도 그대로 산다.
+   플레이어 2단 바는 아래 `FOOT_BAR_W` 로 같은 2/3 를 받는다(그쪽은 간격과 무관해 곱으로 둔다). */
+const HPBAR_W=ENEMY_GAP-7, HPBAR_W_BOSS=ENEMY_GAP*2-29;
 /* ⚑⚑⚑ T155 ② (주인 확정 2026-09-05 18:5X) — 특전 카드·인포·툴팁·장비 옵션 문구에서 창·도끼·화살·번개·검기가
    나오면 괄호로 «(공격력의 N%)» 를 붙인다. N 은 **위 R_* 상수에서 읽는다** — 문구에 숫자를 적어 두지 않으므로
    T118 처럼 계수가 바뀌면 문구가 저절로 따라온다. 창은 관통 마릿수(SPEAR_PIERCE)도 같이 적는다.
@@ -3981,6 +3985,14 @@ function renderPerkStrip(){
   }).join('');
   if(box.innerHTML!==html) box.innerHTML=html;
 }
+/* ⚑ T164 ①-b — 하단 HUD 의 HP·실드 채움도 «0 이면 아예 안 그린다» (주인 버그 22:4X · 발밑 2단 바와 같은 규칙).
+   폭 0% 만으로도 대개 안 보이지만 둥근 모서리·전환 잔상으로 파란 조각이 남을 수 있어 아예 `display:none` 으로
+   내린다 — 0 보다 크면 되살리고 폭을 그대로 준다(1 이면 최소 1px 는 남게 CSS 가 `min-width` 를 잡는다). */
+function setBarFill(sel,pct){
+  const el=document.querySelector(sel); if(!el) return;
+  if(pct>0){ el.style.display=''; el.style.width=pct+'%'; }
+  else{ el.style.display='none'; el.style.width='0%'; }
+}
 let lastBars='';
 function updateBars(){
   if(!G) return;
@@ -3991,9 +4003,9 @@ function updateBars(){
   $('expTxt').textContent=`${p.exp}/${expNeed(p.level)}`;
   document.querySelector('#expBar .fill').style.width=(p.exp/expNeed(p.level)*100)+'%';
   $('hpTxt').textContent=`${fmt(p.hp)}/${fmt(p.maxHp)}`;
-  document.querySelector('#hpBar .fill').style.width=(p.hp/p.maxHp*100)+'%';
+  setBarFill('#hpBar .fill',p.hp/p.maxHp*100);
   $('shTxt').textContent=`${fmt(p.sh)}/${fmt(p.maxSh)}`;
-  document.querySelector('#shBar .fill').style.width=(p.maxSh?p.sh/p.maxSh*100:0)+'%';
+  setBarFill('#shBar .fill',p.maxSh?p.sh/p.maxSh*100:0);
 }
 
 /* ================= RENDER ================= */
@@ -4009,7 +4021,16 @@ const LW=540; let LH=900, cam=0;
    레퍼런스 자이고, 레퍼런스 사진도 «띠는 그 자리 · 캐릭터만 크다» 이기 때문이다(아래 pathTop/pathBot 역변환).
    HUD(상단·하단 패널·진행 바)는 DOM 이라 애초에 줌 대상이 아니다. */
 const CAM_ZOOM=1.5;
-const PLAYER_SCREEN_X=150;
+/* ⚑ T164 ② — 플레이어 화면 위치 (주인 지시 2026-09-05 22:3X «플레이어는 이 스샷처럼 좀 더 왼쪽에 배치되게»).
+   레퍼런스(`docs/ref/메인 게임화면_전투중.jpg`) 실측 = 플레이어 중심 x ≈ 프레임 폭 **16%**(종전 150/540 = 27.8%).
+   **카메라 오프셋 하나뿐이다** — `cam=worldX-PLAYER_SCREEN_X` 라 월드 좌표·전진 속도·사거리·적 간격은 한 글자도
+   안 바뀌고(그리기만 왼쪽으로 밀린다), 줌 기준점도 이 x 를 그대로 따라가므로 T159 변환 안에서 같이 논다.
+   적·투사체·스파크·데미지 숫자·보스 경고는 전부 `-cam` 으로 그려서 같은 오프셋을 자동으로 받는다. */
+const CAM_PLAYER_X=0.16;
+const PLAYER_SCREEN_X=Math.round(LW*CAM_PLAYER_X);
+/* ⚑ T164 ① — 필드 안 발밑 바(플레이어 HP+실드 2단 · 적 HP)의 **가로 폭만** 2/3 (주인 지시 22:3X).
+   높이·글자 크기·숫자 축약은 그대로다. 하단 HUD 의 EXP/HP/실드 바는 대상이 아니다. */
+const FOOT_BAR_W=2/3;
 let viewScale=1;   /* = sc*CAM_ZOOM — 레이아웃 1 단위가 실제 CSS px 몇 개인가 (HP바 글자 클램프가 쓴다) */
 
 function drawCharOn(c,x,y,o){
@@ -4076,8 +4097,15 @@ function drawCharOn(c,x,y,o){
 function drawHpBar(x,y,w,frac,txt,color){
   ctx.fillStyle='#141418';
   ctx.beginPath(); ctx.roundRect(x-w/2-1.5,y-1.5,w+3,15,5); ctx.fill();
-  ctx.fillStyle=color;
-  ctx.beginPath(); ctx.roundRect(x-w/2,y,Math.max(3,w*clamp(frac,0,1)),12,4); ctx.fill();
+  /* ⚑ T164 ①-b (주인 버그 22:4X «실드바가 0일 때 파란색 찌꺼기가 남아서») — 종전엔 `Math.max(3, …)` 라
+     비율이 0 이어도 3px 짜리 둥근 조각이 늘 그려졌다. **0 이면 채움을 아예 안 그린다**(빈 홈만 남는다).
+     0 보다 크면 최소 1px 는 보이게 하고(실드 1 이 사라지지 않는다) 모서리는 폭의 절반으로 눌러 준다. */
+  const fw=w*clamp(frac,0,1);
+  if(fw>0){
+    ctx.fillStyle=color;
+    const dw=Math.max(1,fw);
+    ctx.beginPath(); ctx.roundRect(x-w/2,y,dw,12,Math.min(4,dw/2)); ctx.fill();
+  }
   /* ⚑ T159 — 글자는 나머지와 같은 배율로 커지되, 좁은 화면에서 줄어 안 읽히는 일이 없게 **아래로만** 클램프한다
      (실효 CSS px = 10.5*viewScale 가 10 밑으로 내려가면 그만큼 키운다 · 390 폭에선 10.5 그대로라 무해). */
   ctx.fillStyle='#FFF'; ctx.font=Math.max(10.5,10/Math.max(viewScale,0.001)).toFixed(2)+'px Jua'; ctx.textAlign='center';
@@ -4274,8 +4302,8 @@ function drawScene(){
   drawCharOn(ctx,px2,gy,{s:1.05,f:1,body:'#5E6A75',hat:'helmet',weapon:'sword',
     bob:G.player.walking?Math.sin(t*13)*3:Math.sin(t*3)*1.5,
     hitT:G.player.hitT, strikeT:G.player.strikeT});
-  drawHpBar(px2,gy+12,62,G.player.hp/G.player.maxHp,fmt(G.player.hp),'#E8483F');
-  drawHpBar(px2,gy+29,62,G.player.maxSh?G.player.sh/G.player.maxSh:0,fmt(G.player.sh),'#38A6E8');
+  drawHpBar(px2,gy+12,62*FOOT_BAR_W,G.player.hp/G.player.maxHp,fmt(G.player.hp),'#E8483F');
+  drawHpBar(px2,gy+29,62*FOOT_BAR_W,G.player.maxSh?G.player.sh/G.player.maxSh:0,fmt(G.player.sh),'#38A6E8');
 
   /* 파티클 */
   for(const pt of G.parts){
