@@ -2883,6 +2883,38 @@ console.log('\n[㊸ 특전 선택창 상단 스탯 줄 8칸 · 흡혈 칸 (T154)
   }
 }
 
+/* ---------- ㊹ 특전 카드 문구 상자는 flex/grid 컨테이너가 아니다 (T149 · 주인 버그 신고 2026-09-05 17:3X) ----------
+   주인 원문 «폰트 이상하게 뜨네 맨 위 특전. 수정되게 해 정상적으로» · «이런 거도 그러네».
+   `.perk-card .tx` 안은 «텍스트 노드 + <b>숫자</b> + 텍스트 노드…» 다. 이 상자를 flex(또는 grid)
+   컨테이너로 만들면 **조각마다 익명 아이템**이 되어 열로 갈라지고, **줄 끝 공백이 통째로 사라진다**
+   («치명타 시66%확률로 창1개»). T116 U02 가 세로 중앙 정렬용으로 넣은 `display:flex` 가 그 원인이었다.
+   여기서는 «`.tx` 에 걸리는 모든 규칙에 flex/grid 가 없다» 만 정적으로 못박는다 —
+   실제 렌더(공백 폭·<b> 높이·줄 수)는 `tools/t3/battle.js` 가 특전 99종 전부에 대고 잰다. */
+console.log('\n[㊹ 특전 카드 문구 상자 (T149 · 주인 버그 «문구 깨짐»)]');
+{
+  const CSS = (/<style>([\s\S]*?)<\/style>/.exec(HTML) || [, ''])[1].replace(/\/\*[\s\S]*?\*\//g, ' ');
+  /* 선택자가 **`.tx` 로 끝나는** 규칙만 모은다 (`.perk-card .tx` · `#overlay… .perk-card .tx`).
+     `.perk-card .tx b{…}` 처럼 자손을 겨누는 규칙은 «문구 상자» 가 아니라 대상이 아니다. */
+  const rules = [];
+  const re = /([^{}]*\.perk-card[^{}]*\.tx)\s*\{([^{}]*)\}/g;
+  let m;
+  while ((m = re.exec(CSS))) rules.push({ sel: m[1].trim().replace(/\s+/g, ' '), body: m[2].trim().replace(/\s+/g, ' ') });
+  if (!rules.length) bad('① `.perk-card .tx` 규칙을 하나도 못 찾았다 — 선택자가 바뀌었으면 게이트를 갱신할 것');
+  else {
+    ok(`① \`.perk-card .tx\` 규칙 ${rules.length}개를 찾았다 (${rules.map(r => r.sel).join(' / ')})`);
+    /* `.tx b{…}` 같은 «자손» 규칙은 대상이 아니다 — 위 정규식이 `.tx` 뒤에 단어문자가 오는 것만 걸러낸다 */
+    const flexy = rules.filter(r => /display\s*:\s*(inline-)?(flex|grid)/.test(r.body));
+    flexy.length === 0
+      ? ok('② 어느 규칙도 `.tx` 를 flex/grid 컨테이너로 만들지 않는다 (조각이 익명 아이템으로 갈라지지 않는다)')
+      : bad(`② \`.tx\` 를 flex/grid 로 만드는 규칙 ${flexy.length}개 — «${flexy[0].sel}{${flexy[0].body}}» (T149 주인 버그의 원인이다)`);
+    /* 세로 중앙은 카드가 맡는다 — `.perk-card` 자신은 그대로 flex 여야 한다 */
+    const card = /\.perk-card\{([^{}]*)\}/.exec(CSS);
+    (card && /display\s*:\s*flex/.test(card[1]) && /align-items\s*:\s*center/.test(card[1]))
+      ? ok('③ 세로 중앙은 카드(`.perk-card{display:flex; align-items:center}`)가 맡는다 — 문구 상자가 아니라')
+      : bad('③ `.perk-card` 가 flex + align-items:center 가 아니다 — 문구 세로 중앙을 맡을 자리가 없다');
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');

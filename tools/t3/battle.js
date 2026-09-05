@@ -1037,6 +1037,66 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   const mixedC = rolls.filter(r => new Set(r.pcs).size !== 1);
   chk('⚑⚑⚑ T151 모든 레벨업에서 테두리색도 하나다', rolls.length >= 3 && mixedC.length === 0,
     `섞인 회차 ${mixedC.length}회`);
+  /* ---------- 🔴 T149 특전 카드 문구 실측 (주인 버그 신고 2026-09-05 17:3X) ----------
+     주인 원문 «폰트 이상하게 뜨네 맨 위 특전. 수정되게 해 정상적으로» · «이런 거도 그러네».
+     `#overlay.ov-full .perk-card .tx` 에 있던 `display:flex` 가 문구를 깨뜨렸다 —
+     `.tx` 안의 «텍스트 조각 + <b>» 이 조각마다 익명 flex 아이템이 되어 열로 갈라지고,
+     **줄 끝 공백이 폭 0 으로 사라진다**(«치명타 시66%확률로 창1개»).
+     ⚑ 이 축은 `textContent` 로는 못 잡는다 — DOM 의 글자는 그대로이고 **렌더만** 깨지기 때문이다.
+     그래서 세 가지를 렌더에서 직접 잰다: ⓐ `display` 가 flex/grid 가 아니다
+     ⓑ **같은 줄에 있는** 끝 공백의 실측 폭 > 0 (줄바꿈 자리에서 접히는 공백은 정상이라 건너뛴다)
+     ⓒ `<b>` 가 세로로 쌓이지 않는다(높이 ≤ line-height × 1.3) ⓓ 문구가 2줄 안에 든다.
+     특전 **99종 전부**를 390×844·360×800 두 폭에서 카드로 렌더해 잰다. */
+  console.log('\n=== 🔴 T149 특전 카드 문구 (99종 전부 · 390 / 360) ===');
+  for (const [W, H] of [[390, 844], [360, 800]]) {
+    await p.setViewportSize({ width: W, height: H });
+    await p.waitForTimeout(200);
+    const t149 = await p.evaluate(() => {
+      const ov = document.getElementById('overlay');
+      const wasOn = ov.classList.contains('on'), keep = ov.innerHTML, keepCls = ov.className;
+      let n = 0, flexy = 0, gap = 0, gapZero = 0, tallB = 0, over2 = 0, worst = 0, ex = '';
+      for (let i = 0; i < PERKS.length; i += 3) {
+        const three = PERKS.slice(i, i + 3);
+        openOverlay(three.map((q, j) => perkCardHTML(q, j, 'pick')).join(''), { cls: 'ov-full' });
+        for (const c of ov.querySelectorAll('.perk-card')) {
+          const tx = c.querySelector('.tx'); if (!tx) continue;
+          n++;
+          const cs = getComputedStyle(tx), lh = parseFloat(cs.lineHeight);
+          if (/flex|grid/.test(cs.display)) { flexy++; if (!ex) ex = tx.textContent.slice(0, 24); }
+          for (const b of tx.querySelectorAll('b'))
+            if (b.getBoundingClientRect().height > lh * 1.3) { tallB++; if (!ex) ex = tx.textContent.slice(0, 24); }
+          /* 끝 공백이 «같은 줄» 에서 폭을 갖는가 */
+          for (const nd of tx.childNodes) {
+            if (nd.nodeType !== 3) continue;
+            const t = nd.nodeValue, m = t.match(/\s+$/); if (!m) continue;
+            const nx = nd.nextSibling; if (!nx) continue;
+            const r1 = document.createRange(); r1.setStart(nd, t.length - m[0].length); r1.setEnd(nd, t.length);
+            const r2 = document.createRange();
+            if (nx.nodeType === 3) { r2.setStart(nx, 0); r2.setEnd(nx, 1); } else r2.selectNode(nx);
+            const a = r1.getBoundingClientRect(), bb = r2.getBoundingClientRect();
+            if (Math.abs(bb.top - a.top) > 2) continue;      /* 줄바꿈 자리 — 접히는 것이 정상 */
+            gap++; if (a.width < 0.5) { gapZero++; if (!ex) ex = tx.textContent.slice(0, 24); }
+          }
+          const rg = document.createRange(); rg.selectNodeContents(tx);
+          const lines = rg.getBoundingClientRect().height / lh;
+          if (lines > worst) worst = lines;
+          if (lines > 2.05) { over2++; if (!ex) ex = tx.textContent.slice(0, 24); }
+        }
+      }
+      ov.className = keepCls; ov.innerHTML = keep; if (!wasOn) closeOverlay();
+      return { n, all: PERKS.length, flexy, gap, gapZero, tallB, over2, worst: Math.round(worst * 100) / 100, ex };
+    });
+    chk(`🔴 T149 [${W}] 특전 ${t149.all}종을 다 카드로 렌더했다`, t149.n === t149.all && t149.all > 0, `${t149.n}/${t149.all}장`);
+    chk(`🔴 T149 [${W}] 문구 상자가 flex/grid 가 아니다 (조각이 익명 아이템으로 안 갈라진다)`,
+      t149.flexy === 0, `flex/grid ${t149.flexy}장 · 예 «${t149.ex}»`);
+    chk(`🔴 T149 [${W}] 같은 줄의 끝 공백이 실제로 폭을 갖는다 (띄어쓰기 소실 0)`,
+      t149.gap > 0 && t149.gapZero === 0, `${t149.gap}칸 중 폭 0 인 것 ${t149.gapZero}칸 · 예 «${t149.ex}»`);
+    chk(`🔴 T149 [${W}] <b> 가 세로로 쌓이지 않는다 (높이 ≤ line-height×1.3)`,
+      t149.tallB === 0, `${t149.tallB}건 · 예 «${t149.ex}»`);
+    chk(`🔴 T149 [${W}] 문구가 2줄 안에 든다 (최장 ${t149.worst}줄)`,
+      t149.over2 === 0, `2줄 초과 ${t149.over2}장 · 최장 ${t149.worst}줄`);
+  }
+  await p.setViewportSize({ width: 390, height: 844 });
 
   /* =============================================================================
      ⚑⚑ T154 — 특전 선택창 «상단 스탯 줄» 8칸 + 전투 하단 패널 «흡혈» 칸 (주인 지시 2026-09-05 18:3X)

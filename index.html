@@ -578,8 +578,18 @@
   /* 카드 = 프레임 x5.5 y36.5 w89 h11 · 아이콘은 카드 «왼쪽 끝»(x8 w14 h8) · 문구 x25 w68 */
   #overlay.ov-full .perk-card{padding:calc(var(--fh)*.0155) 3%; gap:3%;}
   #overlay.ov-full .perk-card .ic{width:15.7%; height:calc(var(--fh)*.08); font-size:31px;}
-  /* 레퍼런스 문구 칸은 아이콘과 «같은 높이»(h7)로 잡혀 있다 — 한 줄짜리 문장이라도 칸은 그 높이다. */
-  #overlay.ov-full .perk-card .tx{min-height:calc(var(--fh)*.07); display:flex; align-items:center;}
+  /* 레퍼런스 문구 칸은 아이콘과 «같은 높이»(h7)로 잡혀 있다 — 한 줄짜리 문장이라도 칸은 그 높이다.
+     🔴 T149 (주인 버그 신고 2026-09-05 17:3X «폰트 이상하게 뜨네 맨 위 특전») — 이 줄에 있던
+     `display:flex; align-items:center;` 가 문구를 통째로 깨뜨렸다. `.tx` 안은
+     «텍스트 노드 + <b>숫자</b> + 텍스트 노드…» 라서 flex 컨테이너가 되면 **조각마다 익명 flex 아이템**이
+     되어 열로 갈라지고(«치명타 시 / 66% / 확률로 … / 1 회 / 씩»), **공백만 있는 텍스트 노드는 flex 가
+     통째로 버린다**(«치명타 시66%확률로 창1개»). grid 도 같은 이유로 못 쓴다 — 익명 아이템은 같은 규칙이다.
+     그래서 `.tx` 는 **일반 인라인 흐름**으로 되돌린다(주인 ② 위임 기본값). 세로 중앙은
+     `.perk-card` 가 이미 `display:flex; align-items:center` 라 **카드가 맡는다**(`align-self:center` 는
+     그 뜻을 이 줄에도 남겨 둔 것). `align-content` 는 블록 상자의 내용을 익명 아이템으로 쪼개지 않고
+     칸 안에서 가운데로 내리는 최신 속성이라 **덤으로만** 건다 — 못 알아듣는 브라우저는 그냥 무시하고
+     문구가 칸 위쪽에 붙을 뿐, 깨지지 않는다. */
+  #overlay.ov-full .perk-card .tx{min-height:calc(var(--fh)*.07); align-self:center; align-content:center;}
   /* 하단 줄 = 가운데 큰 버튼(x31 w38 h7.5) + 오른쪽 끝 작은 정사각(x86 w9 h6) · 둘이 «같은 줄» 이다.
      .ov-foot 는 게이트 ⑧ 이 흐름 배치·오른쪽 정렬을 요구하므로 그대로 두고, 음수 margin 으로 같은 줄에 올린다
      (절대 배치가 아니라 흐름 안이라 좁은 폭에서도 카드 위로 올라타지 않는다). */
