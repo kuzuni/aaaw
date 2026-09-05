@@ -644,7 +644,10 @@ if (process.argv.includes('--self')) {
     ['⚑ T119 처치 시 소환을 onKill 에서 빼면', s => s.replace('if(px.p_killAxe&&pkk(p,px.p_killAxe))fireAxe(p,2);', ''), null, null],
     ['⚑ T119 게임만 처치 시 화살 발수가 다르면', null, s => s.replace('if(px.p_killArrow&&pkk(p,px.p_killArrow)) fireArrows(p,3);', 'if(px.p_killArrow&&pkk(p,px.p_killArrow)) fireArrows(p,2);'), null],
     ['⚑ T119 오버킬 회복이 회복 증폭을 안 타게 하면 (noBoost=true)', s => s.replace('if(px.p_overkill&&over>0)heal(p,over);', 'if(px.p_overkill&&over>0)heal(p,over,true);'), null, null],
-    ['⚑ T119 가시갑옷이 원거리에도 걸리면', s => s.replace('if(px.p_thorns&&isMelee&&src)reflect', 'if(px.p_thorns&&src)reflect'), null, null],
+    /* ⚑ T126 — T124 가 이 줄을 `px.p_thorns` 에서 합산 변수 `thornM` 으로 바꿨는데(장비 세트 e 가산)
+       여기 돌연변이 문자열은 옛 모양 그대로라 replace 가 통째로 no-op 이었다 = 죽은 검사.
+       아래 «돌연변이가 원본을 안 바꾼다» 가드가 이 부류를 앞으로는 이름을 붙여 잡는다. */
+    ['⚑ T119 가시갑옷이 원거리에도 걸리면', s => s.replace('if(thornM&&isMelee&&src)reflect', 'if(thornM&&src)reflect'), null, null],
     ['⚑ T119 광전사가 치확을 0 으로 안 만들면', s => s.replace('const effCritR=p=>{const px=p.px;if(px.p_berserk)return 0;', 'const effCritR=p=>{const px=p.px;'), null, null],
     ['⚑ T119 창의 화신이 화살을 그대로 쏘면', s => s.replace('if(px.p_spearAvatar){fireSpear(p,n);return;}', ''), null, null],
     ['⚑ T119 풀피 적 강타 계수를 +50% 로 내리면', s => s.replace('PERK_FULLHP_A=1.00', 'PERK_FULLHP_A=0.50'), null, null],
@@ -698,14 +701,22 @@ if (process.argv.includes('--self')) {
   let caught = 0;
   const quiet = console.log;
   for (const [nm, fs_, fh, fp] of cases) {
-    console.log = () => {};
+    const mS = fs_ ? fs_(simSrc) : simSrc, mH = fh ? fh(htmSrc) : htmSrc, mP = fp ? fp(planSrc) : planSrc;
+    /* ⚑ T126 가드 — 돌연변이 문자열이 대상 파일에서 사라지면 replace 가 no-op 이 되고
+       사본 = 원본이라 게이트가 초록으로 «통과» 한다. 그러면 이 음성 케이스는 아무것도 안 지키는데
+       숫자만 올라가 조용히 죽는다(T124 가 가시갑옷 줄을 바꿨을 때 실제로 일어났다).
+       그래서 «원본과 한 글자도 안 달라진» 돌연변이는 통과가 아니라 그 자리에서 이름을 붙여 떨어뜨린다. */
+    const noop = (fs_ && mS === simSrc) || (fh && mH === htmSrc) || (fp && mP === planSrc);
     let bad = 0;
-    try { bad = run(fs_ ? fs_(simSrc) : simSrc, fh ? fh(htmSrc) : htmSrc, fp ? fp(planSrc) : planSrc); }
-    catch (e) { bad = 1; }
-    console.log = quiet;
-    const ok = bad > 0;
+    if (!noop) {
+      console.log = () => {};
+      try { bad = run(mS, mH, mP); } catch (e) { bad = 1; }
+      console.log = quiet;
+    }
+    const ok = !noop && bad > 0;
     if (ok) caught++;
-    console.log(`  ${ok ? '✓' : '✗'} ${nm} → ${ok ? '빨개진다' : '🔴 안 잡힌다 (죽은 검사)'}`);
+    console.log(`  ${ok ? '✓' : '✗'} ${nm} → ${ok ? '빨개진다'
+      : noop ? '🔴 돌연변이가 원본을 안 바꾼다 (문자열이 낡았다 = 죽은 검사)' : '🔴 안 잡힌다 (죽은 검사)'}`);
   }
   console.log(`\n[음성 검사] ${caught}/${cases.length}`);
   process.exit(caught === cases.length ? 1 : 0);   /* 음성 검사는 «전부 잡히면» exit 1 이 정상이다 */

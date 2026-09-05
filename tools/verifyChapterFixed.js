@@ -326,13 +326,22 @@ if (process.argv.includes('--self')) {
   let caught = 0;
   const quiet = console.log;
   for (const [nm, fsim, fhtm] of cases) {
-    console.log = () => {};
+    /* ⚑ T126 가드 — 돌연변이 문자열이 낡아 replace 가 no-op 이 되면 사본 = 원본이라
+       게이트가 초록으로 «통과» 하고 이 음성 케이스는 아무것도 안 지키면서 숫자만 올린다.
+       (verifyPerkOrder 의 «가시갑옷 근접» 케이스가 T124 뒤 실제로 그렇게 죽어 있었다.
+        verifyCombatConst ②-c 는 처음부터 같은 가드를 갖고 있었다 — 그 규약을 여기로 옮긴다.) */
+    const mS = fsim ? fsim(simSrc) : simSrc, mH = fhtm ? fhtm(htmSrc) : htmSrc;
+    const noop = (fsim && mS === simSrc) || (fhtm && mH === htmSrc);
     let bad = 0;
-    try { bad = run(fsim ? fsim(simSrc) : simSrc, fhtm ? fhtm(htmSrc) : htmSrc); } catch (e) { bad = 1; }
-    console.log = quiet;
-    const okc = bad > 0;
+    if (!noop) {
+      console.log = () => {};
+      try { bad = run(mS, mH); } catch (e) { bad = 1; }
+      console.log = quiet;
+    }
+    const okc = !noop && bad > 0;
     if (okc) caught++;
-    console.log(`  ${okc ? '✓' : '✗'} ${nm} → ${okc ? '빨개진다' : '🔴 안 잡힌다 (죽은 검사)'}`);
+    console.log(`  ${okc ? '✓' : '✗'} ${nm} → ${okc ? '빨개진다'
+      : noop ? '🔴 돌연변이가 원본을 안 바꾼다 (문자열이 낡았다 = 죽은 검사)' : '🔴 안 잡힌다 (죽은 검사)'}`);
   }
   console.log(`\n[음성 검사] ${caught}/${cases.length}`);
   process.exit(caught === cases.length ? 1 : 0);
