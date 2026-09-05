@@ -2225,7 +2225,16 @@ function effCounter(p){ return p.counter; }
    (전투 회복은 종전대로 `dealDmg` 의 `p.steal` 한 곳에서만 계산한다 — 엔진 무수정.) */
 function effSteal(p){ return p.steal; }
 /* ⚑ 실드 수리 한 곳 — 🔧 «실드 수리 효과 +100%» 가 여기서만 걸린다 (sim.js repair 와 1:1) */
-function repair(p,amt){ if(amt<=0) return; p.sh=Math.min(p.maxSh,p.sh+amt*(1+p.repairAmp)); }
+/* ⚑ T166 — 실드 «수리» 는 초록 회복 숫자(체력)와 구분되게 **파란 +N** 으로 띄운다(주인 위임).
+   호출부가 13곳이라 여기 한 자리에서 띄운다. 실제로 채워진 양(최대치 초과분 제외)만 보여준다 —
+   실드가 꽉 차 있으면 숫자가 안 뜬다. 계산은 종전 한 줄 그대로다(`sim.js` 무수정 · 밸런스 무관). */
+function repair(p,amt){
+  if(amt<=0) return;
+  const before=p.sh;
+  p.sh=Math.min(p.maxSh,p.sh+amt*(1+p.repairAmp));
+  const got=p.sh-before;
+  if(got>0&&p===(G&&G.player)) addText('+'+fmt(got),POP_SH,p.worldX+POP_SH_DX,POP_SH_DY);
+}
 /* sim.js heal(p,amt,noBoost) 와 1:1 */
 function heal(p,amt,noBoost){
   const px=p.px;
@@ -3067,6 +3076,15 @@ $('speedBtn').onclick=()=>{
 };
 
 /* ================= FX ================= */
+/* ⚑⚑⚑ T166 (주인 지시 2026-09-05 23:0X «실드 있을 때 피격당했을 때 실드 까이는 거 데미지 텍스트
+   나와야 함. 파란색으로 뜨게 해») — 데미지 팝 색을 한 자리에 모은다. 파랑은 실드바 윗색(`#shBar .fill`
+   그러데이션의 시작색)과 같은 값이라 «실드 관련» 이 한눈에 묶인다. 빨강은 종전 체력 피해 팝 색 그대로. */
+const POP_SH='#6CC0F0';    /* 실드 — 깎임(-N) · 수리(+N) */
+const POP_HP='#FF8A80';    /* 체력 — 피해(-N) */
+/* 한 타격이 실드를 다 깎고 체력까지 들어가면 파란 숫자와 빨간 숫자가 겹쳐 읽히지 않는다.
+   그래서 실드 팝만 왼쪽·위로 살짝 어긋나게 띄운다(주인 «살짝 어긋나게 같이» — 위임 값). */
+const POP_SH_DX=-16, POP_SH_DY=-88;
+
 function addText(txt,color,wx,wy,big){
   if(!G) return;
   G.texts.push({txt,color,x:wx??G.player.worldX,y:wy??-70,t:0,big:big||false});
@@ -3613,14 +3631,17 @@ function hitPlayer(dmg,isMelee,src){
   p.hitT=0.15;
   if(p.sh>0){
     const ab=Math.min(p.sh,d); p.sh-=ab; d-=ab;
-    sparks(p.worldX,-40,'#6CC0F0',5,120);
+    sparks(p.worldX,-40,POP_SH,5,120);
+    /* ⚑ T166 — 실드가 깎인 양을 파란 데미지 팝으로. 체력 팝(-N · 빨강)과 같은 자리·같은 크기이되
+       살짝 어긋나 있어서, 실드를 뚫고 체력까지 들어간 타격은 파란 숫자 + 빨간 숫자 둘이 같이 뜬다. */
+    if(ab>0) addText('-'+fmt(ab),POP_SH,p.worldX+POP_SH_DX,POP_SH_DY);
     if(d<=0) AU.play('shield');
   }
   if(d>0){
     p.hp-=d;
     AU.play('hurt');
     sparks(p.worldX,-40,'#FF8A80',6,140);
-    addText('-'+fmt(d),'#FF8A80');
+    addText('-'+fmt(d),POP_HP);
     if(p.hp<=0){
       if(px.revive>0){
         px.revive--;

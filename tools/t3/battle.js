@@ -1607,6 +1607,94 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     await p.evaluate(() => closeOverlay());
   }
   await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(220);
+  /* ---------- ⚑⚑⚑ T166 실드 피격 = 파란 데미지 팝 (주인 지시 2026-09-05 23:0X) ----------
+     주인 «실드 있을 때 피격당했을 때 실드 까이는 거 데미지 텍스트 나와야 함. 파란색으로».
+     엔진은 안 바뀌었으므로(`sim.js` 무수정 · 실드/체력 분배 계산 그대로) **띄우는 쪽만** 실측한다.
+     T139 와 같은 수법으로 회피·방어막·무시를 다 끄고 `hitPlayer` 를 직접 불러 `G.texts` 를 본다. */
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(200);
+  console.log('\n=== ⚑ T166 실드 피격 = 파란 데미지 팝 (게임 안 실측) ===');
+  const t166 = await p.evaluate(() => {
+    startChapter(7);
+    const pl = G.player, px = pl.px, RR = Math.random;
+    const keep = { hp: pl.hp, sh: pl.sh, ev: pl.evade, ward: pl.ward, def: pl.def, bd: pl.buffs.def,
+      gc: px.guardCrystal, pause: G.paused, ign: px.p_ignoreN, wall: px.p_shWallL, ra: pl.repairAmp };
+    G.paused = true;
+    /* 방어·방어막·무시·실드방벽·수리증폭을 다 끈다 — 남는 것은 «실드 → 체력» 분배뿐이다 */
+    pl.def = 0; pl.buffs.def = []; px.guardCrystal = false; px.p_ignoreN = 0; px.p_shWallL = 0;
+    pl.ward = 0; pl.repairAmp = 0;
+    const out = {};
+    /* 실드 팝·체력 팝은 색으로 구분한다 — 색 상수는 게임에서 읽는다(리터럴 하드코딩 금지) */
+    const SH = POP_SH, HP = POP_HP;
+    const pops = () => G.texts.map(t => ({ txt: t.txt, c: t.color, x: t.x, y: t.y }));
+    const shot = (sh, dmg, evade) => {
+      G.texts.length = 0;
+      pl.evade = evade ? 90 : 0; pl.hp = pl.maxHp; pl.sh = sh;
+      const h0 = pl.hp, s0 = pl.sh;
+      Math.random = () => (evade ? 0.10 : 0.95);          /* 회피 굴림만 정하고 나머지는 실패 쪽 */
+      hitPlayer(dmg, true, { hp: 1e4 });
+      Math.random = RR;
+      const ps = pops();
+      return { blue: ps.filter(t => t.c === SH), red: ps.filter(t => t.c === HP), all: ps,
+               dSh: s0 - pl.sh, dHp: h0 - pl.hp };
+    };
+    try {
+      out.absorb = shot(500, 100, false);        /* ⓐ 실드가 다 흡수 */
+      out.pierce = shot(40, 100, false);         /* ⓑ 실드를 뚫고 체력까지 */
+      out.noSh   = shot(0, 100, false);          /* ⓒ 실드 0 */
+      out.evade  = shot(500, 100, true);         /* ⓕ 회피 — 실드가 있어도 안 깎이니 파란 팝 없음 */
+      /* ⓔ 실드 수리 = 파란 «+N» (초록 체력 회복과 구분) */
+      G.texts.length = 0; pl.sh = 0; repair(pl, 123);
+      out.repair = { pops: pops(), sh: pl.sh };
+      /* ⓔ-2 실드가 꽉 차 있으면 숫자가 안 뜬다 (실제로 채워진 양만 보여준다) */
+      pl.sh = pl.maxSh; G.texts.length = 0; repair(pl, 123);
+      out.repairFull = pops().length;
+      /* ⓖ 음성 — «파란 팝» 을 지우면 ⓐ 단언이 실제로 빨개지는가 (런타임 실증) */
+      const realAdd = addText;
+      window.addText = (txt, color, wx, wy, big) => { if (color === SH) return; realAdd(txt, color, wx, wy, big); };
+      out.neg = shot(500, 100, false);
+      window.addText = realAdd;
+    } finally {
+      Math.random = RR;
+      pl.hp = keep.hp; pl.sh = keep.sh; pl.evade = keep.ev; pl.ward = keep.ward; pl.def = keep.def;
+      pl.buffs.def = keep.bd; px.guardCrystal = keep.gc; px.p_ignoreN = keep.ign;
+      px.p_shWallL = keep.wall; pl.repairAmp = keep.ra; G.paused = keep.pause; G.texts.length = 0;
+    }
+    return out;
+  });
+  {
+    const A = t166.absorb, B = t166.pierce, C = t166.noSh, E = t166.evade;
+    const num = t => Number(String(t.txt).replace(/[^0-9.]/g, ''));
+    chk('ⓐ 실드가 있는 상태로 피격 — 파란 팝 1개 · 빨간 팝 0개',
+        A.blue.length === 1 && A.red.length === 0 && /^-/.test(A.blue[0].txt),
+        `파랑 [${A.blue.map(t => t.txt)}] · 빨강 [${A.red.map(t => t.txt)}] · 실드 −${A.dSh} 체력 −${A.dHp}`);
+    chk('ⓐ-2 파란 숫자 = 실제로 깎인 실드량', A.blue.length === 1 && Math.abs(num(A.blue[0]) - A.dSh) < 1.5,
+        `팝 ${A.blue[0] && A.blue[0].txt} vs 실드 −${A.dSh.toFixed(1)}`);
+    chk('ⓑ 실드를 뚫는 타격 — 파란 + 빨간 2개가 같이 뜬다',
+        B.blue.length === 1 && B.red.length === 1 && B.dSh > 0 && B.dHp > 0,
+        `파랑 [${B.blue.map(t => t.txt)}] · 빨강 [${B.red.map(t => t.txt)}] · 실드 −${B.dSh} 체력 −${B.dHp}`);
+    chk('ⓑ-2 두 숫자가 각각 실드분·체력분과 일치',
+        B.blue.length === 1 && B.red.length === 1 &&
+        Math.abs(num(B.blue[0]) - B.dSh) < 1.5 && Math.abs(num(B.red[0]) - B.dHp) < 1.5,
+        `실드 팝 ${B.blue[0] && B.blue[0].txt} / −${B.dSh.toFixed(1)} · 체력 팝 ${B.red[0] && B.red[0].txt} / −${B.dHp.toFixed(1)}`);
+    chk('ⓑ-3 두 팝이 겹치지 않게 어긋나 있다 (주인 «살짝 어긋나게»)',
+        B.blue.length === 1 && B.red.length === 1 && (B.blue[0].x !== B.red[0].x || B.blue[0].y !== B.red[0].y),
+        `파랑 (${B.blue[0] && B.blue[0].x}, ${B.blue[0] && B.blue[0].y}) · 빨강 (${B.red[0] && B.red[0].x}, ${B.red[0] && B.red[0].y})`);
+    chk('ⓒ 실드 0 상태 — 빨간 팝만 (파란 팝 0개)',
+        C.blue.length === 0 && C.red.length === 1, `파랑 ${C.blue.length} · 빨강 ${C.red.length}`);
+    chk('ⓕ 회피한 타격 — 실드가 있어도 파란 팝 0개 (종전대로 «회피!»)',
+        E.blue.length === 0 && E.dSh === 0 && E.all.some(t => /회피/.test(t.txt)),
+        `파랑 ${E.blue.length} · 팝 [${E.all.map(t => t.txt).slice(0, 3)}]`);
+    const RP = t166.repair.pops.filter(t => t.c === '#6CC0F0' || /^\+/.test(t.txt));
+    chk('ⓔ 실드 수리 — 파란 «+N» (초록 체력 회복과 구분)',
+        RP.length === 1 && /^\+/.test(RP[0].txt) && Math.abs(Number(RP[0].txt.replace(/[^0-9.]/g, '')) - 123) < 1.5,
+        `[${t166.repair.pops.map(t => t.txt + '/' + t.c)}] · 실드 ${t166.repair.sh}`);
+    chk('ⓔ-2 실드가 꽉 차 있으면 수리 숫자가 안 뜬다 (채워진 양만 보여준다)',
+        t166.repairFull === 0, `팝 ${t166.repairFull}개`);
+    /* 음성 — 파란 팝을 막으면 ⓐ 가 실제로 무너진다 (단언이 이 연출에 의존함을 런타임에서 실증) */
+    chk('ⓖ 음성: 파란 팝을 막으면 ⓐ 단언이 빨개진다',
+        t166.neg.blue.length === 0 && t166.neg.dSh > 0,
+        `파랑 ${t166.neg.blue.length}개(0 이어야) · 실드는 그대로 −${t166.neg.dSh}(엔진 무관 확인)`);
+  }
 
   /* ══════ ⚑⚑⚑ T163 적 간격 44 (주인 확정 2026-09-05 22:1X) ══════
      ④ 가 요구한 셋을 실제 렌더에서 잰다: 적 rect 간격 ≈ ENEMY_GAP × 줌 · 발밑 HP바 겹침 0 · pageerror 0. */

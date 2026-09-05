@@ -3309,6 +3309,85 @@ console.log('\n[㊾ 노드 간격 NODE_GAP = 280 (T169 · 주인 확정)]');
   }
 }
 
+/* ---------- ㊿ 실드 피격 = 파란 데미지 팝 (T166 · 주인 지시 2026-09-05 23:0X) ----------
+   주인 «실드 있을 때 피격당했을 때 실드 까이는 거 데미지 텍스트 나와야 함. 파란색으로».
+   **띄우는 쪽만** 바뀌는 축이라(엔진 무수정) 여기서는 ⓐ 색 상수가 한 자리에 있는가 ⓑ 실드 흡수 분기가
+   그 상수로 팝을 띄우는가 ⓒ 수리도 같은 상수로 띄우는가 ⓓ 체력 팝이 상수를 쓰는가
+   ⓔ `sim.js` 가 안 바뀌었는가(연출은 게임 쪽만) 를 본다. **실제로 뜨는지는 T3 battle 의 T166 절**이 본다. */
+console.log('\n[㊿ 실드 피격 파란 데미지 팝 (T166 · 주인 지시)]');
+{
+  const SCRIPT = (/<script>([\s\S]*)<\/script>/.exec(HTML) || [, ''])[1];
+  const shC = (/const\s+POP_SH\s*=\s*'([^']+)'/.exec(SCRIPT) || [])[1];
+  const hpC = (/const\s+POP_HP\s*=\s*'([^']+)'/.exec(SCRIPT) || [])[1];
+  /* ⓐ 색 상수 2개가 한 자리에 있다 — 파랑은 실드바 그러데이션 윗색과 같은 값이어야 «실드 관련» 이 묶인다 */
+  const barTop = (/#shBar \.fill\{background:linear-gradient\((#[0-9A-Fa-f]{6}),/.exec(HTML) || [])[1];
+  shC ? ok(`① 실드 팝 색 상수 POP_SH = ${shC}`) : bad('① POP_SH 상수가 없다 (색을 리터럴로 흩뿌리지 말 것)');
+  hpC ? ok(`①-b 체력 팝 색 상수 POP_HP = ${hpC}`) : bad('①-b POP_HP 상수가 없다');
+  (shC && barTop && shC.toLowerCase() === barTop.toLowerCase())
+    ? ok(`② 파란 팝 색이 실드바 윗색과 같다 (${barTop}) — «실드 관련» 이 색으로 묶인다`)
+    : bad(`② 파란 팝 색 ${shC} 이 실드바 윗색 ${barTop} 과 다르다`);
+  (shC && hpC && shC !== hpC) ? ok('②-b 실드 팝 색 ≠ 체력 팝 색') : bad('②-b 두 팝 색이 같다 — 구분이 안 된다');
+  /* ⓑ 실드 흡수 분기가 «깎인 양» 으로 파란 팝을 띄운다 (dmg 가 아니라 실제 흡수량 ab) */
+  const absorb = /const ab=Math\.min\(p\.sh,d\); p\.sh-=ab; d-=ab;[\s\S]{0,400}?if\(d<=0\) AU\.play\('shield'\);/.exec(SCRIPT);
+  absorb ? ok('③ 실드 흡수 분기를 찾았다') : bad('③ 실드 흡수 분기를 못 찾았다 — 코드 모양이 바뀌었나(게이트를 갱신할 것)');
+  const ab = absorb ? absorb[0] : '';
+  /if\(ab>0\)\s*addText\('-'\+fmt\(ab\),POP_SH,/.test(ab)
+    ? ok('③-b 실드가 깎이면 «-깎인양» 을 POP_SH 로 띄운다 (dmg 가 아니라 실제 흡수량 ab)')
+    : bad('③-b 실드 흡수 분기에 파란 팝이 없다 (또는 ab 가 아닌 값을 띄운다)');
+  /* ⓒ 수리는 `repair` 한 곳에서 «실제로 채워진 양» 만 파랗게 띄운다 */
+  const rep = /function repair\(p,amt\)\{[\s\S]{0,420}?\n\}/.exec(SCRIPT);
+  const rp = rep ? rep[0] : '';
+  /const got=p\.sh-before;/.test(rp) && /if\(got>0&&p===\(G&&G\.player\)\)\s*addText\('\+'\+fmt\(got\),POP_SH,/.test(rp)
+    ? ok('④ 실드 수리는 «실제로 채워진 양» 만 파란 +N 으로 띄운다 (호출부 13곳을 안 건드린다)')
+    : bad('④ repair() 의 파란 +N 이 없다 — 또는 채워진 양이 아니라 요청량을 띄운다');
+  /p\.sh=Math\.min\(p\.maxSh,p\.sh\+amt\*\(1\+p\.repairAmp\)\);/.test(rp)
+    ? ok('④-b repair() 의 계산 한 줄은 종전 그대로 (연출만 얹혔다 · 밸런스 무관)')
+    : bad('④-b repair() 의 계산이 바뀌었다 — 이 작업은 표시만 바꾼다');
+  /* ⓓ 체력 팝도 상수를 쓴다 (색 리터럴이 다시 흩어지지 않게) */
+  /addText\('-'\+fmt\(d\),POP_HP\);/.test(SCRIPT)
+    ? ok('⑤ 체력 피해 팝도 POP_HP 상수를 쓴다')
+    : bad('⑤ 체력 피해 팝이 아직 색 리터럴이다');
+  /* ⓔ 엔진 무수정 — sim.js 는 연출을 모른다 */
+  (!/POP_SH|POP_HP/.test(SIM) && !/addText/.test(SIM))
+    ? ok('⑥ `sim.js` 는 팝 색·addText 를 모른다 — 연출은 게임 쪽만 (밸런스 무관)')
+    : bad('⑥ sim.js 에 연출이 새어 들어갔다');
+
+  /* ---------- 음성 자기검사 ---------- */
+  {
+    console.log('  [음성 자기검사] 심은 고장을 ㊿ 가 잡는가');
+    const S0 = SCRIPT;
+    const seeds = [
+      ['파란 팝 제거 (실드가 깎여도 숫자가 안 뜬다)',
+        x => x.replace(/\n\s*if\(ab>0\) addText\('-'\+fmt\(ab\),POP_SH,p\.worldX\+POP_SH_DX,POP_SH_DY\);/, ''),
+        x => !/if\(ab>0\)\s*addText\('-'\+fmt\(ab\),POP_SH,/.test(x)],
+      ['파란 팝을 빨간색으로 (실드·체력 구분이 사라진다)',
+        x => x.replace(/addText\('-'\+fmt\(ab\),POP_SH,/, "addText('-'+fmt(ab),POP_HP,"),
+        x => !/addText\('-'\+fmt\(ab\),POP_SH,/.test(x)],
+      ['흡수량 ab 대신 원 피해 d 를 띄움 (실드가 다 깎인 척한다)',
+        x => x.replace(/addText\('-'\+fmt\(ab\),POP_SH,/, "addText('-'+fmt(d),POP_SH,"),
+        x => !/addText\('-'\+fmt\(ab\),POP_SH,/.test(x)],
+      ['두 팝을 같은 자리에 (겹쳐서 안 읽힌다)',
+        x => x.replace(/const POP_SH_DX=-16, POP_SH_DY=-88;/, 'const POP_SH_DX=0, POP_SH_DY=-70;'),
+        x => /const POP_SH_DX=0,\s*POP_SH_DY=-70;/.test(x)],
+      ['실드 팝 색을 실드바와 다른 값으로',
+        x => x.replace(/const POP_SH='#6CC0F0';/, "const POP_SH='#7ED957';"),
+        x => (/const\s+POP_SH\s*=\s*'([^']+)'/.exec(x) || [])[1] !== barTop],
+      ['수리 +N 을 요청량으로 (꽉 찬 실드에도 숫자가 뜬다)',
+        x => x.replace(/if\(got>0&&p===\(G&&G\.player\)\) addText\('\+'\+fmt\(got\),POP_SH,/, "if(p===(G&&G.player)) addText('+'+fmt(amt),POP_SH,"),
+        x => !/if\(got>0&&p===\(G&&G\.player\)\)\s*addText\('\+'\+fmt\(got\),POP_SH,/.test(x)],
+    ];
+    let caught = 0;
+    for (const [nm, mut, detect] of seeds) {
+      const s1 = mut(S0);
+      if (s1 === S0) { bad(`  음성 «${nm}» 이 아무것도 안 바꿨다 — 심는 자리가 옮겨졌다(게이트를 갱신할 것)`); continue; }
+      detect(s1) ? (caught++, ok(`  음성 «${nm}» 을 ㊿ 가 잡는다`)) : bad(`  음성 «${nm}» 을 ㊿ 가 못 잡았다`);
+    }
+    const clean = seeds.every(([, , detect]) => !detect(S0));
+    clean ? ok(`  양성 대조군 — 원본은 ${seeds.length}개 검출자 어디에도 안 걸린다 (오탐 0)`)
+          : bad('  양성 대조군이 걸렸다 — 원본에서 ㊿ 가 오탐을 낸다');
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
