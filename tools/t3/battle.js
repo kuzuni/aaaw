@@ -424,6 +424,12 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     return {
       pat: G.nodes.filter(n => n.type === 'wave').map(n => n.enemies.map(e => e.ranged ? '1' : '0').join('')).join('|'),
       n: G.nodes.flatMap(n => n.type === 'wave' ? n.enemies : []).filter(e => e.ranged).length,
+      /* ⚑⚑⚑ T134 — «그대로 매판 굴린다» 반쪽의 실측 재료. 자리(ranged)는 챕터 시드로 굳었지만
+         첫 공격 타이머·스킨·흔들림은 판마다 새로 굴려져야 한다 (주인 확정 T105 ②). */
+      t: G.nodes.flatMap(n => n.type === 'wave' ? n.enemies : []).map(e => +e.atkTimer.toFixed(4)),
+      sk: G.nodes.flatMap(n => n.type === 'wave' ? n.enemies : []).map(e => e.skin && e.skin.body).join(','),
+      bob: G.nodes.flatMap(n => n.type === 'wave' ? n.enemies : []).map(e => +e.bob.toFixed(4)),
+      bossT: (G.nodes.find(n => n.type === 'boss') || { enemies: [] }).enemies.map(e => e.atkTimer).join(','),
     };
   }, c);
   /* ⚑⚑⚑ T114 — 챕터 1~4 는 원거리가 0마리라 «다른 챕터는 다른 자리» 를 거기서 재면 둘 다 전부 0 이라
@@ -434,6 +440,19 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('다른 챕터는 다른 자리다 (고정이 «전 챕터 동일» 로 뭉개지지 않았다)', r7a.pat !== r8.pat,
     `ch7 ${r7a.n}마리 / ch8 ${r8.n}마리`);
   chk('웨이브 첫 마리는 원거리가 아니다', r7a.pat.split('|').every(w => w[0] === '0'));
+  /* ⚑⚑⚑ T134 — 같은 주인 문장의 «나머지 반쪽»: «스킨·첫 공격 타이머·전투 난수는 그대로 매판 굴린다».
+     정적 게이트(`verifyPerRunRandom`)는 두 엔진 소스와 sim.js 스폰을 보지만, **게임이 실제로 세운 적**이
+     판마다 새로 굴려지는지는 여기서만 확인된다. 자리는 위에서 «같다» 를 봤으니 여기선 «다르다» 를 본다. */
+  chk('⚑ T134 같은 챕터를 두 번 시작해도 첫 공격 타이머는 판마다 다르다 (실측)',
+    r7a.t.join(',') !== r7b.t.join(',') && r7a.t.length > 0,
+    `1회차 ${r7a.t.slice(0, 3).join('/')} … / 2회차 ${r7b.t.slice(0, 3).join('/')} …`);
+  chk('⚑ T134 한 판 안에서도 적마다 타이머가 다르다 (한 값으로 굳지 않았다)',
+    new Set(r7a.t).size === r7a.t.length, `${new Set(r7a.t).size}/${r7a.t.length}종`);
+  chk('⚑ T134 적 스킨·흔들림도 판마다 새로 굴려진다 (연출 난수 — 주인 «배치» 범위 밖)',
+    (r7a.sk !== r7b.sk || r7a.bob.join(',') !== r7b.bob.join(',')) && r7a.sk.length > 0,
+    `스킨 ${r7a.sk === r7b.sk ? '동일' : '다름'} · 흔들림 ${r7a.bob.join(',') === r7b.bob.join(',') ? '동일' : '다름'}`);
+  chk('⚑ T134 보스 첫 공격 타이머는 상수 그대로다 (일반 적만 굴린다)',
+    r7a.bossT === r7b.bossT && r7a.bossT.length > 0, `보스 ${r7a.bossT}`);
   /* ⚑⚑⚑ T114 마릿수 곡선 실측 — 주인 «챕터 4까지는 원거리 아예 없고 5부터 원거리 1마리씩 추가».
      정적 게이트는 `chapterLayout` 을 보지만, 게임이 그 마릿수대로 실제 적을 세우는지는 여기서만 확인된다. */
   const zeroN = [];
