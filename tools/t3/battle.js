@@ -464,6 +464,53 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('⚑ 챕터 5~8(램프)은 1·2·3·4마리로 한 마리씩 는다 (주인 «5부터 1마리씩 추가»)',
     ramp.join('/') === '1/2/3/4', `ch5~8 = ${ramp.join('/')}마리`);
 
+  /* ---------- ⚑⚑⚑ T136 — 창의 화신: 화살이 창이 되되 «창 데미지·8관통 그대로» (주인 확정 T105) ----------
+     정적 게이트(`verifySpearAvatar`)는 두 엔진 소스와 sim.js 실측을 보지만, **게임이 실제로 만드는 투사체**가
+     평범한 창과 같은 계수·관통·사거리인지는 여기서만 확인된다(게임 쪽 `fireSpear` 는 `volley` 순차 연사를
+     한 겹 더 쓴다 — sim.js 에는 없는 층이라 여기서 발수가 조용히 깎일 수 있다).
+     ⚑ 판을 `G.paused=true` 로 얼려 두고 잰다 — 얼려도 `volley` 의 setTimeout 은 그대로 흘러 발사되고,
+       전투 업데이트만 멈춘다(`if(!G.paused&&!G.over) update(...)`). 플레이어가 죽거나 적이 사라져
+       발수가 흔들리는 것을 막는다. 투사체는 `G.pprojs.push` 를 가로채 **만들어진 순간** 을 센다. */
+  console.log('\n=== ⚑ T136 창의 화신 — 화살이 창이 되되 창 데미지·8관통은 그대로 (실측) ===');
+  const shoot = (px, n, which) => p.evaluate(async ([px, n, which]) => {
+    startChapter(1);
+    const pl = G.player;
+    Object.assign(pl.px, { p_spearAvatar: 0, arrowCount: 0, spearMaster: 0 }, px);
+    /* 화살은 사거리(540) 안에 표적이 있어야 난다 — 자리만 당기고 판은 얼린다 */
+    const first = G.nodes.flatMap(nd => nd.enemies).sort((a, b) => a.worldX - b.worldX)[0];
+    pl.worldX = first ? first.worldX - 200 : 0;
+    G.paused = true;
+    const rec = [];
+    G.pprojs.push = function (o) {
+      rec.push({ type: o.type, ratio: o.ratio, spd: o.spd, pierce: o.pierce, maxX: o.maxX });
+      return Array.prototype.push.call(this, o);
+    };
+    (which === 'spear' ? fireSpear : fireArrows)(pl, n);
+    await new Promise(r => setTimeout(r, 700));   /* volley = 발마다 50~70ms 순차 연사 */
+    G.paused = false;
+    return rec;
+  }, [px, n, which]);
+  const t136base = await shoot({}, 3, 'arrows');
+  const t136av = await shoot({ p_spearAvatar: 1 }, 3, 'arrows');
+  const t136sp = await shoot({}, 3, 'spear');
+  chk('⚑ T136 아바타 없이 화살 3발을 쏘면 화살 3발이 뜬다 (전제)',
+    t136base.length === 3 && t136base.every(o => o.type === 'parrow'),
+    `${t136base.length}발 · ${t136base[0] ? t136base[0].type : '—'}`);
+  chk('⚑ T136 아바타를 켜면 같은 자리에서 창 3개가 뜬다 (화살 0발 · 발수 그대로)',
+    t136av.length === 3 && t136av.every(o => o.type === 'spear'),
+    `창 ${t136av.filter(o => o.type === 'spear').length}개 · 화살 ${t136av.filter(o => o.type === 'parrow').length}발`);
+  chk('⚑ T136 그 창이 fireSpear(3) 의 창과 한 필드도 다르지 않다 (계수·속도·사거리·관통)',
+    JSON.stringify(t136av) === JSON.stringify(t136sp), JSON.stringify(t136sp[0] || {}));
+  const t136ac = await shoot({ p_spearAvatar: 1, arrowCount: 1 }, 2, 'arrows');
+  chk('⚑ T136 장비 «화살 발수» 옵션이 아바타의 창 발수에도 걸린다 (주인 «장비 화살 옵션도 포함»)',
+    t136ac.length === 3 && t136ac.every(o => o.type === 'spear'), `2발 → 창 ${t136ac.length}개`);
+  const t136sm = await shoot({ p_spearAvatar: 1, spearMaster: 1 }, 1, 'arrows');
+  const t136sm0 = await shoot({ spearMaster: 1 }, 1, 'spear');
+  chk('⚑ T136 장비 «창 데미지» 옵션도 아바타 창에 똑같이 걸린다 (아바타 전용 창이 아니다)',
+    t136sm.length === 1 && t136sm0.length === 1 && t136sm[0].ratio === t136sm0[0].ratio
+    && t136sm[0].ratio > (t136sp[0] ? t136sp[0].ratio : Infinity),
+    `아바타 ${t136sm[0] ? t136sm[0].ratio : '—'} / 평범 ${t136sm0[0] ? t136sm0[0].ratio : '—'} / 기본 ${t136sp[0] ? t136sp[0].ratio : '—'}`);
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);
