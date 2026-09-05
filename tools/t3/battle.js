@@ -1384,6 +1384,174 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     const st = document.getElementById('t156NoAnim'); if (st) st.remove();
   });
 
+  /* ================= ⚑⚑⚑ T159 — 전투 카메라 줌 실측 (주인 지시 2026-09-05 19:5X) =================
+     주인 원문 «캐릭터랑 적들 한 1.5배는 더 커 보여야 하는데 … 카메라를 그렇게 되게 하던지».
+     여기서 재는 것은 **캔버스 픽셀**이다 — 스프라이트는 DOM 이 아니라서 rect 가 없다.
+     같은 `drawCharOn` 을 오프스크린에 **줌 없이** 한 번 더 그려 «종전 크기» 를 만들고,
+     실제 화면에서 잰 높이와 나눠 배율을 낸다(색 일치 픽셀의 바운딩 상자).
+     ⓐ 플레이어·적 스프라이트 높이 ≥ 종전 ×1.45  ⓑ 프레임 % 가 `docs/ui/ref-layout.md` ② 인게임 행의
+     레퍼런스 % ±3%p  ⓒ 데미지 숫자·HP바 글자 가독  ⓓ 360×800 에서 캐릭터가 하단 패널에 안 가림
+     ⓔ 보스(1.7배)가 줌 뒤에도 화면 안. */
+  /* ⚑ 리베이스 합류 — 앞 절(T156)이 뷰포트를 바꿔 놓을 수 있으므로 390×844 를 명시하고 시작한다 */
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(220);
+  console.log('\n=== ⚑ T159 전투 카메라 줌 (캔버스 실측) ===');
+  const Z = await p.evaluate(() => {
+    /* ---- 재현 가능한 한 프레임 ---- */
+    closeOverlay();
+    G.paused = true; G.shake = 0; G.over = false;
+    G.pprojs = []; G.arrows = []; G.bolts = []; G.parts = []; G.texts = []; G.reaps = [];
+    const pl = G.player; pl.hitT = 0; pl.strikeT = 0; pl.walking = false;
+    /* 카메라가 «따라가는 상태»(cam>0)로 만들어 둔다 — 챕터 초입(worldX<150)에는 cam 이 0 에 눌려 있어
+       플레이어가 화면 왼쪽 끝에 반쯤 걸린다(그때는 줌 기준점과 실제 위치가 다르다). 그리기 전용 위치 지정이다. */
+    pl.worldX = 400;
+    /* 적 하나를 플레이어 앞 세워 둔다(월드 단위 150 — 그리기와 무관한 위치 지정일 뿐이다) */
+    const node = G.nodes.find(n => n.enemies.length) || G.nodes[0];
+    for (const n of G.nodes) for (const e of n.enemies) e.hp = 0;
+    const e0 = node.enemies[0];
+    e0.hp = e0.maxHp; e0.hitT = 0; e0.strikeT = 0; e0.stun = 0; e0.isBoss = false;
+    e0.skin = { body: '#6B7F5A', hat: 'bald', weapon: 'sword' };   /* 민머리 = 모자색 잡음 없음 */
+    e0.worldX = pl.worldX + 150;
+    drawScene();
+
+    const dpr = cv.width / cv.clientWidth;
+    const scLay = cv.clientWidth / LW;              /* 레이아웃 1 단위 = CSS px */
+    const gy = LH * 0.576;
+    const toCssX = lx => (PLAYER_SCREEN_X + (lx - PLAYER_SCREEN_X) * CAM_ZOOM) * scLay;
+
+    /* 색 일치 픽셀의 바운딩 상자 (CSS px). cols = 6자리 대문자 HEX */
+    const box = (c2, g2, cols, cxCss, halfCss, den) => {
+      const x0 = Math.max(0, Math.round((cxCss - halfCss) * den));
+      const x1 = Math.min(c2.width, Math.round((cxCss + halfCss) * den));
+      if (x1 <= x0) return null;
+      const w = x1 - x0, d = g2.getImageData(x0, 0, w, c2.height).data;
+      const set = new Set(cols);
+      let top = 1e9, bot = -1e9, l = 1e9, r = -1e9;
+      for (let y = 0; y < c2.height; y++) for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (d[i + 3] < 250) continue;
+        const hex = ((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]).toString(16).padStart(6, '0').toUpperCase();
+        if (!set.has(hex)) continue;
+        if (y < top) top = y; if (y > bot) bot = y; if (x < l) l = x; if (x > r) r = x;
+      }
+      return top > bot ? null : { h: (bot - top + 1) / den, w: (r - l + 1) / den,
+        top: top / den, bot: bot / den, cx: (x0 + (l + r) / 2) / den };
+    };
+    /* 같은 옵션을 줌 없이 오프스크린에 그려 «종전 크기»(레이아웃 단위)를 만든다 */
+    const refH = (opts, cols) => {
+      const oc = document.createElement('canvas'); oc.width = 400; oc.height = 400;
+      const g2 = oc.getContext('2d');
+      drawCharOn(g2, 200, 300, opts);
+      const b = box(oc, g2, cols, 200, 120, 1);
+      return b ? b.h : null;
+    };
+
+    const PCOL = ['5E6A75', 'F6D7A7', '3E6FD8'];      /* 몸통 · 살색 · 투구 장식(플레이어 전용 색) */
+    const ECOL = ['6B7F5A', 'F6D7A7'];                /* 적 몸통 · 살색 */
+    const pOpt = { s: 1.05, f: 1, body: '#5E6A75', hat: 'helmet', weapon: 'sword' };
+    const eOpt = { s: 1, f: -1, body: '#6B7F5A', hat: 'bald', weapon: 'sword' };
+
+    /* 실제로 그려진 자리에서 잰다 — 레이아웃 x = worldX - cam (cam 은 전역) */
+    const pCss = toCssX(pl.worldX - cam), eCss = toCssX(e0.worldX - cam);
+    const pNow = box(cv, ctx, PCOL, pCss, 60, dpr);
+    const eNow = box(cv, ctx, ECOL, eCss, 60, dpr);
+    const pRef = refH(pOpt, PCOL), eRef = refH(eOpt, ECOL);
+
+    const f = document.getElementById('frame').getBoundingClientRect();
+    const cvr = cv.getBoundingClientRect();
+    return {
+      zoom: CAM_ZOOM, scLay, dpr, viewScale,
+      player: pNow, enemy: eNow,
+      /* 종전(줌 없음) CSS px 높이 = 레이아웃 높이 × scLay */
+      playerPre: pRef === null ? null : pRef * scLay,
+      enemyPre: eRef === null ? null : eRef * scLay,
+      frameH: f.height, cvTop: cvr.top - f.top, cvH: cvr.height,
+      /* 실효 글자 크기(CSS px) — 데미지 숫자 17 · 큰 숫자 26 · HP바 글자(클램프 뒤) */
+      dmgPx: 17 * viewScale, dmgBigPx: 26 * viewScale,
+      hpFontPx: Math.max(10.5, 10 / Math.max(viewScale, 0.001)) * viewScale,
+      hudTop: document.getElementById('hud').getBoundingClientRect().top - f.top,
+    };
+  });
+  const rPl = Z.player && Z.playerPre ? Z.player.h / Z.playerPre : 0;
+  const rEn = Z.enemy && Z.enemyPre ? Z.enemy.h / Z.enemyPre : 0;
+  chk('⚑ T159 ① 플레이어 스프라이트 높이 ≥ 종전 ×1.45', rPl >= 1.45,
+    `${(Z.playerPre || 0).toFixed(1)} → ${(Z.player ? Z.player.h : 0).toFixed(1)}px (×${rPl.toFixed(3)} · CAM_ZOOM ${Z.zoom})`);
+  chk('⚑ T159 ① 적 스프라이트 높이 ≥ 종전 ×1.45', rEn >= 1.45,
+    `${(Z.enemyPre || 0).toFixed(1)} → ${(Z.enemy ? Z.enemy.h : 0).toFixed(1)}px (×${rEn.toFixed(3)})`);
+  /* ② 레퍼런스 % 대조 — `docs/ui/ref-layout.md` ② 인게임 «플레이어 높이 9.0 · 적 높이 7.5»(±3%p) */
+  const pPct = Z.player ? Z.player.h / Z.frameH * 100 : 0, ePct = Z.enemy ? Z.enemy.h / Z.frameH * 100 : 0;
+  chk('⚑ T159 ② 플레이어 높이 % 가 레퍼런스 9.0 ±3%p', Math.abs(pPct - 9.0) <= 3,
+    `실측 ${pPct.toFixed(1)}% (레퍼런스 «메인 게임화면.jpg» 투구 장식~발밑 9.0%)`);
+  chk('⚑ T159 ② 적(민머리) 높이 % 가 레퍼런스 7.5 ±3%p', Math.abs(ePct - 7.5) <= 3,
+    `실측 ${ePct.toFixed(1)}% (레퍼런스 «메인 게임화면_적발견.jpg» 민머리 적 7.5% · 모자 적은 9.0%)`);
+  /* ③ 가독 — 데미지 숫자·HP바 글자 */
+  chk('⚑ T159 ③ 데미지 숫자·HP바 글자 가독 (실효 ≥ 10 CSS px)',
+    Z.dmgPx >= 12 && Z.hpFontPx >= 10,
+    `데미지 ${Z.dmgPx.toFixed(1)}px · 큰 숫자 ${Z.dmgBigPx.toFixed(1)}px · HP바 글자 ${Z.hpFontPx.toFixed(1)}px`);
+  /* ④ 하단 패널에 안 가림 — 캐릭터 아래끝(HP/실드 라벨 포함)이 #hud 위 */
+  const footBot = Z.player ? Z.cvTop + Z.player.bot + 29 * Z.scLay * Z.zoom : 1e9;
+  chk('⚑ T159 ④ 390×844 — 캐릭터·발밑 라벨이 하단 패널 위에 있다', footBot < Z.hudTop,
+    `발밑 라벨 끝 ${footBot.toFixed(0)}px < 하단 패널 ${Z.hudTop.toFixed(0)}px`);
+  chk('⚑ T159 ④ 캐릭터가 캔버스 위로 안 잘린다', Z.player ? Z.player.top > 0.5 : false,
+    `머리 끝 ${(Z.player ? Z.player.top : -1).toFixed(1)}px (캔버스 상단 기준)`);
+
+  /* ⑤ 보스(1.7배)가 줌 뒤에도 화면 안 · ⑥ 360×800 재확인 */
+  const Zb = await p.evaluate(() => {
+    const node = G.nodes.find(n => n.enemies.length) || G.nodes[0];
+    const e0 = node.enemies[0];
+    e0.isBoss = true; e0.skin = { body: '#5A3247', hat: 'horns', weapon: 'axe' };
+    e0.worldX = G.player.worldX + 150;
+    drawScene();
+    const dpr = cv.width / cv.clientWidth, scLay = cv.clientWidth / LW;
+    const cx = (PLAYER_SCREEN_X + (e0.worldX - cam - PLAYER_SCREEN_X) * CAM_ZOOM) * scLay;
+    const x0 = Math.max(0, Math.round((cx - 90) * dpr)), x1 = Math.min(cv.width, Math.round((cx + 90) * dpr));
+    const w = x1 - x0, d = ctx.getImageData(x0, 0, w, cv.height).data;
+    const set = new Set(['5A3247', 'F6D7A7', 'D84343']);   /* 보스 몸통 · 살색 · 뿔 */
+    let top = 1e9, bot = -1e9;
+    for (let y = 0; y < cv.height; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] < 250) continue;
+      const hex = ((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]).toString(16).padStart(6, '0').toUpperCase();
+      if (!set.has(hex)) continue;
+      if (y < top) top = y; if (y > bot) bot = y;
+    }
+    return { top: top / dpr, bot: bot / dpr, cvH: cv.clientHeight, found: top <= bot };
+  });
+  chk('⚑ T159 ⑤ 보스(1.7배)가 줌 뒤에도 화면 안에 들어온다', Zb.found && Zb.top > 0.5 && Zb.bot < Zb.cvH,
+    `보스 머리 ${Zb.top.toFixed(1)}px ~ 발밑 ${Zb.bot.toFixed(1)}px / 캔버스 ${Zb.cvH.toFixed(0)}px`);
+
+  await p.setViewportSize({ width: 360, height: 800 }); await p.waitForTimeout(260);
+  const Z360 = await p.evaluate(() => {
+    const node = G.nodes.find(n => n.enemies.length) || G.nodes[0];
+    const e0 = node.enemies[0];
+    e0.isBoss = false; e0.skin = { body: '#6B7F5A', hat: 'bald', weapon: 'sword' };
+    drawScene();
+    const dpr = cv.width / cv.clientWidth, scLay = cv.clientWidth / LW;
+    const cx = (PLAYER_SCREEN_X + (G.player.worldX - cam - PLAYER_SCREEN_X) * CAM_ZOOM) * scLay;
+    const x0 = Math.max(0, Math.round((cx - 60) * dpr)), x1 = Math.min(cv.width, Math.round((cx + 60) * dpr));
+    const w = x1 - x0, d = ctx.getImageData(x0, 0, w, cv.height).data;
+    const set = new Set(['5E6A75', 'F6D7A7', '3E6FD8']);
+    let top = 1e9, bot = -1e9;
+    for (let y = 0; y < cv.height; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] < 250) continue;
+      const hex = ((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]).toString(16).padStart(6, '0').toUpperCase();
+      if (!set.has(hex)) continue;
+      if (y < top) top = y; if (y > bot) bot = y;
+    }
+    const f = document.getElementById('frame').getBoundingClientRect();
+    const cvr = cv.getBoundingClientRect();
+    return { top: top / dpr, bot: bot / dpr, cvTop: cvr.top - f.top, scLay,
+      hudTop: document.getElementById('hud').getBoundingClientRect().top - f.top,
+      h: (bot - top + 1) / dpr, frameH: f.height, found: top <= bot };
+  });
+  const foot360 = Z360.cvTop + Z360.bot + 29 * Z360.scLay * Z.zoom;
+  chk('⚑ T159 ⑥ 360×800 — 캐릭터가 잘리지도, 하단 패널에 가리지도 않는다',
+    Z360.found && Z360.top > 0.5 && foot360 < Z360.hudTop,
+    `머리 ${Z360.top.toFixed(1)}px · 발밑 라벨 끝 ${foot360.toFixed(0)} < 패널 ${Z360.hudTop.toFixed(0)} · 높이 ${(Z360.h / Z360.frameH * 100).toFixed(1)}%`);
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(220);
+  console.log(`  [T159 크기표] 플레이어 ${(Z.playerPre || 0).toFixed(1)} → ${(Z.player ? Z.player.h : 0).toFixed(1)}px (${pPct.toFixed(1)}% 프레임) · ` +
+    `적 ${(Z.enemyPre || 0).toFixed(1)} → ${(Z.enemy ? Z.enemy.h : 0).toFixed(1)}px (${ePct.toFixed(1)}%) · viewScale ${Z.viewScale.toFixed(3)}`);
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);

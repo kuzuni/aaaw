@@ -2959,6 +2959,131 @@ console.log('\n[㊺ 특전 선택창 상단 스탯 아이콘 2배 (T156 · 주�
   /ov-stats/.test(SIM) ? bad('⑦ sim.js 에 상단 줄 CSS 가 새어 들어갔다') : ok('⑦ sim.js 무관 (CSS 한 자리 · 엔진·밸런스 무수정)');
 }
 
+/* ---------- ㊻ 전투 카메라 줌 CAM_ZOOM (T159 · 주인 지시 2026-09-05 19:5X) ----------
+   주인 원문 «캐릭터랑 적들 한 1.5배는 더 커 보여야 하는데 그렇게 되도록 카메라를 그렇게 되게 하던지 해야 함».
+   위임 기본값은 **카메라 줌** — 월드 → 화면 변환에만 배율을 넣고 월드 단위는 한 글자도 안 바꾼다.
+   그래서 이 절이 재는 것은 «배율이 그리기 쪽에만 있는가» 다:
+     ① 상수가 index.html 한 곳에만 · 값 1.5 ② 월드 상수(132·74·88·440)가 두 엔진에서 종전 그대로
+     ③ sim.js 에 줌이 한 글자도 없다 ④ 발밑 기준 translate→scale→translate 3연 ⑤ 배경·컬링이 화면 범위(VL/VR/VT/VB)를 쓴다
+     ⑥ 지면 띠는 역변환으로 화면 자리를 지킨다(ref ② y30.0 h21.0) ⑦ 보스 클램프 ⑧ HP바 글자 클램프.
+   실제 «몇 배로 커졌나» 는 정적으로 잴 수 없다 — `tools/t3/battle.js` 가 캔버스 픽셀로 잰다. */
+console.log('\n[㊻ 전투 카메라 줌 CAM_ZOOM (T159)]');
+{
+  const SCRIPT = (/<script>([\s\S]*)<\/script>/.exec(HTML) || [, ''])[1];
+  const draw = (/function drawScene\(\)\{([\s\S]*?)\n\}/.exec(SCRIPT) || [, ''])[1];
+
+  /* ① 상수 선언 — 한 곳뿐이고 값이 1.5 */
+  const decl = SCRIPT.match(/const\s+CAM_ZOOM\s*=\s*([0-9.]+)\s*;/g) || [];
+  if (decl.length !== 1) bad(`① \`const CAM_ZOOM=…\` 선언이 ${decl.length}개다 — 배율은 **한 상수 한 곳**이어야 한다`);
+  else {
+    const v = parseFloat(/=\s*([0-9.]+)/.exec(decl[0])[1]);
+    v === 1.5 ? ok('① `const CAM_ZOOM=1.5` 가 index.html 에 한 번만 선언돼 있다')
+              : bad(`① CAM_ZOOM 값이 ${v} 다 — 주인 확정은 1.5(레퍼런스 % 가 우선이라 바꿀 땐 ref-layout ② 인게임 행도 같이)`);
+  }
+  const px = /const\s+PLAYER_SCREEN_X\s*=\s*(\d+)\s*;/.exec(SCRIPT);
+  (px && +px[1] === 150)
+    ? ok('①-b 카메라 기준점 `PLAYER_SCREEN_X=150` (화면 왼쪽 27.8% — 종전 `worldX-150` 과 같은 자리)')
+    : bad('①-b `PLAYER_SCREEN_X=150` 이 없다 — 줌 기준점이 플레이어 발밑에서 어긋나면 화면이 통째로 밀린다');
+  /cam\s*=\s*p\s*\?\s*Math\.max\(0,\s*p\.worldX\s*-\s*PLAYER_SCREEN_X\)/.test(draw)
+    ? ok('①-c `cam` 이 그 상수로 잡힌다 — 플레이어는 줌 전후로 같은 화면 x 에 남는다')
+    : bad('①-c `cam` 이 `p.worldX-PLAYER_SCREEN_X` 가 아니다 — 기준점과 카메라가 따로 논다');
+
+  /* ② 월드 단위 불변 — 주인 등재문이 이름까지 적어 둔 넷을 두 엔진에서 그대로 확인한다 */
+  const WORLD = [
+    ['전진 속도 132', /worldX\s*\+=\s*132\s*\*\s*p\.walkMul/],
+    ['근접 사거리 74', /dist\s*>\s*74/],
+    ['적 간격 88', /worldX\s*:\s*x\s*\+\s*j\s*\*\s*88/],
+    ['원거리 사거리 440', /d\s*<\s*440/],
+  ];
+  let wbad = 0;
+  for (const [nm, re] of WORLD) {
+    const inH = re.test(SCRIPT), inS = re.test(SIM);
+    if (inH && inS) continue;
+    wbad++; bad(`② 월드 상수 «${nm}» 가 ${inH ? 'sim.js' : 'index.html'} 에서 사라졌다 — 줌은 그리기만 바꿔야 한다`);
+  }
+  if (!wbad) ok('② 월드 상수 4종(전진 132 · 근접 74 · 적 간격 88 · 원거리 440)이 두 엔진에 종전 그대로다');
+
+  /* ③ 시뮬에는 줌이 없다 — 있으면 그리기 상수가 밸런스로 샌 것이다 */
+  /CAM_ZOOM|PLAYER_SCREEN_X/.test(SIM)
+    ? bad('③ `sim.js` 에 줌 상수가 들어갔다 — 시뮬은 그림이 없다(그리기 배율이 새면 밸런스가 흔들린다)')
+    : ok('③ `sim.js` 에 `CAM_ZOOM`·`PLAYER_SCREEN_X` 가 한 글자도 없다 (시뮬 무수정)');
+
+  /* ④ 발밑 기준 줌 3연 */
+  const zoomLine = /ctx\.translate\(PLAYER_SCREEN_X,\s*gy\);\s*ctx\.scale\(CAM_ZOOM,\s*CAM_ZOOM\);\s*ctx\.translate\(-PLAYER_SCREEN_X,\s*-gy\);/;
+  zoomLine.test(draw)
+    ? ok('④ 줌이 «발밑(PLAYER_SCREEN_X, gy) 기준 translate → scale → translate» 3연으로 들어가 있다')
+    : bad('④ 발밑 기준 줌 3연을 못 찾았다 — 원점 기준으로 scale 하면 캐릭터가 화면 밖으로 밀려난다');
+  /const\s+VL\s*=[\s\S]*?const\s+VT\s*=\s*gy\s*-\s*gy\s*\/\s*CAM_ZOOM/.test(draw)
+    ? ok('④-b 줌 뒤 «화면에 남는 레이아웃 범위» VL/VR/VT/VB 를 구해 둔다')
+    : bad('④-b VL/VR/VT/VB 가 없다 — 배경을 어디까지 칠할지 알 수 없어 가장자리가 빈다');
+
+  /* ⑤ 배경 칠·소품 루프·컬링이 화면 범위를 쓴다 (LW/LH 하드 경계가 남아 있으면 가장자리가 빈다) */
+  const drawTail = draw.slice(draw.indexOf('const VL'));
+  const leftovers = [
+    ['배경 칠', /fillRect\(-20,\s*-20,\s*LW\s*\+\s*40/],
+    ['적 컬링', /x\s*<\s*-90\s*\|\|\s*x\s*>\s*LW\s*\+\s*90/],
+    ['노드 컬링', /x\s*<\s*-80\s*\|\|\s*x\s*>\s*LW\s*\+\s*80/],
+    ['소품 루프', /i\s*=\s*Math\.floor\(cam\s*\/\s*90\)/],
+  ];
+  const left = leftovers.filter(([, re]) => re.test(drawTail)).map(([n]) => n);
+  left.length === 0
+    ? ok('⑤ 배경 칠·소품 루프·컬링이 전부 화면 범위(VL/VR/VT/VB)로 바뀌었다 — 줌 뒤에도 가장자리가 안 빈다')
+    : bad(`⑤ 아직 LW/LH 하드 경계를 쓰는 곳: ${left.join(' · ')} — 줌 뒤 화면 밖을 칠하거나 안쪽이 빈다`);
+  (/x\s*<\s*VL\s*-\s*90\s*\|\|\s*x\s*>\s*VR\s*\+\s*90/.test(drawTail) && /x\s*<\s*VL\s*-\s*80\s*\|\|\s*x\s*>\s*VR\s*\+\s*80/.test(drawTail))
+    ? ok('⑤-b 적·노드 컬링이 VL/VR 기준이다 (화면에 동시에 보이는 적이 줄어드는 것은 의도 — 레퍼런스도 적 2~3마리)')
+    : bad('⑤-b 적·노드 컬링이 VL/VR 기준이 아니다');
+
+  /* ⑥ 지면 띠는 화면 자리를 지킨다 — ref-layout ② «지면 띠 y30.0 h21.0» 이 자다 */
+  /const\s+pathTop\s*=\s*gy\s*\+\s*\(LH\s*\*\s*0\.432\s*-\s*gy\)\s*\/\s*CAM_ZOOM,\s*pathBot\s*=\s*gy\s*\+\s*\(LH\s*\*\s*0\.735\s*-\s*gy\)\s*\/\s*CAM_ZOOM/.test(draw)
+    ? ok('⑥ 지면 띠 pathTop/pathBot 이 줌 역변환을 먹어 **화면에서는** 종전 자리(.432/.735 = ref ② 30.0/51.0)에 남는다')
+    : bad('⑥ 지면 띠가 역변환 없이 줌을 타면 ref ② «지면 띠 y30.0 h21.0» 이 5%p 넘게 어긋난다');
+  /const\s+gy\s*=\s*LH\s*\*\s*0\.576\s*;/.test(draw)
+    ? ok('⑥-b 발밑 gy 는 LH*0.576 그대로다 (줌 기준점이라 화면에서 한 픽셀도 안 움직인다 — ref ② 발밑 40.0)')
+    : bad('⑥-b 발밑 gy 가 LH*0.576 이 아니다 — ref ② «플레이어 발밑 y 40.0» 이 깨진다');
+
+  /* ⑦ 보스 클램프 (1.7배가 위로 잘리면 보스만 줄인다) */
+  /const\s+s\s*=\s*e\.isBoss\s*\?\s*Math\.min\(1\.7,\s*\(gy\s*-\s*VT\s*-\s*8\)\s*\/\s*70\)\s*:\s*1\s*;/.test(draw)
+    ? ok('⑦ 보스(1.7배)에 «화면 위로 잘리면 보스만 줄인다» 클램프가 걸려 있다')
+    : bad('⑦ 보스 클램프가 없다 — 세로가 짧은 화면에서 뿔·투구가 잘린다');
+
+  /* ⑧ HP바 글자는 아래로만 클램프 (같은 배율로 커지되, 좁은 화면에서 안 읽히는 일이 없게) */
+  /ctx\.font\s*=\s*Math\.max\(10\.5,\s*10\s*\/\s*Math\.max\(viewScale/.test(SCRIPT)
+    ? ok('⑧ HP바 글자가 «10.5 아래로는 안 내려간다» 로 클램프돼 있다 (위로는 줌과 같은 배율)')
+    : bad('⑧ HP바 글자 클램프가 없다');
+  /viewScale\s*=\s*sc\s*\*\s*CAM_ZOOM\s*\/\s*dpr\s*;/.test(draw)
+    ? ok('⑧-b `viewScale = sc*CAM_ZOOM/dpr` — 레이아웃 1 단위가 CSS px 몇 개인지 매 프레임 갱신한다')
+    : bad('⑧-b viewScale 갱신이 없다 — 클램프가 옛 배율로 판단한다');
+
+  /* ---------- 음성 자기검사 ---------- */
+  {
+    console.log('  [음성 자기검사] 심은 고장을 ㊻ 가 잡는가');
+    const S0 = SCRIPT;
+    const seeds = [
+      ['줌을 1 로 되돌림', s => s.replace(/const CAM_ZOOM=1\.5;/, 'const CAM_ZOOM=1.0;'), s => (/=\s*([0-9.]+)/.exec((s.match(/const\s+CAM_ZOOM\s*=\s*([0-9.]+)\s*;/g) || ['=0'])[0])[1]) !== '1.5'],
+      ['원점 기준 scale 로 바꿈', s => s.replace(/ctx\.translate\(PLAYER_SCREEN_X,gy\); ctx\.scale\(CAM_ZOOM,CAM_ZOOM\); ctx\.translate\(-PLAYER_SCREEN_X,-gy\);/, 'ctx.scale(CAM_ZOOM,CAM_ZOOM);'),
+        s => !zoomLine.test(s)],
+      ['지면 띠 역변환 제거', s => s.replace(/const pathTop=gy\+\(LH\*0\.432-gy\)\/CAM_ZOOM, pathBot=gy\+\(LH\*0\.735-gy\)\/CAM_ZOOM;/, 'const pathTop=LH*0.432, pathBot=LH*0.735;'),
+        s => !/pathTop\s*=\s*gy\s*\+\s*\(LH\s*\*\s*0\.432\s*-\s*gy\)\s*\/\s*CAM_ZOOM/.test(s)],
+      ['적 컬링을 LW 로 되돌림', s => s.replace(/if\(x<VL-90\|\|x>VR\+90\) continue;/, 'if(x<-90||x>LW+90) continue;'),
+        s => /x\s*<\s*-90\s*\|\|\s*x\s*>\s*LW\s*\+\s*90/.test(s)],
+      ['보스 클램프 제거', s => s.replace(/const s=e\.isBoss\?Math\.min\(1\.7,\(gy-VT-8\)\/70\):1;/, 'const s=e.isBoss?1.7:1;'),
+        s => !/Math\.min\(1\.7,\s*\(gy\s*-\s*VT\s*-\s*8\)\s*\/\s*70\)/.test(s)],
+      ['HP바 글자 클램프 제거', s => s.replace(/ctx\.font=Math\.max\(10\.5,10\/Math\.max\(viewScale,0\.001\)\)\.toFixed\(2\)\+'px Jua';/, "ctx.font='10.5px Jua';"),
+        s => !/Math\.max\(10\.5,\s*10\s*\/\s*Math\.max\(viewScale/.test(s)],
+    ];
+    let caught = 0;
+    for (const [nm, mut, detect] of seeds) {
+      const s1 = mut(S0);
+      if (s1 === S0) { bad(`  음성 «${nm}» 이 아무것도 안 바꿨다 — 심는 자리가 옮겨졌다(게이트를 갱신할 것)`); continue; }
+      detect(s1) ? (caught++, ok(`  음성 «${nm}» 을 ㊻ 가 잡는다`)) : bad(`  음성 «${nm}» 을 ㊻ 가 못 잡았다`);
+    }
+    /* 양성 대조군 — 원본은 어느 검출자에도 안 걸려야 한다 */
+    const clean = seeds.every(([, , detect]) => !detect(S0));
+    clean ? ok(`  양성 대조군 — 원본은 ${seeds.length}개 검출자 어디에도 안 걸린다 (오탐 0)`)
+          : bad('  양성 대조군이 걸렸다 — 원본에서 ㊻ 가 오탐을 낸다');
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
