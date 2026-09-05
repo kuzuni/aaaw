@@ -227,9 +227,13 @@ function run(simSrc, htmSrc) {
     const b = S.mkBuild(0, 0, 0);
     const fp = r => [r.clear, r.time.toFixed(4), r.gold, r.level, r.atkTries, r.miss].join('/');
     hook.frozen = null;
+    /* 지문이 우연히 겹칠 수 있으니 5판을 재서 «서로 다른 지문이 2개 이상» 을 본다 (잡음 방지). */
     hook.n = 0; const r1 = fp(S.runChapter(9, b, {})); const c1 = hook.n;
     hook.n = 0; const r2 = fp(S.runChapter(9, b, {})); const c2 = hook.n;
-    chk('같은 챕터·같은 빌드 두 판의 지문이 다르다 (전투가 판마다 새로 굴려진다)', r1 !== r2, `${r1} vs ${r2}`);
+    const seen = new Set([r1, r2]);
+    for (let i = 0; i < 3 && seen.size < 2; i++) seen.add(fp(S.runChapter(9, b, {})));
+    chk('같은 챕터·같은 빌드를 여러 판 돌리면 지문이 갈린다 (전투가 판마다 새로 굴려진다)',
+      seen.size >= 2, `${seen.size}종 · ${r1} vs ${r2}`);
     chk('한 판이 스폰(=적 수)보다 훨씬 많이 굴린다 (전투부가 실제로 난수를 쓴다)', c1 > 100 && c2 > 100,
       `${c1}회 / ${c2}회`);
     hook.frozen = 0.5;
