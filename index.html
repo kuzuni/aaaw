@@ -477,7 +477,13 @@
     display:flex; align-items:center;}   /* 좌우 안여백 0 — 레퍼런스는 8칸이 프레임 폭을 그대로 8등분한다 */
   .ov-stats .sc{flex:1 1 0; min-width:0; overflow:hidden;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;}
-  .ov-stats .sc .ic{font-size:16px; line-height:0; display:block; flex:none;}
+  /* ⚑⚑⚑ T156 (주인 2026-09-05 19:2X «그거 아이콘 크기 2배로 키워») — 크기 노브는 이 font-size
+     하나뿐이다(`.gicon` 이 1em · T140 과 같은 수법). **16 → 32px = 정확히 2.0배.**
+     값 글자(11px)는 그대로 두고 칸(`.sc`)은 높이가 auto 라 30.1 → 46.1px 로 저절로 따라 는다 —
+     줄 상자는 `--fh` 연동(top4% h6% = 50.6@390 · 48.0@360)이라 46.1 이 그대로 들어가고,
+     `.ov-stats` 자체는 절대 배치라 배너·카드는 한 픽셀도 안 움직인다. 가로도 안전하다:
+     아이콘 32px < 칸 폭 45px(@360). 전투 하단 패널(`.st .ic` 24px)은 대상이 아니라 그대로다. */
+  .ov-stats .sc .ic{font-size:32px; line-height:0; display:block; flex:none;}
   .ov-stats .sc .vl{font-size:11px; line-height:1.1; color:var(--ink); white-space:nowrap; font-variant-numeric:tabular-nums;}
   .ov-stats .sc .vl.up{color:#7ED957;}   /* 전투 하단 패널(.st .vl.up)과 같은 초록 규칙 */
   /* ⓐ 전면 — 상자·테두리 없음. 좌우 여백 5.5% 라 카드가 x5.5 w89 로 앉는다. */

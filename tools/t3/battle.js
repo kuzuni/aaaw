@@ -1292,6 +1292,98 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     alsoOn.devil === 8 && alsoOn.devilCards === 1 && alsoOn.hasYes,
     `${alsoOn.devil}칸 · 카드 ${alsoOn.devilCards}장`);
 
+  /* =============================================================================
+     ⚑⚑⚑ T156 — 특전 선택창 «상단 스탯 줄» 아이콘 2배 (주인 지시 2026-09-05 19:2X)
+     주인 원문: «특전 선택할 때 공속 치명확률 이런 옵션 상단에 뜨는 거 그거 아이콘 크기 2배로 키워».
+     «2배» 는 CSS 숫자가 아니라 **실기기 rect** 로만 확인된다 — `.gicon` 이 1em 이라 칸의 font-size 를
+     물려받는데, 그 사이에 `line-height`·`flex:none`·부모의 `overflow:hidden` 이 끼어 있어
+     «CSS 를 32 로 적었다» 가 «화면에서 32px 로 그려졌다» 를 보장하지 않는다.
+     ⓐ 종전 실측값 16.0px 을 기준선으로 못박는다(T154 회차 실측 · ref-layout ⚑T156 표에 남겼다).
+     ⓑ 커진 뒤에도 8칸이 한 줄 · 겹침 0 · 360px 에서 잘림 0 이어야 한다 — 주인 조항
+        «넘치면 칸 간격을 줄이지 아이콘을 줄이지 말 것» 을 지키려면 아이콘이 줄었는지를 먼저 봐야 한다.
+     ⓒ 전투 하단 패널 아이콘(`.st .ic` 24px)은 **대상이 아니다** — 같이 커지면 빨강.
+     ============================================================================= */
+  console.log('\n=== ⚑ T156 특전 선택창 상단 스탯 아이콘 2배 (실측 px) ===');
+  const T156_ICON_WAS = 16;   /* T154 회차 실측 (390·360 둘 다 16.0px · `.ov-stats .sc .ic{font-size:16px}`) */
+  const readIcons = () => p.evaluate(() => {
+    const cells = [...document.querySelectorAll('#overlay .ov-stats .sc')];
+    const fr = document.getElementById('frame').getBoundingClientRect();
+    const m = cells.map(el => {
+      const ic = el.querySelector('.ic svg'), vl = el.querySelector('.vl');
+      const c = el.getBoundingClientRect(), i = ic.getBoundingClientRect(), v = vl.getBoundingClientRect();
+      return { c, i, v };
+    });
+    let ovl = 0;
+    for (let a = 0; a < m.length; a++) for (let b = a + 1; b < m.length; b++)
+      if (!(m[a].c.right <= m[b].c.left + .01 || m[b].c.right <= m[a].c.left + .01)) ovl++;
+    return {
+      n: cells.length,
+      icH: +Math.min(...m.map(x => x.i.height)).toFixed(2),
+      icW: +Math.min(...m.map(x => x.i.width)).toFixed(2),
+      cellH: +m[0].c.height.toFixed(2), cellW: +m[0].c.width.toFixed(2),
+      /* 한 줄 = 8칸의 top 이 같다 */
+      oneLine: m.every(x => Math.abs(x.c.top - m[0].c.top) < .6),
+      ovl,
+      /* 잘림 0 = 아이콘·값이 자기 칸(overflow:hidden) 안에 있고 칸이 프레임 안에 있다 */
+      clip: m.filter(x =>
+        x.i.left < x.c.left - .01 || x.i.right > x.c.right + .01 ||
+        x.i.top < x.c.top - .01 || x.v.bottom > x.c.bottom + .01).length,
+      /* 아이콘 ↔ 값 세로 겹침 (주인 «값 글자는 그대로 두되 겹치지 않게») */
+      vOverlap: m.filter(x => x.i.bottom > x.v.top + .01).length,
+      inFrame: m.every(x => x.c.left >= fr.left - .01 && x.c.right <= fr.right + .01),
+      /* 값 글자는 안 커졌다 (주인 «값 글자는 그대로») */
+      vlH: +m[0].v.height.toFixed(2),
+      panelIcH: +(document.querySelector('#stats .st .ic svg') || { getBoundingClientRect: () => ({ height: -1 }) })
+        .getBoundingClientRect().height.toFixed(2),
+    };
+  });
+  await p.evaluate(() => {
+    const st = document.createElement('style'); st.id = 't156NoAnim';
+    st.textContent = '*{animation:none!important;transition:none!important}';
+    document.head.appendChild(st);
+    if (document.getElementById('overlay').classList.contains('on')) closeOverlay();
+    G.paused = true; G.cleared = true; G.perksTaken = []; openLevelUp();
+  });
+  await p.waitForTimeout(180);
+  const ic390 = await readIcons();
+  chk(`⚑ T156 390px — 상단 스탯 아이콘 rect 높이 ≥ 종전 ×1.9 (${T156_ICON_WAS} → ${(T156_ICON_WAS * 1.9).toFixed(1)}px 이상)`,
+    ic390.n === 8 && ic390.icH >= T156_ICON_WAS * 1.9 && ic390.icW >= T156_ICON_WAS * 1.9,
+    `${ic390.icW}×${ic390.icH}px (종전 ${T156_ICON_WAS} 의 ×${(ic390.icH / T156_ICON_WAS).toFixed(2)})`);
+  chk('⚑ T156 390px — 8칸 한 줄 · 겹침 0 · 잘림 0 · 프레임 안',
+    ic390.oneLine && ic390.ovl === 0 && ic390.clip === 0 && ic390.inFrame,
+    `한 줄 ${ic390.oneLine} · 겹침 ${ic390.ovl} · 잘림 ${ic390.clip} · 칸 ${ic390.cellW}×${ic390.cellH}px`);
+  chk('⚑ T156 값 글자는 그대로 (12.09px) · 아이콘 아래에서 안 겹친다',
+    Math.abs(ic390.vlH - 12.09) < 1 && ic390.vOverlap === 0,
+    `값 ${ic390.vlH}px · 세로 겹침 ${ic390.vOverlap}칸`);
+  chk('⚑ T156 전투 하단 패널 아이콘은 대상이 아니다 (24px 그대로)',
+    Math.abs(ic390.panelIcH - 24) < .6, `${ic390.panelIcH}px`);
+  await p.setViewportSize({ width: 360, height: 800 }); await p.waitForTimeout(220);
+  await p.evaluate(() => { closeOverlay(); G.paused = true; G.perksTaken = []; openLevelUp(); });
+  await p.waitForTimeout(180);
+  const ic360 = await readIcons();
+  chk('⚑ T156 360px — 아이콘 ×1.9 이상 유지 · 8칸 한 줄 · 겹침 0 · 잘림 0 (주인 «아이콘을 줄이지 말 것»)',
+    ic360.n === 8 && ic360.icH >= T156_ICON_WAS * 1.9 && ic360.oneLine &&
+    ic360.ovl === 0 && ic360.clip === 0 && ic360.vOverlap === 0 && ic360.inFrame,
+    `${ic360.icW}×${ic360.icH}px · 한 줄 ${ic360.oneLine} · 겹침 ${ic360.ovl} · 잘림 ${ic360.clip} · 칸 폭 ${ic360.cellW}px`);
+  /* 음성 — 아이콘을 종전 16px 로 되돌리면 위 단언이 실제로 빨개지는가 (게이트가 살아 있다는 증거) */
+  const neg = await p.evaluate((was) => {
+    const st = document.createElement('style'); st.id = 't156Neg';
+    st.textContent = `#overlay .ov-stats .sc .ic{font-size:${was}px!important}`;
+    document.head.appendChild(st);
+    const h = document.querySelector('#overlay .ov-stats .sc .ic svg').getBoundingClientRect().height;
+    st.remove();
+    const back = document.querySelector('#overlay .ov-stats .sc .ic svg').getBoundingClientRect().height;
+    return { h: +h.toFixed(2), back: +back.toFixed(2) };
+  }, T156_ICON_WAS);
+  chk('⚑ T156 음성 — 아이콘을 16px 로 되돌리면 ×1.9 단언이 빨개진다 (게이트가 살아 있다)',
+    neg.h < T156_ICON_WAS * 1.9 && neg.back >= T156_ICON_WAS * 1.9,
+    `되돌림 ${neg.h}px → 복구 ${neg.back}px`);
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(220);
+  await p.evaluate(() => {
+    closeOverlay();
+    const st = document.getElementById('t156NoAnim'); if (st) st.remove();
+  });
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);

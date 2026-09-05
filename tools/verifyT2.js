@@ -2921,6 +2921,44 @@ console.log('\n[㊹ 특전 카드 문구 상자 (T149 · 주인 버그 «문구 
   }
 }
 
+/* ---------- ㊺ 특전 선택창 상단 스탯 «아이콘 2배» (T156 · 주인 지시 2026-09-05 19:2X) ----------
+   주인 원문 «특전 선택할 때 공속 치명확률 이런 옵션 상단에 뜨는 거 그거 아이콘 크기 2배로 키워».
+   실물 rect 는 `tools/t3/battle.js` 가 잰다(32×32px · ×2.00). 여기서는 하니스가 못 도는 환경에서도
+   **되돌림을 잡도록** 노브 한 자리와 «건드리지 말아야 할 것들» 을 정적으로 못박는다.
+   기준선 16px 은 T154 회차 실측값이고 `docs/ui/ref-layout.md` ⚑T156 표에 남아 있다. */
+console.log('\n[㊺ 특전 선택창 상단 스탯 아이콘 2배 (T156 · 주인 지시)]');
+{
+  const WAS = 16;                       /* T154 회차 실측 (390·360 둘 다 16.0px) */
+  const px = (re) => { const m = re.exec(HTML); return m ? +m[1] : NaN; };
+  const icFs = px(/\.ov-stats \.sc \.ic\{[^}]*font-size:([\d.]+)px/);
+  Number.isFinite(icFs) && Math.abs(icFs - WAS * 2) < 0.01
+    ? ok(`① 상단 스탯 아이콘 노브 = ${icFs}px = 종전 ${WAS}px 의 **정확히 2.0배** (주인 «2배로 키워»)`)
+    : bad(`① \`.ov-stats .sc .ic\` font-size 가 ${icFs}px — 종전 ${WAS}px 의 2.0배(${WAS * 2}px)가 아니다`);
+  /* `.gicon` 이 1em 이라야 이 font-size 가 «유일한 크기 노브» 다 (T140·T2 7단계와 같은 수법) */
+  const gic = /\.gicon\{([^}]*)\}/.exec(HTML);
+  (gic && /width:1em/.test(gic[1]) && /height:1em/.test(gic[1]))
+    ? ok('② `.gicon{width:1em;height:1em}` — 칸의 font-size 가 아이콘 크기의 유일한 노브다')
+    : bad('② `.gicon` 이 1em 이 아니다 — font-size 를 키워도 아이콘이 안 커진다');
+  /* 주인 «값 글자는 그대로» — 값(11px)·칸 8등분·줄 상자(--fh 연동 top4% h6%)는 안 건드린다 */
+  const vlFs = px(/\.ov-stats \.sc \.vl\{[^}]*font-size:([\d.]+)px/);
+  Math.abs(vlFs - 11) < 0.01 ? ok('③ 값 글자는 11px 그대로 (주인 «값 글자는 그대로 두되»)')
+    : bad(`③ 상단 줄 값 글자가 ${vlFs}px — T156 은 아이콘만 키운다`);
+  const row = /\.ov-stats\{[^}]*\}/.exec(HTML);
+  (row && /top:4%/.test(row[0]) && /height:6%/.test(row[0]))
+    ? ok('④ 줄 상자는 `--fh` 연동(top:4% height:6%) 그대로 — 칸(46.1px)이 그 안에 들어간다')
+    : bad('④ 줄 상자 자리가 바뀌었다 — T156 은 아이콘만 키운다(ref ⑦ x0 y4 w100 h6)');
+  const cell = /\.ov-stats \.sc\{[^}]*\}/.exec(HTML);
+  (cell && /flex:1 1 0/.test(cell[0]) && !/height:/.test(cell[0]))
+    ? ok('⑤ 칸은 8등분(flex:1 1 0) · 높이 고정 없음 — 아이콘이 커진 만큼 칸이 따라 는다')
+    : bad('⑤ 칸에 높이가 고정됐거나 8등분이 아니다 — 값 글자가 아이콘에 눌리거나 잘린다');
+  /* 대상이 아닌 곳 — 전투 하단 패널 아이콘(24px)은 같이 커지면 안 된다 */
+  const stFs = px(/\.st \.ic\{[^}]*font-size:([\d.]+)px/);
+  Math.abs(stFs - 24) < 0.01 ? ok('⑥ 전투 하단 패널 아이콘은 24px 그대로 (주인 지시 대상이 아니다)')
+    : bad(`⑥ 전투 하단 패널 아이콘이 ${stFs}px — T156 은 특전 선택창 상단 줄만 키운다`);
+  /* 표시 전용 — 엔진·밸런스 무관 */
+  /ov-stats/.test(SIM) ? bad('⑦ sim.js 에 상단 줄 CSS 가 새어 들어갔다') : ok('⑦ sim.js 무관 (CSS 한 자리 · 엔진·밸런스 무수정)');
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
