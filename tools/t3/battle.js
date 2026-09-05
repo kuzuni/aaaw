@@ -355,6 +355,85 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     `목록 ${hud.list}장 · 돌아가기 버튼 ${hud.back}`);
   chk('그 책은 탭하면 닫히고 시간이 다시 흐른다', !hud2.on && hud2.paused === false);
 
+  /* ---------- ⚑⚑⚑ T150 악마의 거래 = 전설 특전 «1개» (주인 확정 2026-09-05 17:4X) ----------
+     주인 «악마 거래는 전설 꺼 1개만 두고 hp 소모되면서 가져가는 거로 되야 되는데 3개 특전 주네».
+     정적 게이트(`verifyDevilPolicy` ⑨~⑪)는 소스를 보지만, «화면에 실제로 몇 장이 뜨고 눌러서 무엇이
+     일어나는가» 는 여기서만 확인된다. 보는 것: ①카드 1장 ②등급 태그 «전설» ③고를 수 있는 카드 0장
+     ④2택 유지 ⑤거절하면 아무것도 안 바뀐다 ⑥수락하면 최대 체력 −30% + 미리 보여준 그 한 장을 받는다. */
+  console.log('\n=== ⚑⚑⚑ 악마의 거래 = 전설 특전 1개 (T150) ===');
+  await p.evaluate(() => { if (document.getElementById('overlay').classList.contains('on')) closeOverlay(); });
+  await p.waitForTimeout(200);
+  const dv0 = await p.evaluate(() => {
+    G.perksTaken = []; G.pxPerk = {}; renderPerkStrip();
+    G.player.maxHp = 1000; G.player.hp = 1000;
+    openDevil();
+    const cards = [...document.querySelectorAll('#overlay .perk-card')];
+    return {
+      cards: cards.length,
+      pickable: document.querySelectorAll('#overlay .perk-card.pick').length,
+      tags: cards.map(c => c.querySelector('.tag').textContent),
+      tx: cards.map(c => c.querySelector('.tx').textContent),
+      choices: [...document.querySelectorAll('#overlay .choice-btn')].map(b => b.textContent.replace(/\s+/g, ' ').trim()),
+      yes: !!document.getElementById('dYes'), no: !!document.getElementById('dNo'),
+      maxHp: G.player.maxHp, hp: G.player.hp, taken: G.perksTaken.length, paused: G.paused,
+    };
+  });
+  chk('⚑ T150 악마 팝업에 카드가 «정확히 1장» (3택 폐기)', dv0.cards === 1,
+    `카드 ${dv0.cards}장 · ${(dv0.tx[0] || '').slice(0, 30)}`);
+  chk('⚑ T150 그 카드는 «전설» 이고 고를 수 없다', dv0.tags[0] === '전설' && dv0.pickable === 0,
+    `태그 ${dv0.tags.join(',')} · 고를 수 있는 카드 ${dv0.pickable}장`);
+  chk('선택지는 2택(지불 / 지나감) 그대로', dv0.yes && dv0.no && dv0.choices.length === 2,
+    dv0.choices.map(s => s.slice(0, 34)).join(' | '));
+  chk('지불 버튼이 «전설 특전 1개 획득» 을 안내한다', /전설 특전 1개/.test(dv0.choices[0] || ''),
+    (dv0.choices[0] || '').slice(0, 60));
+  await p.click('#dNo'); await p.waitForTimeout(240);
+  const dvNo = await p.evaluate(() => ({
+    on: document.getElementById('overlay').classList.contains('on'),
+    maxHp: G.player.maxHp, hp: G.player.hp, taken: G.perksTaken.length, paused: G.paused,
+  }));
+  chk('«지나간다» 를 고르면 최대 체력·보유 특전이 그대로다',
+    !dvNo.on && dvNo.maxHp === dv0.maxHp && dvNo.hp === dv0.hp && dvNo.taken === 0 && dvNo.paused === false,
+    `최대체력 ${dvNo.maxHp} · 현재 ${dvNo.hp} · 보유 ${dvNo.taken}종`);
+  /* ⚑ 비용은 «지불하는 그 순간» 을 재야 한다 — 바로 뒤에 붙는 전설 특전이 최대 체력을 다시 만질 수 있고
+     (수집가·최대 체력 +N% 계열), 이 절은 앞 절들이 밀어 넣은 특전이 px 에 남은 상태에서 돈다.
+     그래서 payDevilCost 를 감싸 «부르기 직전/직후» 값을 잡는다. */
+  const dv1 = await p.evaluate(() => {
+    window.__dvSpy = null;
+    const real = window.payDevilCost;
+    window.__dvReal = real;
+    window.payDevilCost = q => { const b = q.maxHp, h = q.hp; real(q); window.__dvSpy = { before: b, hpBefore: h, after: q.maxHp, hp: q.hp }; };
+    openDevil();
+    const c = document.querySelector('#overlay .perk-card');
+    return { tx: c ? c.querySelector('.tx').textContent : '', maxHp: G.player.maxHp };
+  });
+  await p.click('#dYes'); await p.waitForTimeout(280);
+  const dvYes = await p.evaluate(() => {
+    const last = G.perksTaken[G.perksTaken.length - 1];
+    return {
+      spy: window.__dvSpy, taken: G.perksTaken.length,
+      lastTx: last ? last.tx.replace(/<[^>]+>/g, '') : '', lastG: last ? last.g : -1,
+      giftCards: document.querySelectorAll('#overlay .perk-card').length,
+      giftPick: document.querySelectorAll('#overlay .perk-card.pick').length,
+      ok: !!document.getElementById('dOk'),
+    };
+  });
+  chk('수락하면 최대 체력이 정확히 30% 줄어든다 (현재체력은 새 최대치로 클램프)',
+    !!dvYes.spy && Math.abs(dvYes.spy.after - dvYes.spy.before * 0.7) < 1e-6
+      && Math.abs(dvYes.spy.hp - Math.min(dvYes.spy.hpBefore, dvYes.spy.after)) < 1e-6,
+    dvYes.spy ? `최대체력 ${dvYes.spy.before} → ${dvYes.spy.after} · 현재 ${dvYes.spy.hpBefore} → ${dvYes.spy.hp}`
+      : '지불 동사가 한 번도 안 불렸다');
+  chk('⚑ T150 미리 보여준 그 «전설» 한 장을 그대로 받는다',
+    dvYes.taken === 1 && dvYes.lastG === 2 && dvYes.lastTx === dv1.tx,
+    `보유 ${dvYes.taken}종 · 등급 ${dvYes.lastG} · 미리보기 «${dv1.tx.slice(0, 26)}» → 획득 «${dvYes.lastTx.slice(0, 26)}»`);
+  chk('획득 연출에도 카드는 1장이고 «고르기» 가 없다',
+    dvYes.giftCards === 1 && dvYes.giftPick === 0 && dvYes.ok,
+    `카드 ${dvYes.giftCards}장 · 고를 수 있는 카드 ${dvYes.giftPick}장`);
+  await p.evaluate(() => {
+    const b = document.getElementById('dOk'); if (b) b.click();
+    if (window.__dvReal) window.payDevilCost = window.__dvReal;   /* 스파이 원상 복구 */
+  });
+  await p.waitForTimeout(240);
+
   /* ---------- 보스 킬 = 특전 스킵 (주인 지시 06:3X) ---------- */
   console.log('\n=== 챕터 종료 보스 킬 = 특전 스킵 · 클리어 ===');
   /* ⚑ T52 수리 — 순서를 «팝업 비우기 → 과녁 세팅» 에서 «적 정리 → 비우기 → 과녁 세팅» 으로 바꿨다.

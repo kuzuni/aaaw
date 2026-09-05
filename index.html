@@ -2281,6 +2281,19 @@ function offerPerks(taken,noble){
   }
   return out;
 }
+/* ⚑⚑⚑ T150 (주인 확정 2026-09-05 17:4X) — **악마의 거래는 3택이 아니다.**
+   주인 원문: «악마 거래는 전설 꺼 1개만 두고 hp 소모되면서 가져가는 거로 되야 되는데 3개 특전 주네».
+   악마는 «아직 안 얻은 **전설** 특전 중 무작위 1개» 한 장만 내놓는다 — 고르는 것이 없으므로
+   시뮬 정책(`simPickPerk`)도 필요 없고, 시뮬은 게임과 **같은 무작위 1장**을 받는다(판 난수 · 시드 결정적).
+   남은 전설이 없으면 null → 거래 불성립(카드도 비용도 없다 — 종전 «줄 특전이 없으면 성립 안 함» 그대로).
+   등급 굴림(PERK_GRADE_RATE)·귀족의 눈은 여기에 걸리지 않는다 — 악마 몫은 원래 전설 고정이다.
+   sim.js 와 같은 이름·같은 본문(게이트 verifyDevilPolicy·verifyPerkOrder 가 두 엔진을 대조한다). */
+const PERK_DEVIL_GRADE=2;
+function offerDevilPerk(taken){
+  const pool=PERKS.filter(p=>p.g===PERK_DEVIL_GRADE&&taken.indexOf(p)<0);
+  if(!pool.length)return null;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
 /* 이번 레벨업에 줄 것이 남아 있는가 — 한 런 상한(PERK_PICKS)과 남은 풀을 함께 본다.
    ⚑ 난수를 쓰지 않는다 — «있나» 를 묻는 자리에서 카드를 뽑아 버리면 굴림이 두 번 일어난다. */
 function perksLeftN(){ let n=0; for(const p of PERKS) if(G.perksTaken.indexOf(p)<0) n++; return n; }
@@ -2746,35 +2759,35 @@ function openRest(){
   $('rExp').onclick=()=>{ closeOverlay(); addText('EXP +'+REST_EXP,'#FFD54A'); gainExp(REST_EXP); };
 }
 function openDevil(){
-  /* ⚑⚑⚑ T117 (주인 확정 2026-09-04 12:3X) — 악마가 주는 것 = **«즉시 3택 1»**. 레벨업과 같은 팝업·같은 동사로,
-     T96 의 «다음 순번 앞당김» 은 3택 복구와 함께 폐기됐다. 줄 특전이 남아 있지 않으면 거래 자체가
-     성립하지 않으므로 비용도 안 받고 그냥 지나간다(위임 그대로). 비용(최대체력 30% 차감)은 T90 그대로다.
-     ⚑ PLAN §2.4 «지불하기 전에 어떤 특전인지 카드로 먼저 보여줌» 은 살아 있다 — 여기서 **미리 굴린 3장을
-     그대로 보여 주고**, 수락하면 같은 3장으로 선택창이 뜬다(수락 뒤 다시 굴리면 미리보기가 거짓이 된다). */
+  /* ⚑⚑⚑ T150 (주인 확정 2026-09-05 17:4X) — 악마가 주는 것 = **«전설 특전 1개»**. T117 의 «즉시 3택 1» 은 폐기다.
+     주인 원문: «악마 거래는 전설 꺼 1개만 두고 hp 소모되면서 가져가는 거로 되야 되는데 3개 특전 주네».
+     남은 전설이 없으면 거래 자체가 성립하지 않으므로 카드도 비용도 없이 지나간다(위임 그대로).
+     비용(최대체력 30% 차감)은 T90 그대로다.
+     ⚑ PLAN §2.4 «지불하기 전에 어떤 특전인지 카드로 먼저 보여줌» 은 살아 있다 — 여기서 **미리 굴린 그 한 장을**
+     그대로 보여 주고, 수락하면 **같은 한 장**을 준다(수락 뒤 다시 굴리면 미리보기가 거짓이 된다). */
   if(!hasPerkLeft()){ closeOverlay(); return; }
-  const offer=offerPerks(G.perksTaken,!!G.player.px.p_nobleEye);   /* ⚑ 굴림은 여기 한 번뿐 — 미리보기와 선택창이 같은 3장이다 */
+  const perk=offerDevilPerk(G.perksTaken);   /* ⚑ 굴림은 여기 한 번뿐 — 미리보기와 획득이 같은 한 장이다 */
+  if(!perk){ closeOverlay(); return; }       /* 남은 전설이 없다 — 거래 불성립(비용 없음) */
   AU.play('devil');
   const cost=Math.round(G.player.maxHp*DEVIL_COST);   /* ⚑ T90 — 최대치에서 깎일 양 (현재체력 차감 아님) */
   openOverlay(`<div class="big-emoji">😈</div>
     <div class="ov-banner" style="color:#E87AA0">악마의 거래</div>
     <div class="ov-sub">"네 생명을 바치면... 이 힘을 주지"</div>
-    <div style="width:100%; margin-bottom:4px">${offer.map((p,i)=>perkCardHTML(p,i,'static')).join('')}</div>
-    <button class="choice-btn danger" id="dYes">🩸 최대 체력의 30% 지불 (-${fmt(cost)})<small>최대 체력이 줄어든 채 진행 · 위 ${offer.length}장 중 하나를 즉시 획득</small></button>
+    <div style="width:100%; margin-bottom:4px">${perkCardHTML(perk,0,'static')}</div>
+    <button class="choice-btn danger" id="dYes">🩸 최대 체력의 30% 지불 (-${fmt(cost)})<small>최대 체력이 줄어든 채 진행 · 위 전설 특전 1개를 획득</small></button>
     <button class="choice-btn" id="dNo">🚶 조용히 지나간다<small>아무 일도 일어나지 않습니다</small></button>`);
   $('dYes').onclick=()=>{
     payDevilCost(G.player);   /* ⚑ T90 — 최대치에서 30% 차감 + 현재체력 클램프 (sim.js 와 같은 동사) */
     AU.play('hurt');
     G.perkChances++;
-    const paint=()=>{
-      openOverlay(`<div class="ov-banner" style="color:#E87AA0">악마의 선물</div>
-        <div class="ov-sub">특전 하나를 고르세요</div>
-        ${offer.map((p,i)=>perkCardHTML(p,i,'pick')).join('')}
-        <div class="ov-foot"><button id="perkBookBtn">📘<b>${G.perksTaken.length}</b><span class="sr-lbl">보유 특전</span></button></div>`,
-        {rays:true,cls:'ov-full'});
-      offer.forEach((p,i)=>{ $('perkPick'+i).onclick=()=>{ AU.play('click'); pickPerk(p); renderStatsGrid(); updateBars(); closeOverlay(); }; });
-      $('perkBookBtn').onclick=e=>{ e.stopPropagation(); openPerkBook(paint); };
-    };
-    paint();
+    pickPerk(perk); renderStatsGrid(); updateBars();
+    /* PLAN §2.4 «수락 시 특전 획득 연출(광선)» — 고를 것이 없으므로 `.pick` 카드가 아니라 받은 한 장을 보여만 준다 */
+    openOverlay(`<div class="ov-banner" style="color:#E87AA0">악마의 선물</div>
+      <div class="ov-sub">전설 특전을 얻었습니다</div>
+      ${perkCardHTML(perk,0,'static')}
+      <div class="ov-foot"><button id="dOk">계속</button></div>`,
+      {rays:true,cls:'ov-full'});
+    $('dOk').onclick=e=>{ e.stopPropagation(); AU.play('click'); closeOverlay(); };
   };
   $('dNo').onclick=()=>{ AU.play('click'); closeOverlay(); };
 }

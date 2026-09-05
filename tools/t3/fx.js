@@ -116,22 +116,28 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   await p.waitForTimeout(300);
   const devil = await p.evaluate(() => { openDevil(); return { on: document.getElementById('overlay').classList.contains('on'), yes: !!document.getElementById('dYes'), no: !!document.getElementById('dNo'), txt: document.getElementById('overlay').textContent.replace(/\s+/g, ' ').slice(0, 50) }; });
   chk('악마 — 체력 지불/거절 2택', devil.on && devil.yes && devil.no, devil.txt);
-  /* ⚑⚑⚑ T117 — 악마가 «다음 순번 앞당김» 에서 **«즉시 3택 1»** 로 바뀌었다: 수락하면 그 자리에서
-     특전이 붙는 게 아니라 «미리 보여준 3장» 으로 선택창이 뜨고, 카드를 눌러야 획득이 확정된다. */
+  /* ⚑⚑⚑ T150 (주인 확정 2026-09-05 17:4X) — 악마가 «즉시 3택 1» 에서 **«전설 특전 1개»** 로 바뀌었다:
+     지불 «전» 에 전설 한 장을 카드로 보여주고, 수락하면 **고르는 절차 없이** 그 한 장이 붙는다.
+     («카드 1장·등급 태그·최대 체력 −30% 실측» 은 `battle.js` 의 T150 절이 더 촘촘히 본다 — 여기서는
+     이벤트 3종 흐름 안에서 «미리보기 = 획득» 과 «고르기가 없다» 만 확인한다.) */
   const devilPay = await p.evaluate(() => {
     const hp0 = G.player.hp, n0 = G.perksTaken.length;
     const pre = [...document.querySelectorAll('#overlay .perk-card .tx')].map(c => c.textContent);
     document.getElementById('dYes').click();
-    const cards = [...document.querySelectorAll('#overlay .perk-card.pick')];
-    const mid = { paid: G.player.hp < hp0 || G.player.maxHp < hp0 / 0.7 + 1, n: cards.length,
-      same: cards.map(c => c.querySelector('.tx').textContent).join('|') === pre.join('|'), gotYet: G.perksTaken.length > n0 };
-    if (cards.length) cards[0].click();
-    return Object.assign(mid, { got: G.perksTaken.length > n0 });
+    const last = G.perksTaken[G.perksTaken.length - 1];
+    return {
+      paid: G.player.hp < hp0 || G.player.maxHp < hp0 / 0.7 + 1,
+      n: pre.length, pick: document.querySelectorAll('#overlay .perk-card.pick').length,
+      got: G.perksTaken.length === n0 + 1,
+      same: !!last && last.tx.replace(/<[^>]+>/g, '') === (pre[0] || ''),
+      grade: last ? last.g : -1, pre0: pre[0] || '',
+    };
   });
-  chk('악마 거래 — 체력 지불하고 3택 1 로 특전 획득 (⚑ T117)', devilPay.paid && devilPay.n > 0 && devilPay.got,
+  chk('악마 거래 — 체력 지불하고 전설 특전 1개 획득 (⚑ T150)', devilPay.paid && devilPay.n === 1 && devilPay.got,
     `제시 ${devilPay.n}장 · 지불 ${devilPay.paid} · 획득 ${devilPay.got}`);
-  chk('⚑ T117 지불 «전» 미리 보여준 카드가 그대로 선택창에 뜬다 (수락 뒤 재굴림 없음)', devilPay.same);
-  chk('⚑ T117 카드를 누르기 전에는 아직 안 받았다', devilPay.gotYet === false);
+  chk('⚑ T150 지불 «전» 미리 보여준 그 한 장을 그대로 받는다 (수락 뒤 재굴림 없음)',
+    devilPay.same && devilPay.grade === 2, `«${devilPay.pre0.slice(0, 26)}» · 등급 ${devilPay.grade}`);
+  chk('⚑ T150 수락 뒤에도 «고를 수 있는 카드» 가 없다 (3택 폐기)', devilPay.pick === 0, `고르기 카드 ${devilPay.pick}장`);
   await p.waitForTimeout(400);
   await p.evaluate(() => closeOverlay());
   const angel = await p.evaluate(() => { openAngel(); return { on: document.getElementById('overlay').classList.contains('on'), free: !!document.getElementById('aFree'), ad: !!document.getElementById('aAd') }; });

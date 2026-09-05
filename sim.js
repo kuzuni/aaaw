@@ -531,6 +531,19 @@ function offerPerks(taken,noble){
   }
   return out;
 }
+/* ⚑⚑⚑ T150 (주인 확정 2026-09-05 17:4X) — **악마의 거래는 3택이 아니다.**
+   주인 원문: «악마 거래는 전설 꺼 1개만 두고 hp 소모되면서 가져가는 거로 되야 되는데 3개 특전 주네».
+   악마는 «아직 안 얻은 **전설** 특전 중 무작위 1개» 한 장만 내놓는다 — 고르는 것이 없으므로
+   시뮬 정책(`simPickPerk`)도 필요 없고, 시뮬은 게임과 **같은 무작위 1장**을 받는다(판 난수 · 시드 결정적).
+   남은 전설이 없으면 null → 거래 불성립(카드도 비용도 없다 — 종전 «줄 특전이 없으면 성립 안 함» 그대로).
+   등급 굴림(PERK_GRADE_RATE)·귀족의 눈은 여기에 걸리지 않는다 — 악마 몫은 원래 전설 고정이다.
+   index.html 과 같은 이름·같은 본문(게이트 verifyDevilPolicy·verifyPerkOrder 가 두 엔진을 대조한다). */
+const PERK_DEVIL_GRADE=2;
+function offerDevilPerk(taken){
+  const pool=PERKS.filter(p=>p.g===PERK_DEVIL_GRADE&&taken.indexOf(p)<0);
+  if(!pool.length)return null;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
 /* ⚑ 시뮬 측정 정책 (재현성 · 주인 지시 13:0X ②): 가상 플레이어는 제시 3장 중
    **등급이 높은 것 우선 · 같은 등급이면 §3.1 표 순서가 앞선 것**을 고른다(실제 유저가 좋은 것을 고르는 것의 근사).
    실제 게임(index.html)은 유저 자유 선택이므로 이 함수를 쓰지 않는다 — 측정 조건 통일용이다. */
@@ -1594,7 +1607,8 @@ function procNHit(p){
    레벨업할 때마다 «아직 안 얻은» 특전 중 최대 `PERK_OFFER`(3)장을 뽑아 보여주고 하나를 고른다.
    남은 것이 3개 미만이면 남은 만큼만, 0개면 아무것도 주지 않는다. 한 특전은 한 번만(중복 금지).
    등급·등장 확률·무료 새로고침·전지의 눈은 T96 대로 그대로 폐지 상태다.
-   **악마의 거래도 같은 동사**를 거친다 — «즉시 3택 1»(비용 = 최대 체력 30% 차감 그대로 · 주인 지시 ①).
+   ⚑⚑⚑ T150 — **악마의 거래는 이 3택을 쓰지 않는다.** 악마는 «남은 전설 특전 중 무작위 1개» 한 장을
+   내놓고(`offerDevilPerk`·`devilPerkFor`), 비용 = 최대 체력 30% 차감은 그대로다. 확정 동사(`pickPerk`)만 공유한다.
    시뮬은 유저 대신 `simPickPerk` 정책(표 순서 우선)으로 고른다. */
 function grantPerkChance(G){ G.perkChances++; }
 /* 3장을 제시하고 시뮬 정책으로 한 장을 골라 지급한다. 지급했으면 그 특전을, 줄 게 없으면 null. */
@@ -1612,6 +1626,16 @@ function grantNextPerk(G){
   const offer=offerPerks(G.taken,!!G.player.px.p_nobleEye);
   if(!offer.length)return null;                  /* 풀이 다 떨어졌다 — 팝업 없이 레벨업만 (주인 지시 ①) */
   return pickPerk(G,simPickPerk(offer));
+}
+/* ⚑⚑⚑ T150 — 악마가 이번에 내놓을 특전 **한 장**. 없으면 null(거래 불성립 · 비용도 안 낸다).
+   가드는 종전 악마 분기의 둘을 그대로 옮긴 것이다: ①noPerk(특전 미획득 측정 제외분) ②한 런 획득 상한.
+   ⚑ T120 사다리 자(尺)에서는 3택도 전설 뽑기도 거치지 않고 base10 다음 장을 그대로 받는다 —
+   그래야 «사다리 측정은 난수를 한 번도 안 쓴다» 는 T114 스트림 불변이 유지된다. */
+function devilPerkFor(G){
+  if(G.noPerk)return null;
+  if(G.taken.length>=PERK_PICKS)return null;
+  if(G.perkMode===PERK_MODE_LADDER)return PERKS_BASE10[G.taken.length]||null;
+  return offerDevilPerk(G.taken);
 }
 
 /* ---------- 챕터 1회 실행 ---------- */
@@ -1668,13 +1692,15 @@ function runChapter(chapter,build,opts){
           /* SIM_DEVIL_POLICY: ⚑ 주인 확정(2026-09-03 · PLAN §2.4 · T90) — 가상 플레이어는 악마 거래를 **항상 수락**한다
              (승인 대기 32번 종결. 쉼터 «항상 경험치» 와 같은 축의 측정 조건 통일 — 체력 조건부 수락은 폐기).
              실제 게임(index.html)은 유저 자유 선택이므로 두 선택지를 그대로 둔다. */
-          /* ⚑ T117 (주인 확정 2026-09-04 12:3X) — 악마가 주는 것은 **«즉시 3택 1»** 이다(같은 팝업·같은 동사).
-             T96 의 «다음 순번 앞당김» 은 3택 복구와 함께 폐기됐다. «전설 확정» 은 등급과 함께 T96 에서 사라진 그대로다.
-             줄 특전이 남아 있을 때만 거래가 성립한다 — 10개를 다 얻었으면 비용도 안 내고 지나간다(위임).
+          /* ⚑⚑⚑ T150 (주인 확정 2026-09-05 17:4X) — 악마가 주는 것은 **«전설 특전 1개»** 다.
+             T117 의 «즉시 3택 1» 은 폐기 — 고를 것이 없으니 카드 한 장을 받고 값을 치를 뿐이다.
+             줄 전설이 남아 있을 때만 거래가 성립한다 — 없으면 카드도 비용도 없이 지나간다(위임 그대로).
              비용(최대체력 30% 차감)·«항상 수락» 정책은 T90 그대로다. */
-          if(!G.noPerk&&G.taken.length<PERK_PICKS){
+          const dp=devilPerkFor(G);
+          if(dp){
             payDevilCost(p);   /* 비용 = 최대체력의 30% 를 «최대치에서» 차감 (현재체력 차감 아님) */
-            grantNextPerk(G);
+            grantPerkChance(G);   /* 악마 = 특전 기회 1번 (PLAN §4 · 레벨업과 같은 셈) */
+            pickPerk(G,dp);
           }
         }else{
           /* SIM_ANGEL_POLICY: ⚑ 주인 확정(2026-09-03 · PLAN §2.4 · T90) — 가상 플레이어는 천사에서

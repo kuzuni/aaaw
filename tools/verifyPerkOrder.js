@@ -333,6 +333,20 @@ function run(simSrc, htmSrc, planSrc) {
       `획득 ${Gx.taken.length}종 · 빈 지급 ${nulls}회 · 기회 ${Gx.perkChances}회`);
     chk('⚑ 그 획득분에 중복이 없다',
       new Set(Gx.taken).size === Gx.taken.length, Gx.taken.map(x => x.id).join('>'));
+    /* ⚑⚑⚑ T150 보강 — «순서 지급 회귀» 는 이제 **지급 동사로 직접** 재야 한다.
+       종전엔 챕터 실행 획득열이 «표 앞에서부터 고정» 인지로 쟀는데, T150 으로 악마가 3택을 안 쓰고
+       무작위 전설 1장을 주게 되면서 그 획득열엔 악마 몫이 섞여 «표 순서 그대로» 가 구조적으로 안 나온다
+       (그 검사만으로는 레벨업이 순서 지급으로 되돌아가도 초록이었다 — 음성 검사가 잡아냈다). */
+    let fixedDirect = 0; const seqs = new Set();
+    for (let t = 0; t < 40; t++) {
+      const Gy = { taken: [], player: null, perkChances: 0 };
+      const py = S.mkPlayer(S.mkBuild(1, 0, 0), Gy); Gy.player = py; py.G = Gy;
+      for (let i = 0; i < S.PERK_PICKS; i++) S.grantNextPerk(Gy);
+      if (Gy.taken.length === S.PERK_PICKS && Gy.taken.every((q, k) => q === S.PERKS[k])) fixedDirect++;
+      seqs.add(Gy.taken.map(q => q.id).join('>'));
+    }
+    chk('⚑ T117 지급 동사가 «표 앞에서부터 고정» 이 아니다 (순서 지급 회귀 방지 · ⚑ T150 로 여기로 옮겼다)',
+      fixedDirect === 0 && seqs.size > 1, `표 순서와 같은 판 ${fixedDirect}/40 · 서로 다른 획득열 ${seqs.size}종`);
     /* ⚑ 풀 크기 = 상한(10) 인 동안은 «상한을 지웠는가» 를 실측으로 구별할 수 없다(풀이 마르면 어차피 멈춘다).
        그래서 상한 가드가 두 엔진에 **문장으로** 살아 있는지 함께 본다 — 풀을 늘리는 순간 실측 차이가 생기는 자리다. */
     chk('⚑ 한 런 획득 상한 가드가 두 엔진에 살아 있다 (PERK_PICKS)',
@@ -435,14 +449,16 @@ function run(simSrc, htmSrc, planSrc) {
   chk('⚑ T117·T119 제시·확정 동사가 두 엔진에 한 벌씩 있다 (offerPerks(taken,noble) · pickPerk)',
     /function offerPerks\(taken,noble\)\{/.test(simSrc) && /function offerPerks\(taken,noble\)\{/.test(htmSrc) &&
     /function pickPerk\(G,perk\)\{/.test(simSrc) && /function pickPerk\(perk\)\{/.test(htmSrc));
-  /* ⚑ T117 악마 = «즉시 3택 1». 두 엔진 모두 비용을 낸 «뒤» 특전이 붙고, 전설 풀 뽑기는 없다.
-     시뮬은 유저가 없으므로 정책 동사(grantNextPerk)로 대신 고르고, 게임은 같은 3장을 카드로 띄운다. */
+  /* ⚑⚑⚑ T150 (주인 확정 2026-09-05 17:4X) 악마 = «전설 특전 1개». 두 엔진 모두 비용을 낸 «뒤» 특전이 붙고,
+     제시는 3택 동사(offerPerks)가 아니라 전설 1장 동사(offerDevilPerk)다 — 고르는 것이 없으니 선택창도 없다.
+     («어떤 전설이 나오나» 의 실측·음성은 verifyDevilPolicy ⑨~⑪ 이 본다. 여기서는 «경로» 만 못 박는다.) */
   const devilSim = simSrc.slice(simSrc.indexOf("n.type==='devil'"), simSrc.indexOf('SIM_ANGEL_POLICY'));
   const devilHtm = htmSrc.slice(htmSrc.indexOf('function openDevil'), htmSrc.indexOf('function openAngel'));
-  chk('악마도 같은 획득 경로를 쓴다 (전설 확정 폐기 · ⚑ T117 3택)',
-    /payDevilCost\([^)]*\)[\s\S]{0,200}grantNextPerk\(/.test(devilSim) &&
-    /payDevilCost\([^)]*\)[\s\S]{0,900}pickPerk\(/.test(devilHtm) &&
-    /offerPerks\(/.test(devilHtm) &&
+  chk('악마도 같은 확정 동사를 쓰되 제시는 전설 1장이다 (⚑ T150 — 3택 폐기)',
+    /devilPerkFor\(G\)[\s\S]{0,300}payDevilCost\([^)]*\)[\s\S]{0,200}pickPerk\(G,dp\)/.test(devilSim) &&
+    /payDevilCost\([^)]*\)[\s\S]{0,900}pickPerk\(perk\)/.test(devilHtm) &&
+    /offerDevilPerk\(/.test(devilHtm) &&
+    !/offerPerks\(/.test(devilSim + devilHtm) && !/grantNextPerk\(/.test(devilSim + devilHtm) &&
     !/perkPool|pick\(pool\)/.test(devilSim + devilHtm));
   /* ⚑ 소환 연쇄 기대값 B — 새 10종의 소환 3종은 트리거가 «피격/회피/반격» 이라
      소환 «적중» 이 새 소환을 낳지 않는다. 즉 «공격 시»·«치명타 시» 축에 특전 소환이 0건이어야 한다. */
@@ -687,14 +703,17 @@ if (process.argv.includes('--self')) {
       s => s.replace('return pickPerk(G,simPickPerk(offer));', 'return pickPerk(G,PERKS[G.taken.length]);'), null, null],
     ['⚑ T117 한 런 상한 가드를 게임에서 지우면',
       null, s => s.replace('return perkOrderN()<PERK_PICKS && perksLeftN()>0;', 'return perksLeftN()>0;'), null],
-    ['⚑ T117 게임 악마가 3택 대신 딴 짓을 하면',
-      null, s => s.replace('offer.forEach((p,i)=>{ $(\'perkPick\'+i).onclick=()=>{ AU.play(\'click\'); pickPerk(p); renderStatsGrid(); updateBars(); closeOverlay(); }; });', ''), null],
+    ['⚑ T150 게임 악마가 전설 1장 대신 3택으로 되돌아가면',
+      null, s => s.replace('const perk=offerDevilPerk(G.perksTaken);', 'const perk=offerPerks(G.perksTaken,false)[0];'), null],
+    ['⚑ T150 게임 악마가 특전을 안 주면',
+      null, s => s.replace('pickPerk(perk); renderStatsGrid(); updateBars();', 'renderStatsGrid(); updateBars();'), null],
     ['⚑ T104 회피 시 회복이 회복 증폭을 타게 하면 (noBoost=true 제거)',
       s => s.replace('heal(p,p.maxHp*PERK_EVHEAL_F,true)', 'heal(p,p.maxHp*PERK_EVHEAL_F)'), null, null],
     ['«공격 시» 축에 특전 소환을 달면', s => s.replace('  if(px.c_waveAtk', '  if(px.p_axeHit&&pkk(p,0.5))fireAxe(p,1);\n  if(px.c_waveAtk')
       .replace('function procOnAttack(G,e){\n  const p=G.player,px=p.px;', 'function procOnAttack(G,e){\n  const p=G.player,px=p.px;\n  if(px.p_axeHit&&pkk(p,0.5))fireAxe(p,1);'), null, null],
     ['특전을 11종으로 늘리면', s => s.replace("  ];\n}\nconst PERKS=mkPerks();", "    {id:'p_zzz', nm:'x', d:'x', ap:p=>p.px.p_zzz=1},\n  ];\n}\nconst PERKS=mkPerks();"), null, null],
-    ['악마가 앞당김 대신 딴 짓을 하면', s => s.replace('            grantNextPerk(G);', '            /* nothing */'), null, null],
+    ['⚑ T150 시뮬 악마가 특전을 안 주면', s => s.replace('pickPerk(G,dp);', '/* nothing */'), null, null],
+    ['⚑ T150 시뮬 악마가 3택 지급으로 되돌아가면', s => s.replace('const dp=devilPerkFor(G);', 'const dp=null; grantNextPerk(G);'), null, null],
     ['한 런 획득 상한을 없애면', s => s.replace('if(G.taken.length>=PERK_PICKS)return null;', ''), null, null],
     ['PERK_PICKS 를 챕터 레벨업 횟수와 다르게 하면', s => s.replace('const PERK_PICKS=10;', 'const PERK_PICKS=7;'), null, null],
   ];
