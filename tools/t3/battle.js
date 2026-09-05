@@ -510,6 +510,80 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     t136sm.length === 1 && t136sm0.length === 1 && t136sm[0].ratio === t136sm0[0].ratio
     && t136sm[0].ratio > (t136sp[0] ? t136sp[0].ratio : Infinity),
     `아바타 ${t136sm[0] ? t136sm[0].ratio : '—'} / 평범 ${t136sm0[0] ? t136sm0[0].ratio : '—'} / 기본 ${t136sp[0] ? t136sp[0].ratio : '—'}`);
+  /* ---------- ⚑⚑⚑ T137 — 장비 옵션의 «발동 조건» 을 **게임 안에서** 실측 (주인 확정 T124 ③) ----------
+     주인 문면 두 절: «가시갑옷 옵션은 특전 가시갑옷과 가산(실드 > 0 일 때만 +12%씩)» ·
+     ««체력 50% 미만일 때 회피 시 회복» 은 회피 성공 순간 체력 비율로 판정».
+     정적 게이트(`verifyGearOptTrigger`)는 `sim.js` 의 `hitPlayer` 를 vm 에서 굴려 재고 index.html 은
+     «조건이 평가되는 자리» 를 구조로 본다 — **게임이 실제로 그 조건대로 발동하는지**는 여기서만 확인된다.
+     맨 끝에 두는 이유: 난수·플레이어 상태를 잠깐 갈아끼우므로 앞의 검사가 다 끝난 뒤라야 안전하다. */
+  console.log('\n=== ⚑ T137 장비 옵션 발동 조건 (게임 안 실측) ===');
+  const trig = await p.evaluate(() => {
+    startChapter(7);                                   /* 갓 만든 G · 플레이어로 시작 */
+    const pl = G.player, px = pl.px, RR = Math.random;
+    /* 시간이 흐르면 방어 버프가 만료돼 `effDef` 가 측정 도중에 움직인다 —
+       판을 멈추고 방어축을 0 으로 굳혀서 «받은 피해» 를 dmg 그대로 만든다. */
+    const keep = { hp: pl.hp, sh: pl.sh, ev: pl.evade, ward: pl.ward, def: pl.def,
+      bd: pl.buffs.def, gc: px.guardCrystal, pause: G.paused,
+      th: px.g_thornSh, pt: px.p_thorns, eh: px.g_evHeal, ea: px.g_evAxe };
+    G.paused = true; pl.def = 0; pl.buffs.def = []; px.guardCrystal = false;
+    let n = 0;
+    const roll = f => { n = 0; Math.random = () => { const v = f(n); n++; return v; }; };
+    const foe = () => ({ hp: 1e4 });   /* 반사량은 1 미만이라 부동소수 간격이 측정을 흐리지 않게 작게 잡는다 */
+    const out = { d: 0 };
+    try {
+      /* ⓐ 가시갑옷 — 실드 유무로 장비분(+72%)이 붙었다 떨어진다 (특전분 0) */
+      pl.ward = 0; pl.evade = 0; px.g_thornSh = 0.72; px.p_thorns = 0;
+      const d = 1 * (1 - effDef(pl) / 100); out.d = d;
+      roll(() => 0.999);                               /* 회피 실패 · 모든 확률 굴림 실패 */
+      pl.hp = pl.maxHp; pl.sh = 1e9; let e = foe(); hitPlayer(1, true, e); out.shOn = 1e4 - e.hp;
+      roll(() => 0.999);
+      pl.hp = pl.maxHp; pl.sh = 0; e = foe(); hitPlayer(1, true, e); out.shOff = 1e4 - e.hp;
+      /* ⓑ 실드가 이 타격으로 «전부 소진» 돼도 발동한다 (조건 시점 = 피격 «전») */
+      roll(() => 0.999);
+      pl.hp = pl.maxHp; pl.sh = d / 2; e = foe(); hitPlayer(1, true, e); out.shDrain = 1e4 - e.hp;
+      /* ⓒ 특전 가시(+100%)와 «가산» — 곱연산이면 ×1.72 가 아니라 ×1.72… 가 아니라 1×1.72 로 갈라진다 */
+      roll(() => 0.999); px.p_thorns = 3;
+      pl.hp = pl.maxHp; pl.sh = 1e9; e = foe(); hitPlayer(1, true, e); out.both = 1e4 - e.hp;
+      /* ⓓ 원거리는 안 붙는다 */
+      roll(() => 0.999);
+      pl.hp = pl.maxHp; pl.sh = 1e9; e = foe(); hitPlayer(1, false, e); out.ranged = 1e4 - e.hp;
+      /* ⓔ 저체력 회피 회복 — 굴림 횟수(부위마다 따로)·조건 경계·회복량 */
+      px.g_thornSh = 0; px.p_thorns = 0; px.g_evAxe = 0; px.g_evHeal = 6; pl.evade = 50; pl.sh = 0;
+      roll(() => 0); pl.hp = pl.maxHp * 0.10; let h0 = pl.hp; hitPlayer(1, true, foe());
+      out.loRolls = n; out.loHeal = (pl.hp - h0) / pl.maxHp;
+      roll(() => 0); pl.hp = pl.maxHp * 0.50; h0 = pl.hp; hitPlayer(1, true, foe());
+      out.midRolls = n; out.midHeal = (pl.hp - h0) / pl.maxHp;
+      roll(() => 0); pl.hp = pl.maxHp * 0.49; h0 = pl.hp; hitPlayer(1, true, foe());
+      out.loEdgeRolls = n;
+      px.g_evHeal = 1;
+      roll(() => 0); pl.hp = pl.maxHp * 0.10; h0 = pl.hp; hitPlayer(1, true, foe());
+      out.oneRolls = n; out.oneHeal = (pl.hp - h0) / pl.maxHp;
+    } finally {
+      Math.random = RR;
+      pl.hp = keep.hp; pl.sh = keep.sh; pl.evade = keep.ev; pl.ward = keep.ward; pl.def = keep.def;
+      pl.buffs.def = keep.bd; px.guardCrystal = keep.gc; G.paused = keep.pause;
+      px.g_thornSh = keep.th; px.p_thorns = keep.pt; px.g_evHeal = keep.eh; px.g_evAxe = keep.ea;
+    }
+    return out;
+  });
+  const nr = (a, b) => Math.abs(a - b) <= 1e-7 * Math.max(1, Math.abs(b));
+  chk('⚑ T137 실드가 있으면 가시갑옷 장비분(+72%)이 붙는다', nr(trig.shOn, trig.d * 0.72),
+    `반사 ${trig.shOn} · 기대 ${trig.d * 0.72}`);
+  chk('⚑ T137 실드가 0 이면 장비분이 안 붙는다', nr(trig.shOff, 0), `반사 ${trig.shOff}`);
+  chk('⚑ T137 실드가 이 타격으로 전부 소진돼도 발동한다 (조건 시점 = 피격 «전»)',
+    nr(trig.shDrain, trig.d * 0.72), `반사 ${trig.shDrain} · 기대 ${trig.d * 0.72} (0 이면 hadSh 가 흡수 «뒤» 로 밀린 것)`);
+  chk('⚑ T137 특전 가시(+300%)와 «가산» 이다 (×3.72 · 곱연산이면 ×5.16)',
+    nr(trig.both, trig.d * 3.72), `반사 ${trig.both} · 가산 ${trig.d * 3.72} · 곱연산 ${trig.d * 3 * 1.72}`);
+  chk('⚑ T137 원거리 피격은 가시갑옷이 안 붙는다', nr(trig.ranged, 0), `반사 ${trig.ranged}`);
+  chk('⚑ T137 체력 10% 회피 → 6부위가 각각 따로 굴린다 (굴림 7 = 회피1 + 회복6)',
+    trig.loRolls === 7, `굴림 ${trig.loRolls}회`);
+  chk('⚑ T137 전부 성공하면 최대 체력의 10% × 6 회복', nr(trig.loHeal, 0.6),
+    `회복 ${(trig.loHeal * 100).toFixed(4)}%`);
+  chk('⚑ T137 체력 정확히 50% 면 발동하지 않는다 («미만»)',
+    trig.midRolls === 1 && nr(trig.midHeal, 0), `굴림 ${trig.midRolls}회 · 회복 ${trig.midHeal}`);
+  chk('⚑ T137 체력 49% 면 발동한다 (경계 한 칸)', trig.loEdgeRolls === 7, `굴림 ${trig.loEdgeRolls}회`);
+  chk('⚑ T137 1부위면 정확히 1번 굴리고 10% 회복한다',
+    trig.oneRolls === 2 && nr(trig.oneHeal, 0.1), `굴림 ${trig.oneRolls}회 · 회복 ${(trig.oneHeal * 100).toFixed(4)}%`);
 
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
