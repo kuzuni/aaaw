@@ -29,12 +29,16 @@ if (at < 0) throw new Error(`sim.js 에서 CLI 디스패처(«${CUT}») 를 못 
 const ctx = { console: { log() {} }, process, Math, JSON, Number, String, Array, Set, Map, Object, Date,
               parseInt, parseFloat, isFinite, isNaN, require };
 vm.createContext(ctx);
-vm.runInContext(SRC.slice(0, at) + '\n;globalThis.__X={mkBuild,buildPower,runChapter,LADDER,EXP1_TARGETS,TUNE,GT};', ctx);
+vm.runInContext(SRC.slice(0, at) + '\n;globalThis.__X={mkBuild,buildPower,runChapter,LADDER,LADDER_OPTS,EXP1_TARGETS,TUNE,GT};', ctx);
 const X = ctx.__X || ctx.globalThis.__X;
 
 const N = parseInt(process.env.N || '120', 10);
 const HI = parseInt(process.env.HI || String(X.TUNE.maxChapter), 10);
-const rate = (c, b) => { let w = 0; for (let i = 0; i < N; i++) if (X.runChapter(c, b, {}).clear) w++; return w / N * 100; };
+/* ⚑⚑⚑ T160 — 이 진단기가 **자를 안 쓰고 있었다**: `runChapter(c,b,{})` 는 게임 조건(3택 특전 · 기본 스탯 0 ·
+   장비 세트 옵션 켬)이라, 사다리 과녁과 대조하는 «실측 챕터» 가 통째로 딴 빌드의 것이었다.
+   실험1·실험5·`verifyScoreCriteria` 가 쓰는 것과 **같은 `LADDER_OPTS`** 를 넘긴다
+   (base10 + 기본 스탯 옛 값 20 + 세트 옵션 끔 — 주인 확정 측정 조건 ②). */
+const rate = (c, b) => { let w = 0; for (let i = 0; i < N; i++) if (X.runChapter(c, b, X.LADDER_OPTS).clear) w++; return w / N * 100; };
 
 console.log(`=== 사다리 역측정 (각 등급이 클리어율 5% 가 되는 챕터 · ${N}판/평가 · 탐색 상한 ${HI}) ===\n`);
 console.log('| 상태 | 확정 과녁 | 실측 5% 챕터 | 차 |');
