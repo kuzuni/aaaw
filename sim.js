@@ -223,6 +223,28 @@ const STUN_BOSS_MUL=1/3;
    — 화살 0.50 → 0.30 · 도끼 0.30 → 0.50 으로 **맞교환**. 검기·번개·창은 그대로. */
 const R_AXE=0.50, R_ARROW=0.30, R_WAVE=0.50, R_BOLT=0.75, R_SPEAR=1.00;
 const WAVE_PIERCE=2, WAVE_PIERCE_BIG=8, SPEAR_PIERCE=8;
+/* ⚑⚑⚑ T155 ② (주인 확정 2026-09-05 18:5X) — 특전 카드·인포·툴팁·장비 옵션 문구에서 창·도끼·화살·번개·검기가
+   나오면 괄호로 «(공격력의 N%)» 를 붙인다. N 은 **위 R_* 상수에서 읽는다** — 문구에 숫자를 적어 두지 않으므로
+   T118 처럼 계수가 바뀌면 문구가 저절로 따라온다. 창은 관통 마릿수(SPEAR_PIERCE)도 같이 적는다.
+   문구 하나에 소환이 둘이면(«모든 화살이 창으로 바뀐다» = 창의 화신) **결과가 되는 뒤쪽 하나**만 적는다:
+   «(창 · 공격력의 100%)». 두 엔진 같은 이름·같은 결과(게이트가 두 엔진 문구를 대조한다). */
+const SUMMON_R=[['도끼',R_AXE],['화살',R_ARROW],['번개',R_BOLT],['검기',R_WAVE],['창',R_SPEAR]];
+function summonNote(d){
+  const hit=SUMMON_R.filter(w=>d.indexOf(w[0])>=0);
+  if(!hit.length)return d;
+  const pct=r=>Math.round(r*100)+'%';
+  if(hit.length>1){                                   /* 창의 화신 — 문구에서 더 뒤에 나오는 쪽이 결과다 */
+    const w=hit.reduce((a,b)=>d.lastIndexOf(a[0])>d.lastIndexOf(b[0])?a:b);
+    return d+' ('+w[0]+' · 공격력의 '+pct(w[1])+')';
+  }
+  return d+' (공격력의 '+pct(hit[0][1])+(hit[0][0]==='창'?' · '+SPEAR_PIERCE+'마리 관통':'')+')';
+}
+/* 특전 배열·장비 옵션표를 **제자리에서** 훑어 소환 문구에 데미지 표기를 붙인다(키 이름은 엔진마다 d/tx). */
+function withSummonDmg(tbl,key){
+  const list=Array.isArray(tbl)?tbl:Object.keys(tbl).reduce((a,k)=>a.concat(tbl[k]),[]);
+  for(const o of list) if(o&&typeof o[key]==='string') o[key]=summonNote(o[key]);
+  return tbl;
+}
 /* ⚑ T96 — 주기 소환·공속 램프·오버킬 회복·반격 연쇄·등급 확률 상수는 특전 132종과 함께 폐지됐다
    (새 10종에는 주기형 소환도 등급도 없다). 장비 옵션이 쓰는 `autoBolt`(3초 주기)만 남는다. */
 /* ⚑ 주인 확정 — 방어막(ward)은 장수 상한이 없다(무한). 수치형 실드와 별개 축으로, 실드는 데미지를
@@ -292,7 +314,7 @@ function enemyStats(c,w){
         엔진의 `steal` 스탯은 남지만 특전이 더는 안 쓴다(게이트 «흡혈» 단언은 이 특전 기준으로 갈아끼웠다).
      ② 나머지 9종의 «효과·수치» 는 한 글자도 안 바뀐다 — 순서만 아래처럼 바뀐다.
    수치 해석(주인 위임 기본값 ⑦):
-     · 회피 시 회복 = **회피 성공마다 10% 굴려서** 최대 체력 6% 회복(초과분 버림 · 실드 안 채움 · 트리거는
+     · 회피 시 회복 = **회피 성공마다 굴려서**(⚑ T155 로 일반 33% · 최대 체력 12%) 회복(초과분 버림 · 실드 안 채움 · 트리거는
        «내가 적 공격을 회피한 순간» = 4번 «회피 시 화살» 과 같은 자리 · 4번보다 앞서 굴린다)
      · 확률형(회피·반격·치확)은 **+10** (기본 20 → 30) · 치명타 피해는 **+50** (기본 150 → 200)
      · 공격력 +20% · 방어력 +10% 는 **기본치에 곱연산**이고 장비 합산 «뒤» 에 걸린다
@@ -306,11 +328,14 @@ function enemyStats(c,w){
 /* ⚑⚑⚑ T121 (주인 확정 2026-09-04 16:2X·16:3X) — 기존 일반 4종 하향. 사다리 «기준 플레이어» 의 특전이라
    기준 자체가 약해지지만 **적 스탯 재적합은 없다**(T120 ④ 상시 규칙 — 주인이 «맞춰라» 라고 할 때만).
    ⚑ 9번 치피는 T121 ② 로 +50 → +30. index.html 과 같은 이름·같은 값. */
-/* ⚑ 18:1X·18:2X 주인 재정정 — 1번 «회피 시 회복» 10 → 8% · 10번 «방어력 증가» +10 → +8%.
+/* ⚑⚑⚑ T155 (주인 확정 2026-09-05 18:5X · 19:1X 정정 «그거를 밸런스 조절한 건데») — «회피 시 회복» 3종 **교체**:
+   일반 8%·6% → **33%·12%**(`PERK_EVHEAL_CH`·`PERK_EVHEAL_F`) · 희귀 II 15%·6% → **66%·12%**(`PERK_EVHEAL_R`) ·
+   전설 III **100%·12%**(`PERK_EVHEAL_L` 신설). 회복량은 셋이 같은 `PERK_EVHEAL_F` 한 축을 쓴다.
+   ⚑ 18:1X·18:2X 주인 재정정 — 1번 «회피 시 회복» 10 → 8% · 10번 «방어력 증가» +10 → +8% (T155 로 8 → 33).
    ⚑ 17:5X — `PERK_SUMMON_CH`(단일 100%)는 이제 «반격 시 창» 하나만 쓴다(주인 언급 없어 100% 유지).
    회피 시 화살·피격 시 도끼는 특전별 확률(PERK_SUMMON_N/R/L)로 쪼개졌다. */
 const PERK_ATK_M=1.15, PERK_DEF_M=1.08, PERK_EVADE_A=8, PERK_COUNTER_A=8,
-      PERK_CRITR_A=8, PERK_CRITF_A=30, PERK_EVHEAL_CH=0.08, PERK_EVHEAL_F=0.06, PERK_SUMMON_CH=1.00;
+      PERK_CRITR_A=8, PERK_CRITF_A=30, PERK_EVHEAL_CH=0.33, PERK_EVHEAL_F=0.12, PERK_SUMMON_CH=1.00;
 /* ⚑⚑⚑ T119 신규 상수 (주인 확정 2026-09-04 13:0X) — 신규 22종이 쓰는 수치. index.html 과 같은 이름·같은 값.
    처치 시 소환 확률 33/66/100 은 주인이 직접 정한 값이라 «10% 단위(5% 예외)» 규칙에서 제외된다
    (`verifyNumClean` 에 주인 확정으로 등재). 가시갑옷 배율은 «100% = 1배» (주인 정의). */
@@ -348,7 +373,7 @@ const PERK_NHIT_ARROW=2, PERK_NHIT_AXE=3, PERK_NHIT_BOLT=3, PERK_NHIT_SPEAR=3, P
 const PERK_SUMMON_N=0.33, PERK_SUMMON_R=0.66, PERK_SUMMON_L=1.00, /* 회피 시 화살 · 피격 시 도끼 I/II/III */
       PERK_SUMMON_SP=0.33,                                       /* 회피 시 창 · 피격 시 창 (전설) */
       PERK_CRITSP_R=0.33, PERK_CRITSP_L=0.66, PERK_CRITBOLT_L=0.66, /* 치명 시 창(희귀 33 · 전설 66) · 치명 시 번개(전설 66) */
-      PERK_EVHEAL_R=0.15,                                        /* 회피 시 회복 II — 15% · 최대 체력 6%(PERK_EVHEAL_F) */
+      PERK_EVHEAL_R=0.66, PERK_EVHEAL_L=1.00,                    /* 회피 시 회복 II/III — 66% · 100% · 최대 체력 12%(PERK_EVHEAL_F · ⚑ T155) */
       PERK_EVREP_R=0.15, PERK_EVREP_L=0.25, PERK_EVREP_F=0.06,    /* 회피 시 수리 I/II — 15/25% · 최대 실드 6% */
       PERK_DEF_R=1.16, PERK_DEF_L=1.24,                          /* 방어력 증가 II/III — 곱연산(상한 80 은 엔진 규칙) */
       PERK_IGN_N=0.20,                                           /* 피해 무시 — 피격 20% (회피·방어막 «뒤») */
@@ -376,7 +401,7 @@ function mkPerks(){
   const kmax=(p,k,v)=>{ p.px[k]=Math.max(p.px[k]||0,v); };   /* 처치 시 소환 — 확률 최댓값 갱신 */
   return [
     /* ===== 일반 15종 (1~10 = 기존 10종 · 수치 불변) ===== */
-    {id:'p_evadeHeal',g:0,nm:'회피 시 회복',      d:'회피 시 8% 확률로 최대 체력 6% 회복', ap:p=>p.px.p_evadeHeal=1},
+    {id:'p_evadeHeal',g:0,nm:'회피 시 회복',      d:'회피 시 33% 확률로 최대 체력 12% 회복', ap:p=>p.px.p_evadeHeal=1},
     {id:'p_atk',     g:0,nm:'공격력 증가',        d:'공격력 +15%',                     ap:p=>{p.px.p_atk=1;p.dmg*=PERK_ATK_M;}},
     {id:'p_evade',   g:0,nm:'회피율 증가',        d:'회피율 +8',                       ap:p=>{p.px.p_evade=1;p.evade+=PERK_EVADE_A;}},
     {id:'p_arrowEv', g:0,nm:'회피 시 화살',       d:'회피 시 33% 확률로 화살 1개',      ap:p=>p.px.p_arrowEv=1},
@@ -449,7 +474,7 @@ function mkPerks(){
     /* ===== ⚑⚑⚑ T121 3차 신규 희귀 7종 (주인 확정 17:5X · 18:0X · 18:2X · 18:4X) ===== */
     {id:'p_arrowEvR',  g:1,nm:'회피 시 화살 II',   d:'회피 시 66% 확률로 화살 1개',      ap:p=>p.px.p_arrowEvR=1},
     {id:'p_axeHitR',   g:1,nm:'피격 시 도끼 II',   d:'피격 시 66% 확률로 도끼 1개',      ap:p=>p.px.p_axeHitR=1},
-    {id:'p_evHealR',   g:1,nm:'회피 시 회복 II',   d:'회피 시 15% 확률로 최대 체력 6% 회복', ap:p=>p.px.p_evHealR=1},
+    {id:'p_evHealR',   g:1,nm:'회피 시 회복 II',   d:'회피 시 66% 확률로 최대 체력 12% 회복', ap:p=>p.px.p_evHealR=1},
     {id:'p_evRepairR', g:1,nm:'회피 시 수리',      d:'회피 시 15% 확률로 최대 실드 6% 수리', ap:p=>p.px.p_evRepairR=1},
     {id:'p_defR',      g:1,nm:'방어력 증가 II',    d:'방어력 +16%',                      ap:p=>{p.px.p_defR=1;p.def*=PERK_DEF_R;}},
     {id:'p_wardHitR',  g:1,nm:'피격 시 방어막 II', d:'피격 시 20% 확률로 방어막 1장',     ap:p=>p.px.p_wardHitR=1},
@@ -486,9 +511,13 @@ function mkPerks(){
     {id:'p_shWallL',   g:2,nm:'실드 방벽',         d:'실드가 있으면 피격 시 50% 확률로 데미지 무시', ap:p=>p.px.p_shWallL=1},
     {id:'p_shRefL',    g:2,nm:'실드 반사',         d:'실드가 있으면 피격 시 50% 확률로 그 데미지를 반사', ap:p=>p.px.p_shRefL=1},
     {id:'p_wardHitL',  g:2,nm:'피격 시 방어막 III',d:'피격 시 30% 확률로 방어막 1장',     ap:p=>p.px.p_wardHitL=1},
+    /* ===== ⚑⚑⚑ T155 신규 전설 1종 (주인 확정 2026-09-05 18:5X · 19:1X 정정) =====
+       «회피 시 회복» 축의 세 번째. I(일반 33%)·II(희귀 66%)와 **별개 특전**이라 같이 얻으면 각각 굴린다. */
+    {id:'p_evHealL',   g:2,nm:'회피 시 회복 III',  d:'회피 시 최대 체력 12% 회복',        ap:p=>p.px.p_evHealL=1},
   ];
 }
 const PERKS=mkPerks();
+withSummonDmg(PERKS,'d');   /* ⚑ T155 ② — 소환 문구에 «(공격력의 N%)» (상수에서 생성 · 제자리) */
 /* ⚑ 주인 방향(2026-09-03) — 한 런에서 얻는 특전 수를 «풀 크기» 와 분리한다.
    지금은 풀도 10, 획득도 10 이라 `PERK_PICKS === PERKS.length` 이고 동작은 한 글자도 안 바뀐다.
    나중에 풀을 30 종으로 늘려도 «한 런 = 10개» 면 파워 총량이 그대로라 T102·T103 난이도를 다시
@@ -901,6 +930,7 @@ const GOPT={
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
   ],
 };
+withSummonDmg(GOPT,'d');    /* ⚑ T155 ② — 장비 옵션의 도끼 문구에도 «(공격력의 50%)» (상수에서 생성) */
 
 /* ---- 뽑기 (PLAN §11.2) ---- */
 function newGacha(){ return {p50:0,p10:0,pulls:0}; }
@@ -1492,9 +1522,11 @@ function hitPlayer(G,dmg,isMelee,src){
     for(let i=0;i<px.g_evAxe;i++) if(pkk(p,0.50))fireAxe(p,1);
     if(p.hp<p.maxHp*0.50) for(let i=0;i<px.g_evHeal;i++) if(pkk(p,0.30))heal(p,p.maxHp*0.10);
     gainWard(p,0.10*px.wardEvade);
-    /* ⚑⚑⚑ T104 (주인 확정) — 1번 특전 «회피 시 회복»: 회피 성공마다 10% 굴려서 최대 체력 6% 회복.
-       `heal(...,true)` 로 회복 증폭/오버킬 수리 분기를 타지 않는다 → 실드는 안 채운다(위임 기본값). */
-    if(px.p_evadeHeal&&pkk(p,PERK_EVHEAL_CH))heal(p,p.maxHp*PERK_EVHEAL_F,true);
+    /* ⚑⚑⚑ T104 (주인 확정) — 1번 특전 «회피 시 회복»: 회피 성공마다 굴려서 최대 체력 비율만큼 회복.
+       ⚑⚑⚑ T155 (주인 확정 18:5X) — 33%·12% 로 교체되면서 위임이 «회복 증폭 적용» 으로 통일됐다:
+       II·III 과 같이 `heal(...)`(증폭 분기)을 탄다. 실드를 채우는 분기(healShield3/5·overheal)는
+       지금 장비 옵션에 없는 죽은 키라 «실드 안 채움» 은 그대로다. */
+    if(px.p_evadeHeal&&pkk(p,PERK_EVHEAL_CH))heal(p,p.maxHp*PERK_EVHEAL_F);
     /* ④ 회피 시 화살 I/II/III — ⚑ 17:5X 주인 정정으로 I 이 100% → 33% 가 되고 II(66%)·III(100%)가 생겼다.
        셋은 서로 다른 특전이라 **각각 따로 굴린다**(전부 있으면 한 번의 회피에 최대 3발). */
     if(px.p_arrowEv &&pkk(p,PERK_SUMMON_N))fireArrows(p,1);
@@ -1502,9 +1534,10 @@ function hitPlayer(G,dmg,isMelee,src){
     if(px.p_arrowEvL&&pkk(p,PERK_SUMMON_L))fireArrows(p,1);
     /* ⚑ T121 3차 «회피 시 창»(전설 33%) — 회피 축의 창 소환 (⚑ 17:5X) */
     if(px.p_spearEvL&&pkk(p,PERK_SUMMON_SP))fireSpear(p,1);
-    /* ⚑ T121 3차 «회피 시 회복 II»(희귀 15%)·«회피 시 수리 I/II»(희귀 15% · 전설 25%) — ⚑ 18:0X·18:1X 정정값.
-       II 는 주인이 «회복 증폭 적용» 이라 적어 일반 1번(noBoost)과 달리 증폭 분기를 탄다. 수리는 `repair` 가 증폭을 건다. */
+    /* ⚑ T121 3차 «회피 시 회복 II»(⚑ T155 로 66%)·«회피 시 수리 I/II»(희귀 15% · 전설 25%).
+       ⚑ T155 로 I·II·III 셋이 다 증폭 분기를 탄다(«회복 증폭 적용»). 수리는 `repair` 가 증폭을 건다. */
     if(px.p_evHealR  &&pkk(p,PERK_EVHEAL_R))heal(p,p.maxHp*PERK_EVHEAL_F);
+    if(px.p_evHealL  &&pkk(p,PERK_EVHEAL_L))heal(p,p.maxHp*PERK_EVHEAL_F);   /* ⚑ T155 «회피 시 회복 III» — 확정 발동 */
     if(px.p_evRepairR&&pkk(p,PERK_EVREP_R))repair(p,p.maxSh*PERK_EVREP_F);
     if(px.p_evRepairL&&pkk(p,PERK_EVREP_L))repair(p,p.maxSh*PERK_EVREP_F);
     /* ⚑⚑⚑ T121 회피 시 즉사 I/II/III (주인 확정 16:0X ①) — 셋은 서로 다른 특전이라 **각각 따로 굴린다**

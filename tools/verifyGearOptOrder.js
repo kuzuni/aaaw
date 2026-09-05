@@ -166,6 +166,13 @@ function run(simSrc, htmSrc, planSrc, routineSrc, quiet) {
   R.length = 0;
   const say = quiet ? () => {} : console.log;
 
+  /* ⚑⚑⚑ T155 ② (주인 확정 2026-09-05 18:5X) — 소환 문구에 «(공격력의 N%)» 가 붙는다. 그 표기는 **로드할 때
+     `summonNote` 가 R_* 상수에서 만들어 붙이는 것**이라 PLAN §11.6 표(=사람이 보는 문구)에는 있고
+     이 게이트가 읽는 엔진 **리터럴**에는 없다. 이 게이트가 보는 것은 «어느 옵션이 몇 번 칸인가» 라
+     양쪽에서 표기를 걷어 내고 대조한다 — 표기 자체(상수 연동·두 엔진 일치·하드코딩 금지)는
+     `verifyPerkOrder` 의 T155 ② 절과 `verifyOptText`(런타임 덤프 대조)가 본다. */
+  const noDmg = t => (typeof t === 'string' ? t.replace(/ \((?:[^()]* · )?공격력의 [^()]*\)$/, '') : t);
+
   const rOrd = routineOrder(routineSrc);
   const pOrd = planOrder(planSrc);
   const pLet = planLetters(planSrc);
@@ -198,7 +205,7 @@ function run(simSrc, htmSrc, planSrc, routineSrc, quiet) {
   for (const [sn] of SETS) {
     want[sn] = {};
     for (const [, pt] of PARTS) {
-      want[sn][pt] = pOrd[pt].map(c => (c === STEAL_CELL ? STEAL_OPT : pLet[sn][c]));
+      want[sn][pt] = pOrd[pt].map(c => noDmg(c === STEAL_CELL ? STEAL_OPT : pLet[sn][c]));
     }
   }
   for (const [nm, X] of E) {
@@ -247,7 +254,7 @@ function run(simSrc, htmSrc, planSrc, routineSrc, quiet) {
       chk(`${nm} ${sn} — 목걸이가 무기와 같다`, row.neck.join('§') === row.weapon.join('§'),
           `목걸이 «${row.neck.slice(0, 3).join(' · ')}…» · 무기 «${row.weapon.slice(0, 3).join(' · ')}…»`);
       /* ⓒ-4 세트 안 6부위가 표의 여섯 옵션만 쓴다 (미등록 문구 0) */
-      const known = new Set(Object.values(pLet[sn]));
+      const known = new Set(Object.values(pLet[sn]).map(noDmg));
       const unk = PARTS.filter(([, pt]) => row[pt].slice(0, 6).some(d => !known.has(d))).map(x => x[0]);
       chk(`${nm} ${sn} — 6부위가 표의 여섯 옵션만 쓴다 (미등록 문구 0)`, unk.length === 0, unk.join(', '));
     }

@@ -701,7 +701,13 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     save.inv = [newGear('weapon', 'crit_weapon', 0, 0)];
     renderGear(); openGearDetail(save.inv[0].u);
     const rows0 = [...document.querySelectorAll('.gd-opt')];
-    out.lockNeeds = rows0.slice(1).map(r => (/\(([^)]*)\)/.exec(r.textContent) || [])[1]);
+    /* ⚑ T155 ② — 소환 옵션 문구에 «(공격력의 N%)» 가 붙으면서 괄호가 **두 개**가 됐다
+       («… 도끼 1개 (공격력의 50%) (신화 +3강)»). 잠금 조건은 데미지 표기가 아닌 마지막 괄호다. */
+    out.lockNeeds = rows0.slice(1).map(r => {
+      const g = (r.textContent.match(/\(([^)]*)\)/g) || []).map(x => x.slice(1, -1))
+        .filter(x => !/^(?:[^()]* · )?공격력의 /.test(x));
+      return g.length ? g[g.length - 1] : undefined;
+    });
     closeOverlay();
     return out;
   });

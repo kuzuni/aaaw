@@ -41,7 +41,7 @@ const chk = (n, c, d) => { R.push({ n, c }); console.log(`  ${c ? '✓' : '✗'}
      ⓒ id 는 종전 규약대로 등급 접미 N/R/L 을 쓴다 — 이 게이트의 id regex 가 `p_[A-Za-z]+`(숫자 없음)라
        «II» 를 `2` 로 적으면 그 행이 통째로 안 보인다(실제로 한 번 걸렸다: 66종이 60종으로 읽혔다). */
 const WANT = [
-  { id: 'p_evadeHeal', g: 0, nm: '회피 시 회복', tx: '회피 시 8% 확률로 최대 체력 6% 회복' },
+  { id: 'p_evadeHeal', g: 0, nm: '회피 시 회복', tx: '회피 시 33% 확률로 최대 체력 12% 회복' },
   { id: 'p_atk', g: 0, nm: '공격력 증가', tx: '공격력 +15%' },
   { id: 'p_evade', g: 0, nm: '회피율 증가', tx: '회피율 +8' },
   { id: 'p_arrowEv', g: 0, nm: '회피 시 화살', tx: '회피 시 33% 확률로 화살 1개' },
@@ -109,7 +109,7 @@ const WANT = [
   /* ⚑⚑⚑ T121 3차 신규 희귀 7종 (주인 확정 17:5X · 18:0X · 18:2X · 18:4X) */
   { id: 'p_arrowEvR', g: 1, nm: '회피 시 화살 II', tx: '회피 시 66% 확률로 화살 1개' },
   { id: 'p_axeHitR', g: 1, nm: '피격 시 도끼 II', tx: '피격 시 66% 확률로 도끼 1개' },
-  { id: 'p_evHealR', g: 1, nm: '회피 시 회복 II', tx: '회피 시 15% 확률로 최대 체력 6% 회복' },
+  { id: 'p_evHealR', g: 1, nm: '회피 시 회복 II', tx: '회피 시 66% 확률로 최대 체력 12% 회복' },
   { id: 'p_evRepairR', g: 1, nm: '회피 시 수리', tx: '회피 시 15% 확률로 최대 실드 6% 수리' },
   { id: 'p_defR', g: 1, nm: '방어력 증가 II', tx: '방어력 +16%' },
   { id: 'p_wardHitR', g: 1, nm: '피격 시 방어막 II', tx: '피격 시 20% 확률로 방어막 1장' },
@@ -143,14 +143,17 @@ const WANT = [
   { id: 'p_shWallL', g: 2, nm: '실드 방벽', tx: '실드가 있으면 피격 시 50% 확률로 데미지 무시' },
   { id: 'p_shRefL', g: 2, nm: '실드 반사', tx: '실드가 있으면 피격 시 50% 확률로 그 데미지를 반사' },
   { id: 'p_wardHitL', g: 2, nm: '피격 시 방어막 III', tx: '피격 시 30% 확률로 방어막 1장' },
+  /* ⚑⚑⚑ T155 (주인 확정 2026-09-05 18:5X · 19:1X 정정) — «회피 시 회복» 축의 세 번째(전설 · 확정 발동). */
+  { id: 'p_evHealL', g: 2, nm: '회피 시 회복 III', tx: '회피 시 최대 체력 12% 회복' },
 ];
 const GRADE_NAME = ['일반', '희귀', '전설'];
-const GRADE_N = [39, 32, 28];        /* 주인 확정 등급별 개수 (⚑ T121 3차 — 17:5X~18:4X 로 22종 더 · 합 99) */
+const GRADE_N = [39, 32, 29];        /* 주인 확정 등급별 개수 (⚑ T155 — 전설 «회피 시 회복 III» 1종 추가 · 합 100) */
+const PERK_TOTAL = 100;              /* ⚑ T155 — 풀 99 → 100 (주인 확정 «풀 99 → 100 · 일반 39 · 희귀 32 · 전설 29») */
 const GRADE_RATE = [60, 25, 15];     /* ⚑ 13:2X 주인 정정 (처음 50/30/20) */
 /* ⚑ T104 — `PERK_STEAL` 은 폐기됐다(특전에서 흡혈 축이 사라졌다). 자리에 `PERK_EVHEAL_CH`·`PERK_EVHEAL_F` 신설.
    ⚑ T119 — 신규 22종이 쓰는 상수 9종 추가(두 엔진 같은 이름·같은 값). */
 const CONST = { PERK_ATK_M: '1.15', PERK_DEF_M: '1.08', PERK_EVADE_A: '8', PERK_COUNTER_A: '8',
-  PERK_CRITR_A: '8', PERK_CRITF_A: '30', PERK_EVHEAL_CH: '0.08', PERK_EVHEAL_F: '0.06', PERK_SUMMON_CH: '1.00',
+  PERK_CRITR_A: '8', PERK_CRITF_A: '30', PERK_EVHEAL_CH: '0.33', PERK_EVHEAL_F: '0.12', PERK_SUMMON_CH: '1.00',
   PERK_KILL_N: '0.33', PERK_KILL_R: '0.66', PERK_KILL_L: '1.00',
   PERK_THORN_N: '1.00', PERK_THORN_R: '2.00', PERK_THORN_L: '3.00',
   PERK_AMP: '1.00', PERK_FULLHP_A: '1.00', PERK_BERSERK_M: '3.00',
@@ -175,7 +178,7 @@ const CONST = { PERK_ATK_M: '1.15', PERK_DEF_M: '1.08', PERK_EVADE_A: '8', PERK_
   /* ⚑ T121 3차 신규 상수 20종 (주인 확정 17:5X · 18:0X · 18:1X · 18:2X · 18:4X) */
   PERK_SUMMON_N: '0.33', PERK_SUMMON_R: '0.66', PERK_SUMMON_L: '1.00', PERK_SUMMON_SP: '0.33',
   PERK_CRITSP_R: '0.33', PERK_CRITSP_L: '0.66', PERK_CRITBOLT_L: '0.66',
-  PERK_EVHEAL_R: '0.15', PERK_EVREP_R: '0.15', PERK_EVREP_L: '0.25', PERK_EVREP_F: '0.06',
+  PERK_EVHEAL_R: '0.66', PERK_EVHEAL_L: '1.00', PERK_EVREP_R: '0.15', PERK_EVREP_L: '0.25', PERK_EVREP_F: '0.06',
   PERK_DEF_R: '1.16', PERK_DEF_L: '1.24', PERK_IGN_N: '0.20',
   PERK_SHWALL_L: '0.50', PERK_SHREF_L: '0.50', PERK_NOSH_ATK: '1.50', PERK_NOSH_ASPD: '1.30',
   PERK_WARD_N: '0.10', PERK_WARD_R: '0.20', PERK_WARD_L: '0.30' };
@@ -208,8 +211,8 @@ function run(simSrc, htmSrc, planSrc) {
   chk('PLAN §3.1 표의 등급이 주인 표와 같다', planRows.map(r => r.g).join() === wantG.join(),
     planRows.map(r => r.g).join('') || '-');
   const cnt = g => WANT.filter(w => w.g === g).length;
-  chk('⚑ T121 등급별 개수 = 일반 39 · 희귀 32 · 전설 28 (합 99)',
-    [0, 1, 2].every(g => cnt(g) === GRADE_N[g]) && N === 99, `${[0, 1, 2].map(cnt).join('/')} = ${N}`);
+  chk(`⚑ T155 등급별 개수 = 일반 ${GRADE_N[0]} · 희귀 ${GRADE_N[1]} · 전설 ${GRADE_N[2]} (합 ${PERK_TOTAL})`,
+    [0, 1, 2].every(g => cnt(g) === GRADE_N[g]) && N === PERK_TOTAL, `${[0, 1, 2].map(cnt).join('/')} = ${N}`);
   const planTxBad = planRows.filter((r, i) => WANT[i] && !(r.nm === WANT[i].nm && r.tx.replace(/\*/g, '') === WANT[i].tx));
   chk('PLAN 표의 이름·효과 문장이 주인 확정 문면 그대로다', planRows.length === N && planTxBad.length === 0,
     planTxBad.map(r => r.id).join(',') || `${N}/${N}`);
@@ -401,15 +404,15 @@ function run(simSrc, htmSrc, planSrc) {
     `풀 ${S.PERKS.length} ≥ 획득 ${S.PERK_PICKS}`);
   /* ⚑⚑⚑ T119 — «풀 = 획득 수 = 10» 이던 T102 의 등식이 드디어 갈라졌다(풀 32 · 한 런 상한 10).
      이제 이 자리가 지키는 것은 «풀이 상한보다 넉넉한가» 다 — 풀을 도로 줄이면 빨개진다. */
-  chk('⚑ T121 풀 99종 · 한 런 상한 10 (T102 가 예고한 분리가 더 벌어졌다)',
-    S.PERKS.length === 99 && S.PERK_PICKS === 10, `풀 ${S.PERKS.length} · 획득 ${S.PERK_PICKS}`);
+  chk(`⚑ T155 풀 ${PERK_TOTAL}종 · 한 런 상한 10 (T102 가 예고한 분리가 더 벌어졌다)`,
+    S.PERKS.length === PERK_TOTAL && S.PERK_PICKS === 10, `풀 ${S.PERKS.length} · 획득 ${S.PERK_PICKS}`);
   chk('⚑ T117 풀 ≥ 제시 장수 (풀이 3보다 작으면 남은 만큼만 제시된다 — ⓐ 가 실측)',
     S.PERKS.length >= S.PERK_OFFER, `풀 ${S.PERKS.length} ≥ 제시 ${S.PERK_OFFER}`);
   /* ⚑ T107 — 종전엔 «보스 전 공급으로 오르는 레벨 + 악마 앞당김 1 = PERK_PICKS» 를 못 박았지만,
      적 수가 챕터마다 달라져 그 항등식이 사라졌다. 남은 단언은 주인 확정 «풀 10종 · 한 런 상한 10» 이다
      (챕터별 실제 획득 수는 `verifyChapterFixed` ⓓ 가 표와 대조한다 — 여기서 두 번 재지 않는다). */
   chk('⚑ PERK_PICKS 가 주인 확정 «한 런 상한 10» 과 같다', S.PERK_PICKS === 10,
-    `PERK_PICKS=${S.PERK_PICKS} · 풀 99종 · 챕터별 실제 획득 6~9 (T107)`);
+    `PERK_PICKS=${S.PERK_PICKS} · 풀 ${PERK_TOTAL}종 · 챕터별 실제 획득 6~9 (T107)`);
   /* 수치 — 획득 순서대로 하나씩 붙이며 실효 스탯 변화를 잰다.
      ⚑ T104 — 순서가 바뀌었고, 1번 특전은 스탯을 안 건드리는 트리거형(회피 시 회복)이라 스탯 델타 0 이다. */
   const G0 = { taken: [], player: null, perkChances: 0 };
@@ -462,11 +465,106 @@ function run(simSrc, htmSrc, planSrc) {
   /* ⚑ T104 — 특전에서 흡혈 축이 사라졌다: 어느 특전도 `p.steal` 을 안 건드린다 (엔진의 steal 스탯은 남는다). */
   chk('⚑ T104 — 특전이 p.steal 을 건드리지 않는다 (특전에서 흡혈 축 폐기)',
     S.PERKS.every(pk => dOf(pk.id).steal === 0));
-  /* 회피 시 회복은 «실드를 안 채운다» — heal 의 noBoost 경로(true)를 실제로 타는지 본다.
-     `if(px.p_evadeHeal&&pkk(p,...))heal(p,p.maxHp*...,true);` 형태를 두 엔진에서 찾아 확인한다. */
-  const evHealRe = /if\(px\.p_evadeHeal\s*&&\s*pkk\(p\s*,\s*(?:PERK_EVHEAL_CH|0?\.08)\s*\)\)\s*(?:\{[^}]*)?heal\(p\s*,\s*p\.maxHp\s*\*\s*(?:PERK_EVHEAL_F|0?\.06)\s*,\s*true\s*\)/;
-  chk('⚑ T104 ① 회피 시 회복이 회피 분기에서 noBoost=true 로 회복한다 (sim.js)', evHealRe.test(simSrc));
-  chk('⚑ T104 ① 회피 시 회복이 회피 분기에서 noBoost=true 로 회복한다 (index.html)', evHealRe.test(htmSrc));
+  /* ⚑⚑⚑ T155 ① — «회피 시 회복» 3종(일반 33% · 희귀 66% · 전설 100%)이 회피 분기에서 **같은 회복 축**
+     (`PERK_EVHEAL_F`)을 쓰고, 셋 다 **회복 증폭 분기**(noBoost 인자 없음)를 탄다. 주인 위임이
+     «회복 증폭 적용» 으로 통일되면서 T104 의 `heal(...,true)`(noBoost) 단언은 이 단언으로 교체됐다.
+     실드는 여전히 안 채운다 — 채우는 분기(healShield3/5·overheal)는 장비 옵션에 한 칸도 없는 죽은 키다. */
+  const evHealRe = k => new RegExp('if\\(px\\.' + k + '\\s*&&\\s*pkk\\(p\\s*,\\s*PERK_EVHEAL_' +
+    { p_evadeHeal: 'CH', p_evHealR: 'R', p_evHealL: 'L' }[k] +
+    '\\s*\\)\\)\\s*(?:\\{\\s*)?heal\\(p\\s*,\\s*p\\.maxHp\\s*\\*\\s*PERK_EVHEAL_F\\s*\\)');
+  for (const k of ['p_evadeHeal', 'p_evHealR', 'p_evHealL']) {
+    chk(`⚑ T155 ① ${k} 이 회피 분기에서 PERK_EVHEAL_F 만큼 회복한다 (증폭 분기 · 두 엔진)`,
+      evHealRe(k).test(simSrc) && evHealRe(k).test(htmSrc));
+  }
+  chk('⚑ T155 ① 세 특전이 heal 의 noBoost 인자를 쓰지 않는다 (회복 증폭 적용)',
+    !/PERK_EVHEAL_F\s*,\s*true/.test(simSrc) && !/PERK_EVHEAL_F\s*,\s*true/.test(htmSrc));
+
+  /* ===== ⚑⚑⚑ T155 ② 소환 문구 «(공격력의 N%)» — 상수에서 만들어지는가 (주인 확정 2026-09-05 18:5X) =====
+     주인 문면: «창·도끼·화살·번개·검기가 나오면 괄호로 «(공격력의 N%)» 를 붙인다. N 은 엔진 상수에서
+     읽는다(`R_AXE 50 · R_ARROW 30 · R_SPEAR 100 · R_BOLT 75 · R_WAVE 50` — 하드코딩 금지 · T118 처럼 값이
+     바뀌면 문구가 따라오게)». 그래서 이 절은 **기대 문구를 적어 두지 않고** 두 엔진 소스에서 R_* 를 읽어
+     직접 만들어 대조한다 — 문구를 상수에서 떼어 내면(하드코딩·생성기 제거·한쪽 엔진만 계수 변경) 빨개진다. */
+  console.log('\n=== ⚑ T155 ② 소환 문구 데미지 표기 (상수 연동) ===');
+  const numOf = (src, k) => Number((src.match(new RegExp('\\b' + k + '=([0-9.]+)')) || [])[1]);
+  const RC = {};
+  const rBad = [];
+  for (const k of ['R_AXE', 'R_ARROW', 'R_BOLT', 'R_WAVE', 'R_SPEAR', 'SPEAR_PIERCE']) {
+    const a = numOf(simSrc, k), b = numOf(htmSrc, k);
+    RC[k] = a;
+    if (!(a > 0) || a !== b) rBad.push(`${k}(sim ${a} / game ${b})`);
+  }
+  chk('소환 계수 R_* 5종과 창 관통 수가 두 엔진에서 같은 값이다', rBad.length === 0,
+    rBad.join(' · ') || `도끼 ${RC.R_AXE} · 화살 ${RC.R_ARROW} · 번개 ${RC.R_BOLT} · 검기 ${RC.R_WAVE} · 창 ${RC.R_SPEAR} · 관통 ${RC.SPEAR_PIERCE}`);
+  /* 게이트가 상수로 직접 만드는 기대 문구 — 엔진의 summonNote 와 **독립으로** 다시 쓴 규칙이다
+     (엔진 함수를 불러 쓰면 그 함수가 망가져도 같이 망가져 검사가 죽는다). */
+  const WORDS = [['도끼', 'R_AXE'], ['화살', 'R_ARROW'], ['번개', 'R_BOLT'], ['검기', 'R_WAVE'], ['창', 'R_SPEAR']];
+  const wantNote = d => {
+    const hit = WORDS.filter(w => d.indexOf(w[0]) >= 0);
+    if (!hit.length) return d;
+    const pct = k => Math.round(RC[k] * 100) + '%';
+    if (hit.length > 1) {            /* 창의 화신 — «모든 화살이 창으로 바뀐다» 는 결과인 창만 적는다 */
+      const w = hit.reduce((a, b) => (d.lastIndexOf(a[0]) > d.lastIndexOf(b[0]) ? a : b));
+      return `${d} (${w[0]} · 공격력의 ${pct(w[1])})`;
+    }
+    return `${d} (공격력의 ${pct(hit[0][1])}${hit[0][0] === '창' ? ' · ' + RC.SPEAR_PIERCE + '마리 관통' : ''})`;
+  };
+  const stripTag = t => t.replace(/<[^>]+>/g, '');
+  /* index.html 의 특전·장비 옵션표를 **실제로 실행해** 문구를 얻는다(정적 리터럴에는 표기가 없다 — 로드 때 붙는다) */
+  const htmlTables = (() => {
+    const L = htmSrc.split('\n');
+    const cut = (startRe, endLine) => {
+      const a = L.findIndex(l => startRe.test(l));
+      if (a < 0) return null;
+      const b = L.findIndex((l, i) => i > a && l === endLine);
+      return b < 0 ? null : L.slice(a, b + 1).join('\n');
+    };
+    const one = re => L.find(l => re.test(l)) || '';
+    const src = [one(/^const R_AXE=/), one(/^const WAVE_PIERCE=/), one(/^const SUMMON_R=/),
+      cut(/^function summonNote\(d\)\{/, '}'), cut(/^function withSummonDmg\(tbl,key\)\{/, '}'),
+      one(/^const kmax=/), cut(/^const GOPT=\{/, '};'), cut(/^const PERKS=\[/, '];'),
+      "withSummonDmg(GOPT,'d');", "withSummonDmg(PERKS,'tx');", ';({PERKS,GOPT})'].join('\n');
+    try { return vm.runInNewContext(src, { Math, JSON }); } catch (e) { return null; }
+  })();
+  chk('index.html 의 특전·장비 옵션표를 실행해 문구를 얻을 수 있다 (문구 생성기가 표보다 앞에 있다)',
+    !!(htmlTables && htmlTables.PERKS && htmlTables.GOPT), htmlTables ? `${htmlTables.PERKS.length}종` : '로드 실패');
+  const simSum = S.PERKS.filter(pk => WORDS.some(w => pk.d.indexOf(w[0]) >= 0));
+  chk('소환을 말하는 특전이 실제로 있다 (표기 대상 0 이면 이 절이 죽은 검사다)', simSum.length >= 30, `${simSum.length}종`);
+  {   /* ⓐ sim.js 런타임 문구 = 주인 문면(WANT) + 상수에서 만든 표기 */
+    const bad = WANT.map((w, i) => [w.id, wantNote(w.tx), S.PERKS[i] && S.PERKS[i].d])
+      .filter(([, want, got]) => want !== got);
+    chk('⚑ T155 ② sim.js 특전 문구가 «주인 문면 + 상수로 만든 표기» 와 글자까지 같다', bad.length === 0,
+      bad.slice(0, 3).map(([id, w, g]) => `${id}«${g}»≠«${w}»`).join(' · ') || `${WANT.length}종`);
+  }
+  {   /* ⓑ index.html 런타임 문구(태그 제거) = sim.js 런타임 문구 — 두 엔진이 같은 표기를 만든다 */
+    const hp = (htmlTables && htmlTables.PERKS) || [];
+    const bad = S.PERKS.map((pk, i) => [pk.id, pk.d, hp[i] && stripTag(hp[i].tx)]).filter(([, a, b]) => a !== b);
+    chk('⚑ T155 ② 두 엔진의 특전 문구가 런타임에서 같다 (한쪽만 계수가 바뀌면 빨개진다)',
+      hp.length === S.PERKS.length && bad.length === 0,
+      bad.slice(0, 3).map(([id, a, b]) => `${id}«${b}»≠«${a}»`).join(' · ') || `${hp.length}종`);
+  }
+  {   /* ⓒ 장비 옵션 문구(도끼 발동 칸)도 같은 규칙 — 두 엔진 · 상수 대조 */
+    const flat = t => Object.keys(t).reduce((a, k) => a.concat(t[k]), []);
+    const sg = flat(S.GOPT || {}), hg = flat((htmlTables && htmlTables.GOPT) || {});
+    const sum = sg.filter(o => WORDS.some(w => o.d.indexOf(w[0]) >= 0));
+    const bad = sum.filter(o => o.d !== wantNote(o.d.replace(/ \([^)]*\)$/, '')));
+    chk('⚑ T155 ② 장비 옵션의 소환 문구에도 상수로 만든 표기가 붙는다', sum.length === 18 && bad.length === 0,
+      bad.slice(0, 2).map(o => `«${o.d}»`).join(' · ') || `${sum.length}칸 (도끼 = 공격력의 ${Math.round(RC.R_AXE * 100)}%)`);
+    chk('⚑ T155 ② 장비 옵션 문구가 두 엔진에서 같다',
+      sg.length === hg.length && sg.every((o, i) => o.d === hg[i].d), `sim ${sg.length}칸 · game ${hg.length}칸`);
+  }
+  {   /* ⓓ 하드코딩 금지 — 소스 리터럴에는 «공격력의» 가 한 번도 없고, 생성기가 R_* 를 읽는다 */
+    const lit = src => (src.match(/(?:^|[\s{,])(?:d|tx):'[^']*공격력의[^']*'/g) || []).length;
+    chk('⚑ T155 ② 두 엔진의 문구 리터럴에 «공격력의» 하드코딩이 없다',
+      lit(simSrc) === 0 && lit(htmSrc) === 0, `sim ${lit(simSrc)}건 · game ${lit(htmSrc)}건`);
+    const genRe = /const SUMMON_R=\[\['도끼',R_AXE\],\['화살',R_ARROW\],\['번개',R_BOLT\],\['검기',R_WAVE\],\['창',R_SPEAR\]\];/;
+    chk('⚑ T155 ② 표기 생성기가 R_* 상수를 그대로 읽는다 (두 엔진 같은 표)',
+      genRe.test(simSrc) && genRe.test(htmSrc));
+    chk('⚑ T155 ② 두 엔진이 특전표·장비 옵션표에 생성기를 실제로 건다',
+      /withSummonDmg\(PERKS,'d'\);/.test(simSrc) && /withSummonDmg\(GOPT,'d'\);/.test(simSrc) &&
+      /withSummonDmg\(PERKS,'tx'\);/.test(htmSrc) && /withSummonDmg\(GOPT,'d'\);/.test(htmSrc));
+    chk('⚑ T155 ② 창 문구에 관통 마릿수(SPEAR_PIERCE)가 상수로 들어간다',
+      /SPEAR_PIERCE\+'마리 관통'/.test(simSrc) && /SPEAR_PIERCE\+'마리 관통'/.test(htmSrc));
+  }
 
   /* ===== ③ 폐지분 + 소환 연쇄 ===== */
   console.log('\n=== ③ 폐지분 (등급·선택창·새로고침) · 소환 연쇄 B ===');
@@ -671,7 +769,7 @@ function run(simSrc, htmSrc, planSrc) {
 /* fireBoltsAll 본문만 잘라 온다 — «보이는 적» 의 정의(frontNode)가 그 안에 있는지 보기 위함 */
 function killAxisAll(src) { const i = src.indexOf('function fireBoltsAll'); return i < 0 ? '' : src.slice(i, i + 400); }
 function loadSim(src) {
-  const body = src.replace(/const mode=process\.argv[\s\S]*$/, 'module.exports={runChapter,PERKS,PERK_PICKS,PERK_OFFER,PERK_GRADE_RATE,offerPerks,simPickPerk,pickPerk,mkBuild,mkPlayer,grantNextPerk,TUNE};');
+  const body = src.replace(/const mode=process\.argv[\s\S]*$/, 'module.exports={runChapter,PERKS,GOPT,PERK_PICKS,PERK_OFFER,PERK_GRADE_RATE,offerPerks,simPickPerk,pickPerk,mkBuild,mkPlayer,grantNextPerk,TUNE};');
   const m = { exports: {} };
   vm.runInNewContext(body, { module: m, exports: m.exports, process, console: { log() {} }, require });
   return m.exports;
@@ -792,10 +890,36 @@ if (process.argv.includes('--self')) {
       null, s => s.replace('const perk=offerDevilPerk(G.perksTaken);', 'const perk=offerPerks(G.perksTaken,false)[0];'), null],
     ['⚑ T150 게임 악마가 특전을 안 주면',
       null, s => s.replace('pickPerk(perk); renderStatsGrid(); updateBars();', 'renderStatsGrid(); updateBars();'), null],
-    ['⚑ T104 회피 시 회복이 회복 증폭을 타게 하면 (noBoost=true 제거)',
-      s => s.replace('heal(p,p.maxHp*PERK_EVHEAL_F,true)', 'heal(p,p.maxHp*PERK_EVHEAL_F)'), null, null],
+    /* ⚑ T155 로 폐기 — «noBoost=true 제거» 음성 검사는 주인 위임이 «회복 증폭 적용» 으로 바뀌면서
+       방향이 뒤집혔다(이제 증폭을 타는 쪽이 정답이다). 자리는 아래 «⚑ T155 ① … noBoost 로 되돌리면» 이 잇는다. */
     ['«공격 시» 축에 특전 소환을 달면', s => s.replace('  if(px.c_waveAtk', '  if(px.p_axeHit&&pkk(p,0.5))fireAxe(p,1);\n  if(px.c_waveAtk')
       .replace('function procOnAttack(G,e){\n  const p=G.player,px=p.px;', 'function procOnAttack(G,e){\n  const p=G.player,px=p.px;\n  if(px.p_axeHit&&pkk(p,0.5))fireAxe(p,1);'), null, null],
+    /* ===== ⚑⚑⚑ T155 신설 음성 검사 (주인 확정 2026-09-05 18:5X · 19:1X) =====
+       ① «회피 시 회복» 3종의 확률·회복량·증폭 분기 ② 소환 문구 표기가 정말 «상수 연동» 인지 —
+       하드코딩하거나 생성기를 떼거나 한쪽 엔진만 계수를 바꾸면 각각 빨개져야 한다. */
+    ['⚑ T155 ① 일반 회피 시 회복을 8% 로 되돌리면', s => s.replace('PERK_EVHEAL_CH=0.33', 'PERK_EVHEAL_CH=0.08'), null, null],
+    ['⚑ T155 ① 회복량을 6% 로 되돌리면', s => s.replace('PERK_EVHEAL_F=0.12', 'PERK_EVHEAL_F=0.06'), null, null],
+    ['⚑ T155 ① 희귀 II 를 15% 로 되돌리면', null, s => s.replace('PERK_EVHEAL_R=0.66', 'PERK_EVHEAL_R=0.15'), null],
+    ['⚑ T155 ① 전설 III 를 지우면', s => s.replace(/\n\s*\{id:'p_evHealL',[^\n]*\n/, '\n'), null, null],
+    ['⚑ T155 ① 전설 III 의 발동부를 떼면', s => s.replace("if(px.p_evHealL  &&pkk(p,PERK_EVHEAL_L))heal(p,p.maxHp*PERK_EVHEAL_F);", ''), null, null],
+    ['⚑ T155 ① 일반을 다시 noBoost(회복 증폭 제외)로 되돌리면',
+      s => s.replace('if(px.p_evadeHeal&&pkk(p,PERK_EVHEAL_CH))heal(p,p.maxHp*PERK_EVHEAL_F);',
+                     'if(px.p_evadeHeal&&pkk(p,PERK_EVHEAL_CH))heal(p,p.maxHp*PERK_EVHEAL_F,true);'), null, null],
+    ['⚑ T155 ② 소환 데미지 표기를 문구에 하드코딩하면 (생성기 우회)',
+      s => s.replace("for(const o of list) if(o&&typeof o[key]==='string') o[key]=summonNote(o[key]);",
+                     "for(const o of list) if(o&&typeof o[key]==='string') o[key]=o[key]+' (공격력의 50%)';"), null, null],
+    ['⚑ T155 ② 특전표에 생성기를 안 걸면 (표기 소멸)', s => s.replace("withSummonDmg(PERKS,'d');", ''), null, null],
+    ['⚑ T155 ② 게임 쪽만 생성기를 안 걸면', null, s => s.replace("withSummonDmg(PERKS,'tx');", ''), null],
+    ['⚑ T155 ② 장비 옵션표에 생성기를 안 걸면', s => s.replace("withSummonDmg(GOPT,'d');", ''), null, null],
+    ['⚑ T155 ② sim.js 만 화살 계수를 0.35 로 바꾸면 (문구가 한쪽만 따라간다)',
+      s => s.replace('R_ARROW=0.30', 'R_ARROW=0.35'), null, null],
+    ['⚑ T155 ② 표기가 계수 대신 다른 상수를 읽으면 (화살에 도끼 계수)',
+      s => s.replace("['화살',R_ARROW]", "['화살',R_AXE]"), null, null],
+    ['⚑ T155 ② 창 문구에서 관통 마릿수를 빼면',
+      s => s.replace("+(hit[0][0]==='창'?' · '+SPEAR_PIERCE+'마리 관통':'')", ''), null, null],
+    ['⚑ T155 ② 창의 화신 문구가 화살 계수를 적으면 (뒤쪽이 아니라 앞쪽을 고른다)',
+      s => s.replace('const w=hit.reduce((a,b)=>d.lastIndexOf(a[0])>d.lastIndexOf(b[0])?a:b);',
+                     'const w=hit.reduce((a,b)=>d.lastIndexOf(a[0])<d.lastIndexOf(b[0])?a:b);'), null, null],
     ['특전을 11종으로 늘리면', s => s.replace("  ];\n}\nconst PERKS=mkPerks();", "    {id:'p_zzz', nm:'x', d:'x', ap:p=>p.px.p_zzz=1},\n  ];\n}\nconst PERKS=mkPerks();"), null, null],
     ['⚑ T150 시뮬 악마가 특전을 안 주면', s => s.replace('pickPerk(G,dp);', '/* nothing */'), null, null],
     ['⚑ T150 시뮬 악마가 3택 지급으로 되돌아가면', s => s.replace('const dp=devilPerkFor(G);', 'const dp=null; grantNextPerk(G);'), null, null],

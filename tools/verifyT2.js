@@ -91,7 +91,7 @@ else {
    그래서 «102 인가» 가 아니라 «두 파일이 같은가 + 등급별 편차 ≤ PERK_RAR_GAP» 을 본다.
    T48 이 각 등급 33종(총 132)까지 채웠고, T77(주인 확정 «전투 무관 특전 4종 삭제»)이
    일반 2종(c_gold30·c_walk20)·신화 2종(m_gold2·m_sage)을 빼 31/33/33/31 = 128종, 편차 2 가 됐다. */
-const PERK_TOTAL = 99;   /* ⚑⚑⚑ T121 3차 — 주인 확정 «풀 99종(일반 39 · 희귀 32 · 전설 28)». 77종(16:0X~17:4X)에서 22종이 더 붙었다(17:5X ~ 18:4X) */
+const PERK_TOTAL = 100;  /* ⚑⚑⚑ T155 — 주인 확정 «풀 100종(일반 39 · 희귀 32 · 전설 29)». 99종(T121 3차)에 «회피 시 회복 III» 1종이 붙었다 */
 console.log(`\n[② 특전 ${PERK_TOTAL}종 — id·순서·ap 본문 두 엔진 대조]`);
 const S = simPerks(), H = htmlPerks();
 if (!H) { bad('index.html 에서 const PERKS=[...] 를 찾지 못했다'); }
@@ -240,10 +240,16 @@ const DIRECTIVES = [
       const outside = ((src.split(g[0]).join('')).match(/p\.steal\s*\+=/g) || []).length;
       return inGopt === 18 && outside === 0;
     })],
-  ['⚑ T104 — 회피 시 회복(p_evadeHeal)이 두 엔진에 하나씩 있고 회피 분기에서 heal(...,true) 로 처리된다',
+  /* ⚑⚑⚑ T155 ① (주인 확정 2026-09-05 18:5X) — «회피 시 회복» 이 33%·12% 로 교체되고 II(66%)·III(100%)와
+     같은 회복 축을 쓴다. 위임이 «회복 증폭 적용» 으로 통일되면서 종전 `heal(...,true)`(noBoost) 단언은
+     «세 특전이 회피 분기에서 PERK_EVHEAL_F 만큼 증폭 분기로 회복한다» 로 뒤집혔다. */
+  ['⚑ T155 — 회피 시 회복 I·II·III 이 두 엔진의 회피 분기에서 PERK_EVHEAL_F 로 회복한다 (증폭 분기)',
     () => {
-      const re = /if\(px\.p_evadeHeal\s*&&\s*pkk\(p\s*,\s*(?:PERK_EVHEAL_CH|0?\.10)\s*\)\)[\s\S]{0,80}?heal\(p\s*,\s*p\.maxHp\s*\*\s*(?:PERK_EVHEAL_F|0?\.06)\s*,\s*true\s*\)/;
-      return re.test(SIM) && re.test(HTML);
+      const re = k => new RegExp('if\\(px\\.' + k + '\\s*&&\\s*pkk\\(p\\s*,\\s*PERK_EVHEAL_' +
+        { p_evadeHeal: 'CH', p_evHealR: 'R', p_evHealL: 'L' }[k] +
+        '\\s*\\)\\)[\\s\\S]{0,40}?heal\\(p\\s*,\\s*p\\.maxHp\\s*\\*\\s*PERK_EVHEAL_F\\s*\\)');
+      return ['p_evadeHeal', 'p_evHealR', 'p_evHealL'].every(k => re(k).test(SIM) && re(k).test(HTML)) &&
+        !/PERK_EVHEAL_F\s*,\s*true/.test(SIM) && !/PERK_EVHEAL_F\s*,\s*true/.test(HTML);
     }],
   /* ⚑⚑ T154 (주인 지시 2026-09-05 18:3X «전투할 때 하단에 원래 흡혈율 떴어야 했는데 안 뜨더라») —
      종전 단언 «스탯 그리드에서 흡혈 행 제거 — 7종 (07:1X)» 은 **뒤집혔다**. 07:1X 의 근거는 «흡혈 특전

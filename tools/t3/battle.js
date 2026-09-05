@@ -1046,8 +1046,8 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
      그래서 세 가지를 렌더에서 직접 잰다: ⓐ `display` 가 flex/grid 가 아니다
      ⓑ **같은 줄에 있는** 끝 공백의 실측 폭 > 0 (줄바꿈 자리에서 접히는 공백은 정상이라 건너뛴다)
      ⓒ `<b>` 가 세로로 쌓이지 않는다(높이 ≤ line-height × 1.3) ⓓ 문구가 2줄 안에 든다.
-     특전 **99종 전부**를 390×844·360×800 두 폭에서 카드로 렌더해 잰다. */
-  console.log('\n=== 🔴 T149 특전 카드 문구 (99종 전부 · 390 / 360) ===');
+     특전 **100종 전부**(⚑ T155)를 390×844·360×800 두 폭에서 카드로 렌더해 잰다. */
+  console.log('\n=== 🔴 T149 특전 카드 문구 (100종 전부 · 390 / 360) ===');
   for (const [W, H] of [[390, 844], [360, 800]]) {
     await p.setViewportSize({ width: W, height: H });
     await p.waitForTimeout(200);
@@ -1097,6 +1097,56 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       t149.over2 === 0, `2줄 초과 ${t149.over2}장 · 최장 ${t149.worst}줄`);
   }
   await p.setViewportSize({ width: 390, height: 844 });
+
+  /* =============================================================================
+     ⚑⚑⚑ T155 (주인 확정 2026-09-05 18:5X) — ① «회피 시 회복» 3종(33/66/100% · 12%)이 카드에 그대로 뜨는가
+     ② 소환 문구의 «(공격력의 N%)» 가 **실기기 카드 글자**에도 상수대로 붙는가. 정적 게이트는 소스와
+     런타임 배열을 보지만, «사람이 보는 카드에 그 괄호가 실제로 그려지는가» 는 여기서만 확인된다.
+     ============================================================================= */
+  console.log('\n=== ⚑ T155 특전 카드 — 회피 시 회복 3종 · 소환 «(공격력의 N%)» (실측 렌더) ===');
+  const t155 = await p.evaluate(() => {
+    const ov = document.getElementById('overlay');
+    const wasOn = ov.classList.contains('on'), keep = ov.innerHTML, keepCls = ov.className;
+    const pct = r => Math.round(r * 100) + '%';
+    const W = [['도끼', R_AXE], ['화살', R_ARROW], ['번개', R_BOLT], ['검기', R_WAVE], ['창', R_SPEAR]];
+    const want = d => {                      /* 게이트가 상수로 다시 만든 기대 문구 */
+      const hit = W.filter(w => d.indexOf(w[0]) >= 0);
+      if (!hit.length) return d;
+      if (hit.length > 1) {
+        const w = hit.reduce((a, b) => (d.lastIndexOf(a[0]) > d.lastIndexOf(b[0]) ? a : b));
+        return d + ' (' + w[0] + ' · 공격력의 ' + pct(w[1]) + ')';
+      }
+      return d + ' (공격력의 ' + pct(hit[0][1]) + (hit[0][0] === '창' ? ' · ' + SPEAR_PIERCE + '마리 관통' : '') + ')';
+    };
+    let sum = 0, bad = 0, ex = '', heal = [];
+    for (let i = 0; i < PERKS.length; i += 3) {
+      const three = PERKS.slice(i, i + 3);
+      openOverlay(three.map((q, j) => perkCardHTML(q, j, 'pick')).join(''), { cls: 'ov-full' });
+      const cards = [...ov.querySelectorAll('.perk-card')];
+      three.forEach((q, j) => {
+        const tx = cards[j] && cards[j].querySelector('.tx');
+        if (!tx) return;
+        const shown = tx.textContent;
+        if (/회피 시 회복/.test(q.nm)) heal.push(q.nm + '=' + shown);
+        if (!W.some(w => shown.indexOf(w[0]) >= 0)) return;
+        sum++;
+        /* 카드에 그려진 글자에서 표기를 떼면 나머지가 기대 문구와 같아야 한다 */
+        if (shown !== want(shown.replace(/ \((?:[^()]* · )?공격력의 [^()]*\)$/, ''))) { bad++; if (!ex) ex = shown; }
+      });
+    }
+    ov.className = keepCls; ov.innerHTML = keep; if (!wasOn) closeOverlay();
+    return { sum, bad, ex, heal, evF: PERK_EVHEAL_F, ch: PERK_EVHEAL_CH, rr: PERK_EVHEAL_R, ll: PERK_EVHEAL_L,
+      n: PERKS.length, axe: R_AXE, arrow: R_ARROW, bolt: R_BOLT, spear: R_SPEAR, pierce: SPEAR_PIERCE };
+  });
+  chk(`⚑ T155 ② 소환 카드 ${t155.sum}장의 «(공격력의 N%)» 가 상수대로 그려진다`,
+    t155.sum >= 30 && t155.bad === 0,
+    `대상 ${t155.sum}장 · 어긋남 ${t155.bad}장${t155.ex ? ' · 예 «' + t155.ex + '»' : ''} (도끼 ${Math.round(t155.axe * 100)}% · 화살 ${Math.round(t155.arrow * 100)}% · 번개 ${Math.round(t155.bolt * 100)}% · 창 ${Math.round(t155.spear * 100)}%/${t155.pierce}관통)`);
+  chk('⚑ T155 ① «회피 시 회복» 3종이 33% · 66% · 확정(100%)으로 카드에 뜬다',
+    t155.heal.length === 3 && t155.ch === 0.33 && t155.rr === 0.66 && t155.ll === 1.00 && t155.evF === 0.12 &&
+    /회피 시 33% 확률로 최대 체력 12% 회복/.test(t155.heal[0]) &&
+    /회피 시 66% 확률로 최대 체력 12% 회복/.test(t155.heal[1]) &&
+    /회피 시 최대 체력 12% 회복/.test(t155.heal[2]),
+    t155.heal.join(' / '));
 
   /* =============================================================================
      ⚑⚑ T154 — 특전 선택창 «상단 스탯 줄» 8칸 + 전투 하단 패널 «흡혈» 칸 (주인 지시 2026-09-05 18:3X)
