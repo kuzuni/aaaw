@@ -865,7 +865,7 @@ console.log('\n[⑮ 장비 아이콘 — 인라인 SVG 18종 (스크린샷 구�
   /function gearIcon\(t\)\{/.test(HTML) ? ok('gearIcon(type) — 아이콘 1개를 그리는 공용 함수')
     : bad('gearIcon() 공용 함수가 없다 — 화면마다 아이콘 마크업이 갈라진다');
   /\.gicon\{[^}]*width:1em[^}]*height:1em/.test(HTML)
-    ? ok('.gicon 크기가 1em — 칸의 font-size 가 그대로 크기 노브(인벤 22 · 결과 30 · 재료 19px)')
+    ? ok('.gicon 크기가 1em — 칸의 font-size 가 그대로 크기 노브 (⚑ T140: 슬롯 39 · 인벤 41 · 뽑기 결과 35 · 재료 32 · 합성 결과 60 · 세부 팝업 50px)')
     : bad('.gicon 이 1em 크기가 아니다 — 칸마다 아이콘 크기가 어긋난다');
   /* (2) 아이콘을 쓰는 6개 지점이 전부 gearIcon 을 부른다 (한 곳이라도 빠지면 그 화면만 옛 표기) */
   {

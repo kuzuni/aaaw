@@ -508,6 +508,74 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   }
   await p.setViewportSize({ width: 390, height: 844 });
 
+  /* ---------- ⚑⚑⚑ T140 장비 아이콘 크기 (주인 2026-09-05 14:3X «너무 작아서 잘 안 보임») ----------
+     주인 ② 의 위임 기본값은 «지금의 약 1.6배 · 칸 안에서 칸 폭의 70% 이상» 이다. 크기 노브는 칸의
+     `font-size` 하나뿐(`.gicon` 이 1em)이라 **CSS 한 줄만 되돌려도 조용히 작아진다** — 그래서 실측으로 못박는다.
+     ⚑ 인벤·뽑기 결과 칸은 «가로가 세로의 1.18배» 라 짧은 변이 한계다(칸 자체는 T116 레퍼런스 값이라 못 키운다) —
+       그래서 **짧은 변 70%** 로 잰다(폭 기준은 참고로 함께 찍는다). 세부 팝업은 정사각이라 폭 = 짧은 변이다. */
+  console.log('\n=== ⚑ T140 장비 아이콘 크기 — 칸의 70% 이상 · 프레임 밖으로 안 나간다 (실측) ===');
+  for (const vp of [{ width: 390, height: 844 }, { width: 360, height: 800 }]) {
+    await p.setViewportSize(vp);
+    await p.waitForTimeout(200);
+    const t140 = await p.evaluate(async () => {
+      const fr = document.getElementById('frame').getBoundingClientRect();
+      const out = { frW: +fr.width.toFixed(1), rows: [], clip: 0, pageIcons: 0 };
+      const take = (nm, cellSel, icSel) => {
+        const c = document.querySelector(cellSel), i = document.querySelector(icSel || (cellSel + ' .gicon'));
+        if (!c || !i) { out.rows.push({ nm, miss: true }); return; }
+        const cr = c.getBoundingClientRect(), ir = i.getBoundingClientRect();
+        const short = Math.min(cr.width, cr.height);
+        out.rows.push({ nm, cell: +cr.width.toFixed(1), icon: +ir.width.toFixed(1),
+          shortPct: +(ir.width / short * 100).toFixed(1), wPct: +(ir.width / cr.width * 100).toFixed(1),
+          framePct: +(ir.width / fr.width * 100).toFixed(2),
+          fits: ir.width <= cr.width + 0.6 && ir.height <= cr.height + 0.6 });
+      };
+      save.inv = []; save.eq = {}; save.uid = 1;
+      /* 부위마다 4개 — 하나는 장착하고 남은 3개로 합성한다(«장착분은 재료가 아니다» · T125 ①-c) */
+      for (const pt of GT.parts) for (let k = 0; k < 4; k++) save.inv.push(newGear(pt, GT.types[pt][0], 2, k));
+      for (const pt of GT.parts) { const g = save.inv.find(x => x.part === pt); if (g) save.eq[pt] = g.u; }
+      showScreen('gear'); renderGear();
+      take('장비 탭 부위칸', '#gearColL .slot-card');
+      take('인벤 칸', '#invGrid .inv-cell');
+      openForge(); renderForge();
+      for (const g of save.inv.filter(x => x.part === 'weapon' && save.eq.weapon !== x.u).slice(0, 3)) {
+        const btn = document.querySelector(`#fgGrid .inv-cell[data-u="${g.u}"]`); if (btn) btn.click();
+      }
+      await new Promise(r => setTimeout(r, 120));
+      take('합성 재료 칸', '#fgMats .fg-cell');
+      take('합성 결과 칸', '#fgResult');
+      showScreen('shop'); save.gem = 999999; doPull(10);
+      await new Promise(r => setTimeout(r, 420));
+      out.pullCells = document.querySelectorAll('.pull-list .inv-cell').length;
+      take('뽑기 결과 칸', '.pull-list .inv-cell');
+      closeOverlay();
+      showScreen('gear'); renderGear();
+      openGearDetail(save.inv[0].u);
+      await new Promise(r => setTimeout(r, 420));
+      take('세부 팝업 아이콘칸', '.gd-ic');
+      closeOverlay();
+      showScreen('gear'); renderGear();
+      /* 프레임 밖으로 삐져나간 아이콘·뱃지가 하나도 없어야 한다 */
+      for (const el of document.querySelectorAll('#gear .gicon, #gear .ptag, #gear .nwm, #gear .upmark, #gear .plus')) {
+        const r = el.getBoundingClientRect(); out.pageIcons++;
+        out.clip = Math.max(out.clip, Math.max(0, fr.left - r.left), Math.max(0, r.right - fr.right));
+      }
+      out.clip = +out.clip.toFixed(1);
+      return out;
+    });
+    for (const r of t140.rows) {
+      chk(`[${vp.width}×${vp.height}] ${r.nm} — 아이콘이 칸 짧은 변의 70% 이상`,
+        !r.miss && r.shortPct >= 70 && r.fits,
+        r.miss ? '칸이나 아이콘을 못 찾았다' : `칸 ${r.cell}px · 아이콘 ${r.icon}px · 짧은변 ${r.shortPct}% · 폭 ${r.wPct}% · 프레임 ${r.framePct}%`);
+    }
+    chk(`[${vp.width}×${vp.height}] 장비 탭의 아이콘·뱃지가 프레임 밖으로 안 나간다`,
+      t140.clip === 0 && t140.pageIcons > 0, `잘림 ${t140.clip}px · 잰 요소 ${t140.pageIcons}개`);
+    chk(`[${vp.width}×${vp.height}] 부위 6칸은 3×2 유지 (칸을 키워도 열을 줄이지 않는다 — 주인 ②)`,
+      (await p.evaluate(() => document.querySelectorAll('#gearColL .slot-card').length === 3
+        && document.querySelectorAll('#gearColR .slot-card').length === 3)), '');
+  }
+  await p.setViewportSize({ width: 390, height: 844 });
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 3).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);

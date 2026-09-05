@@ -60,13 +60,18 @@ const MEASURE = {
     '액션바(참고·컨테이너)': '.gear-actionbar', '액션바(Forge 버튼)': '#fuseBtn', '합성 버튼': '#fuseBtn',
     '인벤 그리드(참고·컨테이너)': '#invGrid', '인벤칸1': '#invGrid .inv-cell:nth-child(1)', '인벤칸5': '#invGrid .inv-cell:nth-child(5)',
     '인벤칸6': '#invGrid .inv-cell:nth-child(6)', '인벤칸2': '#invGrid .inv-cell:nth-child(2)', '하단 탭바': '#gear .bottomNav',
+    /* ⚑⚑⚑ T140 (주인 2026-09-05 14:3X «장비 아이콘들 너무 작아서 잘 안 보임») — 지금까지 이 표는 **칸**만 쟀다.
+     *   칸 안의 아이콘(`.gicon`)이 얼마나 차는지가 주인이 말한 바로 그것이라 아이콘 행을 따로 낸다. */
+    '슬롯1 아이콘': '#gearColL .slot-card:nth-child(1) .gicon',
+    '인벤칸1 아이콘': '#invGrid .inv-cell:nth-child(1) .gicon',
   },
   gearpop: {
     /* ⚑ U02 — U01 이 적어 둔 `.gd-ic`/`.gd-contrib`/`.gd-opts`/`.gd-cost` 는 실재하지 않는 클래스라
      *   4행이 통째로 «없음» 으로 나왔다. U02 가 팝업을 레퍼런스 5블록 구조로 재배치하면서
      *   행 이름이 `docs/ui/ref-layout.md` ④ 표와 1:1 이 되게 실제 클래스로 맞췄다. */
     '팝업 박스': '#overlay .ov-inner', '등급 배지': '#overlay .gd-badge',
-    '아이템 아이콘': '#overlay .gd-ic', '이름줄': '#overlay .gd-name', '메타줄': '#overlay .gd-meta',
+    '아이템 아이콘': '#overlay .gd-ic', '아이템 아이콘(SVG)': '#overlay .gd-ic .gicon',   /* ⚑ T140 — 칸과 아이콘을 따로 */
+    '이름줄': '#overlay .gd-name', '메타줄': '#overlay .gd-meta',
     '스탯 섹션': '#overlay .gd-stats', '옵션 목록': '#overlay .gd-opts', '비용줄': '#overlay .gd-cost',
     '스탯 첫 줄': '#overlay .gd-stat', '옵션 첫 줄': '#overlay .gd-opt',
     '버튼줄': '#overlay .gd-row',
@@ -99,6 +104,23 @@ const MEASURE = {
     '자동 버튼': '#fgAuto', '합성 버튼': '#fgFuse', '인벤 그리드(참고·컨테이너)': '#fgGrid',
     '인벤칸1': '#fgGrid .inv-cell:nth-child(1)',
     '뒤로 줄(참고·컨테이너)': '.forge-back', '뒤로 버튼': '#fgBack',
+    /* ⚑ T140 — 재료·결과 칸은 «비어 있으면» 아이콘이 없다(이 shot 은 빈 상태다) → 아래 `forgemat` 이 채운 상태를 잰다. */
+    '인벤칸1 아이콘': '#fgGrid .inv-cell:nth-child(1) .gicon',
+  },
+  /* ⚑⚑⚑ T140 — 재료 3칸이 «채워진» 대장간. 주인 ③ 의 «합성» 한 장이 이것이다. */
+  forgemat: {
+    '결과 슬롯': '#fgResult', '결과 슬롯 아이콘': '#fgResult .gicon',
+    '재료 줄': '#fgMats', '재료 칸1': '#fgMats .fg-cell:nth-child(1)',
+    '재료 칸1 아이콘': '#fgMats .fg-cell:nth-child(1) .gicon',
+    '재료 칸3': '#fgMats .fg-cell:nth-child(3)', '재료 칸1 부위태그': '#fgMats .fg-cell:nth-child(1) .ptag',
+  },
+  /* ⚑⚑⚑ T140 — 뽑기 결과(10연차). 주인 ① 의 «뽑기 결과 화면(11칸도)» 자리다. */
+  pullres: {
+    '결과 그리드': '#overlay .pull-list',
+    '결과칸1': '#overlay .pull-list .inv-cell:nth-child(1)',
+    '결과칸1 아이콘': '#overlay .pull-list .inv-cell:nth-child(1) .gicon',
+    '결과칸5': '#overlay .pull-list .inv-cell:nth-child(5)',
+    '결과칸1 부위태그': '#overlay .pull-list .inv-cell:nth-child(1) .ptag',
   },
   perk: {
     /* ⚑ U03 정정 — 레퍼런스 «선택창»(perks.jpg)에는 **팝업 상자가 없다**(`ref-layout.md` ⚑U01 정정 · ⑦ 표에도
@@ -276,9 +298,34 @@ const SEED_GEAR = () => {
   await p.waitForTimeout(700);
   await shot('perkbook', '특전 인포 팝업');
 
+  /* ⚑⚑⚑ T140 (주인 2026-09-05 14:3X) — 아이콘이 «실제로 그려진» 두 자리를 마지막에 더 찍는다.
+     앞의 shot 들을 흔들지 않으려고 **맨 뒤**에 둔다(상태를 다시 씨앗으로 되돌린 뒤 찍는다).
+     ① 재료 3칸이 채워진 대장간 ② 10연차 뽑기 결과 화면. */
+  await p.evaluate(SEED_GEAR);
+  await p.evaluate(() => {
+    /* 합성 재료 칸을 채우려면 «같은 부위·종류·등급 3개» 가 필요한데 씨앗 구성엔 그런 묶음이 없다 —
+       재현 가능한 3개를 더 심는다(뽑기 난수를 쓰지 않는다 · T116 ③-1 규약). */
+    for (let i = 0; i < 3; i++) save.inv.push(newGear('weapon', 'crit_weapon', 1, 0));
+    persist();
+    showScreen('gear'); openForge(); renderForge();
+  });
+  await p.waitForTimeout(250);
+  await p.evaluate(() => {
+    /* 같은 부위·종류·등급 3개를 골라 재료 칸을 채운다 (클릭 = 게임과 같은 경로) */
+    const us = save.inv.filter(g => g.part === 'weapon' && g.type === 'crit_weapon' && g.rar === 1).slice(0, 3);
+    for (const g of us) { const b = document.querySelector(`#fgGrid .inv-cell[data-u="${g.u}"]`); if (b) b.click(); }
+  });
+  await p.waitForTimeout(250);
+  await shot('forgemat', '대장간 — 재료 3칸 채움');
+
+  await p.evaluate(() => { showScreen('shop'); save.gem = 999999; doPull(10); });
+  await p.waitForTimeout(700);
+  await shot('pullres', '뽑기 결과 (10연차)');
+  await p.evaluate(() => closeOverlay());
+
   fs.writeFileSync(path.join(OUT, 'layout.json'), JSON.stringify(layout, null, 1));
   console.log(`\npageerror ${errs.length}건${errs.length ? ': ' + errs.join(' | ') : ''}`);
-  console.log(`PNG 9장 + layout.json → ${OUT}`);
+  console.log(`PNG 11장 + layout.json → ${OUT}`);
   await b.close();
   process.exit(errs.length ? 1 : 0);
 })();

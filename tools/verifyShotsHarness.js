@@ -32,7 +32,9 @@ const SIM_ONLY = ['grantNextPerk', 'simPickPerk', 'runChapter', 'mkPlayer', 'mkB
 
 /* 하니스가 `page.evaluate` 안에서 쓰는 게임 쪽 이름 — 여기 있는 것은 전부 index.html 에 정의돼 있어야 한다. */
 const GAME_FN = ['showScreen', 'openGearDetail', 'closeOverlay', 'openForge', 'startChapter',
-  'newGear', 'persist', 'pickPerk', 'openLevelUp', 'renderStatsGrid'];
+  'newGear', 'persist', 'pickPerk', 'openLevelUp', 'renderStatsGrid',
+  /* ⚑ T140 — 아이콘 크기 기록용 두 장(대장간 재료 채움 · 10연차 결과)이 쓰는 동사 */
+  'renderForge', 'doPull'];
 const GAME_VAR = ['G', 'save', 'GT', 'PERKS'];
 
 /* JS·Node·Playwright·하니스 자체의 이름 — ③ 에서 «없는 이름» 으로 세지 않는다. */
