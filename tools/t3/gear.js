@@ -151,6 +151,38 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     `모델 ${nwView.model}/${nwView.inv}`);
   chk('«닫기» 직후 인벤 격자의 NEW 뱃지가 즉시 줄어든다', nwView.before === nwView.inv && nwView.after === nwView.model,
     `뱃지 ${nwView.before} → ${nwView.after} · 모델 ${nwView.model}`);
+  /* ⚑⚑⚑ T129 — ①-c 의 나머지 절반 «↑ 표시»(지금 낀 것보다 좋은 장비가 인벤에 있으면 부위 칸에 ↑ 만).
+     T128 이 «다음 워커가 넣을 자리» 로 남긴 축이다. 여기도 T128 과 같은 이유로 **모델이 아니라 화면**을
+     본다 — `.upmark` 의 개수와 **어느 부위 칸에 붙었는지**를 센다(정적 ㊶ 는 판정식을, 여기는 표시를). */
+  const upm = await p.evaluate(() => {
+    const cnt = () => document.querySelectorAll('#gearColL .upmark, #gearColR .upmark').length;
+    const at = pt => !!document.querySelector(`.slot-card[data-pt="${pt}"] .upmark`);
+    const add = (pt, rar, plus) => { const g = newGear(pt, GT.types[pt][0], rar, plus); save.inv.push(g); return g; };
+    save.inv = []; save.eq = {}; save.gem = 1e9;
+    for (const pt of GT.parts) save.eq[pt] = add(pt, 3, 0).u;   /* 여섯 부위 전부 «전설 +0» 을 끼운다 */
+    showScreen('gear'); renderGear();
+    const none = cnt();
+    add('weapon', 3, 0); renderGear();                          /* 같은 등급·강화 — «더 좋은» 이 아니다 */
+    const equal = cnt();
+    const better = add('weapon', 4, 0); renderGear();           /* 등급이 위 */
+    const byRar = { n: cnt(), weapon: at('weapon'), helm: at('helm') };
+    add('helm', 3, 3); renderGear();                            /* 같은 등급 · 강화가 위 */
+    const byPlus = { n: cnt(), helm: at('helm') };
+    const eqBefore = Object.keys(save.eq).length;
+    save.eq.weapon = better.u; renderGear();                    /* 유저가 직접 끼우면 그 부위 ↑ 는 꺼진다 */
+    return { none, equal, byRar, byPlus, eqBefore,
+      after: { n: cnt(), weapon: at('weapon'), helm: at('helm') } };
+  });
+  await p.waitForTimeout(200);
+  chk('↑ — 인벤에 더 좋은 게 없으면 한 칸도 안 뜬다', upm.none === 0, `${upm.none}개`);
+  chk('↑ — 같은 등급·같은 강화는 «더 좋은» 이 아니다 (헛장착 유도 금지)', upm.equal === 0, `${upm.equal}개`);
+  chk('↑ — 등급이 위인 장비가 인벤에 있으면 그 부위 칸에만 뜬다',
+    upm.byRar.n === 1 && upm.byRar.weapon && !upm.byRar.helm, `${upm.byRar.n}개 · 무기 ${upm.byRar.weapon} · 투구 ${upm.byRar.helm}`);
+  chk('↑ — 같은 등급이라도 강화가 위면 뜬다 (등급·강화 둘 다 본다)',
+    upm.byPlus.n === 2 && upm.byPlus.helm, `${upm.byPlus.n}개 · 투구 ${upm.byPlus.helm}`);
+  chk('↑ 가 떠도 자동으로 갈아끼우지 않는다 (장착 부위 수 불변 · T125 ①-c)', upm.eqBefore === 6, `${upm.eqBefore}부위`);
+  chk('↑ — 유저가 그것을 장착하면 그 부위 ↑ 만 꺼진다',
+    upm.after.n === 1 && !upm.after.weapon && upm.after.helm, `${upm.after.n}개 · 무기 ${upm.after.weapon} · 투구 ${upm.after.helm}`);
   await p.evaluate(() => { closeOverlay(); showScreen('shop'); }); await p.waitForTimeout(300);
   await p.screenshot({ path: `${OUT}/t3-shop.png` });
 

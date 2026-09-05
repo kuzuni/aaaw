@@ -2387,6 +2387,61 @@ console.log('\n[㊵ 레벨업 팝업 «보유 특전» 버튼 (T89 · ⚑ T96 �
     : ok('⑨ sim.js 에 T89 흔적 0 — UI 전용, 밸런스 영향 0');
 }
 
+console.log('\n[㊶ T125 ①-c «↑ 표시» — 인벤에 더 좋은 게 있을 때만 (T129)]');
+{
+  /* 주인 21:2X 위임 기본값의 **나머지 절반**이다: «지금 낀 것보다 좋은(등급·강화) 장비가 인벤에 있으면
+     부위 칸에 ↑ 표시만(자동은 아님)». T127 이 자동 장착을, T128 이 NEW 뱃지를 메웠고 이 축만 비어 있었다 —
+     T129 실측: `slotCardHTML` 의 ↑ 를 통째로 지운 사본에서 **정적 19종·T3 4스위트가 전부 초록**이었다.
+     ①② 는 표시 자리(두 갈래 모두)를, ③ 은 «더 좋은» 의 **판정을 실제로 실행해서** 본다
+     (㉒(5) fuseMake 행동 대조와 같은 방식 — 이름·문구 grep 은 T127 이 겪은 대로 이름만 바꾸면 뚫린다). */
+  const CODE = HTML.replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const sc = /function slotCardHTML\(pt\)\{[\s\S]*?\n\}/.exec(CODE);
+  if (!sc) bad('① slotCardHTML 을 찾지 못했다 — 게이트를 갱신할 것');
+  else {
+    const body = sc[0];
+    const rets = body.match(/return `[\s\S]*?`;/g) || [];
+    const marked = rets.filter(r => /\$\{up\}/.test(r));
+    /betterInInv\s*\(\s*pt\s*\)\s*\?/.test(body)
+      ? ok('① 슬롯 칸의 ↑ 는 betterInInv(pt) 로 계산된다 (상시 표시·하드코딩이 아니다)')
+      : bad('① 슬롯 칸이 betterInInv(pt) 를 안 쓴다 — ↑ 가 사라졌거나 늘 떠 있다 (T125 ①-c)');
+    (rets.length === 2 && marked.length === 2)
+      ? ok('② 빈 칸·장착 칸 두 갈래 모두 ↑ 를 단다 (한쪽 갈래만 다는 회귀 방지)')
+      : bad(`② 슬롯 칸 ${rets.length}갈래 중 ↑ 를 다는 갈래가 ${marked.length}개다 — 두 갈래 모두여야 한다 (T125 ①-c)`);
+    /* ③ 행동 대조 — betterInInv 를 꺼내 실제로 돌린다. 보는 것은 «경계» 다:
+       같은 등급·강화는 «더 좋은» 이 **아니고**(그때 ↑ 가 뜨면 유저가 헛장착을 한다),
+       등급이 위이거나 같은 등급에 강화가 위면 «더 좋은» 이다(주인 원문 «좋은(등급·강화)»). */
+    const bi = /function betterInInv\(pt\)\{[\s\S]*?\n\}/.exec(CODE);
+    const gs = /const gearScore=([^;]+);/.exec(CODE);
+    if (!bi) bad('③ betterInInv 를 찾지 못했다 — 게이트를 갱신할 것');
+    else if (!gs) bad('③ gearScore 정의를 찾지 못했다 — 게이트를 갱신할 것');
+    else {
+      const run = new Function('save', `
+        const gearScore=${gs[1]};
+        const invById=u=>save.inv.find(g=>g.u===u)||null;
+        const equippedGear=pt=>invById(save.eq[pt]);
+        const isEquipped=g=>save.eq[g.part]===g.u;
+        ${bi[0]}
+        return betterInInv('weapon');`);
+      const mk = (u, rar, plus) => ({ u, part: 'weapon', type: 'crit_weapon', rar, plus });
+      const cases = [
+        ['장착만 있고 인벤에 후보가 없으면 ↑ 없음', { inv: [mk(1, 3, 0)], eq: { weapon: 1 } }, false],
+        ['같은 등급·같은 강화는 «더 좋은» 이 아니다', { inv: [mk(1, 3, 0), mk(2, 3, 0)], eq: { weapon: 1 } }, false],
+        ['등급이 위면 ↑', { inv: [mk(1, 3, 0), mk(2, 4, 0)], eq: { weapon: 1 } }, true],
+        ['같은 등급이라도 강화가 위면 ↑', { inv: [mk(1, 3, 0), mk(2, 3, 1)], eq: { weapon: 1 } }, true],
+        ['등급이 아래면 강화가 높아도 ↑ 없음 (신화0 > 전설9)', { inv: [mk(1, 4, 0), mk(2, 3, 9)], eq: { weapon: 1 } }, false],
+        ['빈 부위에 그 부위 장비가 있으면 ↑', { inv: [mk(1, 0, 0)], eq: {} }, true],
+        ['빈 부위이고 그 부위 장비도 없으면 ↑ 없음', { inv: [], eq: {} }, false],
+      ];
+      let miss = 0;
+      for (const [n, sv, want] of cases) {
+        let got; try { got = run(sv); } catch (e) { got = `throw:${e.message}`; }
+        if (got !== want) { miss++; bad(`③ betterInInv — ${n} (기대 ${want} · 실제 ${got})`); }
+      }
+      if (!miss) ok(`③ betterInInv 행동 대조 ${cases.length}건 — «더 좋은» = 등급 우선, 같으면 강화 (같은 값은 «더 좋은» 이 아니다)`);
+    }
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
