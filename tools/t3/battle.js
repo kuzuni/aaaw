@@ -1552,6 +1552,62 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   console.log(`  [T159 크기표] 플레이어 ${(Z.playerPre || 0).toFixed(1)} → ${(Z.player ? Z.player.h : 0).toFixed(1)}px (${pPct.toFixed(1)}% 프레임) · ` +
     `적 ${(Z.enemyPre || 0).toFixed(1)} → ${(Z.enemy ? Z.enemy.h : 0).toFixed(1)}px (${ePct.toFixed(1)}%) · viewScale ${Z.viewScale.toFixed(3)}`);
 
+  /* ---------- ⚑⚑ T167 이벤트 팝업 «스크롤 없음» (주인 지적 2026-09-05 23:2X) ----------
+     주인 원문 «악마와의 거래가 스크롤 있게 되어 있네, 참고 레퍼런스에 이렇게 안 되어 있을 텐데».
+     ⚠ 재는 시점 — 팝업은 `popIn`(상자 scale .78→1) 과 `slideUp`(카드·버튼 translateY 26px) 로 등장한다.
+     그 동안에는 아래로 26px 이 삐져나와 scrollHeight 가 잠깐 부풀므로(측정 초기에 실제로 427>414 가 나왔다)
+     **애니메이션이 끝난 뒤**에 잰다. 상자 자체는 `overflow:visible` 이라 그 순간에도 스크롤은 못 생긴다. */
+  console.log('\n=== ⚑ T167 이벤트 팝업(악마·쉼터·천사) 스크롤 없음 ===');
+  const evProbe = () => {
+    const ov = document.getElementById('overlay');
+    const inner = ov.querySelector('.ov-inner');
+    if (!inner) return { none: true };
+    const f = document.getElementById('frame').getBoundingClientRect();
+    const r = inner.getBoundingClientRect();
+    const btns = [...ov.querySelectorAll('.choice-btn')].map(b => {
+      const q = b.getBoundingClientRect();
+      return { inFrame: q.top >= f.top - .5 && q.bottom <= f.bottom + .5,
+        inBox: q.top >= r.top - .5 && q.bottom <= r.bottom + .5 };
+    });
+    return {
+      sH: inner.scrollHeight, cH: inner.clientHeight, ovf: getComputedStyle(inner).overflowY,
+      boxTop: +(r.top - f.top).toFixed(1), boxBot: +(r.bottom - f.top).toFixed(1), boxH: +r.height.toFixed(1),
+      fits: r.top >= f.top - .5 && r.bottom <= f.bottom + .5,
+      cards: ov.querySelectorAll('.perk-card').length, stats: ov.querySelectorAll('.ov-stats .sc').length,
+      btnN: btns.length, btnOk: btns.every(x => x.inFrame && x.inBox),
+    };
+  };
+  for (const vp of [{ w: 390, h: 844 }, { w: 360, h: 800 }]) {
+    await p.setViewportSize({ width: vp.w, height: vp.h }); await p.waitForTimeout(280);
+    for (const [ko, fn, wantCard] of [['악마', 'openDevil', 1], ['쉼터', 'openRest', 0], ['천사', 'openAngel', 0]]) {
+      await p.evaluate((f) => { closeOverlay(); if (f === 'openDevil') G.perksTaken = []; window[f](); }, fn);
+      await p.waitForTimeout(700);
+      const m = await p.evaluate(evProbe);
+      const good = !m.none && m.sH <= m.cH + 1 && m.ovf === 'visible' && m.fits && m.btnN === 2 && m.btnOk
+        && m.cards === wantCard;
+      chk(`⚑ T167 ${ko} 팝업 ${vp.w}px — scrollHeight ≤ clientHeight · 버튼 2개 화면 안 · 카드 ${wantCard}장`,
+        good, m.none ? '팝업이 안 열렸다' :
+        `내용 ${m.sH} ≤ 상자 ${m.cH} · overflow ${m.ovf} · 상자 y${m.boxTop}~${m.boxBot}(h${m.boxH}) · 카드 ${m.cards} · 버튼 ${m.btnN}(${m.btnOk ? '전부 안' : '밖으로 나감'})`);
+      if (fn === 'openDevil') chk(`⚑ T167 ${ko} 팝업 ${vp.w}px — 상단 스탯 줄 8칸 유지 (T154 회귀 방지)`,
+        m.stats === 8, `${m.stats}칸`);
+    }
+    /* 최악 조건 — 가장 긴 전설 특전 문구(2줄)를 악마 카드에 강제해도 안 넘친다 */
+    const worst = await p.evaluate(() => {
+      closeOverlay();
+      const leg = PERKS.filter(x => x.g === 2);
+      const lng = leg.slice().sort((a, b) => b.tx.replace(/<[^>]*>/g, '').length - a.tx.replace(/<[^>]*>/g, '').length)[0];
+      G.perksTaken = []; window.offerDevilPerk = () => lng; openDevil();
+      return lng.tx.replace(/<[^>]*>/g, '');
+    });
+    await p.waitForTimeout(700);
+    const mw = await p.evaluate(evProbe);
+    chk(`⚑ T167 악마 팝업 ${vp.w}px — 가장 긴 전설 문구에서도 스크롤 0 · 버튼 2개 화면 안`,
+      !mw.none && mw.sH <= mw.cH + 1 && mw.fits && mw.btnN === 2 && mw.btnOk,
+      `«${worst.slice(0, 34)}…» 내용 ${mw.sH} ≤ 상자 ${mw.cH} · 상자 y${mw.boxTop}~${mw.boxBot}`);
+    await p.evaluate(() => closeOverlay());
+  }
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(220);
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);

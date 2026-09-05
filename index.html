@@ -501,6 +501,19 @@
   /* ⓒ 특전 인포 — 상자 y23 h52.5 · 제목 리본이 윗변에 걸친다(ref x25 y21.5 w50 h4). */
   #overlay.ov-book{padding:calc(var(--fh)*.2358) 6.5% calc(var(--fh)*.06);}
   #overlay.ov-book .ov-inner{min-height:calc(var(--fh)*.5382); max-height:calc(var(--fh)*.5382);}
+  /* ⓓ ⚑⚑ T167 (주인 지적 2026-09-05 23:2X «악마와의 거래가 스크롤 있게 되어 있네») — **이벤트 팝업**
+     (악마·쉼터·천사 · 천사의 광고/축복 후속창)의 컴팩트 규격. 레벨업 3택(ⓐ ov-full)과 다른 규격이다.
+     🔴 스크롤이 생긴 원인은 «상자 높이가 내용과 무관하게 고정» 이었기 때문이다 — 기본 `.ov-inner` 가
+     `min-height:.43fh; max-height:.48fh; overflow-y:auto` 라서
+       ⓐ 악마: 큰 이모지 + 배너 + 부제 + **특전 카드 1장** + 선택지 2개 = 461px 이 상한 389px 에 갇혀
+          **72px 이 스크롤 뒤로 숨었다**(두 번째 버튼이 상자 밖으로 밀림)
+       ⓑ 쉼터·천사: 353px 이 351px 상한에 2px 넘쳐 스크롤바가 생겼다.
+     고침: 이 규격에서는 상자가 **내용 높이 그대로**(min/max 해제 · `overflow:visible`) 커지고,
+     남는 세로 공간에서 **가운데 정렬**(`justify-content:center`)돼 카드 1장 + 버튼 2개가 화면 중앙에 온다.
+     390×844·360×800 둘 다 여유가 남도록 큰 이모지·줄 간격만 조금 줄인다(자식 재정의는 기본 규칙 뒤에).
+     T154 상단 스탯 줄(`.ov-stats`)은 절대 배치라 이 상자 높이에 한 픽셀도 안 보태므로 그대로 유지된다. */
+  #overlay.ov-ev{padding:calc(var(--fh)*.13) 6.5% calc(var(--fh)*.06); justify-content:center;}
+  #overlay.ov-ev .ov-inner{min-height:0; max-height:none; overflow:visible; flex:0 0 auto;}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes popIn{from{transform:scale(.78); opacity:0}to{transform:scale(1); opacity:1}}
   @keyframes slideUp{from{transform:translateY(26px); opacity:0}to{transform:translateY(0); opacity:1}}
@@ -613,6 +626,14 @@
      `overflow-y:auto` 라 **첫 카드의 배지가 잘리고 부제 글자와 겹쳐 보였다**. 위 여백 13px 을 주고
      같은 값만큼 상자를 끌어올려 목록 카드 자리(y28.1 · ref 26.5)는 그대로 두면서 배지 자리를 만든다. */
   #overlay.ov-book .perk-list{padding:13px 4px 2px; margin-top:-9px; max-height:none; flex:1 1 auto; min-height:0;}
+  /* ⚑⚑ T167 — 규격 ⓓ(이벤트 팝업)의 자식 재정의. **기본 규칙 뒤**에 둔다(U02 의 «첫 일치» 함정 · 위 579행 주석).
+     상자가 내용 높이로 커지므로 이 줄들이 없어도 스크롤은 안 나지만, 가장 긴 전설 특전 문구(3줄)까지
+     여유를 남기려고 큰 이모지와 줄 간격만 줄인다 — 카드·버튼의 글자 크기는 한 글자도 안 건드린다. */
+  #overlay.ov-ev .big-emoji{font-size:46px; margin-bottom:2px;}
+  #overlay.ov-ev .ov-sub{margin-bottom:11px;}
+  #overlay.ov-ev .perk-card{margin-bottom:9px;}
+  #overlay.ov-ev .choice-btn{margin-bottom:9px;}
+  #overlay.ov-ev .choice-btn:last-child{margin-bottom:0;}
   .up-row{display:flex; align-items:center; gap:10px; background:var(--panel2); border-radius:14px; padding:10px 12px; margin-bottom:8px; width:100%; text-align:left; animation:slideUp .4s cubic-bezier(.2,1.4,.4,1) backwards;}
   .up-row:nth-child(2){animation-delay:.05s}
   .up-row:nth-child(3){animation-delay:.10s}
@@ -2909,7 +2930,8 @@ function openRest(){
     <div class="ov-banner">쉼터</div>
     <div class="ov-sub">모닥불 앞에서 잠시 쉬어갑니다</div>
     <button class="choice-btn gold" id="rHeal">❤️ 체력 ${fmt(REST_HEAL)} 회복<small>지친 몸을 달랩니다</small></button>
-    <button class="choice-btn" id="rExp">🌟 경험치 +${REST_EXP}<small>다음 레벨에 가까워집니다</small></button>`);
+    <button class="choice-btn" id="rExp">🌟 경험치 +${REST_EXP}<small>다음 레벨에 가까워집니다</small></button>`,
+    {cls:'ov-ev'});   /* ⚑ T167 — 이벤트 팝업 규격 ⓓ(스크롤 없음) */
   $('rHeal').onclick=()=>{ AU.play('heal'); const p2=G.player; heal(p2,REST_HEAL); addText('+'+fmt(REST_HEAL),'#7ED957'); updateBars(); closeOverlay(); };
   $('rExp').onclick=()=>{ closeOverlay(); addText('EXP +'+REST_EXP,'#FFD54A'); gainExp(REST_EXP); };
 }
@@ -2931,7 +2953,7 @@ function openDevil(){
     <div style="width:100%; margin-bottom:4px">${perkCardHTML(perk,0,'static')}</div>
     <button class="choice-btn danger" id="dYes">🩸 최대 체력의 30% 지불 (-${fmt(cost)})<small>최대 체력이 줄어든 채 진행 · 위 전설 특전 1개를 획득</small></button>
     <button class="choice-btn" id="dNo">🚶 조용히 지나간다<small>아무 일도 일어나지 않습니다</small></button>`,
-    {stats:true});   /* ⚑ T154 — 악마 카드에도 같은 줄 (주인 지시 «위임») */
+    {stats:true,cls:'ov-ev'});   /* ⚑ T154 — 악마 카드에도 같은 줄 (주인 지시 «위임») · ⚑ T167 — 규격 ⓓ(스크롤 없음) */
   $('dYes').onclick=()=>{
     payDevilCost(G.player);   /* ⚑ T90 — 최대치에서 30% 차감 + 현재체력 클램프 (sim.js 와 같은 동사) */
     AU.play('hurt');
@@ -2953,7 +2975,8 @@ function openAngel(){
     <div class="ov-banner" style="color:#FFE9A8">천사의 축복</div>
     <div class="ov-sub">"용사여, 축복을 내리노라"</div>
     <button class="choice-btn" id="aFree">⚔️ 공격력 +5%<small>무료 축복</small></button>
-    <button class="choice-btn gold" id="aAd">📺 광고 보고 공격력 +15%<small>더 강한 축복</small></button>`);
+    <button class="choice-btn gold" id="aAd">📺 광고 보고 공격력 +15%<small>더 강한 축복</small></button>`,
+    {cls:'ov-ev'});   /* ⚑ T167 — 이벤트 팝업 규격 ⓓ(스크롤 없음) */
   const bless=mult=>{
     G.player.dmg*=mult;
     G.perksTaken.push({ic:'😇',tx:`천사의 축복 — 공격력 <b>+${Math.round((mult-1)*100)}%</b>`});   /* 특전이 아니라 «축복» — PERKS 에 없으므로 카드 태그가 «축복» 으로 뜬다 */
@@ -2964,14 +2987,14 @@ function openAngel(){
     let sec=3;
     const show=()=>openOverlay(`<div class="big-emoji">📺</div>
       <div class="ov-banner">광고 시청 중...</div>
-      <div class="ov-sub" style="font-size:24px">${sec}</div>`);
+      <div class="ov-sub" style="font-size:24px">${sec}</div>`,{cls:'ov-ev'});
     show();
     const iv=setInterval(()=>{
       sec--;
       if(sec<=0){ clearInterval(iv); bless(1.15); AU.play('angel');
         openOverlay(`<div class="big-emoji">✨</div><div class="ov-banner">축복 강화!</div>
         <div class="ov-sub">공격력이 15% 증가했습니다</div>
-        <button class="choice-btn gold" id="aOk">계속 전진</button>`,{rays:true});
+        <button class="choice-btn gold" id="aOk">계속 전진</button>`,{rays:true,cls:'ov-ev'});
         $('aOk').onclick=()=>{ AU.play('click'); closeOverlay(); };
       } else show();
     },1000);

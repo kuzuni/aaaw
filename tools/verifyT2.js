@@ -3087,6 +3087,82 @@ console.log('\n[㊻ 전투 카메라 줌 CAM_ZOOM (T159)]');
   }
 }
 
+/* ---------- ㊼ 이벤트 팝업 «스크롤 없음» 규격 ov-ev (T167 · 주인 지적 2026-09-05 23:2X) ----------
+   주인 원문 «악마와의 거래가 스크롤 있게 되어 있네, 참고 레퍼런스에 이렇게 안 되어 있을 텐데».
+   원인은 기본 `.ov-inner` 의 «고정 높이 + overflow-y:auto» 였다 — 악마 팝업의 내용 461px 이
+   상한 389px 에 갇혀 72px(두 번째 버튼)이 스크롤 뒤로 숨었고, 쉼터·천사도 353 이 351 에 2px 넘쳤다.
+   실물 높이는 `tools/t3/battle.js` 가 잰다. 여기서는 **되돌림을 정적으로** 잡는다. */
+console.log('\n[㊼ 이벤트 팝업 스크롤 없음 — 규격 ov-ev (T167 · 주인 지적)]');
+{
+  const cssOf = (sel) => {
+    const re = new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}');
+    const m = re.exec(HTML); return m ? m[1] : null;
+  };
+  /* ① 규격 상자 — 내용 높이 그대로 자라고 스크롤이 없다 */
+  const inner = cssOf('#overlay.ov-ev .ov-inner');
+  (inner && /max-height:\s*none/.test(inner) && /min-height:\s*0/.test(inner) && /overflow:\s*visible/.test(inner))
+    ? ok('① `#overlay.ov-ev .ov-inner` = min-height:0 · max-height:none · overflow:visible — 상자가 내용 높이로 자란다(스크롤 자체가 불가능)')
+    : bad(`① ov-ev 상자에 고정 높이나 스크롤이 남아 있다 — ${inner === null ? '규칙 자체가 없다' : inner.trim()}`);
+  /* ② 카드 1장 + 버튼 2개가 «화면 중앙» (주인 ①) */
+  const box = cssOf('#overlay.ov-ev');
+  (box && /justify-content:\s*center/.test(box))
+    ? ok('② `#overlay.ov-ev{justify-content:center}` — 카드 1장 + 버튼 2개가 화면 중앙에 온다')
+    : bad('② ov-ev 에 세로 가운데 정렬이 없다 — 상자가 위에 붙어 아래가 빈다');
+  /* ③ 다른 규격은 안 건드렸다 — 기본 상자(장비·인포 등)는 종전 그대로 */
+  const base = cssOf('.ov-inner');
+  (base && /overflow-y:\s*auto/.test(base) && /max-height:calc\(var\(--fh\)\*\.48\)/.test(base))
+    ? ok('③ 기본 `.ov-inner` 규격(고정 높이 + overflow-y:auto)은 종전 그대로 — T167 은 이벤트 팝업만 바꾼다')
+    : bad('③ 기본 `.ov-inner` 가 함께 바뀌었다 — 장비·인포 팝업 규격까지 흔든다');
+  /* ④ 이벤트 팝업 3종이 전부 이 규격을 쓴다 */
+  const body = (/<script>([\s\S]*)<\/script>/.exec(HTML) || [, ''])[1];
+  /* 함수 한 개만 잘라낸다 — 다음 `function` 선언 앞에서 끊지 않으면 뒤 함수의 `cls:'ov-ev'` 를 제 것으로 읽는다 */
+  const cut = (src, nm) => {
+    const i = src.indexOf(`function ${nm}(`); if (i < 0) return '';
+    const j = src.indexOf('\nfunction ', i + 1);
+    return src.slice(i, j < 0 ? src.length : j);
+  };
+  const fnOf = (nm) => cut(body, nm);
+  let n = 0;
+  for (const [nm, ko] of [['openDevil', '악마'], ['openRest', '쉼터'], ['openAngel', '천사']]) {
+    const src = fnOf(nm);
+    /cls:'ov-ev'/.test(src) ? (n++, ok(`④ ${ko} 팝업(\`${nm}\`)이 규격 ov-ev 로 열린다`))
+      : bad(`④ ${ko} 팝업(\`${nm}\`)이 ov-ev 를 안 쓴다 — 기본 상자로 돌아가 스크롤이 다시 생긴다`);
+  }
+  /* ⑤ T154 회귀 방지 — 악마 카드의 상단 스탯 줄은 유지한다(주인 «악마 카드에도») */
+  /\{stats:true,cls:'ov-ev'\}/.test(fnOf('openDevil'))
+    ? ok('⑤ 악마 팝업은 상단 스탯 줄(stats:true)을 유지한 채 ov-ev 를 쓴다 (T154 주인 지시 «악마 카드에도»)')
+    : bad('⑤ 악마 팝업의 상단 스탯 줄이 사라졌다 — T154 회귀');
+  /* ⑥ 표시 전용 — 엔진·밸런스 무관 */
+  /ov-ev/.test(SIM) ? bad('⑥ sim.js 에 팝업 규격이 새어 들어갔다') : ok('⑥ sim.js 무관 (index.html CSS/마크업만 · 엔진·밸런스 무수정)');
+
+  /* ---------- 음성 자기검사 ---------- */
+  {
+    console.log('  [음성 자기검사] 심은 고장을 ㊼ 가 잡는가');
+    const H0 = HTML;
+    const seeds = [
+      ['상자에 옛 상한을 되돌림', s => s.replace(/#overlay\.ov-ev \.ov-inner\{min-height:0; max-height:none; overflow:visible;/,
+        '#overlay.ov-ev .ov-inner{min-height:calc(var(--fh)*.43); max-height:calc(var(--fh)*.48); overflow-y:auto;'),
+        s => { const m = /#overlay\.ov-ev \.ov-inner\{([^}]*)\}/.exec(s); return !(m && /max-height:\s*none/.test(m[1]) && /overflow:\s*visible/.test(m[1])); }],
+      ['가운데 정렬 제거', s => s.replace(/#overlay\.ov-ev\{padding:calc\(var\(--fh\)\*\.13\) 6\.5% calc\(var\(--fh\)\*\.06\); justify-content:center;\}/,
+        '#overlay.ov-ev{padding:calc(var(--fh)*.13) 6.5% calc(var(--fh)*.06);}'),
+        s => { const m = /#overlay\.ov-ev\{([^}]*)\}/.exec(s); return !(m && /justify-content:\s*center/.test(m[1])); }],
+      ['악마 팝업을 기본 규격으로 되돌림', s => s.replace(/\{stats:true,cls:'ov-ev'\}/, '{stats:true}'),
+        s => !/\{stats:true,cls:'ov-ev'\}/.test(s)],
+      ['쉼터 팝업을 기본 규격으로 되돌림', s => s.replace(/<small>다음 레벨에 가까워집니다<\/small><\/button>`,\n    \{cls:'ov-ev'\}\);/,
+        '<small>다음 레벨에 가까워집니다</small></button>`);'),
+        s => !/cls:'ov-ev'/.test(cut(s, 'openRest'))],
+    ];
+    for (const [nm, mut, detect] of seeds) {
+      const s1 = mut(H0);
+      if (s1 === H0) { bad(`  음성 «${nm}» 이 아무것도 안 바꿨다 — 심는 자리가 옮겨졌다(게이트를 갱신할 것)`); continue; }
+      detect(s1) ? ok(`  음성 «${nm}» 을 ㊼ 가 잡는다`) : bad(`  음성 «${nm}» 을 ㊼ 가 못 잡았다`);
+    }
+    const clean = seeds.every(([, , detect]) => !detect(H0));
+    clean ? ok(`  양성 대조군 — 원본은 ${seeds.length}개 검출자 어디에도 안 걸린다 (오탐 0)`)
+          : bad('  양성 대조군이 걸렸다 — 원본에서 ㊼ 가 오탐을 낸다');
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');
