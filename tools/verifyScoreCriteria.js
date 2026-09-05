@@ -44,14 +44,17 @@ const rd = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 /* ⚑⚑⚑ T153 (주인 확정 2026-09-05 18:1X) — «영웅 풀셋 · 슬롯 10 = 챕터 40» 칸이 **장비 등급 폐지로 삭제**됐다
    (8점 → **7점**). 남는 칸의 챕터·목표·스탯은 한 글자도 안 바뀌었고, 등급 인덱스만 한 칸씩 당겨졌다
    (전설 3 → 2 · 신화 4 → 3). 적 스탯은 건드리지 않는다(상시 규칙 — 표에서 칸만 뺐다). */
+/* ⚑⚑⚑ T160 (주인 확정 2026-09-05 20:2X · 20:3X 정정 3건) — 과녁 챕터가 새 표로 바뀌었다.
+   **빌드·슬롯·목표 클리어율·총 스탯은 한 칸도 안 바뀐다** — 움직인 것은 과녁 챕터뿐이고,
+   맞추는 노브는 적 스탯(§6 기저 · §11.7 구간률)이다. 종전 표(T103·T153): 5·15·28·70·150·380·420. */
 const RUNGS = [
-  { k: 1, ch: 5,   rar: -1, plus: 0, slot: 0,   stat: [25, 150, 250] },
-  { k: 2, ch: 15,  rar: 0,  plus: 0, slot: 0,   stat: [50, 250, 400] },
-  { k: 3, ch: 28,  rar: 1,  plus: 0, slot: 5,   stat: [108.9, 543.4, 868.9] },
-  { k: 4, ch: 70,  rar: 2,  plus: 0, slot: 15,  stat: [524.7, 2619.1, 4188.9] },
-  { k: 5, ch: 150, rar: 3,  plus: 0, slot: 25,  stat: [3742.2, 18703.1, 29921.9] },
-  { k: 6, ch: 380, rar: 3,  plus: 9, slot: 50,  stat: [106912, 533475, 853125] },
-  { k: 7, ch: 420, rar: 3,  plus: 9, slot: 100, stat: [190050, 948300, 1516500] },
+  { k: 1, ch: 3,   rar: -1, plus: 0, slot: 0,   stat: [25, 150, 250] },
+  { k: 2, ch: 7,   rar: 0,  plus: 0, slot: 0,   stat: [50, 250, 400] },
+  { k: 3, ch: 15,  rar: 1,  plus: 0, slot: 5,   stat: [108.9, 543.4, 868.9] },
+  { k: 4, ch: 30,  rar: 2,  plus: 0, slot: 15,  stat: [524.7, 2619.1, 4188.9] },
+  { k: 5, ch: 60,  rar: 3,  plus: 0, slot: 25,  stat: [3742.2, 18703.1, 29921.9] },
+  { k: 6, ch: 100, rar: 3,  plus: 9, slot: 50,  stat: [106912, 533475, 853125] },
+  { k: 7, ch: 125, rar: 3,  plus: 9, slot: 100, stat: [190050, 948300, 1516500] },
 ];
 const WANT = {
   rate: 10,          // 일곱 칸 공통 목표 클리어율
@@ -68,7 +71,7 @@ const chk = (n, c, d) => { R.push({ n, c }); console.log(`  ${c ? '✓' : '✗'}
 
 function loadSim(src) {
   const body = src.replace(/const mode=process\.argv[\s\S]*$/,
-    'module.exports={runChapter,mkBuild,buildPower,setSeed,TUNE,EXP1_TARGETS,LADDER,PERK_MODE_LADDER,PERK_MODE_PLAY,PERKS_BASE10};');
+    'module.exports={runChapter,mkBuild,buildPower,setSeed,TUNE,EXP1_TARGETS,LADDER,LADDER_OPTS,PERK_MODE_LADDER,PERK_MODE_PLAY,PERKS_BASE10};');
   const m = { exports: {} };
   vm.runInNewContext(body, { module: m, exports: m.exports, process, console: { log() {} }, require });
   return m.exports;
@@ -85,10 +88,16 @@ function run(simSrc, planSrc, routineSrc, regressSrc) {
   chk(`PLAN §7 · 허용 오차 ±${WANT.tol}%p`, new RegExp(`±\\s*${WANT.tol}\\s*%p`).test(planSrc));
   chk('PLAN §7 · 측정 판수 «1,000판 이상»', /1,?000판\s*이상/.test(planSrc));
   chk('PLAN §7 · 고정 시드 3벌', /고정\s*시드\s*3벌/.test(planSrc));
-  chk('PLAN §11.7 · 사다리 7점이 유일한 기준임을 명시', /사다리\s*8점/.test(planSrc));
-  chk('ROUTINE · 사다리 7점 지시가 남아 있다', /사다리\s*8점/.test(routineSrc));
-  chk('ROUTINE · 7칸 (슬롯 50 = 챕터 380)', /슬롯\s*\*?\*?50\*?\*?\s*\|\s*\*\*380\*\*/.test(routineSrc));
-  chk('ROUTINE · 8칸 (슬롯 100 = 챕터 420 · 종전 600 폐기)', /슬롯\s*\*?\*?100\*?\*?\s*\|\s*\*\*420\*\*/.test(routineSrc));
+  /* ⚑ T160 — 문면 자를 새 표로 갈아끼웠다. 종전 두 줄은 «사다리 8점» 이라는 옛 낱말을 찾고 있었는데,
+     그 낱말은 이력 문단에도 남아 있어 «표가 바뀌어도 초록» 이었다. 이제 **새 과녁 숫자**를 직접 본다. */
+  chk('PLAN §7.1 제목이 새 과녁(사다리 7점 · T160)을 가리킨다', /### 7\.1[^\n]*사다리 7점/.test(planSrc));
+  chk('PLAN §7.1 에 T160 새 과녁 7개가 문장으로도 적혀 있다', /3 · 7 · 15 · 30 · 60 · 100 · 125/.test(planSrc));
+  chk('ROUTINE · T160 지시가 살아 있다 (새 사다리 7점)', /노템 \*\*3\*\*[\s\S]{0,200}신화9강\+슬롯 ?100 ?= ?125|노템 3 · 일반 7 · 희귀 15 · 전설 30 · 신화 60/.test(routineSrc));
+  chk('ROUTINE · 6칸 (슬롯 50 = 챕터 100)', /\|\s*6\s*\|[^|\n]*\|\s*\*\*50\*\*\s*\|\s*\*\*100\*\*\s*\|/.test(routineSrc));
+  chk('ROUTINE · 7칸 (슬롯 100 = 챕터 125)', /\|\s*7\s*\|[^|\n]*\|\s*\*\*100\*\*\s*\|\s*\*\*125\*\*\s*\|/.test(routineSrc));
+  /* ⚑ T160 측정 조건 3종이 문면에 살아 있는가 (자가 조용히 바뀌는 것을 막는다) */
+  chk('PLAN · 측정 조건 «기본 스탯 옛 값 20»(baseStats:legacy20)이 문면에 있다', /baseStats:'legacy20'|baseStats:`legacy20`|`baseStats:'legacy20'`/.test(planSrc));
+  chk('PLAN · 측정 조건 «세트 옵션 끔»(gearOpts:false)이 문면에 있다', /gearOpts:false/.test(planSrc));
 
   /* ===== ⓑ 구현 대조 — 문면의 숫자 = 엔진의 상수 ===== */
   console.log('\n=== ⓑ 구현 대조 (PLAN 문면 ↔ sim.js 상수) ===');
@@ -128,7 +137,9 @@ function run(simSrc, planSrc, routineSrc, regressSrc) {
     /* ⚑⚑⚑ T120 (주인 확정 15:3X ①) — 사다리를 재는 자는 «기준 플레이어» 하나다:
        기존 일반 10종을 옛 순서대로 «되는 만큼» 자동 획득 · 3택 없음 · 신규 22종·등급 없음.
        3택·희귀·전설은 기준 위에 얹히는 유저 보너스라 이 자에 들어오지 않는다. */
-    for (let j = 0; j < WANT.probeN; j++) if (S.runChapter(g.ch, builds[i], { perkMode: S.PERK_MODE_LADDER }).clear) win++;
+    /* ⚑ T160 — 자는 이제 세 스위치다(`LADDER_OPTS`): base10 + 기본 스탯 옛 값 20 + 세트 옵션 끔.
+       엔진의 상수를 그대로 가져다 쓴다 — 여기서 손으로 다시 적으면 «게이트만 딴 자로 재는» 일이 생긴다. */
+    for (let j = 0; j < WANT.probeN; j++) if (S.runChapter(g.ch, builds[i], S.LADDER_OPTS).clear) win++;
     const rate = win / WANT.probeN * 100;
     chk(`${g.k}칸: 챕터 ${g.ch} 클리어율이 ${WANT.rate}±${WANT.band}%p 안이다`,
       Math.abs(rate - WANT.rate) <= WANT.band, `실측 ${rate.toFixed(1)}%`);
@@ -162,8 +173,20 @@ function run(simSrc, planSrc, routineSrc, regressSrc) {
     /G\.perkMode\s*===\s*PERK_MODE_LADDER[\s\S]{0,160}PERKS_BASE10\[G\.taken\.length\]/.test(simSrc));
   chk('실험1 의 기본 자가 PERK_MODE_LADDER 다 (EXP1_PERKMODE 는 참고표 전용 덮어쓰기)',
     /const\s+EXP1_PERKMODE\s*=\s*process\.env\.EXP1_PERKMODE\s*\|\|\s*PERK_MODE_LADDER/.test(simSrc));
-  chk('실험1 실측이 그 자로 돈다', /runChapter\(c,b,\{perkMode:EXP1_PERKMODE\}\)/.test(simSrc));
-  chk('실험5(진단)도 같은 자로 돈다', /runChapter\(c,b,\{perkMode:PERK_MODE_LADDER\}\)/.test(simSrc));
+  /* ⚑ T160 — 자가 세 스위치(`LADDER_OPTS`)로 늘어나 두 실험 다 그 상수를 통해 돈다.
+     실험1 만 `EXP1_PERKMODE`(참고표 전용 덮어쓰기)를 위에 얹는다. */
+  chk('실험1 실측이 그 자로 돈다 (LADDER_OPTS + 참고표 덮어쓰기)',
+    /runChapter\(c,b,Object\.assign\(\{\},LADDER_OPTS,\{perkMode:EXP1_PERKMODE\}\)\)/.test(simSrc));
+  chk('실험5(진단)도 같은 자로 돈다 (LADDER_OPTS 그대로)', /runChapter\(c,b,LADDER_OPTS\)/.test(simSrc));
+  chk('⚑ T160 자가 한 곳에 모여 있다 — LADDER_OPTS = base10 + legacy20 + 세트 옵션 끔',
+    /const LADDER_OPTS=\{perkMode:PERK_MODE_LADDER,\s*baseStats:'legacy20',\s*gearOpts:false\}/.test(simSrc));
+  chk('⚑ T160 하니스 스위치 ⓐ 가 mkPlayer 에 배선돼 있다 (넷만 옛 값 20)',
+    /G\.baseStats==='legacy20'[\s\S]{0,200}p\.critR=LADDER_BASE20[\s\S]{0,120}p\.evade=LADDER_BASE20/.test(simSrc));
+  chk('⚑ T160 하니스 스위치 ⓑ 가 GOPT 적용부를 감싼다 (세트 옵션 끔)',
+    /if\(!\(G&&G\.gearOpts===false\)\) for\(const pt of GT\.parts\)/.test(simSrc));
+  /* 자 스위치가 게임 쪽으로 새면 «재려고 만든 것» 이 실제 동작이 된다 — index.html 에는 한 글자도 없어야 한다 */
+  chk('⚑ T160 게임 배선은 그대로 — index.html 에 자 스위치가 없다',
+    !/legacy20|gearOpts|LADDER_OPTS|LADDER_BASE20/.test(rd('index.html')));
   {
     const base10 = S.PERKS_BASE10 || [];
     const want10 = ['p_evadeHeal','p_atk','p_evade','p_arrowEv','p_axeHit','p_counter','p_spearCt','p_critR','p_critF','p_def'];
@@ -200,9 +223,13 @@ if (process.argv.includes('--self')) {
   const cases = [
     ['허용 오차를 ±5%p 로 되돌리면', s => s.replace('const EXP1_TOL=2', 'const EXP1_TOL=5'), null, null, null],
     ['채점 판수를 300판으로 내리면', s => s.replace('const EXP1_SCORE_N=1000', 'const EXP1_SCORE_N=300'), null, null, null],
-    ['8칸 과녁 챕터를 420 → 500 으로 옮기면', s => s.replace('slot:100, at:420', 'slot:100, at:500'), null, null, null],
-    ['2칸 목표를 10 → 20% 로 바꾸면', s => s.replace('slot:0,   at:15,  want:10', 'slot:0,   at:15,  want:20'), null, null, null],
-    ['3칸 슬롯을 5 → 0 으로 바꾸면 (하니스 조작)', s => s.replace('rar:1, plus:0, slot:5,   at:28', 'rar:1, plus:0, slot:0,   at:28'), null, null, null],
+    /* ⚑ T160 — 과녁이 3·7·15·30·60·100·125 로 바뀌어 옛 문자열이 전부 죽었다. 새 표로 갈아끼운다. */
+    ['7칸 과녁 챕터를 125 → 200 으로 옮기면', s => s.replace('slot:100, at:125', 'slot:100, at:200'), null, null, null],
+    ['2칸 목표를 10 → 20% 로 바꾸면', s => s.replace('slot:0,   at:7,   want:10', 'slot:0,   at:7,   want:20'), null, null, null],
+    ['3칸 슬롯을 5 → 0 으로 바꾸면 (하니스 조작)', s => s.replace('rar:1, plus:0, slot:5,   at:15', 'rar:1, plus:0, slot:0,   at:15'), null, null, null],
+    /* ⚑ T160 신설 — 자 스위치 세 개를 하나씩 떼면 빨개지는가 */
+    ['자에서 «기본 스탯 옛 값 20» 을 떼면', s => s.replace("baseStats:'legacy20', ", ''), null, null, null],
+    ['자에서 «세트 옵션 끔» 을 떼면', s => s.replace(', gearOpts:false}', '}'), null, null, null],
     ['사다리에서 한 칸을 빼면', s => s.replace(/\{id:'전설 풀셋·슬롯15',[^\n]*\n/, ''), null, null, null],
     ['판수 기본값 배선을 끊으면', s => s.replace("EXP1_N||String(EXP1_SCORE_N)", "EXP1_N||'300'"), null, null, null],
     ['기저를 1.5배로 올려 곡선이 통째로 어긋나면',
@@ -212,16 +239,17 @@ if (process.argv.includes('--self')) {
       s => s.replace('const LADDER=EXP1_TARGETS.map(',
         "const LADDER=[{id:'노템',rar:-1,plus:0,at:5,want:[25,150,250]}].concat(EXP1_TARGETS.slice(1).map("), null, null, null],
     ['사다리 «합격 2~10%» 판정을 되살리면', s => s.replace('진단 전용 — 기준 폐기', '합격 2~10%'), null, null, null],
-    ['PLAN 에서 8칸 문면을 지우면', null, s => s.replace(/\*\*420\*\*\s*\|\s*\*\*10%\*\*/, '**420** | **12%**'), null, null],
+    ['PLAN 에서 7칸 문면을 지우면', null, s => s.replace(/\*\*125\*\*\s*\|\s*\*\*10%\*\*/, '**125** | **12%**'), null, null],
     ['PLAN 에서 판수 규약을 지우면', null, s => s.replace(/1,000판 이상/g, '판수 자유'), null, null],
-    ['ROUTINE 에서 8칸 문면을 지우면', null, null, s => s.replace(/\*\*420\*\*/g, '**600**'), null],
+    ['ROUTINE 에서 7칸 문면을 지우면', null, null, s => s.replace('| 7 | 신화 +9강 풀셋 | **100** | **125** |', '| 7 | 신화 +9강 풀셋 | **100** | **420** |'), null],
     ['러너 시드를 1벌로 줄이면', null, null, null, s => s.replace('const DEFAULT_SEEDS = [11, 12, 13]', 'const DEFAULT_SEEDS = [11]')],
     ['러너 판정 허용치만 ±5 로 벌리면', null, null, null, s => s.replace('Math.abs(v - t) <= 2', 'Math.abs(v - t) <= 5')],
     ['러너 파서에 칸 이름을 다시 박으면', null, null, null,
       s => s.replace(/\/\^\\s\*\\\|\\s\*\(\[\^\|\]\+\?\)/, '/^\\s*\\|\\s*(표준 장비[^|]*?)')],
     /* ⚑⚑⚑ T120 ⓖ 음성 — 자(尺)가 3택으로 슬쩍 돌아가는 네 가지 길 */
     ['실험1 의 자를 3택으로 되돌리면', s => s.replace('process.env.EXP1_PERKMODE||PERK_MODE_LADDER', "process.env.EXP1_PERKMODE||PERK_MODE_PLAY"), null, null, null],
-    ['실험1 실측에서 perkMode 배선을 떼면', s => s.replace('runChapter(c,b,{perkMode:EXP1_PERKMODE})', 'runChapter(c,b)'), null, null, null],
+    ['실험1 실측에서 자(LADDER_OPTS) 배선을 떼면',
+      s => s.replace('runChapter(c,b,Object.assign({},LADDER_OPTS,{perkMode:EXP1_PERKMODE}))', 'runChapter(c,b,{})'), null, null, null],
     ['runChapter 의 perkMode 기본값을 base10 으로 바꾸면 (게임 동작까지 자로 덮는다)',
       s => s.replace('perkMode:opts.perkMode||PERK_MODE_PLAY', 'perkMode:opts.perkMode||PERK_MODE_LADDER'), null, null, null],
     ['기준 10종 순서를 흔들면 (공격력 ↔ 반격률)',

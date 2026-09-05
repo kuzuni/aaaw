@@ -1089,12 +1089,9 @@ function basePx(){ const o=_basePxLegacy(); for(const k of PERKS) o[k.id]=0; for
 function mkPlayer(build,G){
   const pw=buildPower(build);
   const maxHp=pw.hp;
-  /* ⚑ T160 하니스 스위치 ⓐ — 자가 `baseStats:'legacy20'` 이면 넷만 옛 값 20 을 쓴다(게임 상수는 불변) */
-  const lg=G&&G.baseStats==='legacy20';
-  const b0=(v,k)=>lg?LADDER_BASE20:v;
   const p={G, worldX:0, atkTimer:0, nextAtk:0, nextCrit:false,
-    dmg:pw.atk, aspd:TUNE.pAspd0, critR:b0(TUNE.pCrit0), critF:TUNE.pCritF0,
-    def:b0(TUNE.pDef0), counter:b0(TUNE.pCounter0), evade:b0(TUNE.pEvade0), steal:0, killHeal:0, misfire:0, goldMul:1, walkMul:1, healAmp:0,
+    dmg:pw.atk, aspd:TUNE.pAspd0, critR:TUNE.pCrit0, critF:TUNE.pCritF0,
+    def:TUNE.pDef0, counter:TUNE.pCounter0, evade:TUNE.pEvade0, steal:0, killHeal:0, misfire:0, goldMul:1, walkMul:1, healAmp:0,
     maxHp, hp:maxHp, maxSh:pw.sh, sh:pw.sh,   /* ⚑ T35: 실드 독립 스탯 (`maxHp*0.8` 파생 폐기) */
     level:1, exp:0, ward:0, repairAmp:0,
     /* ⚑ T121 신규 상태 — 치명 스택(평타 적중 누적) · N타 카운터(특전마다 따로) · 수집가·체력이 지금 건 배수 */
@@ -1102,6 +1099,10 @@ function mkPlayer(build,G){
     /* ⚑ T121 2차 — 처치 시 확정 치명 플래그 · 버서커 스택 · 처치 시 대시 중 여부 */
     sureCrit:false, bsStk:0, dash:false,
     buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]}, px:basePx()};
+  /* ⚑ T160 하니스 스위치 ⓐ — 자가 `baseStats:'legacy20'` 이면 **넷만** 옛 값 20 으로 덮는다.
+     ⚠ 위 리터럴(`critR:TUNE.pCrit0` …)은 그대로 둔다 — 게임 경로는 언제나 TUNE 을 읽고,
+     `verifyCombatConst` ① 이 그 토큰을 두 엔진에서 대조한다(자 때문에 게임 배선을 바꾸지 않는다). */
+  if(G&&G.baseStats==='legacy20'){ p.critR=LADDER_BASE20; p.def=LADDER_BASE20; p.counter=LADDER_BASE20; p.evade=LADDER_BASE20; }
   /* 장비 계열 옵션 적용 (PLAN §11.1 — 상위 등급은 하위 옵션 포함)
      ⚑ T160 하니스 스위치 ⓑ — 자가 `gearOpts:false` 면 세트 옵션을 통째로 건너뛴다(공/체/실 기여만 남는다). */
   if(!(G&&G.gearOpts===false)) for(const pt of GT.parts){
