@@ -33,8 +33,9 @@ function gachaPct(){
   const m=SIM.match(/gachaRate:\s*\[([^\]]*)\]/);
   if(!m) throw new Error('GT.gachaRate 를 못 찾았다 (T65 이후 가챠 확률의 단일 출처)');
   const r=m[1].split(',').map(Number);
-  if(r.length!==5||r.some(isNaN)) throw new Error(`GT.gachaRate 를 5칸 숫자로 못 읽었다: «${m[1]}»`);
-  return {myth:r[4], leg:r[3], hero:r[2], rare:r[1], norm:r[0]};
+  /* ⚑⚑⚑ T153 — 영웅 폐지로 4칸이다 (0 일반 · 1 희귀 · 2 전설 · 3 신화). */
+  if(r.length!==4||r.some(isNaN)) throw new Error(`GT.gachaRate 를 4칸 숫자로 못 읽었다: «${m[1]}»`);
+  return {myth:r[3], leg:r[2], rare:r[1], norm:r[0]};
 }
 const GP=gachaPct();
 
@@ -102,12 +103,12 @@ const CHECKS=[
   ['slotCostG(§6 R07)',G('slotCostG'),/슬롯 비용\s+: .*→ \d+ \* ([\d.]+)\^L/,               '§6 R07 블록'],
 
   /* §11.2 가챠 (주인 확정 상수) */
-  ['가챠 신화%', GP.myth, /확률: \*\*신화 ([\d.]+)%/,                                       '§11.2'],
-  ['가챠 전설%', GP.leg,  /확률: \*\*신화 [\d.]+% \/ 전설 ([\d.]+)%/,                        '§11.2'],
-  ['가챠 영웅%', GP.hero, /전설 [\d.]+% \/ 영웅 ([\d.]+)%/,                                  '§11.2'],
-  ['가챠 희귀%', GP.rare, /영웅 [\d.]+% \/ 희귀 ([\d.]+)%/,                                  '§11.2'],
+  /* ⚑ T153 — §11.2 산문의 «확률(신화 상자)» 줄. 상자 3종 표 자체는 verifyT2 ㉜ 가 PLAN ↔ 엔진 3자 대조한다. */
+  ['가챠 신화%', GP.myth, /확률\(신화 상자\): \*\*신화 ([\d.]+)%/,                            '§11.2'],
+  ['가챠 전설%', GP.leg,  /확률\(신화 상자\): \*\*신화 [\d.]+% \/ 전설 ([\d.]+)%/,             '§11.2'],
+  ['가챠 희귀%', GP.rare, /전설 [\d.]+% \/ 희귀 ([\d.]+)%/,                                  '§11.2'],
   ['가챠 일반%', GP.norm, /희귀 [\d.]+% \/ 일반 ([\d.]+)%/,                                  '§11.2'],
-  ['pullCost',  G('pullCost'), /1회 \*\*(\d+) 다이아\*\*/,                                   '§11.2'],
+  ['pullCost',  G('pullCost'), /1회 \*\*(\d+) 다이아\*\* \(신화 상자/,                        '§11.2'],
 
   /* §11.3 합성 */
   ['legendToMythPlus', G('legendToMythPlus'), /\*\*\+(\d+)강 도달 시 그 대신 신화 0강/,       '§11.3'],
@@ -137,12 +138,12 @@ const CHECKS=[
 ];
 
 /* ---- ⚑ T35 표 대조: [항목, 엔진값, PLAN 정규식, 위치, 배율] — 소수 표기라 허용오차 1e-6 ---- */
-const RAR=['일반','희귀','영웅','전설','신화'];
+const RAR=['일반','희귀','전설','신화'];   /* ⚑ T153 — 영웅 폐지 */
 const TABLE=[];
 {
   const eAtk=arr(GB,'atk'), eHp=arr(GB,'hp'), eSh=arr(GB,'sh');
   /* §11.5-a «등급별 1부위 기여» 표: | 일반 | 4.167 | 16.667 | 25.000 | */
-  for(let i=0;i<5;i++){
+  for(let i=0;i<RAR.length;i++){
     const row=new RegExp(`\\|\\s*${RAR[i]}\\s*\\|\\s*([\\d.]+)\\s*\\|\\s*([\\d.]+)\\s*\\|\\s*([\\d.]+)\\s*\\|`);
     TABLE.push([`기여 ${RAR[i]} 공`, eAtk[i], row, '§11.5-a 기여표', 1, 1]);
     TABLE.push([`기여 ${RAR[i]} 체`, eHp[i],  row, '§11.5-a 기여표', 1, 2]);

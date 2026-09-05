@@ -101,7 +101,7 @@ function loadSim(src, rng) {
 /* 통제된 한 방 — 세트 ti 풀셋 신화+9강을 입히고 `hitPlayer` 를 정확히 한 번 부른다.
    `nodes` 가 비어 있어 도끼·투사체는 대상이 없다(발동은 하되 부수 효과가 측정을 흐리지 않는다). */
 function shot(A, ti, o) {
-  const b = A.mkBuild(4, 9, 0, ti);
+  const b = A.mkBuild(A.GT.RAR_MYTH, 9, 0, ti);   /* ⚑ T153 — 영웅 폐지로 최고 등급 인덱스가 4 → 3 */
   if (o.parts) for (const pt of A.GT.parts) if (!o.parts.includes(pt)) delete b.eq[pt];
   const G = { chapter: 1, player: null, nodes: [], projs: [], taken: [], t: 0, dead: false, gold: 0 };
   G.player = A.mkPlayer(b, G);

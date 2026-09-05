@@ -42,15 +42,40 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     packs: document.querySelectorAll('.gem-grid .gem-card:not(.lock)').length,
     lockCells: document.querySelectorAll('.gem-grid .gem-card.lock').length,
     lockBtns: document.querySelectorAll('.gem-grid .gem-card.lock button').length,
-    pity: document.querySelector('.pity')?.textContent.replace(/\s+/g, ' ').trim(),
+    pity: document.querySelector('.gacha-card.gb-myth .pity')?.textContent.replace(/\s+/g, ' ').trim(),
   }));
   chk('상점 화면 전환', shop0.screen === 'shop');
   chk('일일 무료 다이아 버튼', shop0.free === '수령', shop0.free);
   chk('모의 결제 상품 1종 (주인이 정한 값만) · 잠금 칸은 살 수 없다',
     shop0.packs === 1 && shop0.lockBtns === 0, `상품 ${shop0.packs}종 · 잠금 ${shop0.lockCells}칸(버튼 ${shop0.lockBtns})`);
-  /* ⚑ T125 ①-b (주인 21:1X) — 문구가 «신화 확정까지 N회 · 전설 확정까지 N회» 두 줄로 바뀌었다. */
-  chk('천장 문구 — «신화 확정까지 N회 · 전설 확정까지 N회»',
-    /신화 확정까지\s*50\s*회/.test(shop0.pity || '') && /전설 확정까지\s*10\s*회/.test(shop0.pity || ''), shop0.pity);
+  /* ⚑⚑⚑ T153 (주인 확정 2026-09-05 18:1X) — 상자가 3종이다. 화면에 세 칸이 뜨고, 각 칸의 확률·가격·천장 줄이
+     그 상자 것이어야 한다(희귀 상자는 천장 줄이 아예 없고, 전설 상자는 «전설 확정까지» 한 줄이다). */
+  const boxes = await p.evaluate(() => [...document.querySelectorAll('.gacha-card')].map(c => ({
+    cls: c.className,
+    ttl: c.querySelector('.ttl')?.textContent.trim(),
+    pity: c.querySelector('.pity')?.textContent.replace(/\s+/g, ' ').trim(),
+    btns: [...c.querySelectorAll('.gacha-btns button')].map(b => ({ id: b.id, t: b.textContent.replace(/\s+/g, ' ').trim() })),
+  })));
+  chk('⚑ T153 상점에 뽑기 상자가 3칸이다 (희귀 · 전설 · 신화)',
+    boxes.length === 3 && boxes[0].ttl === '희귀 상자' && boxes[1].ttl === '전설 상자' && boxes[2].ttl === '신화 상자',
+    boxes.map(b => b.ttl).join(' / '));
+  chk('⚑ T153 희귀 상자 — 확률 «희귀 33.3% · 일반 66.7%» · 1회 80💎 · 천장 줄 없음',
+    /희귀 33\.3% · 일반 66\.7%/.test(boxes[0].pity || '') && !/확정까지/.test(boxes[0].pity || '')
+      && /1회 💎80/.test(boxes[0].btns[0]?.t || '') && /10회 💎800/.test(boxes[0].btns[1]?.t || ''),
+    `${boxes[0].pity} | ${boxes[0].btns.map(b => b.t).join(' / ')}`);
+  chk('⚑ T153 전설 상자 — 확률 «전설 4% · 희귀 30% · 일반 66%» · 1회 200💎 · «전설 확정까지» 한 줄',
+    /전설 4% · 희귀 30% · 일반 66%/.test(boxes[1].pity || '')
+      && /전설 확정까지 10회/.test((boxes[1].pity || '').replace(/\s+/g, ' '))
+      && !/신화 확정까지/.test(boxes[1].pity || '') && /1회 💎200/.test(boxes[1].btns[0]?.t || ''),
+    `${boxes[1].pity} | ${boxes[1].btns.map(b => b.t).join(' / ')}`);
+  chk('⚑ T153 신화 상자 — 확률 «신화 0.8% · 전설 4% · 희귀 30% · 일반 65.2%» · 1회 400💎',
+    /신화 0\.8% · 전설 4% · 희귀 30% · 일반 65\.2%/.test(boxes[2].pity || '') && /1회 💎400/.test(boxes[2].btns[0]?.t || ''),
+    `${boxes[2].pity} | ${boxes[2].btns.map(b => b.t).join(' / ')}`);
+  chk('⚑ T153 어느 상자에도 «영웅» 이 안 뜬다 (등급 폐지)',
+    !boxes.some(b => /영웅/.test(b.pity || '')), boxes.map(b => b.pity).join(' | '));
+  /* ⚑ T125 ①-b (주인 21:1X) — 신화 상자 문구가 «신화 확정까지 N회 · 전설 확정까지 N회» 두 줄이다. */
+  chk('천장 문구 — «신화 확정까지 N회 · 전설 확정까지 N회» (신화 상자)',
+    /신화 확정까지\s*50\s*회/.test(boxes[2].pity || '') && /전설 확정까지\s*10\s*회/.test(boxes[2].pity || ''), boxes[2].pity);
 
   await p.click('#freeBtn'); await p.waitForTimeout(300);
   const shop1 = await p.evaluate(() => ({ gem: save.gem, free: document.getElementById('freeBtn').textContent.trim(), dis: document.getElementById('freeBtn').disabled }));
@@ -59,9 +84,9 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
 
   /* 뽑기 1회 + 10회 (다이아를 넣어 준다 — 모의 결제 경로 대신 상태를 직접) */
   await p.evaluate(() => { save.gem = 100000; renderShop(); });
-  await p.click('#pull1'); await p.waitForTimeout(500);
+  await p.click('#pull1_myth'); await p.waitForTimeout(500);
   const g1 = await p.evaluate(() => ({
-    inv: save.inv.length, gem: save.gem, pulls: save.gacha.pulls,
+    inv: save.inv.length, gem: save.gem, pulls: save.gachaBoxes.myth.pulls,
     ov: document.getElementById('overlay').classList.contains('on'),
     cells: document.querySelectorAll('#overlay .inv-cell, #overlay .pull-cell').length,
     svg: document.querySelectorAll('#overlay svg.gicon').length,
@@ -70,8 +95,8 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('뽑기 비용 400 다이아', g1.gem === 100000 - 400, `잔액 ${g1.gem}`);
   chk('결과 연출 오버레이 + 장비 SVG 아이콘', g1.ov && g1.svg >= 1, `svg ${g1.svg}개`);
   await p.evaluate(() => closeOverlay()); await p.waitForTimeout(200);
-  await p.click('#pull10'); await p.waitForTimeout(700);
-  const g10 = await p.evaluate(() => ({ inv: save.inv.length, gem: save.gem, pulls: save.gacha.pulls, svg: document.querySelectorAll('#overlay svg.gicon').length }));
+  await p.click('#pull10_myth'); await p.waitForTimeout(700);
+  const g10 = await p.evaluate(() => ({ inv: save.inv.length, gem: save.gem, pulls: save.gachaBoxes.myth.pulls, svg: document.querySelectorAll('#overlay svg.gicon').length }));
   chk('뽑기 10회 — 장비 10개 추가', g10.inv === 11 && g10.pulls === 11, `인벤 ${g10.inv} · 누적 ${g10.pulls}`);
   /* ⚑ T131 — 여기서 잔액을 재는 단언이 없었다 (g10.gem 을 모으기만 하고 안 봤다). 10연차도 회차당 1회분이다. */
   chk('뽑기 10회 비용 4,000 다이아 (400 × 10회 · 할인·할증 없음)', g10.gem === 100000 - 400 - 4000, `잔액 ${g10.gem}`);
@@ -79,44 +104,44 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   await p.evaluate(() => closeOverlay()); await p.waitForTimeout(200);
   /* 천장 — 50회에서 신화가 반드시 나온다 */
   const pity = await p.evaluate(() => {
-    save.inv = []; save.gacha = { p50: 0, p10: 0, pulls: 0 }; save.gem = 1e9;
+    save.inv = []; save.gachaBoxes.myth = { p50: 0, p10: 0, pulls: 0 }; save.gem = 1e9;
     /* «50번째가 반드시 신화» 로 보면 안 된다 — 그 전에 자연 신화가 나오면 천장이 리셋된다.
        천장의 실제 약속은 «신화 없이 50회를 넘기지 않는다», 피티는 «전설 이상 없이 10회를 넘기지 않는다» 다. */
     const rar = [];
-    for (let i = 0; i < 600; i++) for (const g of gachaPull(save.gacha)) rar.push(g.rar);   /* ⚑ T125 — 배열 */
+    for (let i = 0; i < 600; i++) for (const g of gachaPull(save.gachaBoxes.myth, GT.boxes.myth)) rar.push(g.rar);   /* ⚑ T125 — 배열 */
     let gapM = 0, curM = 0, gapL = 0, curL = 0;
     for (const r of rar) {
-      curM = r === 4 ? 0 : curM + 1; gapM = Math.max(gapM, curM);
-      curL = r >= 3 ? 0 : curL + 1; gapL = Math.max(gapL, curL);
+      curM = r === GT.RAR_MYTH ? 0 : curM + 1; gapM = Math.max(gapM, curM);
+      curL = r >= GT.RAR_LEGEND ? 0 : curL + 1; gapL = Math.max(gapL, curL);
     }
-    return { gapM, gapL, myth: rar.filter(r => r === 4).length, leg: rar.filter(r => r >= 3).length, n: rar.length };
+    return { gapM, gapL, myth: rar.filter(r => r === GT.RAR_MYTH).length, leg: rar.filter(r => r >= GT.RAR_LEGEND).length, n: rar.length };
   });
   chk('50회 천장 — 신화 없이 50회를 넘지 않는다', pity.gapM <= 50, `600회 중 최장 무신화 구간 ${pity.gapM}회 · 신화 ${pity.myth}개`);
   chk('10회 피티 — 전설 이상 없이 10회를 넘지 않는다', pity.gapL <= 10, `최장 무전설 구간 ${pity.gapL}회 · 전설↑ ${pity.leg}개`);
   /* ⚑⚑⚑ T125 ① (주인 21:0X) — 천장 겹침은 «이월» 이 아니라 «둘 다 지급» 이다.
      ⓐ 한 회차(p50=49 · p10=9)가 신화 1 + 전설 1 = 2개 ⓑ 그 겹침이 낀 10연차는 결과가 11개 ⓒ 두 카운터 리셋. */
   const ov = await p.evaluate(() => {
-    save.gacha = { p50: 49, p10: 9, pulls: 0 };
-    const got = gachaPull(save.gacha);
-    const one = { n: got.length, rars: got.map(g => g.rar), p50: save.gacha.p50, p10: save.gacha.p10 };
+    save.gachaBoxes.myth = { p50: 49, p10: 9, pulls: 0 };
+    const got = gachaPull(save.gachaBoxes.myth, GT.boxes.myth);
+    const one = { n: got.length, rars: got.map(g => g.rar), p50: save.gachaBoxes.myth.p50, p10: save.gachaBoxes.myth.p10 };
     /* 10연차 안에서 겹치게: 카운터를 49·9 로 두면 **첫 회차**에서 천장과 피티가 같이 걸린다.
        (40·0 으로 두고 10회째를 노리면 중간의 자연 전설이 피티를 리셋해 겹침이 안 날 수 있다 — 결정적으로 간다.) */
-    save.inv = []; save.eq = {}; save.gem = 1e9; save.gacha = { p50: 49, p10: 9, pulls: 0 };
+    save.inv = []; save.eq = {}; save.gem = 1e9; save.gachaBoxes.myth = { p50: 49, p10: 9, pulls: 0 };
     const gem0 = save.gem;
-    doPull(10);
-    const ten = { inv: save.inv.length, pulls: save.gacha.pulls, cells: document.querySelectorAll('#overlay .inv-cell').length,
+    doPull(10,'myth');
+    const ten = { inv: save.inv.length, pulls: save.gachaBoxes.myth.pulls, cells: document.querySelectorAll('#overlay .inv-cell').length,
                   spent: gem0 - save.gem };
     closeOverlay();
     /* ⚑ T131 — 겹침 «1회» 뽑기의 청구도 잰다 (주인 T125 ① «비용은 1회분 그대로») */
-    save.inv = []; save.eq = {}; save.gem = 1e9; save.gacha = { p50: 49, p10: 9, pulls: 0 };
+    save.inv = []; save.eq = {}; save.gem = 1e9; save.gachaBoxes.myth = { p50: 49, p10: 9, pulls: 0 };
     const gem1 = save.gem;
-    doPull(1);
+    doPull(1,'myth');
     const solo = { inv: save.inv.length, spent: gem1 - save.gem };
     closeOverlay();
     return { one, ten, solo };
   });
   await p.waitForTimeout(200);
-  chk('겹침 회차가 2개를 준다 (신화 + 전설)', ov.one.n === 2 && ov.one.rars[0] === 4 && ov.one.rars[1] === 3,
+  chk('겹침 회차가 2개를 준다 (신화 + 전설)', ov.one.n === 2 && ov.one.rars[0] === 3 && ov.one.rars[1] === 2,   /* ⚑ T153 등급 인덱스 */
     `${ov.one.n}개 [${ov.one.rars.join(',')}]`);
   chk('겹침 뒤 두 카운터 리셋 (이월 없음)', ov.one.p50 === 0 && ov.one.p10 === 0, `p50=${ov.one.p50} p10=${ov.one.p10}`);
   chk('겹침이 낀 10연차는 11개', ov.ten.inv === 11 && ov.ten.pulls === 10, `인벤 ${ov.ten.inv} · 뽑기 ${ov.ten.pulls}회`);
@@ -133,22 +158,23 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
      주인 21:1X 원문은 «N = 남은 횟수 · 50회·10회에서 **카운트다운**» 이라 화면에서 실제로 줄어드는지 잰다. */
   const cd = await p.evaluate(() => {
     const rd = () => {
-      const t = (document.querySelector('.pity')?.textContent || '').replace(/\s+/g, ' ');
+      /* ⚑ T153 — 상자가 3칸이라 «신화 상자» 칸의 천장 줄을 집는다 (첫 칸은 희귀 상자다) */
+      const t = (document.querySelector('.gacha-card.gb-myth .pity')?.textContent || '').replace(/\s+/g, ' ');
       const m = /신화 확정까지\s*(-?\d+)\s*회/.exec(t), l = /전설 확정까지\s*(-?\d+)\s*회/.exec(t);
       return { m: m ? +m[1] : null, l: l ? +l[1] : null, t: t.trim() };
     };
     save.inv = []; save.eq = {}; save.gem = 1e9;
-    save.gacha = { p50: 0, p10: 0, pulls: 0 }; renderShop(); const a = rd();
-    save.gacha = { p50: 7, p10: 3, pulls: 7 }; renderShop(); const b = rd();
-    save.gacha = { p50: 49, p10: 9, pulls: 49 }; renderShop(); const c = rd();
+    save.gachaBoxes.myth = { p50: 0, p10: 0, pulls: 0 }; renderShop(); const a = rd();
+    save.gachaBoxes.myth = { p50: 7, p10: 3, pulls: 7 }; renderShop(); const b = rd();
+    save.gachaBoxes.myth = { p50: 49, p10: 9, pulls: 49 }; renderShop(); const c = rd();
     /* 상태를 손으로 세우는 것에 그치지 않고 **실제 뽑기**로도 움직이는지 본다:
        p50=49·p10=9 는 겹침 회차라 한 번 뽑으면 두 카운터가 같이 리셋된다(T125 ①) → 표시도 50·10 으로 돌아온다. */
-    doPull(1); closeOverlay(); renderShop(); const d = rd();
+    doPull(1,'myth'); closeOverlay(); renderShop(); const d = rd();
     /* 겹치지 않는 평범한 한 회차: p50·p10 이 각각 1씩 오르므로 표시는 각각 1씩 줄어야 한다.
        (자연 전설↑ 이 나오면 p10 이 리셋되므로 신화 쪽만 결정적으로 본다.) */
-    save.gacha = { p50: 10, p10: 2, pulls: 10 }; renderShop(); const e = rd();
-    doPull(1); closeOverlay(); renderShop(); const f = rd();
-    return { a, b, c, d, e, f, p50: save.gacha.p50 };
+    save.gachaBoxes.myth = { p50: 10, p10: 2, pulls: 10 }; renderShop(); const e = rd();
+    doPull(1,'myth'); closeOverlay(); renderShop(); const f = rd();
+    return { a, b, c, d, e, f, p50: save.gachaBoxes.myth.p50 };
   });
   await p.waitForTimeout(200);
   chk('천장 표시가 카운트다운이다 — 카운터 0·0 → 50/10 · 7·3 → 43/7 · 49·9 → 1/1',
@@ -164,8 +190,8 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     cd.e.m === 40 && cd.p50 !== 10 && cd.f.m === 50 - cd.p50, `${cd.e.m} → ${cd.f.m} (p50 10 → ${cd.p50})`);
   /* ⚑⚑⚑ T125 ①-c — 뽑기 결과 자동 장착 금지 + 수동 장착 동작 */
   const noAuto = await p.evaluate(() => {
-    save.inv = []; save.eq = {}; save.gem = 1e9; save.gacha = { p50: 0, p10: 0, pulls: 0 };
-    doPull(10); closeOverlay();
+    save.inv = []; save.eq = {}; save.gem = 1e9; save.gachaBoxes.myth = { p50: 0, p10: 0, pulls: 0 };
+    doPull(10,'myth'); closeOverlay();
     const eqAfterPull = Object.keys(save.eq).length;
     const nw = save.inv.filter(g => g.nw).length;
     const g = save.inv[0];
@@ -184,8 +210,8 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   /* ⚑⚑⚑ T128 — «열어 보면 지워진다» 갈래는 위 «장착» 갈래와 다른 코드 경로다(장착은 renderGear 를 부르고 닫기는 안 불렀다).
      그래서 **모델 플래그가 아니라 화면의 뱃지 개수**를 센다 — 모델만 보는 단언은 이 결함을 그대로 통과시켰다. */
   const nwView = await p.evaluate(() => {
-    save.inv = []; save.eq = {}; save.gem = 1e9; save.gacha = { p50: 0, p10: 0, pulls: 0 };
-    doPull(10); closeOverlay();
+    save.inv = []; save.eq = {}; save.gem = 1e9; save.gachaBoxes.myth = { p50: 0, p10: 0, pulls: 0 };
+    doPull(10,'myth'); closeOverlay();
     showScreen('gear'); renderGear();
     const cnt = () => document.querySelectorAll('#invGrid .nwm').length;
     const before = cnt();
@@ -210,14 +236,14 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     const at = pt => !!document.querySelector(`.slot-card[data-pt="${pt}"] .upmark`);
     const add = (pt, rar, plus) => { const g = newGear(pt, GT.types[pt][0], rar, plus); save.inv.push(g); return g; };
     save.inv = []; save.eq = {}; save.gem = 1e9;
-    for (const pt of GT.parts) save.eq[pt] = add(pt, 3, 0).u;   /* 여섯 부위 전부 «전설 +0» 을 끼운다 */
+    for (const pt of GT.parts) save.eq[pt] = add(pt, 2, 0).u;   /* 여섯 부위 전부 «전설 +0» 을 끼운다 (⚑ T153 — 전설 = 2) */
     showScreen('gear'); renderGear();
     const none = cnt();
-    add('weapon', 3, 0); renderGear();                          /* 같은 등급·강화 — «더 좋은» 이 아니다 */
+    add('weapon', 2, 0); renderGear();                          /* 같은 등급·강화 — «더 좋은» 이 아니다 (⚑ T153 전설=2) */
     const equal = cnt();
-    const better = add('weapon', 4, 0); renderGear();           /* 등급이 위 */
+    const better = add('weapon', 3, 0); renderGear();           /* 등급이 위 (신화=3) */
     const byRar = { n: cnt(), weapon: at('weapon'), helm: at('helm') };
-    add('helm', 3, 3); renderGear();                            /* 같은 등급 · 강화가 위 */
+    add('helm', 2, 3); renderGear();                            /* 같은 등급 · 강화가 위 (⚑ T153 전설=2) */
     const byPlus = { n: cnt(), helm: at('helm') };
     const eqBefore = Object.keys(save.eq).length;
     save.eq.weapon = better.u; renderGear();                    /* 유저가 직접 끼우면 그 부위 ↑ 는 꺼진다 */
@@ -242,7 +268,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   /* ⚑ T125 ①-c — 자동 장착이 없어져 이 픽스처가 직접 «부위별 최고» 를 끼운다(장비 탭 단언의 전제). */
   await p.evaluate(() => {
     save.inv = []; save.eq = {}; save.gem = 1e9; save.gold = 1e9;
-    for (let i = 0; i < 60; i++) for (const raw of gachaPull(save.gacha)) { const g = newGear(raw.part, raw.type, raw.rar, raw.plus); g.u = save.uid++; save.inv.push(g); }
+    for (let i = 0; i < 60; i++) for (const raw of gachaPull(save.gachaBoxes.myth, GT.boxes.myth)) { const g = newGear(raw.part, raw.type, raw.rar, raw.plus); g.u = save.uid++; save.inv.push(g); }
     const best = autoEquip(save.inv);
     for (const pt of GT.parts) if (best[pt]) save.eq[pt] = best[pt].u;
     persist(); showScreen('gear');
@@ -274,8 +300,8 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     txt: document.getElementById('overlay').textContent.replace(/\s+/g, ' ').slice(0, 90),
   }));
   chk('세부 팝업이 열린다', det.on);
-  /* ⚑ T124 — .gd-opt = 세트 옵션 **8칸** + 슬롯 강화 안내 1줄 = 9 (일반부터 1개 · 신화 +9강이 8칸째) */
-  chk('옵션 8칸 목록 (해금 ◆ / 잠금 🔒) + 슬롯 안내 1줄', det.opts === 9 && det.locks >= 1 && det.opens >= 1,
+  /* ⚑ T124 → ⚑ T153 — .gd-opt = 세트 옵션 **7칸** + 슬롯 강화 안내 1줄 = 8 (일반부터 1개 · 신화 +9강이 7칸째) */
+  chk('옵션 7칸 목록 (해금 ◆ / 잠금 🔒) + 슬롯 안내 1줄', det.opts === 8 && det.locks >= 1 && det.opens >= 1,
     `${det.opts}줄 (해금 ${det.opens} · 잠금 ${det.locks})`);
   chk('슬롯 강화 버튼', /슬롯 강화|슬롯 MAX/.test(det.up || ''), det.up);
   const before = await p.evaluate(() => { const pt = GT.parts.find(x => save.eq[x]); return { pt, lv: save.slots[pt] | 0, gold: save.gold }; });
@@ -287,15 +313,15 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('슬롯 레벨 상한 150', cap.maxed && cap.over === 150, `Lv ${cap.over} · MAX=${cap.maxed}`);
   await p.screenshot({ path: `${OUT}/t3-gear.png` });
 
-  /* ---------- ⚑ T145 — 세부 팝업 7번 칸 = «흡혈 +8%» (주인 확정 2026-09-05 16:4X) ----------
+  /* ---------- ⚑ T145 → ⚑⚑⚑ T153 — 세부 팝업 마지막 7번 칸 = «흡혈 +8%» ----------
      정적 게이트(verifyGearOptOrder·verifyGearOptAgg)는 GOPT 표를 보지만, 유저가 실제로 읽는 줄은
-     세부 팝업의 옵션 목록이다. +6강에서 7번이 해금돼 «흡혈 +8%» 로 보이고 8번(«공격력 +10%»)은 아직
-     잠겨 있는지, +9강에서 둘 다 해금되는지를 화면에서 직접 읽는다. */
-  console.log('\n=== ⚑ T145 세부 팝업 — 7번 = 흡혈 +8% · 8번 = 공격력 +10% ===');
-  for (const [plus, want7open, want8open] of [[6, true, false], [9, true, true]]) {
+     세부 팝업의 옵션 목록이다. ⚑ T153 로 «공격력 +10%» 칸이 사라져 흡혈이 **마지막 칸(신화 +9강)** 이 됐다:
+     +6강에서는 아직 잠겨 있고 +9강에서 열린다. */
+  console.log('\n=== ⚑⚑⚑ T153 세부 팝업 — 마지막 7번 = 흡혈 +8% (공격력 칸 삭제) ===');
+  for (const [plus, want7open] of [[6, false], [9, true]]) {
     const st = await p.evaluate((pl) => {
       save.inv = []; save.eq = {}; save.slots = {};
-      const g = newGear('weapon', 'crit_weapon', 4, pl); g.u = save.uid++;
+      const g = newGear('weapon', 'crit_weapon', GT.RAR_MYTH, pl); g.u = save.uid++;
       save.inv.push(g); save.eq.weapon = g.u; persist(); showScreen('gear');
       return { plus: g.plus, rar: g.rar };
     }, plus);
@@ -307,14 +333,14 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
         .map(e => ({ t: e.textContent.replace(/\s+/g, ' ').trim(), lock: e.classList.contains('lock') }));
       return { rows, n: rows.length };
     });
-    const r7 = d.rows[6], r8 = d.rows[7];
-    chk(`신화 +${plus} 세부 팝업 — 7번 줄이 «흡혈 +8%» 다`,
+    const r7 = d.rows[6];
+    chk(`신화 +${plus} 세부 팝업 — 옵션 줄이 7개다 (⚑ T153)`, d.n === 7, `${d.n}줄`);
+    chk(`신화 +${plus} 세부 팝업 — 마지막 7번 줄이 «흡혈 +8%» 다`,
       !!r7 && /흡혈 \+8%/.test(r7.t), r7 ? r7.t : `줄 ${d.n}개`);
     chk(`신화 +${plus} 세부 팝업 — 7번이 ${want7open ? '해금' : '잠금'} 이다`,
       !!r7 && r7.lock === !want7open, r7 ? `lock=${r7.lock}` : '(없음)');
-    chk(`신화 +${plus} 세부 팝업 — 8번 줄이 «공격력 +10%» 이고 ${want8open ? '해금' : '잠금'} 이다`,
-      !!r8 && /공격력 \+10%/.test(r8.t) && r8.lock === !want8open,
-      r8 ? `${r8.t} · lock=${r8.lock}` : '(없음)');
+    chk(`신화 +${plus} 세부 팝업 — «공격력 +10%» 줄이 없다 (⚑ T153 삭제)`,
+      !d.rows.some(x => /공격력 \+10%/.test(x.t)), d.rows.map(x => x.t).join(' | ').slice(0, 60));
     chk(`신화 +${plus} 세부 팝업 — «흡혈» 줄이 정확히 1개다 (부위당 1칸)`,
       d.rows.filter(x => /흡혈/.test(x.t)).length === 1,
       `${d.rows.filter(x => /흡혈/.test(x.t)).length}줄`);
@@ -322,9 +348,9 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     void st;
   }
   /* ---------- ⚑ T147 — 세부 팝업 «잠금 안내» 가 해금 조건과 맞는가 (한 칸 밀려 있었다) ----------
-     옵션 i 는 GT.optCount(rar,plus) > i 일 때 열린다 → i=0~4 는 일반·희귀·영웅·전설·신화 «이상»,
-     i=5~7 은 신화 +3/+6/+9강. 일반 +0 장비 하나로 8칸의 안내 문구를 전수로 읽는다. */
-  console.log('\n=== ⚑ T147 세부 팝업 잠금 안내 — 8칸 전수 ===');
+     옵션 i 는 GT.optCount(rar,plus) > i 일 때 열린다 → ⚑ T153 로 i=0~3 은 일반·희귀·전설·신화 «이상»,
+     i=4~6 은 신화 +3/+6/+9강. 일반 +0 장비 하나로 7칸의 안내 문구를 전수로 읽는다. */
+  console.log('\n=== ⚑ T147·T153 세부 팝업 잠금 안내 — 7칸 전수 ===');
   {
     await p.evaluate(() => {
       save.inv = []; save.eq = {}; save.slots = {};
@@ -336,10 +362,10 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     const rows = await p.evaluate(() => [...document.querySelectorAll('#overlay .gd-opt')]
       .filter(e => !/슬롯/.test(e.textContent))
       .map(e => e.textContent.replace(/\s+/g, ' ').trim()));
-    const WANT = [null, '희귀 이상', '영웅 이상', '전설 이상', '신화 이상', '신화 +3강', '신화 +6강', '신화 +9강'];
-    chk('일반 +0 장비 — 1번만 해금(◆) 이고 2~8번은 잠금(🔒)', rows.length === 8 && /^◆/.test(rows[0]) && rows.slice(1).every(t => /^🔒/.test(t)),
+    const WANT = [null, '희귀 이상', '전설 이상', '신화 이상', '신화 +3강', '신화 +6강', '신화 +9강'];
+    chk('일반 +0 장비 — 1번만 해금(◆) 이고 2~7번은 잠금(🔒)', rows.length === 7 && /^◆/.test(rows[0]) && rows.slice(1).every(t => /^🔒/.test(t)),
       `${rows.length}줄 — ${rows.map(t => t.slice(0, 2)).join('')}`);
-    for (let i = 1; i < 8; i++) {
+    for (let i = 1; i < 7; i++) {
       chk(`${i + 1}번 칸 잠금 안내가 «(${WANT[i]})» 다`, !!rows[i] && rows[i].includes(`(${WANT[i]})`),
         rows[i] || '(없음)');
     }
@@ -347,17 +373,17 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   }
 
   {
-    /* 엔진 쪽 실측 — 풀셋 +6강 이상이면 p.steal 이 부위마다 가산돼 48 이다(= 준 피해의 48%). */
+    /* 엔진 쪽 실측 — ⚑ T153 로 흡혈이 마지막 칸이라 **풀셋 +9강**에서 부위마다 가산돼 48 이다(= 준 피해의 48%). */
     const agg = await p.evaluate(() => {
       const set = parts => {
         save.inv = []; save.eq = {}; save.slots = {};
-        for (const pt of parts) { const g = newGear(pt, GT.types[pt][0], 4, 6); g.u = save.uid++; save.inv.push(g); save.eq[pt] = g.u; }
+        for (const pt of parts) { const g = newGear(pt, GT.types[pt][0], GT.RAR_MYTH, 9); g.u = save.uid++; save.inv.push(g); save.eq[pt] = g.u; }
         persist(); return playerBase().steal;
       };
       const full = set(GT.parts), one = set(['weapon']);
       return { full, one };
     });
-    chk('index.html 엔진 — 풀셋 +6강 흡혈이 부위마다 가산돼 48 이다', agg.full === 48, `steal=${agg.full}`);
+    chk('index.html 엔진 — 풀셋 +9강 흡혈이 부위마다 가산돼 48 이다', agg.full === 48, `steal=${agg.full}`);
     chk('index.html 엔진 — 1부위만 끼면 흡혈 8 이다', agg.one === 8, `steal=${agg.one}`);
   }
 
@@ -426,7 +452,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     /* 인벤 6칸 전부 장착 · uid 1~6 인데 save.uid 필드가 없는 세이브(구버전·부분 손상) */
     await p.evaluate(() => {
       const inv = [], eq = {}; let u = 1;
-      for (const pt of GT.parts) { inv.push({ u, part: pt, type: GT.types[pt][0], rar: 4, plus: 9 }); eq[pt] = u; u++; }
+      for (const pt of GT.parts) { inv.push({ u, part: pt, type: GT.types[pt][0], rar: GT.RAR_MYTH, plus: 9 }); eq[pt] = u; u++; }
       const slots = {}; for (const pt of GT.parts) slots[pt] = 0;
       localStorage.clear();
       localStorage.setItem('kkoma-knight-v2', JSON.stringify({ gold: 0, gem: 1e6, maxChapter: 1, selChapter: 1, inv, eq, slots, gacha: { p50: 0, p10: 0, pulls: 0 } }));
@@ -436,7 +462,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     chk('uid 필드가 없는 세이브 — save.uid 가 인벤 최대 uid 위로 보정된다', u0.uid > u0.mx, `save.uid=${u0.uid} · 인벤 최대=${u0.mx}`);
     chk('보정하면서 장비·장착을 잃지 않는다', u0.n === 6 && u0.eq === 6, `인벤 ${u0.n} · 장착 ${u0.eq}`);
     const u1 = await p.evaluate(() => {
-      doPull(1); closeOverlay();
+      doPull(1,'myth'); closeOverlay();
       const uids = save.inv.map(g => g.u);
       const dup = [...new Set(uids.filter((x, i) => uids.indexOf(x) !== i))];
       /* 겹치면 «장착 중인 부위» 의 세부 팝업이 신품 이름으로 뜬다 — 증상 쪽도 같이 본다 */
@@ -450,8 +476,10 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     await p.evaluate(() => {
       localStorage.clear();
       localStorage.setItem('kkoma-knight-v2', JSON.stringify({
-        uid: 2, gold: 0, gem: 0, maxChapter: 1, selChapter: 1, eq: { weapon: 1 }, slots: {},
-        inv: [{ u: 1, part: 'weapon', type: 'crit_weapon', rar: 4, plus: 9 },
+        /* ⚑ T153 — 이 절은 uid 를 재는 자리라 등급 마이그레이션이 끼면 안 된다: 판 표시를 «현재 판» 으로 심어
+           이미 4등급 세이브임을 알린다(마이그레이션 자체는 T153 절이 따로 잰다). */
+        uid: 2, gold: 0, gem: 0, maxChapter: 1, selChapter: 1, eq: { weapon: 1 }, slots: {}, gearRarV: 2,
+        inv: [{ u: 1, part: 'weapon', type: 'crit_weapon', rar: GT.RAR_MYTH, plus: 9 },
               { u: 1, part: 'armor', type: 'hpsh_armor', rar: 0, plus: 0 }],
         gacha: { p50: 0, p10: 0, pulls: 0 },
       }));
@@ -464,7 +492,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     });
     chk('중복 uid 세이브 — 중복이 사라진다', !d.dup, `uid 목록 [${d.uids}]`);
     chk('중복 강등분도 save.uid 위의 새 번호를 받는다', Math.max(...d.uids) < d.uid, `최대 ${Math.max(...d.uids)} < save.uid ${d.uid}`);
-    chk('먼저 나온 쪽이 장착 연결을 유지한다 (신화 무기)', d.keptPart === 'weapon' && d.keptRar === 4, `eq.weapon → ${d.keptPart}/rar${d.keptRar}`);
+    chk('먼저 나온 쪽이 장착 연결을 유지한다 (신화 무기)', d.keptPart === 'weapon' && d.keptRar === 3, `eq.weapon → ${d.keptPart}/rar${d.keptRar}`);
   }
   await p.evaluate(() => localStorage.clear());
   await p.reload(); await p.waitForTimeout(500);
@@ -618,7 +646,7 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
       await new Promise(r => setTimeout(r, 120));
       take('합성 재료 칸', '#fgMats .fg-cell');
       take('합성 결과 칸', '#fgResult');
-      showScreen('shop'); save.gem = 999999; doPull(10);
+      showScreen('shop'); save.gem = 999999; doPull(10,'myth');
       await new Promise(r => setTimeout(r, 420));
       out.pullCells = document.querySelectorAll('.pull-list .inv-cell').length;
       take('뽑기 결과 칸', '.pull-list .inv-cell');
@@ -649,6 +677,78 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
         && document.querySelectorAll('#gearColR .slot-card').length === 3)), '');
   }
   await p.setViewportSize({ width: 390, height: 844 });
+
+  /* ---------- ⚑⚑⚑ T153 — 영웅 등급 폐지: 합성 체인 · 세부 팝업 7칸 · 세이브 마이그레이션 ---------- */
+  const t153 = await p.evaluate(() => {
+    const out = {};
+    out.rarNames = GT.rarName.slice();
+    out.colors = GT.rarColor.length;
+    /* ⓐ 합성 — 희귀 3개가 «전설» 이 된다(영웅이 사라진 자리) */
+    save.inv = []; save.eq = {}; save.uid = 1;
+    for (let i = 0; i < 3; i++) save.inv.push(newGear('weapon', 'crit_weapon', 1, 0));
+    fuseAll(save.inv, new Set());
+    out.fused = save.inv.length === 1 ? { rar: save.inv[0].rar, nm: GT.rarName[save.inv[0].rar] } : null;
+    /* ⓑ 세부 팝업 — 신화 +9강이면 옵션 7칸이 전부 열리고 «공격력 +10%» 이 한 칸도 없다 */
+    save.inv = [newGear('weapon', 'crit_weapon', GT.RAR_MYTH, 9)];
+    save.eq = {}; renderGear(); openGearDetail(save.inv[0].u);
+    const rows = [...document.querySelectorAll('.gd-opt')];
+    out.optRows = rows.length;
+    out.optLocked = rows.filter(r => r.classList.contains('lock')).length;
+    out.optText = rows.map(r => r.textContent.replace(/\s+/g, ' ').trim()).join(' | ');
+    out.secname = document.querySelector('.gd-secname')?.textContent.trim();
+    closeOverlay();
+    /* ⓒ 잠금 안내 — 일반 0강이면 1칸만 열리고 잠긴 칸의 조건이 «희귀 이상 … 신화 +9강» 이다 */
+    save.inv = [newGear('weapon', 'crit_weapon', 0, 0)];
+    renderGear(); openGearDetail(save.inv[0].u);
+    const rows0 = [...document.querySelectorAll('.gd-opt')];
+    out.lockNeeds = rows0.slice(1).map(r => (/\(([^)]*)\)/.exec(r.textContent) || [])[1]);
+    closeOverlay();
+    return out;
+  });
+  chk('⚑ T153 등급이 4개다 (일반 · 희귀 · 전설 · 신화 — 영웅 없음)',
+    t153.rarNames.join('·') === '일반·희귀·전설·신화' && t153.colors === 4,
+    `${t153.rarNames.join('·')} · 색 ${t153.colors}개`);
+  chk('⚑ T153 합성 — 희귀 3개 → «전설» 0강 (영웅이 빠진 자리)',
+    !!t153.fused && t153.fused.rar === 2 && t153.fused.nm === '전설', JSON.stringify(t153.fused));
+  chk('⚑ T153 세부 팝업 — 신화 +9강이면 옵션 7칸이 전부 열린다',
+    t153.optRows === 7 && t153.optLocked === 0, `${t153.optRows}칸 · 잠김 ${t153.optLocked} · «${t153.secname}»`);
+  chk('⚑ T153 세부 팝업에 «공격력 +10%» 옵션이 없다 (주인 «+9 부분 현재 꺼 빼고»)',
+    !/공격력 \+10%/.test(t153.optText || ''), (t153.optText || '').slice(0, 80));
+  chk('⚑ T153 잠금 안내가 «희귀 이상 → 전설 이상 → 신화 이상 → 신화 +3/+6/+9강» 이다',
+    (t153.lockNeeds || []).join(' / ') === '희귀 이상 / 전설 이상 / 신화 이상 / 신화 +3강 / 신화 +6강 / 신화 +9강',
+    (t153.lockNeeds || []).join(' / '));
+  /* ⓓ 세이브 마이그레이션 — 5등급 시절 세이브(영웅 2 · 전설 3 · 신화 4)를 심고 다시 읽는다.
+     영웅은 «전설로 승격»(주인 위임), 전설·신화는 인덱스만 당겨진다. 새 판이면 두 번 돌지 않는다. */
+  await p.evaluate(() => {
+    const raw = {
+      gold: 0, gem: 0, maxChapter: 1, selChapter: 1, muted: false, uid: 9, freeDay: '',
+      inv: [
+        { u: 1, part: 'weapon', type: 'crit_weapon', rar: 0, plus: 0 },
+        { u: 2, part: 'helm',   type: 'crit_helm',   rar: 1, plus: 0 },
+        { u: 3, part: 'armor',  type: 'crit_armor',  rar: 2, plus: 0 },   /* 영웅 → 전설 승격 */
+        { u: 4, part: 'glove',  type: 'crit_glove',  rar: 3, plus: 4 },   /* 전설 → 전설 (강화 유지) */
+        { u: 5, part: 'boot',   type: 'crit_boot',   rar: 4, plus: 2 },   /* 신화 → 신화 */
+      ],
+      eq: {}, slots: {}, gacha: { p50: 17, p10: 3, pulls: 20 }, pulls: 20, fuses: 0,
+    };
+    localStorage.setItem('kkoma-knight-v2', JSON.stringify(raw));
+  });
+  await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(600);
+  const migT153 = await p.evaluate(() => ({
+    rars: save.inv.map(g => `${GT.rarName[g.rar]}+${g.plus}`),
+    v: save.gearRarV,
+    mythPity: save.gachaBoxes.myth ? { p50: save.gachaBoxes.myth.p50, p10: save.gachaBoxes.myth.p10, pulls: save.gachaBoxes.myth.pulls } : null,
+    rare: save.gachaBoxes.rare, legend: save.gachaBoxes.legend, legacy: 'gacha' in save,
+  }));
+  chk('⚑ T153 마이그레이션 — 영웅은 전설로 승격 · 전설·신화는 강화까지 그대로',
+    migT153.rars.join(' / ') === '일반+0 / 희귀+0 / 전설+0 / 전설+4 / 신화+2', migT153.rars.join(' / '));
+  chk('⚑ T153 마이그레이션 판 표시가 남아 두 번 돌지 않는다 (gearRarV)', migT153.v === 2, `gearRarV=${migT153.v}`);
+  chk('⚑ T153 옛 단일 피티 카운터가 «신화 상자» 칸으로 옮겨진다 (진행 보존 · 옛 키 삭제)',
+    !!migT153.mythPity && migT153.mythPity.p50 === 17 && migT153.mythPity.p10 === 3 && migT153.mythPity.pulls === 20 && !migT153.legacy,
+    `${JSON.stringify(migT153.mythPity)} · 옛 키 남음=${migT153.legacy}`);
+  chk('⚑ T153 희귀·전설 상자 카운터는 새로 0 에서 시작한다',
+    !!migT153.rare && migT153.rare.p50 === 0 && migT153.rare.pulls === 0 && !!migT153.legend && migT153.legend.pulls === 0,
+    `${JSON.stringify(migT153.rare)} / ${JSON.stringify(migT153.legend)}`);
 
   chk('pageerror 0', errs.length === 0, errs.slice(0, 3).join(' | '));
   await b.close();

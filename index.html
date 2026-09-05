@@ -289,8 +289,13 @@
   .free-row .gem-card button{margin:0; width:38%; font-size:11.5px;}
   .gacha-card{border-radius:18px; padding:12px; background:linear-gradient(150deg,#5A3E8C,#8A4FA8 60%,#C05C9E);
     box-shadow:0 5px 0 rgba(0,0,0,.28);
-    margin-top:calc(var(--fh)*.02); height:calc(var(--fh)*.185);      /* ⚑ U02 — 두 번째 카드행 y70.5 h18.5 */
+    margin-top:calc(var(--fh)*.018); min-height:calc(var(--fh)*.155);  /* ⚑ U02 h18.5 → ⚑ T153 로 3칸이라 살짝 낮췄다 */
     display:flex; flex-direction:column; justify-content:center;}
+  /* ⚑⚑⚑ T153 — 상자 3종. 등급색(GT.rarColor 의 희귀 파랑 · 전설 금색 · 신화 분홍)과 결을 맞춘 배경이고,
+     세 칸이 세로로 쌓이므로 높이를 «한 칸» 기준(U02 h18.5)보다 줄여 상점이 한 화면에 남게 한다. */
+  .gacha-card.gb-rare  {background:linear-gradient(150deg,#2C4A70,#3E7FB8 60%,#4FA3E3);}
+  .gacha-card.gb-legend{background:linear-gradient(150deg,#6B4E12,#B58A22 60%,#F2C14E);}
+  .gacha-card.gb-myth  {background:linear-gradient(150deg,#5A3E8C,#8A4FA8 60%,#C05C9E);}
   .gacha-card .ttl{font-size:20px; text-shadow:0 2px 0 rgba(0,0,0,.35);}
   .gacha-card .pity{font-size:12px; background:rgba(10,10,14,.42); border-radius:10px; padding:5px 8px; margin:6px 0; line-height:1.45;}
   .gacha-btns{display:flex; gap:8px;}
@@ -773,7 +778,7 @@ const grand=Math.random;              /* sim.js 의 뽑기 전용 시드 스트�
    18계열(부위마다 서로 다른 계열)이 폐지되고 **세트 3개 × 부위 6개**가 됐다.
    종류 이름 = «세트명 + 부위명»(치명 무기 · 체력실드 투구 … 회피 목걸이)이라 종류 수는 18 그대로지만
    **옵션은 세트 안 6부위가 공유**한다(상위 등급이 하위 옵션을 포함하는 규칙은 그대로).
-   옵션 개수: 일반1 · 희귀2 · 영웅3 · 전설4 · 신화5, 신화는 +3/+6/+9 강에서 1개씩 추가(최대 8).
+   옵션 개수: 일반1 · 희귀2 · 전설3 · 신화4, 신화는 +3/+6/+9 강에서 1개씩 추가(최대 7 — ⚑ T153).
    — 종전 «일반 0개» 가 아니라 **일반부터 1개**다(주인 확정). */
 const GT={
   parts:['weapon','helm','armor','glove','boot','neck'],
@@ -792,20 +797,23 @@ const GT={
     hpsh_glove:'체력실드 장갑',hpsh_boot:'체력실드 신발',hpsh_neck:'체력실드 목걸이',
     evade_weapon:'회피 무기',evade_helm:'회피 투구',evade_armor:'회피 갑옷',
     evade_glove:'회피 장갑',evade_boot:'회피 신발',evade_neck:'회피 목걸이'},
-  rarName:['일반','희귀','영웅','전설','신화'],
+  /* ⚑⚑⚑ T153 (주인 확정 2026-09-05 18:1X) — **«영웅» 등급 폐지.** 주인 «영웅 등급은 빼기».
+     등급 인덱스가 한 칸씩 당겨졌다: 0 일반 · 1 희귀 · **2 전설** · **3 신화** (종전 2 영웅 · 3 전설 · 4 신화).
+     남는 네 등급의 기여값은 «현재 절대값 그대로»(주인 위임) — 영웅 행만 뺐다. sim.js 와 1:1. */
+  rarName:['일반','희귀','전설','신화'],
   /* ⚑⚑⚑ T102 (주인 확정 2026-09-03) — 등급별 1부위 기여 (0강·슬롯 0렙). 등급 배수 재설계본이다.
      주인 원문: «일반에서 전설까지는 공체실 각각 2배씩 뛰고, 전설→신화는 6배, 신화→신화9강은 20배».
-     인덱스 = 일반0 · 희귀1 · 영웅2 · 전설3 · 신화4. 실드는 체력 파생이 아니라 독립 기여축이다.
+     ⚑ T153 — 인덱스 = 일반0 · 희귀1 · **전설2** · **신화3**. 실드는 체력 파생이 아니라 독립 기여축이다.
      값은 «(풀셋 총 스탯 − 기본치) ÷ 6» 을 그대로 옮긴 것이다 — 역산·재해석 금지.
-     검산(기본치 공25/체150/실250 + 6부위): 일반 50/250/400 · 희귀 100/500/800 · 영웅 200/1000/1600 ·
+     검산(기본치 공25/체150/실250 + 6부위): 일반 50/250/400 · 희귀 100/500/800 ·
      전설 400/2000/3200 · 신화 2400/12000/19200 (PLAN §11.5-a·§11.7 표와 일치).
      ⚠ 신화+9강은 «장비 기여만» ×20 이라 47525/237150/379250 이고, 주인 표의 48000/240000/384000 과
        기본치(25/150/250)의 19배만큼 어긋난다 — 강화는 장비에만 걸리고 기본치는 불변이라는 두 확정
        조항의 산술적 귀결이며, 오차는 각각 −0.99% / −1.19% / −1.24% 다. 되돌리려면 «기본치도 강화된다»
        를 주인이 확정해야 한다(PROGRESS T102 행에 근거 등재). */
-  atk:[4.167, 12.500,  29.167,  62.500,  395.833],
-  hp: [16.667, 58.333, 141.667, 308.333, 1975.000],
-  sh: [25.000, 91.667, 225.000, 491.667, 3158.333],
+  atk:[4.167, 12.500,  62.500,  395.833],
+  hp: [16.667, 58.333, 308.333, 1975.000],
+  sh: [25.000, 91.667, 491.667, 3158.333],
   /* ⚑⚑⚑ T102 — 강화 1레벨당 +211.11% (= 19/9). 0.13 으로는 +9강이 ×2.17 이라 주인의 «신화→신화9강 ×20»
      이 안 나온다. **선형을 유지하는 이유는 신화 무한 강화다** — 복리(1.4^강)로 하면 +20강이 836배로
      폭주하지만 선형이면 43배다. 2.1111111111111111 은 19/9 와 비트 단위로 같은 double 이고
@@ -828,10 +836,19 @@ const GT={
   /* 뽑기 확률·천장·피티 — 주인 확정 상수 (PLAN §11.2, 노브 아님).
      T65 전까지 이 세 값이 «gachaPull 의 누적 임계 리터럴» 과 «상점 안내문 문자열» 에 각각 손으로
      베껴져 있었다 — T8·T9·T11·T12 가 네 번 반복한 «설명문↔엔진 불일치» 와 같은 모양이다.
-     이제 굴림도 안내문도 이 배열 하나만 본다. 순서 = 등급 인덱스(0 일반 … 4 신화), 단위 %. */
-  gachaRate:[57.9,30,10,2,0.1],
-  pityMyth:50,                   // 50회 천장 (누적 50회째 신화 확정)
-  pityLegend:10,                 // 10회 피티 (10회당 전설 이상 확정)
+     이제 굴림도 안내문도 이 표 하나만 본다. 순서 = 등급 인덱스(0 일반 · 1 희귀 · 2 전설 · 3 신화), 단위 %.
+     ⚑⚑⚑ T153 (주인 확정 2026-09-05 18:1X) — **상자가 3종**이 됐다. sim.js 와 같은 표·같은 동사.
+     위임 기본값(ROUTINE ⑤): ⓐ 전설 상자 가격 200 ⓑ 신화 상자의 옛 «영웅 10%» 몫은 일반이 먹는다(65.2)
+     ⓒ 희귀 상자 = 희귀 33.3 / 일반 66.7 ⓓ 천장·피티는 상자마다 다르다(희귀 없음 · 전설 피티만 · 신화 둘 다). */
+  boxes:{
+    rare:  {key:'rare',  name:'희귀 상자', cost:80,  rate:[66.7,33.3,0,0], pityM:0, pityL:0},
+    legend:{key:'legend',name:'전설 상자', cost:200, rate:[66,30,4,0],     pityM:0, pityL:10},
+    /* 신화 상자의 확률·가격·천장 정본은 아래 종전 상수 4개다 — GT 리터럴 바로 뒤에서 채운다(T65 규칙). */
+    myth:  {key:'myth',  name:'신화 상자'},
+  },
+  gachaRate:[65.2,30,4,0.8],
+  pityMyth:50,                   // 50회 천장 (누적 50회째 신화 확정) — 신화 상자
+  pityLegend:10,                 // 10회 피티 (10회당 전설 이상 확정) — 신화·전설 상자
   legendToMythPlus:10,           // 전설 +10강 도달 시 신화 0강으로 변환
   runsPerDay:30,                 // (위임) 하루 플레이 판수 — 실험3/4 의 다이아 적립 환산 기준
 };
@@ -839,22 +856,38 @@ const GT={
 GT.slotMul=L=>1+GT.slotStep*Math.min(L,GT.slotLvMax);
 GT.slotCost=L=>Math.floor(GT.slotCostBase*Math.pow(GT.slotCostG,L));
 GT.allTypes=[]; for(const pt of GT.parts) for(const ty of GT.types[pt]) GT.allTypes.push({part:pt,type:ty});
-/* 뽑기 굴림 임계 — gachaRate 를 «높은 등급부터» 누적한 값. 종전 리터럴(0.1/2.1/12.1/42.1)과 비트 단위로 같다
+/* ⚑⚑⚑ T153 — 등급 인덱스를 리터럴(3·4)로 흩지 않는다. 영웅이 빠져 한 칸씩 당겨진 자리다. */
+GT.RAR_LEGEND=2; GT.RAR_MYTH=3;
+/* 신화 상자 = 종전 «그 뽑기 상자». 확률·가격·천장의 정본은 GT.gachaRate/pullCost/pityMyth/pityLegend 다. */
+GT.boxes.myth.rate=GT.gachaRate; GT.boxes.myth.cost=GT.pullCost;
+GT.boxes.myth.pityM=GT.pityMyth; GT.boxes.myth.pityL=GT.pityLegend;
+/* 뽑기 굴림 임계 — 상자마다 rate 를 «높은 등급부터» 누적한 값
    (toFixed(6) 로 부동소수 누적 오차를 끊는다 — 임계가 1ULP 라도 밀리면 시드 재현성이 깨진다). */
-GT.gachaCum=(()=>{ const c=[]; let a=0; for(let i=GT.gachaRate.length-1;i>=0;i--){ a=+(a+GT.gachaRate[i]).toFixed(6); c[i]=a; } return c; })();
-GT.rarRoll=r=>{ for(let i=GT.gachaRate.length-1;i>0;i--) if(r<GT.gachaCum[i]) return i; return 0; };
-/* 옵션 개수: 등급별 + 신화 강화 보너스 (⚑ T124 — 일반부터 1개 · 등급마다 +1 · 최대 8) */
+GT.mkCum=rate=>{ const c=[]; let a=0; for(let i=rate.length-1;i>=0;i--){ a=+(a+rate[i]).toFixed(6); c[i]=a; } return c; };
+for(const k in GT.boxes){
+  const b=GT.boxes[k];
+  b.cum=GT.mkCum(b.rate);
+  b.rarRoll=r=>{ for(let i=b.rate.length-1;i>0;i--) if(r<b.cum[i]) return i; return 0; };
+}
+GT.gachaCum=GT.boxes.myth.cum;                 /* 종전 이름 (신화 상자) */
+GT.rarRoll=GT.boxes.myth.rarRoll;
+/* 옵션 개수: 등급별 + 신화 강화 보너스 (⚑ T124 — 일반부터 1개 · 등급마다 +1)
+   ⚑⚑⚑ T153 — 영웅이 빠져 **최대 8 → 7** 이다: 일반1 · 희귀2 · 전설3 · 신화4 + (+3/+6/+9 각 +1). */
 GT.optCount=(rar,plus)=>{
-  let n=rar+1;                                 // 일반1 희귀2 영웅3 전설4 신화5
-  if(rar===4){ if(plus>=3)n++; if(plus>=6)n++; if(plus>=9)n++; }
+  let n=rar+1;                                 // 일반1 희귀2 전설3 신화4
+  if(rar===GT.RAR_MYTH){ if(plus>=3)n++; if(plus>=6)n++; if(plus>=9)n++; }
   return n;
 };
 
 /* ---- 3세트 × 6부위 옵션표 (PLAN §11.6 — ⚑⚑⚑ 주인 확정 T124 2026-09-04 19:2X) ----
    세트마다 옵션 6개(a~f)를 정해 **6부위가 그대로 공유**하고, 부위별로 a~e 만 5칸 순환시켜 순서를 돌린다.
-   f(6번째 = 신화 +3강)는 전 부위 고정이고(주인 «치명 시 도끼는 무조건 6번째»), 7·8번째(신화 +6/+9강)는
-   세 세트 공통이다 — **7번 = «흡혈 +8%» · 8번 = «공격력 +10%»**(⚑ 주인 확정 T145 2026-09-05 16:4X:
-   «7번째 꺼는 흡혈로 해야 할 거 같은데 8퍼로» — 7번이 종전 «공격력 +10%» 에서 바뀌었다. 8번은 그대로).
+   ⚑⚑⚑ T153 (주인 확정 2026-09-05 18:1X) — **사다리가 8칸 → 7칸**이 됐다. 주인 «옵션에서는 신화 강화 +9
+   부분 현재 꺼 빼고 영웅서부터 하나씩 밀려서 채워주면 될 듯»: 맨 끝 «공격력 +10%» 을 빼면 배열은 그대로이고
+   영웅 등급이 사라진 만큼 **해금 등급만 한 칸씩 당겨진다**. 새 사다리 =
+     1 일반 a · 2 희귀 b · 3 전설 c · 4 신화 d · 5 신화+3 e · 6 신화+6 **f(도끼)** · 7 신화+9 **흡혈 8%**.
+   f 는 여전히 «세트의 마지막 옵션 = 도끼 발동»(주인 «치명 시 도끼는 무조건 6번째» — 자리 번호가 아니라
+   «a~f 중 마지막» 이라는 뜻으로 유지된다) 이고, 흡혈 8%(T145)는 맨 끝 칸으로 옮겨졌다.
+   **«공격력 +10%» 옵션은 사라졌다** — 풀셋 +9강 공격력 +60% 도 함께 사라진다(등재만 · 밸런스 조정 아님).
    상위 등급은 하위 옵션을 전부 포함한다(종전 규칙 그대로).
 
      부위별 순서 — 무기 abcde · 투구 bcdea · 갑옷 cdeab · 장갑 deabc · 신발 eabcd · 목걸이 abcde (+ f 고정)
@@ -867,12 +900,12 @@ GT.optCount=(rar,plus)=>{
    위임 기본값(주인이 다르면 한 줄로 정정) —
    · «같은 옵션이 여러 부위에 있으면 각각 따로 합산·발동»(주인 명시). 스탯 옵션은 그냥 더하고,
      발동 옵션(도끼·회복)은 **부위 수만큼 따로 굴린다**(풀셋 +3강이면 6번).
-   · «최대 체력 +8%»·«최대 실드 +10%»·«공격력 +10%» 는 **가산 합산**이다(곱연산 아님 — 주인 참고표의
+   · «최대 체력 +8%»·«최대 실드 +10%» 는 **가산 합산**이다(곱연산 아님 — 주인 참고표의
      풀셋 +9강 합산 «체력 +48% · 실드 +180%» 가 가산이어야 나온다). 그래서 `ap` 는
-     퍼센트를 `px.g_hpP/g_shP/g_atkP` 에 모으고 `mkPlayer` 가 마지막에 한 번 곱한다.
-     ⚑ T145 로 «공격력 +10%» 칸이 8번 하나만 남아 풀셋 +9강 공격력은 **+120% → +60%** 다(주인 확정의
-     산술적 귀결 · 밸런스 조정 아님 — 상시 규칙대로 수치를 «맞추지» 않는다).
-   · ⚑ «흡혈 +8%»(7번 · T145) 는 **부위마다 가산** — 풀셋 +6강 이상이면 `p.steal` 8×6 = **48**(= 준 피해의 48%).
+     퍼센트를 `px.g_hpP/g_shP` 에 모으고 `mkPlayer` 가 마지막에 한 번 곱한다(`g_atkP` 축은 남겨 두되
+     ⚑ T153 으로 **그것을 올리는 장비 옵션이 한 칸도 없다** — 풀셋 +9강 공격력 +60% 소멸).
+   · ⚑ «흡혈 +8%»(마지막 7번 칸 · T145 → ⚑ T153 로 +6강 → **+9강** 자리) 는 **부위마다 가산** —
+     풀셋 +9강이면 `p.steal` 8×6 = **48**(= 준 피해의 48%).
      엔진의 `steal` 축을 **그대로** 쓴다: 회복은 `dealDmg` 의 `heal(p,d*p.steal/100,true)` 한 곳이고
      `noBoost=true` 라 회복 증폭을 타지 않으며(종전 «준 피해의 n%» 문면 위임 그대로) 실드도 안 채운다.
    · «방어력 +8%» 는 방어 스탯(0~80 의 피해 감소율)에 **+8 을 더한다** — 풀셋 +48 (주인 참고표와 일치).
@@ -888,7 +921,6 @@ const GOPT={
     {d:'치명타 피해 +25', ap:p=>p.critF+=25},
     {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   crit_helm:[ /* 치명 투구 */
     {d:'치명타 피해 +20', ap:p=>p.critF+=20},
@@ -898,7 +930,6 @@ const GOPT={
     {d:'치명타 확률 +5', ap:p=>p.critR+=5},
     {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   crit_armor:[ /* 치명 갑옷 */
     {d:'반격률 +10', ap:p=>p.counter+=10},
@@ -908,7 +939,6 @@ const GOPT={
     {d:'치명타 피해 +20', ap:p=>p.critF+=20},
     {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   crit_glove:[ /* 치명 장갑 */
     {d:'치명타 확률 +5', ap:p=>p.critR+=5},
@@ -918,7 +948,6 @@ const GOPT={
     {d:'반격률 +10', ap:p=>p.counter+=10},
     {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   crit_boot:[ /* 치명 신발 */
     {d:'치명타 피해 +25', ap:p=>p.critF+=25},
@@ -928,7 +957,6 @@ const GOPT={
     {d:'치명타 확률 +5', ap:p=>p.critR+=5},
     {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   crit_neck:[ /* 치명 목걸이 */
     {d:'치명타 확률 +5', ap:p=>p.critR+=5},
@@ -938,7 +966,6 @@ const GOPT={
     {d:'치명타 피해 +25', ap:p=>p.critF+=25},
     {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   /* --- 체력실드 세트 --- */
   hpsh_weapon:[ /* 체력실드 무기 */
@@ -949,7 +976,6 @@ const GOPT={
     {d:'실드가 있을 때 가시갑옷 +12%', ap:p=>p.px.g_thornSh+=0.12},
     {d:'피격 시 50% 확률로 도끼 1개', ap:p=>p.px.g_hitAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   hpsh_helm:[ /* 체력실드 투구 */
     {d:'최대 실드 +12%', ap:p=>p.px.g_shP+=12},
@@ -959,7 +985,6 @@ const GOPT={
     {d:'최대 체력 +10%', ap:p=>p.px.g_hpP+=10},
     {d:'피격 시 50% 확률로 도끼 1개', ap:p=>p.px.g_hitAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   hpsh_armor:[ /* 체력실드 갑옷 */
     {d:'방어력 +8%', ap:p=>p.def+=8},
@@ -969,7 +994,6 @@ const GOPT={
     {d:'최대 실드 +12%', ap:p=>p.px.g_shP+=12},
     {d:'피격 시 50% 확률로 도끼 1개', ap:p=>p.px.g_hitAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   hpsh_glove:[ /* 체력실드 장갑 */
     {d:'최대 실드 +12%', ap:p=>p.px.g_shP+=12},
@@ -979,7 +1003,6 @@ const GOPT={
     {d:'방어력 +8%', ap:p=>p.def+=8},
     {d:'피격 시 50% 확률로 도끼 1개', ap:p=>p.px.g_hitAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   hpsh_boot:[ /* 체력실드 신발 */
     {d:'실드가 있을 때 가시갑옷 +12%', ap:p=>p.px.g_thornSh+=0.12},
@@ -989,7 +1012,6 @@ const GOPT={
     {d:'최대 실드 +12%', ap:p=>p.px.g_shP+=12},
     {d:'피격 시 50% 확률로 도끼 1개', ap:p=>p.px.g_hitAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   hpsh_neck:[ /* 체력실드 목걸이 */
     {d:'최대 체력 +10%', ap:p=>p.px.g_hpP+=10},
@@ -999,7 +1021,6 @@ const GOPT={
     {d:'실드가 있을 때 가시갑옷 +12%', ap:p=>p.px.g_thornSh+=0.12},
     {d:'피격 시 50% 확률로 도끼 1개', ap:p=>p.px.g_hitAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   /* --- 회피 세트 --- */
   evade_weapon:[ /* 회피 무기 */
@@ -1010,7 +1031,6 @@ const GOPT={
     {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
     {d:'회피 시 50% 확률로 도끼 1개', ap:p=>p.px.g_evAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   evade_helm:[ /* 회피 투구 */
     {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
@@ -1020,7 +1040,6 @@ const GOPT={
     {d:'회피 +8', ap:p=>p.evade+=8},
     {d:'회피 시 50% 확률로 도끼 1개', ap:p=>p.px.g_evAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   evade_armor:[ /* 회피 갑옷 */
     {d:'체력 50% 미만일 때 회피 시 30% 확률로 체력 10% 회복', ap:p=>p.px.g_evHeal++},
@@ -1030,7 +1049,6 @@ const GOPT={
     {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
     {d:'회피 시 50% 확률로 도끼 1개', ap:p=>p.px.g_evAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   evade_glove:[ /* 회피 장갑 */
     {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
@@ -1040,7 +1058,6 @@ const GOPT={
     {d:'체력 50% 미만일 때 회피 시 30% 확률로 체력 10% 회복', ap:p=>p.px.g_evHeal++},
     {d:'회피 시 50% 확률로 도끼 1개', ap:p=>p.px.g_evAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   evade_boot:[ /* 회피 신발 */
     {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
@@ -1050,7 +1067,6 @@ const GOPT={
     {d:'최대 체력 +8%', ap:p=>p.px.g_hpP+=8},
     {d:'회피 시 50% 확률로 도끼 1개', ap:p=>p.px.g_evAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
   evade_neck:[ /* 회피 목걸이 */
     {d:'회피 +8', ap:p=>p.evade+=8},
@@ -1060,7 +1076,6 @@ const GOPT={
     {d:'최대 실드 +10%', ap:p=>p.px.g_shP+=10},
     {d:'회피 시 50% 확률로 도끼 1개', ap:p=>p.px.g_evAxe++},
     {d:'흡혈 +8%', ap:p=>p.steal+=8},
-    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},
   ],
 };
 
@@ -1073,22 +1088,26 @@ function newGacha(){ return {p50:0,p10:0,pulls:0}; }
    위임 기본값: 그 회차의 자연 굴림은 종전대로 신화가 대체하고, **추가 1개는 전설 등급 고정**이다
    (피티의 «전설 이상» 은 신화가 이미 채웠으므로 보너스는 전설). 추가분의 종류도 일반 굴림과 같이 무작위다.
    종전 조항(«겹치면 신화 우선 · 전설 확정은 다음 뽑기로 이월»)은 폐지됐다. */
-function gachaPull(st){
+/* ⚑⚑⚑ T153 (주인 확정 2026-09-05 18:1X) — 상자가 3종이라 **어느 상자를 뽑았는지**를 받는다.
+   `box` 는 `GT.boxes` 의 한 칸(기본 = 신화 상자 = 종전 «그 뽑기 상자»). 천장·피티는 상자마다 다르고
+   피티 카운터(p50·p10)도 **상자별로 따로** 센다 — 호출부가 상자별 `newGacha()` 상태를 준다. sim.js 와 1:1. */
+function gachaPull(st,box){
+  box=box||GT.boxes.myth;
   st.pulls++; st.p50++; st.p10++;
-  const pityM=st.p50>=GT.pityMyth, pityL=st.p10>=GT.pityLegend;
+  const pityM=box.pityM>0&&st.p50>=box.pityM, pityL=box.pityL>0&&st.p10>=box.pityL;
   let rar;
-  if(pityM) rar=4;
+  if(pityM) rar=GT.RAR_MYTH;
   else{
     const r=grand()*100;
-    rar = GT.rarRoll(r);            /* 임계는 GT.gachaRate 에서 파생 — 리터럴로 되돌리지 말 것 (T65) */
-    if(pityL&&rar<3) rar=3;
+    rar = box.rarRoll(r);           /* 임계는 상자의 rate 에서 파생 — 리터럴로 되돌리지 말 것 (T65) */
+    if(pityL&&rar<GT.RAR_LEGEND) rar=GT.RAR_LEGEND;
   }
-  if(rar===4) st.p50=0;
-  if(rar>=3) st.p10=0;              /* 신화든 전설이든 전설 피티는 채워졌다 (겹침도 여기서 리셋된다) */
+  if(rar===GT.RAR_MYTH) st.p50=0;
+  if(rar>=GT.RAR_LEGEND) st.p10=0;  /* 신화든 전설이든 전설 피티는 채워졌다 (겹침도 여기서 리셋된다) */
   const mk=r=>{ const t=GT.allTypes[Math.floor(grand()*GT.allTypes.length)];   /* 뽑기 스트림 (R11) */
     return {part:t.part,type:t.type,rar:r,plus:0}; };
   const out=[mk(rar)];
-  if(pityM&&pityL) out.push(mk(3));  /* 겹침 = 전설 1개 추가 지급 */
+  if(pityM&&pityL) out.push(mk(GT.RAR_LEGEND));  /* 겹침 = 전설 1개 추가 지급 */
   return out;
 }
 
@@ -1098,14 +1117,15 @@ const gearKey=g=>`${g.part}|${g.type}|${g.rar}|${g.plus}`;
    규칙을 두 곳에 적으면 T8·T9·T11·T12 계열(«같은 수치를 손으로 두 번 옮기다 어긋남») 이 재발한다.
    base = 재료 3개 중 최고 강화품(호출부가 정렬해서 넘긴다). */
 function fuseMake(base){
-  if(base.rar<3) return {part:base.part,type:base.type,rar:base.rar+1,plus:0};
-  if(base.rar===3){
+  /* ⚑ T153 — 영웅이 빠져 «희귀 3개 → 전설» 이다(등급 인덱스만 당겨졌고 규칙은 그대로). */
+  if(base.rar<GT.RAR_LEGEND) return {part:base.part,type:base.type,rar:base.rar+1,plus:0};
+  if(base.rar===GT.RAR_LEGEND){
     const np=base.plus+1;
     return np>=GT.legendToMythPlus
-      ? {part:base.part,type:base.type,rar:4,plus:0}            /* +10강 도달 → 신화 0강 변환 */
-      : {part:base.part,type:base.type,rar:3,plus:np};
+      ? {part:base.part,type:base.type,rar:GT.RAR_MYTH,plus:0}            /* +10강 도달 → 신화 0강 변환 */
+      : {part:base.part,type:base.type,rar:GT.RAR_LEGEND,plus:np};
   }
-  return {part:base.part,type:base.type,rar:4,plus:base.plus+1};   /* 신화 무한 강화 */
+  return {part:base.part,type:base.type,rar:GT.RAR_MYTH,plus:base.plus+1};   /* 신화 무한 강화 */
 }
 /* inv: 배열. equipped: Set(장착 중인 객체) — 재료에서 제외 */
 function fuseAll(inv,equipped){
@@ -1152,8 +1172,9 @@ function buildPower(b){
 }
 
 /* ---- 표시용 메타 (게임 전용 — sim.js 에는 없다) ---- */
-GT.rarColor=['#9AA3AF','#4FA3E3','#B96CE8','#F2C14E','#FF5FA2'];   /* 일반·희귀·영웅(보라 위임)·전설·신화 */
-GT.rarGlow =['rgba(154,163,175,.35)','rgba(79,163,227,.40)','rgba(185,108,232,.45)','rgba(242,193,78,.45)','rgba(255,95,162,.50)'];
+/* ⚑ T153 — 영웅(보라)이 폐지돼 4색이다: 일반 회색 · 희귀 파랑 · 전설 금색 · 신화 분홍. */
+GT.rarColor=['#9AA3AF','#4FA3E3','#F2C14E','#FF5FA2'];
+GT.rarGlow =['rgba(154,163,175,.35)','rgba(79,163,227,.40)','rgba(242,193,78,.45)','rgba(255,95,162,.50)'];
 /* ⚑ T2 6단계 — 장비 아이콘: 이모지 → 인라인 SVG 아이콘 18종 (참고: docs/ref/캐릭터 장비.jpg).
    ⚑ T124 — 종류 키가 «세트_부위» 로 바뀌면서 키만 갈아끼웠다(그림 18개는 그대로). 한 부위 안에서
    세트끼리 실루엣이 갈리도록 종전 3종을 [치명 · 체력실드 · 회피] 로 배정했다 —
@@ -1311,12 +1332,19 @@ GT.lineName=Object.fromEntries(Object.keys(GT.typeName).map(t=>[t,GT.setName[GT.
 const gearName=g=>`${GT.rarName[g.rar]} ${GT.typeName[g.type]}`;
 
 /* ================= SAVE (v2 — 장비 포맷. 영구강화 up{} 폐지) ================= */
+/* ⚑⚑⚑ T153 — 장비 «등급 인덱스 판». 1 = 5등급(영웅 포함) · 2 = 4등급(영웅 폐지). 판이 뒤처진 세이브는
+   아래 정규화에서 한 번 재배치된다(마이그레이션). 세이브 키 자체는 그대로 둔다 — 골드·진행도를 지킬 이유가 없다. */
+const GEAR_RAR_V=2;
 const SAVE_KEY='kkoma-knight-v2';
 const SAVE_KEY_V1='kkoma-knight-v1';
 function newSave(){
   const slots={}; for(const pt of GT.parts) slots[pt]=0;
   return {gold:0, gem:0, maxChapter:1, selChapter:1, muted:false,
-    inv:[], eq:{}, slots, gacha:newGacha(), pulls:0, fuses:0, uid:1, freeDay:''};
+    /* ⚑ T153 — 상자 3종이라 피티 카운터도 상자마다 따로다. 둘 다 **비운 채** 두고 아래 정규화가 채운다:
+       기본값을 여기서 채우면 `Object.assign(save, 옛세이브)` 뒤에도 그 기본값이 남아
+       «옛 세이브인지» 를 구별할 수 없어 마이그레이션이 조용히 건너뛰어진다(T153 실측으로 잡았다). */
+    inv:[], eq:{}, slots, gachaBoxes:{},
+    gearRarV:0, pulls:0, fuses:0, uid:1, freeDay:''};
 }
 let save=newSave();
 try{
@@ -1340,7 +1368,15 @@ save.maxChapter=Math.max(1,Math.min(save.maxChapter|0||1,420));   /* 챕터 상�
 save.selChapter=Math.max(1,Math.min(save.selChapter|0||1,save.maxChapter));
 save.gold=Math.max(0,+save.gold||0); save.gem=Math.max(0,+save.gem||0);
 if(!Array.isArray(save.inv)) save.inv=[];
-save.inv=save.inv.filter(g=>g&&GT.parts.includes(g.part)&&GOPT[g.type]&&g.rar>=0&&g.rar<=4)
+/* ⚑⚑⚑ T153 (주인 «영웅 등급은 빼기») — 5등급 시절 세이브의 등급 인덱스를 4등급으로 옮긴다.
+   0 일반 → 0 · 1 희귀 → 1 · **2 영웅 → 2 전설(승격 — 낮추면 유저 손해라 주인 위임대로 올린다)** ·
+   3 전설 → 2 · 4 신화 → 3. 판 표시(`save.gearRarV`)가 없는 세이브 = 5등급 시절이다. 한 번만 돈다. */
+if((save.gearRarV|0) < GEAR_RAR_V){
+  const REMAP=[0,1,2,2,3];
+  if(Array.isArray(save.inv)) for(const g of save.inv) if(g&&typeof g.rar==='number') g.rar=REMAP[Math.max(0,Math.min(4,g.rar|0))];
+  save.gearRarV=GEAR_RAR_V;
+}
+save.inv=save.inv.filter(g=>g&&GT.parts.includes(g.part)&&GOPT[g.type]&&g.rar>=0&&g.rar<GT.rarName.length)
   .map(g=>({u:Math.max(0,g.u|0), part:g.part, type:g.type, rar:g.rar|0, plus:Math.max(0,g.plus|0),
     ...(g.nw?{nw:1}:{})}));   /* ⚑ T125 — «NEW» 뱃지는 세이브를 넘어서도 남는다(장착하거나 열어 보면 지워진다) */
 /* ⚑ T68 — uid «유일성» 보정. 종전엔 «uid 가 없는 항목»(`if(!g.u)`)만 봤다. 그래서 ① 같은 uid 가 둘인 세이브와
@@ -1361,8 +1397,17 @@ if(!save.slots||typeof save.slots!=='object') save.slots={};
 for(const pt of GT.parts) save.slots[pt]=Math.max(0,Math.min(save.slots[pt]|0,GT.slotLvMax));
 if(!save.eq||typeof save.eq!=='object') save.eq={};
 for(const pt of GT.parts){ const u=save.eq[pt]; const g=save.inv.find(x=>x.u===u); if(!g||g.part!==pt) delete save.eq[pt]; }
-if(!save.gacha||typeof save.gacha!=='object') save.gacha=newGacha();
-save.gacha.p50=Math.max(0,save.gacha.p50|0); save.gacha.p10=Math.max(0,save.gacha.p10|0); save.gacha.pulls=Math.max(0,save.gacha.pulls|0);
+/* ⚑⚑⚑ T153 — 피티 카운터가 상자별로 나뉘었다. 종전 단일 `save.gacha` 는 «그 뽑기 상자» = 신화 상자의
+   진행분이므로 그대로 신화 칸으로 옮긴다(유저 진행 보존). 옮긴 뒤 옛 키는 지운다. */
+if(!save.gachaBoxes||typeof save.gachaBoxes!=='object') save.gachaBoxes={};
+if(!save.gachaBoxes.myth||typeof save.gachaBoxes.myth!=='object')
+  save.gachaBoxes.myth=(save.gacha&&typeof save.gacha==='object')?save.gacha:newGacha();
+delete save.gacha;
+for(const k in GT.boxes){
+  const st=save.gachaBoxes[k];
+  if(!st||typeof st!=='object'){ save.gachaBoxes[k]=newGacha(); continue; }
+  st.p50=Math.max(0,st.p50|0); st.p10=Math.max(0,st.p10|0); st.pulls=Math.max(0,st.pulls|0);
+}
 function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} }
 
 /* ---- 인벤토리·장착 헬퍼 ---- */
@@ -1771,10 +1816,11 @@ function optRowsHTML(g){
   const tbl=GOPT[g.type], n=GT.optCount(g.rar,g.plus);
   return tbl.map((o,i)=>{
     const on=i<n;
-    /* ⚑ T147 — 잠금 안내가 한 칸씩 밀려 있었다. 옵션 i 는 `GT.optCount(rar,plus) > i` 일 때 열리므로
-       해금 조건은 i=0~4 → 일반·희귀·영웅·전설·신화 «이상», i=5~7 → 신화 +3/+6/+9강 이다.
-       종전 식은 `rarName[i+1]`·`(i-3)*3` 이라 2번 칸이 «영웅 이상», 8번 칸이 «신화 +12강» 으로 떴다. */
-    const need = i<=4 ? `${GT.rarName[i]} 이상` : `신화 +${(i-4)*3}강`;
+    /* ⚑ T147 — 잠금 안내가 한 칸씩 밀려 있었다. 옵션 i 는 `GT.optCount(rar,plus) > i` 일 때 열린다.
+       ⚑⚑⚑ T153 — 영웅이 빠져 등급이 4단이 됐다: i=0~3 → 일반·희귀·전설·신화 «이상»,
+       i=4~6 → 신화 +3/+6/+9강. 경계는 `rarName.length` 에서 읽는다(리터럴로 되돌리지 말 것). */
+    const R=GT.rarName.length;
+    const need = i<R ? `${GT.rarName[i]} 이상` : `신화 +${(i-R+1)*3}강`;
     return `<div class="gd-opt${on?'':' lock'}"><span>${on?'◆':'🔒'}</span><span>${o.d}${on?'':` <span style="opacity:.7">(${need})</span>`}</span></div>`;
   }).join('');
 }
@@ -1821,7 +1867,7 @@ function openGearDetail(u){
     <div class="gd-stats">${gearContribHTML(g)}</div>
     <div class="gd-opts">
       ${eqd?slotNoteHTML(g.part):''}
-      <div class="gd-secname">세트 옵션 (${GT.optCount(g.rar,g.plus)}/8 해금)</div>
+      <div class="gd-secname">세트 옵션 (${GT.optCount(g.rar,g.plus)}/${GOPT[g.type].length} 해금)</div>
       ${optRowsHTML(g)}
     </div>
     <div class="gd-cost">${eqd?slotCostHTML(g.part):''}</div>
@@ -1866,15 +1912,38 @@ const GEM_PACKS=[
   {gem:GT.iapGem, won:110000, nm:'다이아 금고'},
 ];
 const today=()=>new Date().toISOString().slice(0,10);
-/* 상점 안내문의 확률 줄 — 손으로 베끼지 않고 GT.gachaRate 에서 만든다 (T65).
-   높은 등급부터 «신화 0.1% · 전설 2% · …» 순. 소수 0 은 떼고 찍는다(2.0% 가 아니라 2%). */
-function gachaRateText(){
-  return GT.gachaRate.map((v,i)=>`${GT.rarName[i]} ${+v}%`).reverse().join(' · ');
+/* 상점 안내문의 확률 줄 — 손으로 베끼지 않고 상자의 rate 에서 만든다 (T65).
+   높은 등급부터 «신화 0.8% · 전설 4% · …» 순. 소수 0 은 떼고 찍고(2.0% 가 아니라 2%),
+   ⚑ T153 — **0% 등급은 아예 안 적는다**(희귀 상자에 «신화 0%» 를 적으면 있는 것처럼 읽힌다). */
+function gachaRateText(box){
+  box=box||GT.boxes.myth;
+  return box.rate.map((v,i)=>({v:+v,i})).filter(o=>o.v>0).reverse()
+    .map(o=>`${GT.rarName[o.i]} ${o.v}%`).join(' · ');
+}
+/* 상자의 천장 안내 — ⚑ T125 ①-b 문구 규약(«신화 확정까지 N회» · «전설 확정까지 N회»)을 그대로 쓰되,
+   ⚑ T153 로 상자마다 있는 천장만 적는다(희귀 상자는 천장이 없어 줄이 없다). N 은 상자 상수에서 읽는다. */
+function pityText(box,st){
+  const out=[];
+  if(box.pityM>0)   out.push(`신화 확정까지 <b>${Math.max(0,box.pityM-st.p50)}</b>회`);
+  if(box.pityL>0) out.push(`전설 확정까지 <b>${Math.max(0,box.pityL-st.p10)}</b>회`);
+  out.push(`누적 ${fmtQty(st.pulls)}회`);
+  return out.join('<br>');
+}
+/* 상자 한 칸 — 3상자가 같은 함수를 쓴다(칸을 손으로 세 번 적으면 확률·가격이 갈라진다). */
+function gachaCardHTML(box,st){
+  const one=box.cost, ten=box.cost*10;
+  return `<div class="gacha-card gb-${box.key}">
+      <div class="ttl">${box.name}</div>
+      <div class="pity">${gachaRateText(box)}<br>${pityText(box,st)}</div>
+      <div class="gacha-btns">
+        <button id="pull1_${box.key}" ${save.gem<one?'disabled':''}>1회 💎${fmtQty(one)}</button>
+        <button id="pull10_${box.key}" ${save.gem<ten?'disabled':''}>10회 💎${fmtQty(ten)}</button>
+      </div>
+    </div>`;
 }
 function renderShop(){
   renderTopBars();
-  const st=save.gacha, canFree=save.freeDay!==today();
-  const one=GT.pullCost, ten=GT.pullCost*10;
+  const canFree=save.freeDay!==today();
   $('shopBody').innerHTML=`
     <div class="shop-sec">🎁 무료 보급</div>
     <div class="free-row">
@@ -1893,39 +1962,35 @@ function renderShop(){
       +Array.from({length:Math.max(0,6-GEM_PACKS.length)},()=>
       `<div class="gem-card lock"><div class="amt">🔒</div>준비 중</div>`).join('')}</div>
     <div class="shop-sec tight">⚔️ 장비 뽑기</div>
-    <div class="gacha-card">
-      <div class="ttl">전설의 상자</div>
-      <!-- ⚑ T125 ①-b (주인 21:1X) — 천장 문구는 «신화 확정까지 N회» · «전설 확정까지 N회» 두 줄이다.
-           N 은 GT.pityMyth·GT.pityLegend 에서 읽는다(하드코딩 금지 — 게이트가 문구 ↔ 상수를 대조한다). -->
-      <div class="pity">${gachaRateText()}<br>
-        신화 확정까지 <b>${GT.pityMyth-st.p50}</b>회<br>
-        전설 확정까지 <b>${GT.pityLegend-st.p10}</b>회 (누적 ${fmtQty(st.pulls)}회)</div>
-      <div class="gacha-btns">
-        <button id="pull1" ${save.gem<one?'disabled':''}>1회 💎${fmtQty(one)}</button>
-        <button id="pull10" ${save.gem<ten?'disabled':''}>10회 💎${fmtQty(ten)}</button>
-      </div>
-    </div>`;
+    <!-- ⚑⚑⚑ T153 (주인 18:1X) — 상자 3종(희귀 · 전설 · 신화). 확률·가격·천장 문구는 전부 GT.boxes 에서
+         읽는다(하드코딩 금지 — 게이트가 문구 ↔ 상수를 대조한다). ⚑ T125 ①-b 천장 문구 규약은 그대로. -->
+    ${['rare','legend','myth'].map(k=>gachaCardHTML(GT.boxes[k],save.gachaBoxes[k])).join('')}`;
   $('freeBtn').onclick=()=>{
     if(save.freeDay===today()) return;
     AU.play('coin'); save.gem+=GT.dailyGem; save.freeDay=today(); persist(); renderShop();
     toast(`💎 ${fmtQty(GT.dailyGem)} 수령!`);
   };
-  $('pull1').onclick=()=>doPull(1);
-  $('pull10').onclick=()=>doPull(10);
+  for(const k of ['rare','legend','myth']){
+    $('pull1_'+k).onclick=()=>doPull(1,k);
+    $('pull10_'+k).onclick=()=>doPull(10,k);
+  }
   $('shopBody').querySelectorAll('.gem-card button[data-p]').forEach(b=>b.onclick=()=>{
     const p=GEM_PACKS[+b.dataset.p];
     AU.play('coin'); save.gem+=p.gem; persist(); renderShop();
     toast(`💎 ${fmtQty(p.gem)} 지급 (모의 결제)`);
   });
 }
-function doPull(n){
-  const cost=GT.pullCost*n;
+/* ⚑⚑⚑ T153 — 어느 상자를 뽑았는지(`boxKey`)를 받는다. 가격·확률·천장·피티 카운터가 전부 상자별이다. */
+function doPull(n,boxKey){
+  boxKey=boxKey||'myth';
+  const box=GT.boxes[boxKey], st=save.gachaBoxes[boxKey];
+  const cost=box.cost*n;
   if(save.gem<cost){ toast('💎 다이아가 부족합니다'); return; }
   AU.play('coin'); save.gem-=cost;
   const got=[];
   /* ⚑ T125 — 한 회차가 2개를 줄 수 있다(신화 천장 × 전설 피티 겹침). 10연차면 결과가 11개로 뜬다. */
   for(let i=0;i<n;i++){
-    for(const raw of gachaPull(save.gacha)){
+    for(const raw of gachaPull(st,box)){
       const g=newGear(raw.part,raw.type,raw.rar,raw.plus);
       g.nw=1;                                  /* ⚑ T125 ①-c — «NEW» 뱃지(세부 팝업을 열면 지워진다) */
       save.inv.push(g); got.push(g);
@@ -1936,14 +2001,14 @@ function doPull(n){
      여기 있던 `autoEquipBest()` 를 없앴다. 뽑은 장비는 인벤에만 들어가고 장착은 장비 탭에서 유저가 한다. */
   persist(); renderShop();
   const best=got.reduce((a,b)=>gearScore(b)>gearScore(a)?b:a);
-  AU.play(best.rar>=3?'levelup':'perk');
-  openOverlay(`<div class="ov-banner" style="font-size:24px">🎁 ${n}회 뽑기${got.length>n?` · <b style="color:var(--gold)">${got.length}개</b>`:''}</div>
+  AU.play(best.rar>=GT.RAR_LEGEND?'levelup':'perk');
+  openOverlay(`<div class="ov-banner" style="font-size:24px">🎁 ${box.name} ${n}회${got.length>n?` · <b style="color:var(--gold)">${got.length}개</b>`:''}</div>
     <div class="ov-sub">최고 등급 <b style="color:${GT.rarColor[best.rar]}">${GT.rarName[best.rar]}</b> · 인벤토리에 담겼습니다 — 장착은 ⚔️ 장비 탭에서</div>
     <div class="pull-list">${got.map(g=>
       `<div class="inv-cell" style="border-color:${GT.rarColor[g.rar]};box-shadow:0 0 9px ${GT.rarGlow[g.rar]};background:linear-gradient(${GT.rarColor[g.rar]}55,${GT.rarColor[g.rar]}22)">`+
       `<span class="ptag" style="background:${GT.rarColor[g.rar]}">${GT.partName[g.part]}</span>${gearIcon(g.type)}</div>`).join('')}</div>
     <div style="font-size:12.5px;color:var(--ink-dim);line-height:1.5">${got.map(g=>`${GT.rarName[g.rar]} ${GT.typeName[g.type]}`).join(' · ')}</div>
-    <button class="ghost-btn" id="pullClose">닫기</button>`,{rays:best.rar>=3});
+    <button class="ghost-btn" id="pullClose">닫기</button>`,{rays:best.rar>=GT.RAR_LEGEND});
   $('pullClose').onclick=()=>{ AU.play('click'); closeOverlay(); renderShop(); };
 }
 
@@ -2383,8 +2448,8 @@ function playerBase(){
     for(let i=0;i<n&&i<tbl.length;i++) tbl[i].ap(p);
   }
   /* ⚑ T124 — 세트 옵션의 퍼센트 축은 **가산 합산 뒤 한 번만** 곱한다(부위마다 곱연산으로 걸면 1.10^18 이 되어
-     주인 수치와 어긋난다). ⚑ T145 로 «공격력 +10%» 칸이 8번 하나만 남아 풀셋 +9강은 공 **+60%** ·
-     체 +48% · 실 +180% 다(7번 자리는 «흡혈 +8%» ×6 = p.steal 48). */
+     주인 수치와 어긋난다). ⚑⚑⚑ T153 — «공격력 +10%» 칸이 사라져 풀셋 +9강은 공 **+0%** ·
+     체 +48% · 실 +180% 이고, 마지막 7번 자리가 «흡혈 +8%» ×6 = p.steal 48 이다. */
   p.dmg*=1+p.px.g_atkP/100; p.maxHp*=1+p.px.g_hpP/100; p.maxSh*=1+p.px.g_shP/100;
   p.hp=p.maxHp; p.sh=p.maxSh=Math.round(p.maxSh);
   return p;

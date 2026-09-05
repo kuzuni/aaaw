@@ -227,9 +227,11 @@ const DIRECTIVES = [
      실제로 쓰였다. 그래서 단언을 «아무 데도 없다» 에서 «GOPT 안에만 18칸, 그 밖에는 0» 으로 좁힌다 —
      특전이 흡혈을 다시 집는 경로는 여전히 막히고, 장비 옵션 쪽은 개수까지 못박힌다. */
   /* ⚑ T147 — 세부 팝업 «잠금 안내» 가 해금 조건(GT.optCount > i)과 한 칸도 안 밀린다.
-     옵션 i 는 i=0~4 → rarName[i] «이상», i=5~7 → 신화 +(i-4)*3강 에서 열린다. */
-  ['⚑ T147 — 세부 팝업 잠금 안내가 해금 조건과 같다 (rarName[i] 이상 · 신화 +(i-4)*3강)',
-    () => /const need\s*=\s*i\s*<=\s*4\s*\?\s*`\$\{GT\.rarName\[i\]\} 이상`\s*:\s*`신화 \+\$\{\(i\s*-\s*4\)\s*\*\s*3\}강`/.test(HTML)],
+     ⚑⚑⚑ T153 — 영웅이 빠져 등급이 4단이 됐다: i < rarName.length → rarName[i] «이상»,
+     그 위 → 신화 +(i-R+1)*3강. 경계를 리터럴(4)로 되돌리면 여기서 빨개진다. */
+  ['⚑ T147·T153 — 세부 팝업 잠금 안내가 해금 조건과 같다 (rarName[i] 이상 · 신화 +(i-R+1)*3강)',
+    () => /const R=GT\.rarName\.length;/.test(HTML)
+      && /const need\s*=\s*i\s*<\s*R\s*\?\s*`\$\{GT\.rarName\[i\]\} 이상`\s*:\s*`신화 \+\$\{\(i\s*-\s*R\s*\+\s*1\)\s*\*\s*3\}강`/.test(HTML)],
   ['⚑ T104·T145 — p.steal 을 건드리는 곳이 GOPT 18칸뿐이다 (특전에서 흡혈 축 폐기 · 장비 7번만 사용)',
     () => [HTML, SIM].every(src => {
       const g = src.match(/const GOPT=\{[\s\S]*?\n\};/);
@@ -450,12 +452,13 @@ function gtConsts(src) {
     for (const [k, nm] of [['atk', '공격력'], ['hp', '체력'], ['sh', '실드']]) {
       const a = arr(SIM, k), b = arr(HTML, k);
       if (!a || !b) { bad(`GT.${k} 등급별 기여 배열 파싱 실패 (${!a ? 'sim.js' : 'index.html'})`); continue; }
-      if (a.length !== 5 || b.length !== 5) { bad(`GT.${k} 배열 길이가 5가 아니다 (sim ${a.length} / index ${b.length})`); continue; }
+      /* ⚑⚑⚑ T153 — 영웅 폐지로 등급이 5 → **4** 단이다 (일반·희귀·전설·신화). */
+      if (a.length !== 4 || b.length !== 4) { bad(`GT.${k} 배열 길이가 4가 아니다 (sim ${a.length} / index ${b.length})`); continue; }
       const d = a.map((v, i) => v === b[i] ? null : `${i}: sim=${v} html=${b[i]}`).filter(Boolean);
       if (d.length) { bad(`GT.${k}(${nm}) 등급별 기여 불일치: ${d.join(' / ')}`); continue; }
       const planMiss = a.filter(v => !PLAN.includes(String(v.toFixed(3))) && !PLAN.includes(String(v)));
       planMiss.length ? bad(`GT.${k}(${nm}) 값 ${planMiss.join(',')} 이 PLAN §11.5-a 표에 없다`)
-        : ok(`GT.${k} 등급별 기여 5칸 일치 + PLAN §11.5-a 표와 대조 (${nm} 일반 ${a[0]} → 신화 ${a[4]})`);
+        : ok(`GT.${k} 등급별 기여 4칸 일치 + PLAN §11.5-a 표와 대조 (${nm} 일반 ${a[0]} → 신화 ${a[3]})`);
     }
   }
   const DERIV = [
@@ -526,7 +529,7 @@ function goptTable(src) {
     let cells = 0, dDiff = [], apDiff = [], nCnt = [];
     for (const t of ts) {
       const a = OS[t], b = OH[t] || [];
-      if (a.length !== 8) nCnt.push(`${t}=${a.length}`);
+      if (a.length !== 7) nCnt.push(`${t}=${a.length}`);   /* ⚑ T153 — 8 → 7 (영웅 폐지 + 공격력 칸 삭제) */
       if (b.length !== a.length) { dDiff.push(`${t}: 옵션 수 sim ${a.length} vs index ${b.length}`); continue; }
       for (let i = 0; i < a.length; i++) {
         cells++;
@@ -534,7 +537,7 @@ function goptTable(src) {
         if (norm(a[i].ap) !== norm(b[i].ap)) apDiff.push(`${t}[${i + 1}] ap sim«${a[i].ap}» vs index«${b[i].ap}»`);
       }
     }
-    nCnt.length ? bad(`8옵션이 아닌 종류: ${nCnt.join(' ')}`) : ok('18종류 전부 8옵션 (일반 1 … 신화 5 · +3/+6/+9 각 +1 — PLAN §11.1)');
+    nCnt.length ? bad(`7옵션이 아닌 종류: ${nCnt.join(' ')}`) : ok('18종류 전부 7옵션 (⚑ T153 — 일반 1 … 신화 4 · +3/+6/+9 각 +1 — PLAN §11.1)');
     dDiff.length ? bad(`설명문 불일치 ${dDiff.length}칸:\n    ` + dDiff.slice(0, 8).join('\n    ')) : ok(`설명문 ${cells}칸 전수 일치`);
     apDiff.length ? bad(`ap 본문 불일치 ${apDiff.length}칸:\n    ` + apDiff.slice(0, 8).join('\n    ')) : ok(`ap 본문 ${cells}칸 전수 일치`);
 
@@ -551,7 +554,7 @@ function goptTable(src) {
 console.log('\n[⑪ 장비 엔진 함수 1:1 + 영구강화 4종 폐지 (PLAN §11.4)]');
 {
   const FNS = [
-    ['gachaPull (확률·50천장·10피티)', /function gachaPull\(st\)\{[\s\S]*?\n\}/],
+    ['gachaPull (상자별 확률·천장·피티 — ⚑ T153)', /function gachaPull\(st,box\)\{[\s\S]*?\n\}/],
     ['fuseMake (합성 산출물 규칙 — 자동·수동 공용)', /function fuseMake\(base\)\{[\s\S]*?\n\}/],
     ['fuseAll (3→1 · 전설 +강 · +10강 신화 변환)', /function fuseAll\(inv,equipped\)\{[\s\S]*?\n\}/],
     ['autoEquip', /function autoEquip\(inv\)\{[\s\S]*?\n\}/],
@@ -569,11 +572,17 @@ console.log('\n[⑪ 장비 엔진 함수 1:1 + 영구강화 4종 폐지 (PLAN §
   /* 뽑기 확률은 주인 확정값이라 따로 못박는다 (PLAN §11.2).
      T65 로 리터럴 임계가 `GT.gachaRate` 단일 출처로 바뀌었다 — 여기서는 «두 파일이 같은 파생 굴림을 쓴다» 만 보고,
      PLAN 산문·상점 안내문까지 엮은 3자 대조는 ㉜ 가 본다(리터럴 정규식은 이제 오히려 되돌림을 유도한다). */
-  const RAR = /GT\.rarRoll=r=>\{[^}]*\}/;
+  /* ⚑⚑⚑ T153 — 굴림이 상자별(`b.rarRoll`)로 옮겨졌다. 두 엔진이 같은 파생 굴림·같은 상자 표를 쓰는지 본다. */
+  const RAR = /b\.rarRoll=r=>\{[^}]*\}/;
   const sr = SIM.match(RAR), hr = HTML.match(RAR);
   (sr && hr && norm(sr[0]) === norm(hr[0]))
-    ? ok('뽑기 등급 굴림 GT.rarRoll 이 두 파일에서 같다 (확률값 자체는 ㉜ 가 PLAN·상점과 3자 대조)')
-    : bad('GT.rarRoll 이 두 파일에서 다르거나 없다 (PLAN §11.2)');
+    ? ok('뽑기 등급 굴림(상자별 rarRoll)이 두 파일에서 같다 (확률값 자체는 ㉜ 가 PLAN·상점과 3자 대조)')
+    : bad('상자별 rarRoll 이 두 파일에서 다르거나 없다 (PLAN §11.2)');
+  const BOX = /boxes:\{[\s\S]*?\n  \},/;
+  const sb = SIM.match(BOX), hb = HTML.match(BOX);
+  (sb && hb && norm(sb[0].replace(/\/\*[\s\S]*?\*\//g,'')) === norm(hb[0].replace(/\/\*[\s\S]*?\*\//g,'')))
+    ? ok('⚑ T153 상자 3종 표(GT.boxes)가 두 파일에서 글자까지 같다')
+    : bad('⚑ T153 GT.boxes 가 두 파일에서 다르거나 없다 (희귀·전설·신화 3상자)');
   /* 영구강화 폐지 — UP_DEFS·save.up 잔재가 남아 있으면 안 된다 */
   !/UP_DEFS/.test(HTML) ? ok('영구강화 UP_DEFS 잔재 0 (PLAN §11.4 폐지)') : bad('index.html 에 UP_DEFS 가 남아 있다');
   !/save\.up\b/.test(HTML) ? ok('save.up{} 잔재 0 (저장 포맷 v2 교체)') : bad('index.html 에 save.up 이 남아 있다');
@@ -804,8 +813,8 @@ console.log('\n[⑭ 합성 화면 — 수동 3칸 선택 (PLAN §11.3, 스크린
        전부 초록이었다(유저만 손해). 상수 400 은 위 «주인 확정 경제 상수» 가 이미 보므로
        여기서는 **청구 방식**만 본다: ⓐ 차감이 한 곳뿐이고 ⓑ 그 비용이 «회차 수» 로만 정해진다.
        (시뮬 쪽 같은 조항은 `verifyGearEcon` ⑨ 가 계정 모델을 굴려 본다.) */
-    const DP = CODE.match(/function doPull\(n\)\{[\s\S]*?\n\}/);
-    if (!DP) bad('index.html 에 doPull(n) 이 없다 — 뽑기 비용 청구 경로를 확인할 수 없다 (T125 ①)');
+    const DP = CODE.match(/function doPull\(n,boxKey\)\{[\s\S]*?\n\}/);
+    if (!DP) bad('index.html 에 doPull(n,boxKey) 가 없다 — 뽑기 비용 청구 경로를 확인할 수 없다 (T125 ① · ⚑ T153 상자 3종)');
     else {
       const GEMW = DP[0].match(/save\.gem\s*[-+]?=(?![=>])/g) || [];
       GEMW.length === 1
@@ -813,9 +822,9 @@ console.log('\n[⑭ 합성 화면 — 수동 3칸 선택 (PLAN §11.3, 스크린
         : bad(`doPull 이 save.gem 을 ${GEMW.length}곳에서 건드린다 — 주인 «비용은 1회분 그대로» 위반 소지 (T125 ①)`);
       /* 비용식이 «회차 수 n» 으로만 정해진다 — 결과 배열(got·inv·length)이 끼면 개수 청구다 */
       const COST = DP[0].match(/const\s+cost\s*=\s*([^;]+);/);
-      COST && /^\s*GT\.pullCost\s*\*\s*n\s*$/.test(COST[1])
-        ? ok('뽑기 비용 = GT.pullCost × 회차 수 n (받은 개수와 무관 · T125 ① «비용은 1회분»)')
-        : bad(`뽑기 비용식이 «pullCost × 회차 수» 가 아니다 — ${COST ? COST[1].trim() : 'cost 계산을 못 찾음'} (T125 ①)`);
+      COST && /^\s*box\.cost\s*\*\s*n\s*$/.test(COST[1])
+        ? ok('뽑기 비용 = 그 상자의 cost × 회차 수 n (받은 개수와 무관 · T125 ① «비용은 1회분» · ⚑ T153 상자별 가격)')
+        : bad(`뽑기 비용식이 «상자 cost × 회차 수» 가 아니다 — ${COST ? COST[1].trim() : 'cost 계산을 못 찾음'} (T125 ① · T153)`);
       !/save\.gem[^;\n]*(got|\.length)/.test(DP[0])
         ? ok('다이아 차감이 결과 개수(got·length)에 걸려 있지 않다 (T125 ①)')
         : bad('doPull 의 다이아 차감이 결과 개수를 참조한다 — 겹침 회차에 유저가 더 낸다 (T125 ①)');
@@ -830,25 +839,30 @@ console.log('\n[⑭ 합성 화면 — 수동 3칸 선택 (PLAN §11.3, 스크린
     const L2M = (SIM.match(/legendToMythPlus\s*:\s*(\d+)/) || [])[1];
     if (!L2M) bad('GT.legendToMythPlus 를 sim.js 에서 읽지 못했다');
     else {
-      const mk = body => { const c = { GT: { legendToMythPlus: +L2M } }; vm.createContext(c); vm.runInContext(body + '\nfuseMake', c); return c.fuseMake; };
+      /* ⚑ T153 — fuseMake 가 등급 인덱스를 GT.RAR_LEGEND/RAR_MYTH 로 읽으므로 vm 문맥에 함께 넣는다.
+         값은 sim.js 에서 읽어 온다(여기 리터럴로 적으면 엔진이 바뀌어도 게이트가 안 따라간다). */
+      const RL = +(SIM.match(/GT\.RAR_LEGEND=(\d+)/) || [])[1], RM = +(SIM.match(/GT\.RAR_MYTH=(\d+)/) || [])[1];
+      const mk = body => { const c = { GT: { legendToMythPlus: +L2M, RAR_LEGEND: RL, RAR_MYTH: RM } }; vm.createContext(c); vm.runInContext(body + '\nfuseMake', c); return c.fuseMake; };
       const a = mk(fmS), b = mk(fmH);
       let diff = 0, n = 0;
-      for (let rar = 0; rar <= 4; rar++) for (let plus = 0; plus <= 14; plus++) {
+      for (let rar = 0; rar <= 3; rar++) for (let plus = 0; plus <= 14; plus++) {   /* ⚑ T153 — 등급 4단 */
         const base = { part: 'weapon', type: 'greatsword', rar, plus };
         n++;
         if (JSON.stringify(a(base)) !== JSON.stringify(b(base))) diff++;
       }
-      diff === 0 ? ok(`fuseMake 실행 대조 ${n}조합(등급 5 × 강화 0~14) 전부 동일`)
+      diff === 0 ? ok(`fuseMake 실행 대조 ${n}조합(등급 4 × 강화 0~14) 전부 동일`)
         : bad(`fuseMake 산출물이 두 파일에서 ${diff}/${n} 조합 다르다`);
       /* 주인 확정 규칙 3개를 산출물로 직접 못박는다 */
-      const r1 = JSON.stringify(a({ part: 'weapon', type: 'greatsword', rar: 1, plus: 0 }));
-      r1.includes('"rar":2') ? ok('일반~영웅 3개 → 다음 등급 (PLAN §11.3)') : bad(`등급업 규칙 위반 — ${r1}`);
-      const r2 = a({ part: 'weapon', type: 'greatsword', rar: 3, plus: 0 });
-      (r2.rar === 3 && r2.plus === 1) ? ok('전설 3개 → 등급업이 아니라 +1강 (PLAN §11.3)') : bad(`전설 합성 규칙 위반 — ${JSON.stringify(r2)}`);
-      const r3 = a({ part: 'weapon', type: 'greatsword', rar: 3, plus: +L2M - 1 });
-      (r3.rar === 4 && r3.plus === 0) ? ok(`전설 +${+L2M - 1} 합성 → 신화 0강 변환 (PLAN §11.3)`) : bad(`+${L2M}강 신화 변환 규칙 위반 — ${JSON.stringify(r3)}`);
-      const r4 = a({ part: 'weapon', type: 'greatsword', rar: 4, plus: 9 });
-      (r4.rar === 4 && r4.plus === 10) ? ok('신화는 무한 강화 (변환 없음 — PLAN §11.3)') : bad(`신화 무한강화 규칙 위반 — ${JSON.stringify(r4)}`);
+      const r1 = a({ part: 'weapon', type: 'greatsword', rar: 1, plus: 0 });
+      (r1.rar === RL && r1.plus === 0) ? ok('⚑ T153 희귀 3개 → **전설** 0강 (영웅이 빠진 자리 · PLAN §11.3)') : bad(`등급업 규칙 위반 — ${JSON.stringify(r1)}`);
+      const r0 = a({ part: 'weapon', type: 'greatsword', rar: 0, plus: 0 });
+      (r0.rar === 1 && r0.plus === 0) ? ok('일반 3개 → 희귀 0강 (PLAN §11.3)') : bad(`등급업 규칙 위반 — ${JSON.stringify(r0)}`);
+      const r2 = a({ part: 'weapon', type: 'greatsword', rar: RL, plus: 0 });
+      (r2.rar === RL && r2.plus === 1) ? ok('전설 3개 → 등급업이 아니라 +1강 (PLAN §11.3)') : bad(`전설 합성 규칙 위반 — ${JSON.stringify(r2)}`);
+      const r3 = a({ part: 'weapon', type: 'greatsword', rar: RL, plus: +L2M - 1 });
+      (r3.rar === RM && r3.plus === 0) ? ok(`전설 +${+L2M - 1} 합성 → 신화 0강 변환 (PLAN §11.3)`) : bad(`+${L2M}강 신화 변환 규칙 위반 — ${JSON.stringify(r3)}`);
+      const r4 = a({ part: 'weapon', type: 'greatsword', rar: RM, plus: 9 });
+      (r4.rar === RM && r4.plus === 10) ? ok('신화는 무한 강화 (변환 없음 — PLAN §11.3)') : bad(`신화 무한강화 규칙 위반 — ${JSON.stringify(r4)}`);
     }
   }
   /* (6) 인벤 칸 구도 — 스크린샷의 등급색 타일 + 부위 태그 (장비 탭·합성 화면 공용 함수) */
@@ -2051,103 +2065,195 @@ console.log('\n[㉙ 보스 처치~클리어 확정 700ms 창 (T61)]');
      ⑥ `gachaRateText()` 를 실제로 돌린 문자열이 PLAN 산문의 등급·값·순서와 일치한다
    ============================================================================ */
 {
-  console.log('\n[㉜ 뽑기 확률·천장·피티 단일 출처 (PLAN §11.2, T65)]');
+  console.log('\n[㉜ 뽑기 확률·천장·피티 단일 출처 (PLAN §11.2, T65 · ⚑⚑⚑ T153 상자 3종)]');
   const PLAN = fs.readFileSync(path.join(ROOT, 'PLAN.md'), 'utf8');
-  const RN = ['일반', '희귀', '영웅', '전설', '신화'];
+  /* ⚑ T153 — 영웅 폐지로 4등급 (0 일반 · 1 희귀 · 2 전설 · 3 신화). */
+  const RN = ['일반', '희귀', '전설', '신화'];
+  const BOXES = [
+    { key: 'rare',   plan: '희귀 상자' },
+    { key: 'legend', plan: '전설 상자' },
+    { key: 'myth',   plan: '신화 상자' },
+  ];
 
-  /* ---- PLAN 산문 파싱 ---- */
-  const mRate = PLAN.match(/신화\s*([\d.]+)%\s*\/\s*전설\s*([\d.]+)%\s*\/\s*영웅\s*([\d.]+)%\s*\/\s*희귀\s*([\d.]+)%\s*\/\s*일반\s*([\d.]+)%/);
+  /* ---- PLAN §11.2 상자 표 파싱 ----
+     | 상자 | 1회 가격 | 신화 | 전설 | 희귀 | 일반 | 천장·피티 |
+     칸의 «—» 는 0% 다(그 상자에서 안 나온다). 값은 «**4%**» 처럼 굵게 적힌다. */
+  const cell = t => {
+    const v = String(t).replace(/\*/g, '').trim();
+    if (v === '—' || v === '-' || v === '') return 0;
+    const m = /([\d.]+)/.exec(v);
+    return m ? +m[1] : null;
+  };
+  const planBox = {};
+  for (const b of BOXES) {
+    const row = new RegExp('^\\|\\s*' + b.plan + '\\s*\\|([^\\n]*)$', 'm').exec(PLAN);
+    if (!row) continue;
+    const c = row[1].split('|');
+    const cost = cell(c[0]);
+    /* 표는 신화 → 전설 → 희귀 → 일반 순이라 등급 인덱스로 뒤집는다 */
+    const rate = [cell(c[4]), cell(c[3]), cell(c[2]), cell(c[1])];
+    if (cost === null || rate.some(v => v === null)) continue;
+    planBox[b.key] = { cost, rate };
+  }
+  Object.keys(planBox).length === 3
+    ? ok(`PLAN §11.2 상자 표 파싱 3종 — 희귀 ${planBox.rare.cost}💎 [${planBox.rare.rate}] · 전설 ${planBox.legend.cost}💎 [${planBox.legend.rate}] · 신화 ${planBox.myth.cost}💎 [${planBox.myth.rate}]`)
+    : bad(`PLAN §11.2 상자 표를 3종 다 못 읽었다 (${Object.keys(planBox).join(',') || '0종'}) — 표가 바뀌었으면 ㉜ 파서를 함께 고칠 것`);
   const mM = PLAN.match(/\*\*(\d+)회 천장\*\*/);
   const mL = PLAN.match(/\*\*전설 (\d+)회 피티\*\*/);
-  const planRate = mRate ? [+mRate[5], +mRate[4], +mRate[3], +mRate[2], +mRate[1]] : null;   /* 일반→신화 순으로 뒤집는다 */
   const planM = mM ? +mM[1] : null, planL = mL ? +mL[1] : null;
-  (planRate && planM !== null && planL !== null)
-    ? ok(`PLAN §11.2 파싱 — 확률 [${planRate.join(', ')}]% · 천장 ${planM}회 · 피티 ${planL}회`)
-    : bad('PLAN §11.2 의 확률/천장/피티 문장을 못 찾았다 — 문구가 바뀌었으면 ㉜ 파서를 함께 고칠 것');
+  (planM !== null && planL !== null)
+    ? ok(`PLAN §11.2 천장 ${planM}회 · 피티 ${planL}회`)
+    : bad('PLAN §11.2 의 천장/피티 문장을 못 찾았다 — 문구가 바뀌었으면 ㉜ 파서를 함께 고칠 것');
 
-  /* ---- 엔진 상수 추출 ---- */
+  /* ---- 엔진 상수 추출 — GT.boxes 표 + 신화 상자의 정본 상수 4개 ---- */
   const grab = src => {
+    const out = { boxes: {} };
+    const bm = src.match(/boxes:\{[\s\S]*?\n  \},/);
+    if (bm) {
+      for (const b of BOXES) {
+        const row = new RegExp(b.key + ':\\s*\\{([^}]*)\\}').exec(bm[0]);
+        if (!row) continue;
+        const cost = (/cost:\s*(\d+)/.exec(row[1]) || [])[1];
+        const rate = (/rate:\s*\[([^\]]*)\]/.exec(row[1]) || [])[1];
+        const pm = (/pityM:\s*(\d+)/.exec(row[1]) || [])[1];
+        const pl = (/pityL:\s*(\d+)/.exec(row[1]) || [])[1];
+        out.boxes[b.key] = {
+          cost: cost === undefined ? null : +cost,
+          rate: rate === undefined ? null : rate.split(',').map(Number),
+          pm: pm === undefined ? null : +pm, pl: pl === undefined ? null : +pl,
+        };
+      }
+    }
     const r = (src.match(/gachaRate:\s*\[([^\]]*)\]/) || [])[1];
-    return {
-      rate: r ? r.split(',').map(Number) : null,
-      m: Number((src.match(/pityMyth:\s*(\d+)/) || [])[1]),
-      l: Number((src.match(/pityLegend:\s*(\d+)/) || [])[1]),
-    };
+    out.rate = r ? r.split(',').map(Number) : null;
+    out.cost = Number((src.match(/pullCost:\s*(\d+)/) || [])[1]);
+    out.m = Number((src.match(/pityMyth:\s*(\d+)/) || [])[1]);
+    out.l = Number((src.match(/pityLegend:\s*(\d+)/) || [])[1]);
+    /* 신화 상자는 리터럴에 값을 안 적고 GT 뒤에서 정본 상수로 채운다 — 여기서 그 결과를 재현한다 */
+    if (out.boxes.myth && out.boxes.myth.rate === null) {
+      out.boxes.myth = { cost: out.cost, rate: out.rate, pm: out.m, pl: out.l };
+      out.mythDerived = /GT\.boxes\.myth\.rate=GT\.gachaRate;/.test(src)
+        && /GT\.boxes\.myth\.cost=GT\.pullCost;/.test(src)
+        && /GT\.boxes\.myth\.pityM=GT\.pityMyth;/.test(src)
+        && /GT\.boxes\.myth\.pityL=GT\.pityLegend;/.test(src);
+    }
+    return out;
   };
   const S = grab(SIM), H = grab(HTML);
 
-  /* ① PLAN ↔ 두 파일 3자 일치 */
-  if (planRate) {
+  /* ① PLAN ↔ 두 파일 3자 일치 (상자마다 가격·확률 · 합 100%) */
+  for (const b of BOXES) {
+    const pb = planBox[b.key];
+    if (!pb) continue;
     for (const [nm, g] of [['sim.js', S], ['index.html', H]]) {
-      const eq = g.rate && g.rate.length === 5 && g.rate.every((v, i) => v === planRate[i]);
-      eq ? ok(`${nm} GT.gachaRate = PLAN 산문 [${planRate.join(', ')}]%`)
-         : bad(`${nm} GT.gachaRate «${g.rate}» ≠ PLAN «${planRate}» — 상점이 거짓 확률을 광고한다 (주인 확정 상수)`);
-      g.m === planM ? ok(`${nm} GT.pityMyth ${g.m} = PLAN «${planM}회 천장»`)
-                    : bad(`${nm} GT.pityMyth ${g.m} ≠ PLAN ${planM}`);
-      g.l === planL ? ok(`${nm} GT.pityLegend ${g.l} = PLAN «전설 ${planL}회 피티»`)
-                    : bad(`${nm} GT.pityLegend ${g.l} ≠ PLAN ${planL}`);
+      const e = g.boxes[b.key];
+      if (!e || !e.rate) { bad(`${nm} GT.boxes.${b.key} 를 못 읽었다 (⚑ T153 상자 3종)`); continue; }
+      const eq = e.rate.length === 4 && e.rate.every((v, i) => Math.abs(v - pb.rate[i]) < 1e-9);
+      eq ? ok(`${nm} ${b.plan} 확률 = PLAN [${pb.rate.join(', ')}]%`)
+         : bad(`${nm} ${b.plan} 확률 «${e.rate}» ≠ PLAN «${pb.rate}» — 상점이 거짓 확률을 광고한다 (주인 확정 상수)`);
+      e.cost === pb.cost ? ok(`${nm} ${b.plan} 1회 ${e.cost} 다이아 = PLAN`)
+                         : bad(`${nm} ${b.plan} 가격 ${e.cost} ≠ PLAN ${pb.cost}`);
     }
-    const sum = planRate.reduce((a, b) => a + b, 0);
-    Math.abs(sum - 100) < 1e-9 ? ok(`확률 5단 합 ${sum}% = 100%`)
-                               : bad(`확률 5단 합이 ${sum}% 다 — 100% 가 아니면 최하 등급 비중이 조용히 어긋난다 (T25 «합 105%» 선례)`);
+    const sum = pb.rate.reduce((a, c) => a + c, 0);
+    Math.abs(sum - 100) < 1e-9 ? ok(`${b.plan} 확률 4단 합 ${sum}% = 100%`)
+      : bad(`${b.plan} 확률 합이 ${sum}% 다 — 100% 가 아니면 최하 등급 비중이 조용히 어긋난다 (T25 «합 105%» 선례)`);
+  }
+  /* 신화 상자 천장·피티 = PLAN 산문의 «50회 천장 · 전설 10회 피티» */
+  for (const [nm, g] of [['sim.js', S], ['index.html', H]]) {
+    g.m === planM ? ok(`${nm} GT.pityMyth ${g.m} = PLAN «${planM}회 천장»`) : bad(`${nm} GT.pityMyth ${g.m} ≠ PLAN ${planM}`);
+    g.l === planL ? ok(`${nm} GT.pityLegend ${g.l} = PLAN «전설 ${planL}회 피티»`) : bad(`${nm} GT.pityLegend ${g.l} ≠ PLAN ${planL}`);
+    g.mythDerived
+      ? ok(`${nm} 신화 상자 값이 정본 상수(gachaRate·pullCost·pityMyth·pityLegend)에서 파생된다 — 두 번 적히지 않는다 (T65)`)
+      : bad(`${nm} 신화 상자가 정본 상수에서 파생되지 않는다 — 확률·천장이 두 곳에 손으로 적혔다 (T65 재발)`);
+    /* ⚑ T153 위임: 희귀 상자는 천장 없음 · 전설 상자는 전설 피티만 · 신화 상자만 둘 다 */
+    const rb = g.boxes.rare, lb = g.boxes.legend;
+    (rb && rb.pm === 0 && rb.pl === 0) ? ok(`${nm} 희귀 상자는 천장·피티가 없다 (위임)`) : bad(`${nm} 희귀 상자에 천장·피티가 붙었다 (${rb && rb.pm}/${rb && rb.pl})`);
+    (lb && lb.pm === 0 && lb.pl === planL) ? ok(`${nm} 전설 상자는 전설 피티(${planL})만 있다 (위임)`) : bad(`${nm} 전설 상자의 천장·피티가 «0 / ${planL}» 이 아니다 (${lb && lb.pm}/${lb && lb.pl})`);
   }
 
   /* ② 두 파일이 서로 같다 */
-  (S.rate && H.rate && String(S.rate) === String(H.rate) && S.m === H.m && S.l === H.l)
-    ? ok('sim.js ↔ index.html 뽑기 상수 3종 일치')
-    : bad(`두 파일의 뽑기 상수가 벌어졌다 — sim [${S.rate}]/${S.m}/${S.l} vs html [${H.rate}]/${H.m}/${H.l}`);
+  (JSON.stringify(S.boxes) === JSON.stringify(H.boxes))
+    ? ok('sim.js ↔ index.html 상자 3종 상수 일치 (가격·확률·천장·피티)')
+    : bad(`두 파일의 상자 상수가 벌어졌다 — sim ${JSON.stringify(S.boxes)} vs html ${JSON.stringify(H.boxes)}`);
 
-  /* ③ gachaPull 이 리터럴을 안 쓴다 */
+  /* ③ gachaPull 이 리터럴을 안 쓴다 — 상자의 rarRoll·pityM·pityL 에서 읽는다 */
   for (const [nm, src] of [['sim.js', SIM], ['index.html', HTML]]) {
-    const body = src.slice(src.indexOf('function gachaPull(st){'));
+    const body = src.slice(src.indexOf('function gachaPull(st,box){'));
     const fn = body.slice(0, body.indexOf('\n}') + 2);
-    (/GT\.rarRoll\(/.test(fn) && /GT\.pityMyth/.test(fn) && /GT\.pityLegend/.test(fn))
-      ? ok(`${nm} gachaPull 이 GT.rarRoll·pityMyth·pityLegend 를 쓴다`)
+    (/box\.rarRoll\(/.test(fn) && /box\.pityM\b/.test(fn) && /box\.pityL\b/.test(fn))
+      ? ok(`${nm} gachaPull 이 상자의 rarRoll·pityM·pityL 을 쓴다`)
       : bad(`${nm} gachaPull 이 파생 상수를 안 쓴다 — 임계를 리터럴로 되돌리면 상점 안내문과 갈라진다 (T65 재발)`);
     /r\s*<\s*\d+\.?\d*\s*\?/.test(fn)
       ? bad(`${nm} gachaPull 에 누적 임계 리터럴(«r<0.1?…»)이 돌아왔다 — 단일 출처가 깨졌다`)
       : ok(`${nm} gachaPull 에 누적 임계 리터럴이 없다`);
+    /rar\s*=\s*[34]\b/.test(fn)
+      ? bad(`${nm} gachaPull 에 등급 인덱스 리터럴(«rar=3/4»)이 남아 있다 — ⚑ T153 로 GT.RAR_LEGEND/RAR_MYTH 를 쓴다`)
+      : ok(`${nm} gachaPull 이 등급 인덱스를 GT.RAR_LEGEND/RAR_MYTH 로 읽는다 (⚑ T153)`);
   }
 
-  /* ④ 파생 임계가 종전 리터럴과 비트 단위로 같다 */
+  /* ④ 파생 임계(cum)가 상자마다 «확률을 위 등급부터 누적한 값» 과 비트 단위로 같다
+        (1ULP 만 밀려도 시드 재현성이 깨진다 — T65 는 1,000,000 뽑기 전수 대조로 동치를 확인했다) */
   {
-    const mCum = SIM.match(/GT\.gachaCum=\(\(\)=>\{[\s\S]*?\}\)\(\);/);
-    const ctx = { GT: { gachaRate: S.rate } };
-    vm.createContext(ctx);
-    let cum = null;
-    if (mCum) { try { vm.runInContext(mCum[0], ctx); cum = ctx.GT.gachaCum; } catch (e) { cum = null; } }
-    const want = [100, 42.1, 12.1, 2.1, 0.1];
-    (cum && cum.length === 5 && cum.every((v, i) => Object.is(v, want[i])))
-      ? ok(`GT.gachaCum = [${want.join(', ')}] — 종전 리터럴 임계와 비트 단위로 같다 (1,000,000 뽑기 동치 확인, T65)`)
-      : bad(`GT.gachaCum 이 «${cum}» 이다 — [${want.join(', ')}] 와 다르면 시드 재현성이 깨진다`);
+    const mCum = SIM.match(/GT\.mkCum=rate=>\{[\s\S]*?\};/);
+    if (!mCum) bad('GT.mkCum 을 sim.js 에서 찾지 못했다 — 파생 임계 생성부가 바뀌었다');
+    else {
+      const ctx = {}; vm.createContext(ctx);
+      vm.runInContext('const GT={};' + mCum[0] + '\n__f=GT.mkCum;', ctx);
+      const mk = ctx.__f;
+      const want = { rare: [100, 33.3, 0, 0], legend: [100, 34, 4, 0], myth: [100, 34.8, 4.8, 0.8] };
+      for (const b of BOXES) {
+        const e = S.boxes[b.key];
+        if (!e || !e.rate) continue;
+        const cum = mk(e.rate);
+        const w = want[b.key];
+        (cum.length === 4 && cum.every((v, i) => Object.is(v, w[i])))
+          ? ok(`${b.plan} 누적 임계 = [${w.join(', ')}] (비트 단위 일치)`)
+          : bad(`${b.plan} 누적 임계가 «${cum}» 이다 — [${w.join(', ')}] 와 다르면 시드 재현성이 깨진다`);
+      }
+    }
   }
 
-  /* ⑤ 상점 안내문이 리터럴을 안 쓴다 */
+  /* ⑤ 상점 안내문이 리터럴을 안 쓴다 — 확률 줄은 gachaRateText(box), 천장은 pityText(box,st) */
   {
-    const mShop = HTML.match(/<div class="pity">[\s\S]*?<\/div>/);
-    const shop = mShop ? mShop[0] : '';
-    (/\$\{gachaRateText\(\)\}/.test(shop))
-      ? ok('상점 확률 줄이 gachaRateText() 로 만들어진다')
+    const mCard = HTML.match(/function gachaCardHTML\(box,st\)\{[\s\S]*?\n\}/);
+    const card = mCard ? mCard[0] : '';
+    mCard ? ok('상자 칸이 gachaCardHTML(box,st) 한 동사로 만들어진다 (3상자가 같은 함수 — 손으로 세 번 적히지 않는다)')
+          : bad('gachaCardHTML(box,st) 를 못 찾았다 — 상자 칸이 손으로 세 번 적혔는지 확인할 것');
+    /\$\{gachaRateText\(box\)\}/.test(card)
+      ? ok('상점 확률 줄이 gachaRateText(box) 로 만들어진다')
       : bad('상점 확률 줄이 문자열 리터럴로 돌아왔다 — 임계를 손보면 거짓 확률을 광고한다 (T65 재발)');
-    (/GT\.pityMyth/.test(shop) && /GT\.pityLegend/.test(shop))
-      ? ok('상점 천장·피티 잔여 표시가 GT.pityMyth·GT.pityLegend 를 쓴다')
+    /\$\{pityText\(box,st\)\}/.test(card)
+      ? ok('상점 천장·피티 잔여 표시가 pityText(box,st) 로 만들어진다')
       : bad('상점 천장·피티 표시에 리터럴(«50-st.p50» 류)이 돌아왔다 — 천장을 올리면 «-9회» 가 화면에 뜬다');
-    /[\d.]+\s*%/.test(shop)
-      ? bad(`상점 안내문에 확률 숫자 리터럴이 남아 있다 — «${(shop.match(/[\d.]+\s*%/) || [])[0]}»`)
+    /\$\{fmtQty\(one\)\}/.test(card) && /box\.cost/.test(card)
+      ? ok('1회/10회 가격이 상자의 cost 에서 나온다 (⚑ T153)')
+      : bad('상자 칸의 가격이 상자 cost 에서 나오지 않는다 (리터럴 400 이 돌아왔는지 확인)');
+    /[\d.]+\s*%/.test(card)
+      ? bad(`상점 안내문에 확률 숫자 리터럴이 남아 있다 — «${(card.match(/[\d.]+\s*%/) || [])[0]}»`)
       : ok('상점 안내문에 확률 숫자 리터럴이 없다');
+    /* 세 상자가 전부 그려지는가 */
+    /\['rare','legend','myth'\]\.map\(k=>gachaCardHTML\(GT\.boxes\[k\],save\.gachaBoxes\[k\]\)\)/.test(HTML)
+      ? ok('⚑ T153 상점에 상자 3칸(희귀·전설·신화)이 전부 그려진다')
+      : bad('⚑ T153 상점이 상자 3칸을 그리지 않는다');
   }
 
-  /* ⑥ gachaRateText() 실행 결과 ↔ PLAN 산문 */
+  /* ⑥ gachaRateText(box) 실행 결과 ↔ PLAN 표 (0% 등급은 안 적는다) */
   {
-    const mFn = HTML.match(/function gachaRateText\(\)\{[\s\S]*?\n\}/);
-    const ctx = { GT: { gachaRate: H.rate, rarName: RN } };
-    vm.createContext(ctx);
-    let txt = null;
-    if (mFn) { try { vm.runInContext(mFn[0] + '\n__t=gachaRateText();', ctx); txt = ctx.__t; } catch (e) { txt = null; } }
-    const want = planRate ? RN.map((nm, i) => `${nm} ${+planRate[i]}%`).reverse().join(' · ') : null;
-    (txt && want && txt === want)
-      ? ok(`gachaRateText() = «${txt}» (PLAN 산문과 등급·값·순서 일치)`)
-      : bad(`gachaRateText() 가 «${txt}» 다 — PLAN 기준 «${want}» 여야 한다`);
+    const mFn = HTML.match(/function gachaRateText\(box\)\{[\s\S]*?\n\}/);
+    for (const b of BOXES) {
+      const pb = planBox[b.key];
+      if (!pb || !mFn) { bad(`gachaRateText(${b.key}) 를 잴 수 없다 (함수 또는 PLAN 행 없음)`); continue; }
+      const ctx = { GT: { boxes: { myth: { rate: H.boxes.myth && H.boxes.myth.rate } }, rarName: RN } };
+      vm.createContext(ctx);
+      let txt = null;
+      try { vm.runInContext(mFn[0] + '\n__t=gachaRateText({rate:' + JSON.stringify(H.boxes[b.key].rate) + '});', ctx); txt = ctx.__t; }
+      catch (e) { txt = null; }
+      const want = RN.map((nm, i) => ({ nm, v: +pb.rate[i] })).filter(o => o.v > 0).reverse()
+        .map(o => `${o.nm} ${o.v}%`).join(' · ');
+      (txt && txt === want)
+        ? ok(`gachaRateText(${b.plan}) = «${txt}» (PLAN 표와 등급·값·순서 일치 · 0% 등급은 안 적는다)`)
+        : bad(`gachaRateText(${b.plan}) 가 «${txt}» 다 — PLAN 기준 «${want}» 여야 한다`);
+    }
   }
 }
 
@@ -2487,21 +2593,19 @@ console.log('\n[㊷ T125 ①-b «신화/전설 확정까지 N회» — N 이 실
      이름은 그대로 남아 있고, T3 의 기존 단언은 «처음 화면에서 50·10» 만 봐서 초기값이 우연히 같기 때문이다.
      그래서 이름이 아니라 **동작**으로 못박는다: 조각을 실제 템플릿 리터럴로 렌더해 카운터를 움직여 본다.
      («카운트다운» 은 유저에게 보이는 약속이라 화면 층도 필요하다 — T3 `gear` 가 실제 뽑기로 같은 축을 잰다.) */
-  const mPity = HTML.match(/<div class="pity">[\s\S]*?<\/div>/);
-  if (!mPity) bad('① 상점 천장 표시 조각(<div class="pity">)을 찾지 못했다 — 게이트를 갱신할 것');
+  /* ⚑⚑⚑ T153 — 천장 문구가 상점 템플릿에서 `pityText(box,st)` 동사로 빠졌다(상자 3종이 같은 함수를 쓴다).
+     그래서 조각이 아니라 **그 함수를 실제로 돌려** 같은 ①~⑤ 를 잰다. 값은 상자의 pityM·pityL 에서 온다. */
+  const mPity = HTML.match(/function pityText\(box,st\)\{[\s\S]*?\n\}/);
+  if (!mPity) bad('① 상점 천장 표시 동사(function pityText(box,st))를 찾지 못했다 — 게이트를 갱신할 것');
   else {
-    /* 조각 = index.html 의 템플릿 리터럴 안쪽이라 그대로 다시 리터럴로 감싸 돌린다.
-       gachaRateText·fmtQty 는 이 절의 관심 밖이라 빈 문자열/항등으로 세운다. */
     const render = (frag, myth, leg, p50, p10) => {
-      const ctx = {
-        GT: { pityMyth: myth, pityLegend: leg },
-        st: { p50, p10, pulls: p50 + p10 },
-        gachaRateText: () => '',
-        fmtQty: n => String(n),
-      };
+      const ctx = { fmtQty: n => String(n) };
       vm.createContext(ctx);
       let out;
-      try { out = String(vm.runInContext('`' + frag + '`', ctx)); }
+      try {
+        vm.runInContext(frag + '\n__t=pityText({pityM:' + myth + ',pityL:' + leg + '},{p50:' + p50 + ',p10:' + p10 + ',pulls:' + (p50 + p10) + '});', ctx);
+        out = String(ctx.__t);
+      }
       catch (e) { return `throw:${e.message}`; }
       return out.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     };
@@ -2531,7 +2635,13 @@ console.log('\n[㊷ T125 ①-b «신화/전설 확정까지 N회» — N 이 실
       /* ④ 상수를 GT 에서 읽는다 — 천장을 60·12 로 바꾼 컨텍스트에서 표시도 따라간다 (하드코딩 금지) */
       const s60 = render(frag, 60, 12, 0, 0);
       if (nM(s60) !== 60 || nL(s60) !== 12)
-        F.push(`④ 천장을 60·12 로 두면 «${nM(s60)}회 / ${nL(s60)}회» 가 뜬다 — GT.pityMyth·GT.pityLegend 를 안 읽는다(리터럴)`);
+        F.push(`④ 천장을 60·12 로 두면 «${nM(s60)}회 / ${nL(s60)}회» 가 뜬다 — 상자의 pityM·pityL 을 안 읽는다(리터럴)`);
+      /* ⑥ ⚑ T153 — 천장이 없는 상자는 그 줄을 아예 안 적는다(«신화 확정까지 0회» 가 뜨면 있는 것처럼 읽힌다).
+         희귀 상자(0·0) = 두 줄 다 없음 · 전설 상자(0·10) = 전설 줄만. */
+      const sRare = render(frag, 0, 0, 0, 0), sLeg = render(frag, 0, 10, 0, 0);
+      if (/확정까지/.test(sRare)) F.push(`⑥ 천장 없는 상자(희귀)에 천장 줄이 뜬다 — «${sRare}»`);
+      if (/신화 확정까지/.test(sLeg) || !/전설 확정까지/.test(sLeg))
+        F.push(`⑥ 전설 상자(신화 천장 없음)의 줄이 «전설 확정까지» 하나가 아니다 — «${sLeg}»`);
       /* ⑤ 음수가 안 뜬다 — 카운터가 상한에 닿은 순간에도 0 이하로 내려가지 않는다 */
       const sEnd = render(frag, 50, 10, 50, 10);
       if (nM(sEnd) < 0 || nL(sEnd) < 0)
@@ -2549,14 +2659,17 @@ console.log('\n[㊷ T125 ①-b «신화/전설 확정까지 N회» — N 이 실
       console.log('  [음성 자기검사] 심은 고장을 ㊷ 가 잡는가');
       const F0 = mPity[0];
       const muts = [
+        /* ⚑ T153 — 문구가 `pityText(box,st)` 동사로 옮겨져 치환 자리가 «box.pityM/pityL − st.p50/p10» 이 됐다 */
         ['뺄셈 삭제 — 영원히 50·10 고정 (T133 이 실제로 뚫은 사본)',
-          s => s.replace('${GT.pityMyth-st.p50}', '${GT.pityMyth}').replace('${GT.pityLegend-st.p10}', '${GT.pityLegend}')],
+          s => s.replace('Math.max(0,box.pityM-st.p50)', 'box.pityM').replace('Math.max(0,box.pityL-st.p10)', 'box.pityL')],
         ['두 카운터 뒤바뀜 (신화 줄이 p10 을, 전설 줄이 p50 을 본다)',
-          s => s.replace('${GT.pityMyth-st.p50}', '${GT.pityMyth-st.p10}').replace('${GT.pityLegend-st.p10}', '${GT.pityLegend-st.p50}')],
+          s => s.replace('Math.max(0,box.pityM-st.p50)', 'Math.max(0,box.pityM-st.p10)').replace('Math.max(0,box.pityL-st.p10)', 'Math.max(0,box.pityL-st.p50)')],
         ['카운트업 — 남은 횟수가 아니라 누적을 띄운다',
-          s => s.replace('${GT.pityMyth-st.p50}', '${st.p50}').replace('${GT.pityLegend-st.p10}', '${st.p10}')],
-        ['상수 하드코딩 — GT 를 안 읽고 50·10 을 박아 넣는다',
-          s => s.replace('${GT.pityMyth-st.p50}', '${50-st.p50}').replace('${GT.pityLegend-st.p10}', '${10-st.p10}')],
+          s => s.replace('Math.max(0,box.pityM-st.p50)', 'st.p50').replace('Math.max(0,box.pityL-st.p10)', 'st.p10')],
+        ['상수 하드코딩 — 상자를 안 읽고 50·10 을 박아 넣는다',
+          s => s.replace('Math.max(0,box.pityM-st.p50)', 'Math.max(0,50-st.p50)').replace('Math.max(0,box.pityL-st.p10)', 'Math.max(0,10-st.p10)')],
+        ['⚑ T153 천장 없는 상자에도 줄을 띄운다 (희귀 상자에 «신화 확정까지 0회»)',
+          s => s.replace('if(box.pityM>0)', 'if(box.pityM>=0)').replace('if(box.pityL>0)', 'if(box.pityL>=0)')],
         ['줄 순서 뒤바뀜 (전설 위 · 신화 아래)',
           s => s.replace(/신화 확정까지/, '@@SWAP@@').replace(/전설 확정까지/, '신화 확정까지').replace('@@SWAP@@', '전설 확정까지')],
       ];

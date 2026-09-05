@@ -69,7 +69,7 @@ const orderKey = L => L.filter(n => n.t !== 'wave').map(n => n.t[0]).join('');
 
 function loadSim(src) {
   const body = src.replace(/const mode=process\.argv[\s\S]*$/,
-    'module.exports={runChapter,PERKS,mkBuild,chapterLayout,TUNE,LAYOUT_MAXENEMY,REST_EXP};');
+    'module.exports={runChapter,PERKS,mkBuild,chapterLayout,TUNE,LAYOUT_MAXENEMY,REST_EXP,GT};');
   const m = { exports: {} };
   vm.runInNewContext(body, { module: m, exports: m.exports, process, console: { log() {} }, require });
   return m.exports;
@@ -129,7 +129,7 @@ function run(simSrc, htmSrc) {
     while (need + S.TUNE.expNeed(lv + 1) <= preBoss) { need += S.TUNE.expNeed(++lv); }
     return Math.min(lv + 1, S.PERK_PICKS !== undefined ? S.PERK_PICKS : 10);
   };
-  const b = S.mkBuild(4, 9, 150);
+  const b = S.mkBuild(S.GT.RAR_MYTH, 9, 150);   /* ⚑ T153 — 영웅 폐지로 최고 등급 인덱스가 4 → 3 */
   let perkBad = [], perkLog = [];
   for (const [c, want] of PERK_TABLE) {
     const dist = {}; let clears = 0;

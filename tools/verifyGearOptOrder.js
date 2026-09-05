@@ -23,7 +23,7 @@
      · `verifyOptText` ① 은 PLAN §11.6 **전개표** ↔ `node sim.js table` 덤프를 줄 단위로 맞춘다 —
        엔진과 전개표는 잇지만, 전개표를 낳은 **부위별 순서 표(a~f)** 는 아무도 안 읽는다.
        즉 엔진과 전개표를 **같이** 흔들면 통과한다.
-     · `verifyT2` ⑩ 은 GOPT 144칸을 두 엔진 사이에서만 대조한다 — 둘이 같기만 하면 된다.
+     · `verifyT2` ⑩ 은 GOPT 126칸(⚑ T153)을 두 엔진 사이에서만 대조한다 — 둘이 같기만 하면 된다.
    사본으로 확인했다 — `sim.js`·`index.html`·PLAN 전개표 세 곳에서 **투구와 갑옷의 순서를 통째로 맞바꾸면**
    (투구 c·d·e·a·b / 갑옷 b·c·d·e·a — 주인 표 위반) **정적 게이트 24종의 통과 수가 하나도 안 움직였다.**
    순열은 옵션 집합을 보존하므로 «집합만 보는» 단언은 원리적으로 이 계열을 못 잡는다.
@@ -31,7 +31,7 @@
    ── 그래서 이 게이트가 하는 일 ──
    **주인 표를 정본으로 삼아 삼각형을 닫는다.**
      ⓐ ROUTINE 의 주인 표(6부위 × 6칸) ↔ PLAN §11.6 «부위별 순서» 표 — 옮겨 적으며 생긴 드리프트
-     ⓑ PLAN 의 «세트 옵션 6개(a~f)» 표 × «부위별 순서» 표 = 기대 144칸 ↔ 두 엔진 GOPT 전수
+     ⓑ PLAN 의 «세트 옵션 6개(a~f)» 표 × «부위별 순서» 표 = 기대 126칸(⚑ T153) ↔ 두 엔진 GOPT 전수
         (verifyOptText 가 엔진 ↔ 전개표를 이미 이었으므로, 이 한 변이 닫히면 네 문서가 한 바퀴 돈다)
      ⓒ 주인이 말로 붙인 성질 넷을 **엔진에서 직접** 재확인 —
         f 6번 고정 · a~e 5칸 순환(부위 i = 무기를 i 칸 돌린 것) · 앞 5부위 서로 다름 + 목걸이 = 무기 ·
@@ -102,7 +102,7 @@ const bare = s => String(s).replace(/\*\*/g, '').replace(/~~/g, '').trim();
 
 /* ── ROUTINE 주인 «부위별 순서 셔플» 표 (6칸) ── */
 function routineOrder(src) {
-  const rows = mdTable(src, ['부위', '1 일반', '2 희귀', '3 영웅', '4 전설', '5 신화', '6 +3강']);
+  const rows = mdTable(src, ['부위', '1 일반', '2 희귀', '3 영웅', '4 전설', '5 신화', '6 +3강']);   /* ROUTINE 의 주인 원표는 T124 시점 그대로 둔다(이력) */
   if (!rows) return null;
   const out = {};
   for (const r of rows) {
@@ -113,16 +113,16 @@ function routineOrder(src) {
   }
   return Object.keys(out).length === PARTS.length ? out : null;
 }
-/* ── PLAN §11.6 «부위별 순서» 표 (8칸 — 7번 «흡혈 +8%» · 8번 «공 +10%» 포함) ── */
+/* ── PLAN §11.6 «부위별 순서» 표 (⚑ T153 — 7칸 · 마지막 7번이 «흡혈 +8%» · 공 +10% 칸 삭제) ── */
 function planOrder(src) {
-  const rows = mdTable(src, ['부위', '1 일반', '2 희귀', '3 영웅', '4 전설', '5 신화', '6 +3강', '7 +6강', '8 +9강']);
+  const rows = mdTable(src, ['부위', '1 일반', '2 희귀', '3 전설', '4 신화', '5 +3강', '6 +6강', '7 +9강']);
   if (!rows) return null;
   const out = {};
   for (const r of rows) {
     const pn = bare(r[0]);
     const pt = (PARTS.find(p => p[0] === pn) || [])[1];
     if (!pt) continue;
-    out[pt] = r.slice(1, 9).map(bare);
+    out[pt] = r.slice(1, 8).map(bare);
   }
   return Object.keys(out).length === PARTS.length ? out : null;
 }
@@ -170,7 +170,7 @@ function run(simSrc, htmSrc, planSrc, routineSrc, quiet) {
   const pOrd = planOrder(planSrc);
   const pLet = planLetters(planSrc);
   chk('ROUTINE 주인 «부위별 순서 셔플» 표를 읽었다 (6부위 × 6칸)', !!rOrd, '표가 사라졌거나 머리줄이 바뀌었다 — 주인 지시가 통째로 없어진 것이다');
-  chk('PLAN §11.6 «부위별 순서» 표를 읽었다 (6부위 × 8칸)', !!pOrd, '표가 사라졌거나 머리줄이 바뀌었다');
+  chk('PLAN §11.6 «부위별 순서» 표를 읽었다 (6부위 × 7칸 · ⚑ T153)', !!pOrd, '표가 사라졌거나 머리줄이 바뀌었다');
   chk('PLAN §11.6 «세트 옵션 6개 (a~f)» 표를 읽었다 (3세트 × 6칸)', !!pLet, '표가 사라졌거나 머리줄이 바뀌었다');
   if (!rOrd || !pOrd || !pLet) return finish(say, quiet);
 
@@ -187,18 +187,18 @@ function run(simSrc, htmSrc, planSrc, routineSrc, quiet) {
   }
   {
     const off7 = PARTS.filter(([, pt]) => pOrd[pt][6] !== STEAL_CELL).map(x => x[0]);
-    chk(`PLAN 표의 7번째가 «${STEAL_CELL}» 다 — 6부위 전수 (⚑ 주인 확정 T145)`, off7.length === 0, off7.join(', '));
-    const off8 = PARTS.filter(([, pt]) => pOrd[pt][7] !== PLUS_CELL).map(x => x[0]);
-    chk(`PLAN 표의 8번째가 «${PLUS_CELL}» 다 — 6부위 전수`, off8.length === 0, off8.join(', '));
+    chk(`PLAN 표의 마지막 7번째가 «${STEAL_CELL}» 다 — 6부위 전수 (⚑ T145 → T153)`, off7.length === 0, off7.join(', '));
+    const off8 = PARTS.filter(([, pt]) => pOrd[pt].some(c => c === PLUS_CELL)).map(x => x[0]);
+    chk(`⚑ T153 PLAN 표에 «${PLUS_CELL}» 칸이 한 개도 없다 — 6부위 전수`, off8.length === 0, off8.join(', '));
   }
 
   /* ===== ⓑ 두 표의 곱 = 기대 144칸 ↔ 두 엔진 GOPT 전수 ===== */
-  say('\n=== ⓑ (세트 옵션 a~f) × (부위별 순서) = GOPT 144칸 ===');
+  say('\n=== ⓑ (세트 옵션 a~f) × (부위별 순서) = GOPT 126칸 (⚑ T153) ===');
   const want = {};                                    /* {세트키: {부위: [8칸 설명문]}} */
   for (const [sn] of SETS) {
     want[sn] = {};
     for (const [, pt] of PARTS) {
-      want[sn][pt] = pOrd[pt].map(c => (c === PLUS_CELL ? PLUS_OPT : c === STEAL_CELL ? STEAL_OPT : pLet[sn][c]));
+      want[sn][pt] = pOrd[pt].map(c => (c === STEAL_CELL ? STEAL_OPT : pLet[sn][c]));
     }
   }
   for (const [nm, X] of E) {
@@ -211,8 +211,8 @@ function run(simSrc, htmSrc, planSrc, routineSrc, quiet) {
           if (got !== w) off.push(`${pn} ${k + 1}번 — 표 «${w}» ≠ 엔진 «${got === undefined ? '(없음)' : got}»`);
         });
       }
-      chk(`${nm} ${sn} 세트 — 6부위 × 8칸이 표대로다`, off.length === 0,
-          off.length ? `${off.length}칸 어긋남 — ${off.slice(0, 3).join(' / ')}` : '48칸');
+      chk(`${nm} ${sn} 세트 — 6부위 × 7칸이 표대로다 (⚑ T153)`, off.length === 0,
+          off.length ? `${off.length}칸 어긋남 — ${off.slice(0, 3).join(' / ')}` : '42칸');
     }
   }
 
@@ -258,9 +258,11 @@ function run(simSrc, htmSrc, planSrc, routineSrc, quiet) {
     /* ⓒ-6 7번 = 흡혈 +8% · 8번 = 공격력 +10% (18종 전수 · ⚑ T145 로 갈라졌다) */
     const types = PARTS.flatMap(([, pt]) => X.GT.types[pt]);
     const bad7 = types.filter(t => !X.GOPT[t] || X.GOPT[t][6].d !== STEAL_OPT);
-    chk(`${nm} — 7번째가 «${STEAL_OPT}» 다 (18종 전수 · ⚑ 주인 확정 T145)`, bad7.length === 0, bad7.join(', ') || `${types.length}종`);
-    const bad8 = types.filter(t => !X.GOPT[t] || X.GOPT[t][7].d !== PLUS_OPT);
-    chk(`${nm} — 8번째가 «${PLUS_OPT}» 다 (18종 전수)`, bad8.length === 0, bad8.join(', ') || `${types.length}종`);
+    chk(`${nm} — 마지막 7번째가 «${STEAL_OPT}» 다 (18종 전수 · ⚑ T145 → T153)`, bad7.length === 0, bad7.join(', ') || `${types.length}종`);
+    const bad8 = types.filter(t => !X.GOPT[t] || X.GOPT[t].some(o => o && o.d === PLUS_OPT));
+    chk(`${nm} — ⚑ T153 «${PLUS_OPT}» 옵션이 한 칸도 없다 (18종 전수)`, bad8.length === 0, bad8.join(', ') || `${types.length}종`);
+    const badLen = types.filter(t => !X.GOPT[t] || X.GOPT[t].length !== 7);
+    chk(`${nm} — 18종 전부 옵션 7칸이다 (⚑ T153)`, badLen.length === 0, badLen.join(', ') || `${types.length}종 × 7칸`);
   }
 
   /* ===== ⓓ ROUTINE 주인 문면 ===== */
@@ -345,8 +347,8 @@ if (process.argv.includes('--self')) {
       s => swapParts(s, 'helm', 'armor', ['evade']),
       s => swapParts(s, 'helm', 'armor', ['evade']), null, null],
     ['PLAN 의 부위별 순서 표에서 투구 행만 고치면 (주인 표와 갈라진다)',
-      null, null, s => s.replace('| 투구 | b | c | d | e | a | f | 흡혈 +8% | 공 +10% |',
-                                 '| 투구 | c | d | e | a | b | f | 흡혈 +8% | 공 +10% |'), null],
+      null, null, s => s.replace('| 투구 | b | c | d | e | a | f | 흡혈 +8% |',
+                                 '| 투구 | c | d | e | a | b | f | 흡혈 +8% |'), null],   /* ⚑ T153 — 표가 7칸이 됐다 */
     ['PLAN 의 세트 옵션(a~f) 표에서 치명 c 를 바꾸면 (문자표 ↔ 엔진)',
       null, null, s => s.replace('| 치명 | 치명타 확률 +5 | 치명타 피해 +20 | 반격률 +10 |',
                                  '| 치명 | 치명타 확률 +5 | 치명타 피해 +20 | 반격률 +12 |'), null],
@@ -377,5 +379,5 @@ if (process.argv.includes('--self')) {
 console.log('[T141 장비 옵션 «부위별 순서» 게이트 — 주인 확정 T124 ②]');
 const bad = run(simSrc, htmSrc, planSrc, routineSrc, false);
 console.log(`\n[T141 장비 옵션 부위별 순서 게이트] 대조 ${R.length}항목 · 통과 ${R.length - bad} · 불합격 ${bad}` +
-            (bad === 0 ? ' → 통과 (ROUTINE 주인 표 ↔ PLAN 두 표 ↔ 두 엔진 GOPT 144칸)' : ''));
+            (bad === 0 ? ' → 통과 (ROUTINE 주인 표 ↔ PLAN 두 표 ↔ 두 엔진 GOPT 126칸 · ⚑ T153)' : ''));
 process.exit(bad ? 1 : 0);

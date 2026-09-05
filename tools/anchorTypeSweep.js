@@ -29,8 +29,9 @@ const { runChapter, GT, buildPower, evenBonus } = sim;
 /* PLAN §11.7 앵커 3점 (등급·강화·슬롯·과녁 챕터) — sim.js 의 ANCHORS 와 같은 값 */
 const ANCHORS = {
   C: { rar: 3, plus: 0, slot: 10, at: 30 },
-  A: { rar: 4, plus: 0, slot: 15, at: 90 },
-  B: { rar: 4, plus: 9, slot: 50, at: 300 },
+  /* ⚑ T153 — 영웅 폐지로 신화 등급 인덱스가 4 → 3 이다 */
+  A: { rar: 3, plus: 0, slot: 15, at: 90 },
+  B: { rar: 3, plus: 9, slot: 50, at: 300 },
 };
 /* 주인 확정 «겨우 클리어» 의 판정 밴드 (승인 대기 10번에서 다투는 값 — 여기선 T6 제안값을 그대로 쓴다) */
 const BAND = [2, 10];

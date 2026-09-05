@@ -239,26 +239,26 @@ const T29_WAIVER = true;
   const k9 = 1 + GT.plusStep * 9;
   let held = 0;
   for (const [nm, tbl] of AX) {
-    const m0 = tbl[4], l9 = tbl[3] * k9, margin = m0 / l9;
+    const m0 = tbl[GT.RAR_MYTH], l9 = tbl[GT.RAR_LEGEND] * k9, margin = m0 / l9;   /* ⚑ T153 — 등급 인덱스 4단 */
     const pass = m0 > l9;
     if (pass) held++;
     const detail = `신화0강 ${m0.toFixed(3)} vs 전설9강 ${l9.toFixed(3)} (여유 ${margin.toFixed(3)}배 · +9강 배수 ${k9.toFixed(2)})`;
     if (!pass && T29_WAIVER) console.log(`  ⚠ ${nm} 기여 — 면제 중(T102 · 주인 승인 대기): ${detail}`);
     else chk(`${nm} 기여`, pass, detail);
     if (pass && margin < 1.05)
-      console.log(`     ⚠ ${nm} 여유가 ${margin.toFixed(3)}배뿐이다 — plusStep 을 ${((m0 / tbl[3] - 1) / 9).toFixed(4)} 이상으로 올리면 제약 위반이다.`);
+      console.log(`     ⚠ ${nm} 여유가 ${margin.toFixed(3)}배뿐이다 — plusStep 을 ${((m0 / tbl[GT.RAR_LEGEND] - 1) / 9).toFixed(4)} 이상으로 올리면 제약 위반이다.`);
   }
   /* 면제가 낡았는지 본다 — 3축이 다시 전부 성립하면 면제를 지워야 한다 */
   chk('T29 면제가 아직 필요하다 (성립하면 면제를 지울 것)', !T29_WAIVER || held < 3,
       T29_WAIVER ? `면제 켜짐 · 성립 축 ${held}/3` : '면제 꺼짐');
-  /* 등급 사다리 단조성: 축마다 일반<희귀<영웅<전설<신화 여야 한다 (표를 손댈 때의 오타 방지) */
+  /* 등급 사다리 단조성: 축마다 일반<희귀<전설<신화 여야 한다 (⚑ T153 — 영웅 폐지 · 표를 손댈 때의 오타 방지) */
   for (const [nm, tbl] of AX) {
     const mono = tbl.every((v, i) => i === 0 || v > tbl[i - 1]);
     chk(`${nm} 등급 단조 증가`, mono, tbl.map(v => v.toFixed(2)).join(' < '));
   }
 
   /* 실제 빌드로도 확인 (옵션·슬롯·균등보너스 전부 포함한 종합 전투력) — 위와 같은 면제를 받는다 */
-  const pm = X.buildPower(X.mkBuild(4, 0, 0)), pl = X.buildPower(X.mkBuild(3, 9, 0));
+  const pm = X.buildPower(X.mkBuild(GT.RAR_MYTH, 0, 0)), pl = X.buildPower(X.mkBuild(GT.RAR_LEGEND, 9, 0));
   const bPass = pm.atk > pl.atk && pm.hp > pl.hp && pm.sh > pl.sh;
   const bDetail = `신화0강 공 ${pm.atk.toFixed(0)}/체 ${pm.hp.toFixed(0)}/실 ${pm.sh.toFixed(0)} vs 전설9강 공 ${pl.atk.toFixed(0)}/체 ${pl.hp.toFixed(0)}/실 ${pl.sh.toFixed(0)}`;
   if (!bPass && T29_WAIVER) console.log(`  ⚠ 풀셋 종합 전투력(슬롯 0렙) — 면제 중(T102 · 주인 승인 대기): ${bDetail}`);
@@ -269,7 +269,7 @@ const T29_WAIVER = true;
     const kL = 1 + GT.plusStep * GT.legendToMythPlus;
     const loss = ['공격력', '체력', '실드'].map((nm, i) => {
       const tbl = [GT.atk, GT.hp, GT.sh][i];
-      return `${nm} ${(tbl[4] / (tbl[3] * kL) * 100).toFixed(1)}%`;
+      return `${nm} ${(tbl[GT.RAR_MYTH] / (tbl[GT.RAR_LEGEND] * kL) * 100).toFixed(1)}%`;
     });
     console.log(`     ↳ 전설 +${GT.legendToMythPlus}강 → 신화 0강 변환 후 남는 스탯: ${loss.join(' · ')} (100% 미만 = 강등)`);
   }
@@ -279,9 +279,10 @@ const T29_WAIVER = true;
      신화+9강만 ±6% 안에서 −1.0~1.2% 모자라는데, 이는 «강화는 장비 기여에만 걸리고 기본치는 불변» 이라는
      두 확정 조항의 산술적 귀결이다(기본치 25/150/250 의 19배만큼). 그래서 표는 주인 값을 그대로 두고
      허용 오차로 흡수한다 — 표를 47525 로 낮춰 적으면 «주인 표» 라는 대조의 의미가 사라진다. */
-  const WANT = [['일반', 0, 0, 50, 250, 400], ['희귀', 1, 0, 100, 500, 800], ['영웅', 2, 0, 200, 1000, 1600],
-                ['전설', 3, 0, 400, 2000, 3200], ['신화', 4, 0, 2400, 12000, 19200],
-                ['신화+9강', 4, 9, 48000, 240000, 384000]];
+  /* ⚑⚑⚑ T153 — 영웅 행(200/1000/1600)이 등급 폐지로 사라졌다. 남는 네 등급의 값은 그대로다. */
+  const WANT = [['일반', 0, 0, 50, 250, 400], ['희귀', 1, 0, 100, 500, 800],
+                ['전설', 2, 0, 400, 2000, 3200], ['신화', 3, 0, 2400, 12000, 19200],
+                ['신화+9강', 3, 9, 48000, 240000, 384000]];
   const nt = X.buildPower(X.mkBuild(-1, 0, 0));
   chk('노템 기본치 = 공25/체150/실250', Math.abs(nt.atk - 25) < .01 && Math.abs(nt.hp - 150) < .01 && Math.abs(nt.sh - 250) < .01,
       `공 ${nt.atk} / 체 ${nt.hp} / 실 ${nt.sh}`);
@@ -297,16 +298,16 @@ const T29_WAIVER = true;
 console.log('\n[② §11.1 옵션 개수 — 등급별 + 신화 강화 보너스]');
 {
   /* ⚑⚑⚑ T124 (주인 확정 2026-09-04 19:2X) — «일반부터 옵션 1개 · 등급마다 +1» 로 바뀌었다(종전 일반 0개).
-     사다리 8단 = 일반1 · 희귀2 · 영웅3 · 전설4 · 신화5 · +3강6 · +6강7 · +9강8 이고 +9강이 끝이다. */
-  const byRar = [0, 1, 2, 3, 4].map(r => GT.optCount(r, 0));
-  chk('등급별 0강 옵션 수', byRar.join('/') === '1/2/3/4/5', `일반1·희귀2·영웅3·전설4·신화5 → 실측 ${byRar.join('/')}`);
-  const plusMap = [[0, 5], [2, 5], [3, 6], [5, 6], [6, 7], [8, 7], [9, 8], [12, 8], [50, 8]];
-  const wrongP = plusMap.filter(([p, want]) => GT.optCount(4, p) !== want);
-  chk('신화 +3/+6/+9 에서 1개씩 (+9 가 끝, 무한강화해도 8 고정)', wrongP.length === 0,
-      wrongP.length ? wrongP.map(([p, w]) => `+${p}강 기대 ${w} ≠ 실측 ${GT.optCount(4, p)}`).join(' / ')
-                    : plusMap.map(([p]) => `+${p}→${GT.optCount(4, p)}`).join(' '));
+     ⚑⚑⚑ T153 — 영웅이 빠져 사다리가 **7단**이다: 일반1 · 희귀2 · 전설3 · 신화4 · +3강5 · +6강6 · +9강7. */
+  const byRar = [0, 1, 2, 3].map(r => GT.optCount(r, 0));
+  chk('등급별 0강 옵션 수', byRar.join('/') === '1/2/3/4', `일반1·희귀2·전설3·신화4 → 실측 ${byRar.join('/')}`);
+  const plusMap = [[0, 4], [2, 4], [3, 5], [5, 5], [6, 6], [8, 6], [9, 7], [12, 7], [50, 7]];
+  const wrongP = plusMap.filter(([p, want]) => GT.optCount(GT.RAR_MYTH, p) !== want);
+  chk('신화 +3/+6/+9 에서 1개씩 (+9 가 끝, 무한강화해도 7 고정)', wrongP.length === 0,
+      wrongP.length ? wrongP.map(([p, w]) => `+${p}강 기대 ${w} ≠ 실측 ${GT.optCount(GT.RAR_MYTH, p)}`).join(' / ')
+                    : plusMap.map(([p]) => `+${p}→${GT.optCount(GT.RAR_MYTH, p)}`).join(' '));
   /* 하위 등급 옵션 포함 규칙: 옵션은 tbl[0..n-1] 누적이므로 개수만 단조면 성립 */
-  const mono = [0, 1, 2, 3, 4].every((r, i, a) => i === 0 || GT.optCount(r, 0) > GT.optCount(a[i - 1], 0));
+  const mono = [0, 1, 2, 3].every((r, i, a) => i === 0 || GT.optCount(r, 0) > GT.optCount(a[i - 1], 0));
   chk('상위 등급은 하위 등급 옵션을 포함(개수 단조 증가)', mono);
 }
 
@@ -318,14 +319,15 @@ console.log('\n[③ §11.2 뽑기 — 자연 확률 · 50회 천장 · 10회 전
   /* (a) 자연 확률: 매 뽑기 전에 카운터를 0 으로 되돌려 천장·피티를 무력화하면 순수 굴림만 남는다 */
   X.setSeed(20260902);
   const st0 = X.newGacha();
-  const nat = [0, 0, 0, 0, 0];
+  const nat = [0, 0, 0, 0];
   /* ⚑ T125 — `gachaPull` 이 배열을 돌려준다(겹침 회차만 2개). 여기선 카운터를 매번 0 으로 되돌리므로 언제나 1개다. */
   for (let i = 0; i < N; i++) { st0.p50 = 0; st0.p10 = 0; for (const g of X.gachaPull(st0)) nat[g.rar]++; }
-  const want = [57.9, 30, 10, 2, 0.1];
-  const tol  = [0.6, 0.6, 0.4, 0.2, 0.06];      /* ≈4σ (N=40만). --fast 는 표본이 작아 오탐 가능 — 참고용 */
-  const nm = ['일반', '희귀', '영웅', '전설', '신화'];
+  /* ⚑⚑⚑ T153 — 기본 상자(= 신화 상자)의 확정 확률. 값은 엔진의 상자 표에서 읽는다(리터럴로 두면 표를 바꿀 때 갈라진다). */
+  const want = GT.boxes.myth.rate.slice();
+  const tol  = [0.6, 0.6, 0.2, 0.06];           /* ≈4σ (N=40만). --fast 는 표본이 작아 오탐 가능 — 참고용 */
+  const nm = GT.rarName;
   const off = [];
-  for (let r = 0; r < 5; r++) {
+  for (let r = 0; r < 4; r++) {
     const pct = nat[r] / N * 100;
     if (Math.abs(pct - want[r]) > tol[r] * (FAST ? 3.2 : 1)) off.push(`${nm[r]} 기대 ${want[r]}% ≠ 실측 ${pct.toFixed(3)}%`);
   }
@@ -345,8 +347,8 @@ console.log('\n[③ §11.2 뽑기 — 자연 확률 · 50회 천장 · 10회 전
     if (gs.length > 1) overlap++;
     for (const g of gs) parts.set(g.part + '|' + g.type, (parts.get(g.part + '|' + g.type) || 0) + 1);
     const top = Math.max(...gs.map(g => g.rar));
-    if (top === 4) { const d = i - lastM; if (d > maxM) maxM = d; if (d === 50) hitM50++; lastM = i; }
-    if (top >= 3) { const d = i - lastL; if (d > maxL) maxL = d; if (d === 10) hitL10++; lastL = i; }
+    if (top === GT.RAR_MYTH) { const d = i - lastM; if (d > maxM) maxM = d; if (d === 50) hitM50++; lastM = i; }
+    if (top >= GT.RAR_LEGEND) { const d = i - lastL; if (d > maxL) maxL = d; if (d === 10) hitL10++; lastL = i; }
   }
   chk('50회 천장 (신화 간격 ≤ 50)', maxM <= 50, `최대 간격 ${maxM}회 · 정확히 50 에서 확정된 사례 ${hitM50.toLocaleString()}건`);
   chk('천장이 실제로 발동한다 (간격 50 사례 존재)', hitM50 > 0, `${hitM50}건`);
@@ -364,7 +366,7 @@ console.log('\n[③ §11.2 뽑기 — 자연 확률 · 50회 천장 · 10회 전
   const s1 = X.newGacha(); s1.p50 = 49; s1.p10 = 9;
   const g1 = X.gachaPull(s1);
   chk('겹침: 한 회차가 2개를 준다', g1.length === 2, `${g1.length}개`);
-  chk('겹침: 신화 1개 + 전설 1개', g1.length === 2 && g1[0].rar === 4 && g1[1].rar === 3,
+  chk('겹침: 신화 1개 + 전설 1개', g1.length === 2 && g1[0].rar === GT.RAR_MYTH && g1[1].rar === GT.RAR_LEGEND,
       g1.map(g => nm[g.rar]).join(' + '));
   chk('겹침: 두 카운터 다 리셋 (이월 없음)', s1.p50 === 0 && s1.p10 === 0, `p50=${s1.p50} p10=${s1.p10}`);
   const g2 = X.gachaPull(s1);
@@ -373,12 +375,13 @@ console.log('\n[③ §11.2 뽑기 — 자연 확률 · 50회 천장 · 10회 전
 
   /* (e) 자연 신화는 «전설 이상» 이므로 피티 카운터도 리셋 (겹침이 아닐 때) */
   let seen = false;
-  for (let t = 0; t < 5000 && !seen; t++) {
+  for (let t = 0; t < 60000 && !seen; t++) {
     const s = X.newGacha(); s.p50 = 10; s.p10 = 3;
     const g = X.gachaPull(s)[0];
-    if (g.rar === 4) { chk('자연 신화 획득 시 p50·p10 둘 다 리셋', s.p50 === 0 && s.p10 === 0, `p50=${s.p50} p10=${s.p10}`); seen = true; }
+    if (g.rar === GT.RAR_MYTH) { chk('자연 신화 획득 시 p50·p10 둘 다 리셋', s.p50 === 0 && s.p10 === 0, `p50=${s.p50} p10=${s.p10}`); seen = true; }
   }
-  if (!seen) chk('자연 신화 획득 시 p50·p10 둘 다 리셋', false, '5,000 시도 안에 자연 신화가 안 나와 확인 불가');
+  /* ⚑ T153 — 신화 0.8% 라 5,000 시도로는 못 볼 수 있다(기대 40건이지만 시드에 따라 0 도 가능). 표본을 넉넉히 잡는다. */
+  if (!seen) chk('자연 신화 획득 시 p50·p10 둘 다 리셋', false, '시도 안에 자연 신화가 안 나와 확인 불가');
 }
 
 /* ---------------------------------------------------------------- */
@@ -395,13 +398,13 @@ console.log('\n[④ §11.3 합성 체인 — 3→1 등급업 · 전설 +강 · +
 
   const cases = [
     ['일반 3개 → 희귀 0강',        () => one1(0, 0, 3),  g => g && g.rar === 1 && g.plus === 0],
-    ['희귀 3개 → 영웅 0강',        () => one1(1, 0, 3),  g => g && g.rar === 2 && g.plus === 0],
-    ['영웅 3개 → 전설 0강',        () => one1(2, 0, 3),  g => g && g.rar === 3 && g.plus === 0],
-    ['일반 27개 → 전설 0강 (연쇄)', () => one1(0, 0, 27), g => g && g.rar === 3 && g.plus === 0],
-    ['전설 3개 → 전설 +1강 (등급업 아님)', () => one1(3, 0, 3), g => g && g.rar === 3 && g.plus === 1],
-    [`전설 +${GT.legendToMythPlus - 1}강 3개 → 신화 0강 변환`, () => one1(3, GT.legendToMythPlus - 1, 3), g => g && g.rar === 4 && g.plus === 0],
-    ['신화 3개 → 신화 +1강',       () => one1(4, 0, 3),  g => g && g.rar === 4 && g.plus === 1],
-    ['신화 +11강 3개 → +12강 (무한, 변환 없음)', () => one1(4, 11, 3), g => g && g.rar === 4 && g.plus === 12],
+    /* ⚑⚑⚑ T153 — 영웅이 빠져 «희귀 3개 → 전설» 이다(연쇄도 9개면 전설). */
+    ['희귀 3개 → 전설 0강',        () => one1(1, 0, 3),  g => g && g.rar === GT.RAR_LEGEND && g.plus === 0],
+    ['일반 9개 → 전설 0강 (연쇄)', () => one1(0, 0, 9), g => g && g.rar === GT.RAR_LEGEND && g.plus === 0],
+    ['전설 3개 → 전설 +1강 (등급업 아님)', () => one1(GT.RAR_LEGEND, 0, 3), g => g && g.rar === GT.RAR_LEGEND && g.plus === 1],
+    [`전설 +${GT.legendToMythPlus - 1}강 3개 → 신화 0강 변환`, () => one1(GT.RAR_LEGEND, GT.legendToMythPlus - 1, 3), g => g && g.rar === GT.RAR_MYTH && g.plus === 0],
+    ['신화 3개 → 신화 +1강',       () => one1(GT.RAR_MYTH, 0, 3),  g => g && g.rar === GT.RAR_MYTH && g.plus === 1],
+    ['신화 +11강 3개 → +12강 (무한, 변환 없음)', () => one1(GT.RAR_MYTH, 11, 3), g => g && g.rar === GT.RAR_MYTH && g.plus === 12],
   ];
   for (const [name, run, pass] of cases) { const g = run(); chk(name, pass(g), show(g)); }
 
@@ -425,13 +428,13 @@ console.log('\n[④ §11.3 합성 체인 — 3→1 등급업 · 전설 +강 · +
 
   /* «재료 중 최고 강화 기준 +1» (PLAN 위임 해석) */
   const mixPlus = [
-    { part: 'weapon', type: 'greatsword', rar: 4, plus: 5 },
-    { part: 'weapon', type: 'greatsword', rar: 4, plus: 1 },
-    { part: 'weapon', type: 'greatsword', rar: 4, plus: 0 },
+    { part: 'weapon', type: 'greatsword', rar: GT.RAR_MYTH, plus: 5 },
+    { part: 'weapon', type: 'greatsword', rar: GT.RAR_MYTH, plus: 1 },
+    { part: 'weapon', type: 'greatsword', rar: GT.RAR_MYTH, plus: 0 },
   ];
   X.fuseAll(mixPlus, new Set());
   chk('재료 중 최고 강화 기준 +1 (신화 +5/+1/+0 → +6)',
-      mixPlus.length === 1 && mixPlus[0].rar === 4 && mixPlus[0].plus === 6, show(mixPlus[0]));
+      mixPlus.length === 1 && mixPlus[0].rar === GT.RAR_MYTH && mixPlus[0].plus === 6, show(mixPlus[0]));
 
   /* 장착 제외는 «엔진이 지원하되 시뮬 호출부가 안 쓴다» — 능력 자체는 살아 있어야 T2 가 쓴다 */
   const eqGear = { part: 'weapon', type: 'greatsword', rar: 1, plus: 0 };

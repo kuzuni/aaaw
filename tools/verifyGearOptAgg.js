@@ -60,13 +60,15 @@ const rd = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 /* ── 주인 «풀셋 +9강 합산(참고)» 표 (ROUTINE T124 ③) ─────────────────────────
    키는 엔진의 실제 축 이름이다. `px.g_thornSh` 만 배수(0.72 = +72%)고 나머지는 주인 표기 그대로. */
+/* ⚑⚑⚑ T153 (주인 확정 2026-09-05 18:1X) — «공격력 +10%» 칸이 삭제돼 `px.g_atkP` 는 **0** 이다
+   (풀셋 +9강 공격력 +60% 소멸 — 주인 확정의 산술적 귀결 · 밸런스 조정 아님). 나머지 축은 그대로다. */
 const FROZEN_SET = [
-  ['치명', 0, { critR: 60, critF: 270, counter: 60, 'px.g_critAxe': 6, steal: 48, 'px.g_atkP': 60 }],
-  ['체력실드', 1, { def: 48, 'px.g_hpP': 60, 'px.g_shP': 144, 'px.g_thornSh': 0.72, 'px.g_hitAxe': 6, steal: 48, 'px.g_atkP': 60 }],
-  ['회피', 2, { evade: 48, 'px.g_hpP': 48, 'px.g_shP': 120, 'px.g_evAxe': 6, 'px.g_evHeal': 6, steal: 48, 'px.g_atkP': 60 }],
+  ['치명', 0, { critR: 60, critF: 270, counter: 60, 'px.g_critAxe': 6, steal: 48, 'px.g_atkP': 0 }],
+  ['체력실드', 1, { def: 48, 'px.g_hpP': 60, 'px.g_shP': 144, 'px.g_thornSh': 0.72, 'px.g_hitAxe': 6, steal: 48, 'px.g_atkP': 0 }],
+  ['회피', 2, { evade: 48, 'px.g_hpP': 48, 'px.g_shP': 120, 'px.g_evAxe': 6, 'px.g_evHeal': 6, steal: 48, 'px.g_atkP': 0 }],
 ];
-/* 옵션 개수 사다리 8단 — [등급, 강화] → 개수 (PLAN §11.1 · 주인 확정 T124) */
-const LADDER = [[0, 0, 1], [1, 0, 2], [2, 0, 3], [3, 0, 4], [4, 0, 5], [4, 3, 6], [4, 6, 7], [4, 9, 8]];
+/* 옵션 개수 사다리 — [등급, 강화] → 개수 (PLAN §11.1 · T124 → ⚑ T153 로 영웅 폐지 + 끝 칸 삭제 = **7단**) */
+const LADDER = [[0, 0, 1], [1, 0, 2], [2, 0, 3], [3, 0, 4], [3, 3, 5], [3, 6, 6], [3, 9, 7]];
 
 /* ROUTINE 주인 문면 — 규칙을 지우고 합산을 뒤집는 경로를 막는다 */
 const RULE_EACH = /같은 옵션이 여러 부위에 있으면 각각 따로 합산·발동/;
@@ -95,9 +97,12 @@ function loadOpt(src) {
   const gt = cut(/^const GT=\{/, '};');
   const gopt = cut(/^const GOPT=\{/, '};');
   const oc = cut(/^GT\.optCount=/, '};');
-  if (!gt || !gopt || !oc) return null;
+  /* ⚑ T153 — 등급 인덱스 상수(GT.RAR_LEGEND/RAR_MYTH)는 GT 리터럴 «뒤» 줄이라 따로 실어야
+     optCount 가 신화를 알아본다(안 실으면 조용히 undefined 가 되어 벡터가 텅 빈다). */
+  const rarLine = L.find(l => /^GT\.RAR_LEGEND=/.test(l)) || '';
+  if (!gt || !gopt || !oc || !rarLine) return null;
   try {
-    return vm.runInNewContext(`${gt}\n${oc}\n${gopt}\n;({GT,GOPT})`,
+    return vm.runInNewContext(`${gt}\n${rarLine}\n${oc}\n${gopt}\n;({GT,GOPT})`,
       { Math, JSON, process: { env: {} } });
   } catch (e) { return null; }
 }
@@ -150,7 +155,7 @@ function run(simSrc, htmSrc, routineSrc, quiet) {
   say('\n=== ⓐ 주인 «풀셋 +9강 합산(참고)» 표 실측 동결 ===');
   for (const [nm, X] of E) {
     for (const [sn, ti, want] of FROZEN_SET) {
-      const got = wear(X, ti, 4, 9);
+      const got = wear(X, ti, X.GT.RAR_MYTH, 9);
       chk(`${nm} ${sn} 세트 풀셋 +9강 합산`, vecEq(got, want),
           `동결 «${show(want)}» ≠ 실측 «${show(got)}»`);
     }
@@ -160,8 +165,8 @@ function run(simSrc, htmSrc, routineSrc, quiet) {
   say('\n=== ⓑ 부위마다 따로 걸린다 (1부위 → 6부위 = 정확히 ×6) ===');
   for (const [nm, X] of E) {
     for (const [sn, ti] of FROZEN_SET) {
-      const one = wear(X, ti, 4, 9, [X.GT.parts[0]]);
-      const six = wear(X, ti, 4, 9);
+      const one = wear(X, ti, X.GT.RAR_MYTH, 9, [X.GT.parts[0]]);
+      const six = wear(X, ti, X.GT.RAR_MYTH, 9);
       const ks = new Set([...Object.keys(one), ...Object.keys(six)]);
       const off = [];
       for (const k of ks) if (!near(six[k] || 0, (one[k] || 0) * 6)) off.push(`${k} 1부위 ${one[k] || 0} → 6부위 ${six[k] || 0} (×6 이면 ${(one[k] || 0) * 6})`);
@@ -171,9 +176,9 @@ function run(simSrc, htmSrc, routineSrc, quiet) {
     /* 발동 옵션(도끼)은 «몇 번 굴리는가» 자체가 주인 문면이다 — 풀셋 +3강에서 이미 6이어야 한다 */
     for (const [sn, ti, want] of FROZEN_SET) {
       const axeKey = Object.keys(want).find(k => /Axe$/.test(k));
-      const v3 = wear(X, ti, 4, 3);
-      chk(`${nm} ${sn} 세트 — 풀셋 +3강에서 도끼를 6번 굴린다 (${axeKey})`, near(v3[axeKey] || 0, 6),
-          `${axeKey}=${v3[axeKey] || 0} (주인: «풀셋 +3강 이상이면 6번 굴린다»)`);
+      const v3 = wear(X, ti, X.GT.RAR_MYTH, 6);   /* ⚑ T153 — 도끼 자리가 +3강 → +6강으로 밀렸다 */
+      chk(`${nm} ${sn} 세트 — 풀셋 +6강에서 도끼를 6번 굴린다 (${axeKey} · ⚑ T153)`, near(v3[axeKey] || 0, 6),
+          `${axeKey}=${v3[axeKey] || 0} (주인: «부위마다 따로 굴린다» — ⚑ T153 로 도끼 해금이 +3강 → +6강)`);
     }
   }
 
@@ -195,7 +200,7 @@ function run(simSrc, htmSrc, routineSrc, quiet) {
         const X = E[0][1];
         for (const [sn, ti, want] of FROZEN_SET) {
           const build = { eq: {}, slots: {} };
-          for (const pt of api.GT.parts) { build.eq[pt] = { rar: 4, plus: 9, part: pt, type: api.GT.types[pt][ti] }; build.slots[pt] = 0; }
+          for (const pt of api.GT.parts) { build.eq[pt] = { rar: api.GT.RAR_MYTH, plus: 9, part: pt, type: api.GT.types[pt][ti] }; build.slots[pt] = 0; }
           const base = api.buildPower(build);
           const p = api.mkPlayer(build, { chapter: 1, player: null, nodes: [], taken: [], t: 0 });
           const AXES = [['공격력', 'dmg', 'g_atkP', base.atk], ['최대 체력', 'maxHp', 'g_hpP', base.hp], ['최대 실드', 'maxSh', 'g_shP', base.sh]];
@@ -230,23 +235,20 @@ function run(simSrc, htmSrc, routineSrc, quiet) {
         off.length ? off.join(' / ') : LADDER.map(x => x[2]).join('·'));
     const types = X.GT.parts.flatMap(pt => X.GT.types[pt]);
     const bad6 = types.filter(t => !/도끼/.test(X.GOPT[t][5].d));
-    chk(`${nm} 6번째(신화+3강) 옵션이 «도끼» 다 — 18종 전수`, bad6.length === 0,
+    chk(`${nm} 6번째(⚑ T153 신화+6강) 옵션이 «도끼» 다 — 18종 전수`, bad6.length === 0,
         bad6.length ? `${bad6.length}종 — ${bad6.slice(0, 3).join(', ')}` : `${types.length}종`);
-    /* ⚑ T145 (주인 확정 2026-09-05 16:4X) — 7번은 «흡혈 +8%», 8번만 «공격력 +10%» 로 갈라졌다 */
+    /* ⚑⚑⚑ T153 — 맨 끝 «공격력 +10%» 칸이 삭제되면서 «흡혈 +8%» 가 마지막 7번(신화 +9강) 자리로 옮겨졌다 */
     const bad7 = types.filter(t => X.GOPT[t][6].d !== '흡혈 +8%');
-    chk(`${nm} 7번째(신화+6강) 가 «흡혈 +8%» 다 — 18종 전수 (⚑ 주인 확정 T145)`, bad7.length === 0,
+    chk(`${nm} 7번째(신화+9강 · 마지막) 가 «흡혈 +8%» 다 — 18종 전수 (⚑ T145 → T153)`, bad7.length === 0,
         bad7.length ? `${bad7.length}종 — ${bad7.slice(0, 3).join(', ')}` : `${types.length}종`);
     const bad7ap = types.filter(t => !/p\.steal\s*\+=\s*8\b/.test(String(X.GOPT[t][6].ap)));
     chk(`${nm} 7번째 흡혈이 «p.steal += 8» 로 걸린다 — 18종 전수 (부위마다 가산)`, bad7ap.length === 0,
         bad7ap.length ? `${bad7ap.length}종 — ${bad7ap.slice(0, 3).join(', ')}` : `${types.length}종`);
-    const bad8 = types.filter(t => X.GOPT[t][7].d !== '공격력 +10%');
-    chk(`${nm} 8번째(신화+9강) 가 «공격력 +10%» 다 — 18종 전수 (T145 로 8번만 남았다)`, bad8.length === 0,
-        bad8.length ? `${bad8.length}종 — ${bad8.slice(0, 3).join(', ')}` : `${types.length}종`);
-    const nAtk = types.filter(t => X.GOPT[t].filter(o => o.d === '공격력 +10%').length !== 1);
-    chk(`${nm} 종류마다 «공격력 +10%» 칸이 정확히 1개다 (풀셋 +9강 = 6개 × 10% = +60%)`, nAtk.length === 0,
-        nAtk.length ? `${nAtk.length}종 — ${nAtk.slice(0, 3).join(', ')}` : `${types.length}종 × 1칸`);
-    const badLen = types.filter(t => X.GOPT[t].length !== 8);
-    chk(`${nm} 모든 종류가 옵션 8칸이다`, badLen.length === 0, badLen.join(', ') || `${types.length}종 × 8칸`);
+    const nAtk = types.filter(t => X.GOPT[t].some(o => o.d === '공격력 +10%'));
+    chk(`${nm} ⚑ T153 «공격력 +10%» 옵션이 한 칸도 없다 (주인 «신화 강화 +9 부분 현재 꺼 빼고»)`, nAtk.length === 0,
+        nAtk.length ? `${nAtk.length}종에 남아 있다 — ${nAtk.slice(0, 3).join(', ')}` : `${types.length}종 × 0칸`);
+    const badLen = types.filter(t => X.GOPT[t].length !== 7);
+    chk(`${nm} 모든 종류가 옵션 7칸이다 (⚑ T153)`, badLen.length === 0, badLen.join(', ') || `${types.length}종 × 7칸`);
   }
 
   /* ===== ⓔ 세트 안 6부위 = 같은 6옵션의 순열 ===== */
@@ -316,10 +318,10 @@ if (process.argv.includes('--self')) {
       s => s.split('p.px.g_critAxe++').join('p.px.g_critAxe=1'),
       s => s.split('p.px.g_critAxe++').join('p.px.g_critAxe=1'), null],
     ['치명 무기 옵션 하나만 슬쩍 낮추면 (치피 +25 → +20)',
-      s => s.replace("{d:'치명타 피해 +25', ap:p=>p.critF+=25},\n    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},\n    {d:'흡혈 +8%', ap:p=>p.steal+=8},\n    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},\n  ],\n  crit_helm:",
-                     "{d:'치명타 피해 +25', ap:p=>p.critF+=20},\n    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},\n    {d:'흡혈 +8%', ap:p=>p.steal+=8},\n    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},\n  ],\n  crit_helm:"),
-      s => s.replace("{d:'치명타 피해 +25', ap:p=>p.critF+=25},\n    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},\n    {d:'흡혈 +8%', ap:p=>p.steal+=8},\n    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},\n  ],\n  crit_helm:",
-                     "{d:'치명타 피해 +25', ap:p=>p.critF+=20},\n    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},\n    {d:'흡혈 +8%', ap:p=>p.steal+=8},\n    {d:'공격력 +10%', ap:p=>p.px.g_atkP+=10},\n  ],\n  crit_helm:"), null],
+      s => s.replace("{d:'치명타 피해 +25', ap:p=>p.critF+=25},\n    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},\n    {d:'흡혈 +8%', ap:p=>p.steal+=8},\n  ],\n  crit_helm:",
+                     "{d:'치명타 피해 +25', ap:p=>p.critF+=20},\n    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},\n    {d:'흡혈 +8%', ap:p=>p.steal+=8},\n  ],\n  crit_helm:"),
+      s => s.replace("{d:'치명타 피해 +25', ap:p=>p.critF+=25},\n    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},\n    {d:'흡혈 +8%', ap:p=>p.steal+=8},\n  ],\n  crit_helm:",
+                     "{d:'치명타 피해 +25', ap:p=>p.critF+=20},\n    {d:'치명타 시 50% 확률로 도끼 1개', ap:p=>p.px.g_critAxe++},\n    {d:'흡혈 +8%', ap:p=>p.steal+=8},\n  ],\n  crit_helm:"), null],
     ['방어 +8 을 특전처럼 곱연산 축으로 옮기면 (풀셋 +48 → 0)',
       s => s.split('ap:p=>p.def+=8').join('ap:p=>p.px.g_defM=(p.px.g_defM||1)*1.08'),
       s => s.split('ap:p=>p.def+=8').join('ap:p=>p.px.g_defM=(p.px.g_defM||1)*1.08'), null],
@@ -367,4 +369,4 @@ if (bad) {
   console.log('  PROGRESS 에 주인 원문과 함께 남길 것. 지시가 없었다면 엔진을 되돌릴 것.');
   process.exit(1);
 }
-console.log('→ 통과 (풀셋 합산 3세트 × 2엔진 · 부위 ×6 · 가산 실측 · 사다리 8단 · 18종 전수 · 두 엔진 일치 · 주인 문면)');
+console.log('→ 통과 (풀셋 합산 3세트 × 2엔진 · 부위 ×6 · 가산 실측 · 사다리 7단 · 18종 전수 · 두 엔진 일치 · 주인 문면)');
