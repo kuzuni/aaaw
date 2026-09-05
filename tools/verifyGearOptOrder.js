@@ -13,7 +13,7 @@
      · «치명 시 도끼는 무조건 6번째» → f 는 **전 부위 6번(신화 +3강) 고정**, a~e 만 부위별로 돈다
      · «a~e 는 5칸 순환이라 다섯 부위까지는 서로 다르고 여섯째(목걸이)는 무기와 같다»
      · «세 세트 모두 같은 표를 쓴다» (⚑ 20:0X 주인 확정)
-     · 7·8번째(신화 +6/+9강)는 세 세트·전 부위 공통 «공격력 +10%»
+     · 7·8번째(신화 +6/+9강)는 세 세트·전 부위 공통 — ⚑ T145 로 7 = «흡혈 +8%» · 8 = «공격력 +10%»
 
    ── 구멍을 먼저 증명했다 (T141 사본 실측) ──
    **이 표를 지키는 게이트가 한 줄도 없었다.** 옵션 «순서» 를 보는 자리가 세 곳 있는데 셋 다 못 잡는다:
@@ -35,7 +35,7 @@
         (verifyOptText 가 엔진 ↔ 전개표를 이미 이었으므로, 이 한 변이 닫히면 네 문서가 한 바퀴 돈다)
      ⓒ 주인이 말로 붙인 성질 넷을 **엔진에서 직접** 재확인 —
         f 6번 고정 · a~e 5칸 순환(부위 i = 무기를 i 칸 돌린 것) · 앞 5부위 서로 다름 + 목걸이 = 무기 ·
-        세 세트가 같은 순서 표 · 7·8번 = 공격력 +10%
+        세 세트가 같은 순서 표 · 7번 = 흡혈 +8% · 8번 = 공격력 +10%
      ⓓ ROUTINE 에 주인 문면이 살아 있다
 
    ── 이 표를 고쳐도 되는 때 ──
@@ -58,9 +58,13 @@ const SETS = [['치명', 0], ['체력실드', 1], ['회피', 2]];
 const PARTS = [['무기', 'weapon'], ['투구', 'helm'], ['갑옷', 'armor'],
                ['장갑', 'glove'], ['신발', 'boot'], ['목걸이', 'neck']];
 const LETTERS = ['a', 'b', 'c', 'd', 'e', 'f'];
-/* 7·8번 칸은 글자가 아니라 문구다 — 표에는 «공 +10%», 엔진에는 «공격력 +10%» 로 적힌다 */
+/* 7·8번 칸은 글자가 아니라 문구다 — 8번은 표에 «공 +10%», 엔진에 «공격력 +10%» 로 적힌다.
+   ⚑ T145 (주인 확정 2026-09-05 16:4X «7번째 꺼는 흡혈로 해야 할 거 같은데 8퍼로») — 7번이
+   «공격력 +10%» 에서 «흡혈 +8%» 로 갈라졌다(표·엔진 문구가 같다). 8번은 그대로다. */
 const PLUS_CELL = '공 +10%';
 const PLUS_OPT = '공격력 +10%';
+const STEAL_CELL = '흡혈 +8%';
+const STEAL_OPT = '흡혈 +8%';
 
 /* ROUTINE 주인 문면 — 표를 지우고 순서를 흔드는 경로를 막는다 */
 const RULE_SIX = /치명 시 도끼는 무조건 6번째/;
@@ -109,7 +113,7 @@ function routineOrder(src) {
   }
   return Object.keys(out).length === PARTS.length ? out : null;
 }
-/* ── PLAN §11.6 «부위별 순서» 표 (8칸 — 7·8번 «공 +10%» 포함) ── */
+/* ── PLAN §11.6 «부위별 순서» 표 (8칸 — 7번 «흡혈 +8%» · 8번 «공 +10%» 포함) ── */
 function planOrder(src) {
   const rows = mdTable(src, ['부위', '1 일반', '2 희귀', '3 영웅', '4 전설', '5 신화', '6 +3강', '7 +6강', '8 +9강']);
   if (!rows) return null;
@@ -182,8 +186,10 @@ function run(simSrc, htmSrc, planSrc, routineSrc, quiet) {
         `ROUTINE «${a.join('·')}» ≠ PLAN «${b.join('·')}»`);
   }
   {
-    const off = PARTS.filter(([, pt]) => pOrd[pt][6] !== PLUS_CELL || pOrd[pt][7] !== PLUS_CELL).map(x => x[0]);
-    chk(`PLAN 표의 7·8번째가 «${PLUS_CELL}» 다 — 6부위 전수`, off.length === 0, off.join(', '));
+    const off7 = PARTS.filter(([, pt]) => pOrd[pt][6] !== STEAL_CELL).map(x => x[0]);
+    chk(`PLAN 표의 7번째가 «${STEAL_CELL}» 다 — 6부위 전수 (⚑ 주인 확정 T145)`, off7.length === 0, off7.join(', '));
+    const off8 = PARTS.filter(([, pt]) => pOrd[pt][7] !== PLUS_CELL).map(x => x[0]);
+    chk(`PLAN 표의 8번째가 «${PLUS_CELL}» 다 — 6부위 전수`, off8.length === 0, off8.join(', '));
   }
 
   /* ===== ⓑ 두 표의 곱 = 기대 144칸 ↔ 두 엔진 GOPT 전수 ===== */
@@ -192,7 +198,7 @@ function run(simSrc, htmSrc, planSrc, routineSrc, quiet) {
   for (const [sn] of SETS) {
     want[sn] = {};
     for (const [, pt] of PARTS) {
-      want[sn][pt] = pOrd[pt].map(c => (c === PLUS_CELL ? PLUS_OPT : pLet[sn][c]));
+      want[sn][pt] = pOrd[pt].map(c => (c === PLUS_CELL ? PLUS_OPT : c === STEAL_CELL ? STEAL_OPT : pLet[sn][c]));
     }
   }
   for (const [nm, X] of E) {
@@ -249,10 +255,12 @@ function run(simSrc, htmSrc, planSrc, routineSrc, quiet) {
        세 세트의 순서 표는 정의상 같은 표다(글자는 세트마다 다른 문구를 가리킬 뿐이다). */
     chk(`${nm} — 세 세트가 같은 순서 표를 쓴다 (셋 다 «부위 i = 무기 i 칸 회전»)`, rotOK.every(Boolean),
         SETS.map(([sn], i) => `${sn} ${rotOK[i] ? 'OK' : '✗'}`).join(' · '));
-    /* ⓒ-6 7·8번 = 공격력 +10% (18종 전수) */
+    /* ⓒ-6 7번 = 흡혈 +8% · 8번 = 공격력 +10% (18종 전수 · ⚑ T145 로 갈라졌다) */
     const types = PARTS.flatMap(([, pt]) => X.GT.types[pt]);
-    const bad78 = types.filter(t => !X.GOPT[t] || X.GOPT[t][6].d !== PLUS_OPT || X.GOPT[t][7].d !== PLUS_OPT);
-    chk(`${nm} — 7·8번째가 «${PLUS_OPT}» 다 (18종 전수)`, bad78.length === 0, bad78.join(', ') || `${types.length}종`);
+    const bad7 = types.filter(t => !X.GOPT[t] || X.GOPT[t][6].d !== STEAL_OPT);
+    chk(`${nm} — 7번째가 «${STEAL_OPT}» 다 (18종 전수 · ⚑ 주인 확정 T145)`, bad7.length === 0, bad7.join(', ') || `${types.length}종`);
+    const bad8 = types.filter(t => !X.GOPT[t] || X.GOPT[t][7].d !== PLUS_OPT);
+    chk(`${nm} — 8번째가 «${PLUS_OPT}» 다 (18종 전수)`, bad8.length === 0, bad8.join(', ') || `${types.length}종`);
   }
 
   /* ===== ⓓ ROUTINE 주인 문면 ===== */
@@ -337,8 +345,8 @@ if (process.argv.includes('--self')) {
       s => swapParts(s, 'helm', 'armor', ['evade']),
       s => swapParts(s, 'helm', 'armor', ['evade']), null, null],
     ['PLAN 의 부위별 순서 표에서 투구 행만 고치면 (주인 표와 갈라진다)',
-      null, null, s => s.replace('| 투구 | b | c | d | e | a | f | 공 +10% | 공 +10% |',
-                                 '| 투구 | c | d | e | a | b | f | 공 +10% | 공 +10% |'), null],
+      null, null, s => s.replace('| 투구 | b | c | d | e | a | f | 흡혈 +8% | 공 +10% |',
+                                 '| 투구 | c | d | e | a | b | f | 흡혈 +8% | 공 +10% |'), null],
     ['PLAN 의 세트 옵션(a~f) 표에서 치명 c 를 바꾸면 (문자표 ↔ 엔진)',
       null, null, s => s.replace('| 치명 | 치명타 확률 +5 | 치명타 피해 +20 | 반격률 +10 |',
                                  '| 치명 | 치명타 확률 +5 | 치명타 피해 +20 | 반격률 +12 |'), null],

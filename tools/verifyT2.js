@@ -222,9 +222,22 @@ const DIRECTIVES = [
   }],
   /* ⚑⚑⚑ T104 — 1번 특전이 «생명 흡수» → «회피 시 회복» 으로 바뀌었다.
      특전에서 흡혈(steal) 축이 완전히 사라졌으므로 어느 특전도 `p.steal +=` 를 안 한다(엔진의 steal 스탯은 남는다 —
-     장비 옵션이 필요하면 쓸 수 있다). 대신 두 엔진에 «회피 시 회복» 이 정확히 한 번 들어가 있는지 본다. */
-  ['⚑ T104 — 특전이 p.steal 을 안 건드린다 (특전에서 흡혈 축 폐기)',
-    () => (HTML.match(/p\.steal\s*\+=/g) || []).length === 0 && (SIM.match(/p\.steal\s*\+=/g) || []).length === 0],
+     장비 옵션이 필요하면 쓸 수 있다). 대신 두 엔진에 «회피 시 회복» 이 정확히 한 번 들어가 있는지 본다.
+     ⚑ T145 (주인 확정 2026-09-05 16:4X) — 장비 옵션 7번이 «흡혈 +8%» 가 되면서 그 «필요하면 쓸 수 있다» 가
+     실제로 쓰였다. 그래서 단언을 «아무 데도 없다» 에서 «GOPT 안에만 18칸, 그 밖에는 0» 으로 좁힌다 —
+     특전이 흡혈을 다시 집는 경로는 여전히 막히고, 장비 옵션 쪽은 개수까지 못박힌다. */
+  /* ⚑ T147 — 세부 팝업 «잠금 안내» 가 해금 조건(GT.optCount > i)과 한 칸도 안 밀린다.
+     옵션 i 는 i=0~4 → rarName[i] «이상», i=5~7 → 신화 +(i-4)*3강 에서 열린다. */
+  ['⚑ T147 — 세부 팝업 잠금 안내가 해금 조건과 같다 (rarName[i] 이상 · 신화 +(i-4)*3강)',
+    () => /const need\s*=\s*i\s*<=\s*4\s*\?\s*`\$\{GT\.rarName\[i\]\} 이상`\s*:\s*`신화 \+\$\{\(i\s*-\s*4\)\s*\*\s*3\}강`/.test(HTML)],
+  ['⚑ T104·T145 — p.steal 을 건드리는 곳이 GOPT 18칸뿐이다 (특전에서 흡혈 축 폐기 · 장비 7번만 사용)',
+    () => [HTML, SIM].every(src => {
+      const g = src.match(/const GOPT=\{[\s\S]*?\n\};/);
+      if (!g) return false;
+      const inGopt = (g[0].match(/p\.steal\s*\+=\s*8\b/g) || []).length;
+      const outside = ((src.split(g[0]).join('')).match(/p\.steal\s*\+=/g) || []).length;
+      return inGopt === 18 && outside === 0;
+    })],
   ['⚑ T104 — 회피 시 회복(p_evadeHeal)이 두 엔진에 하나씩 있고 회피 분기에서 heal(...,true) 로 처리된다',
     () => {
       const re = /if\(px\.p_evadeHeal\s*&&\s*pkk\(p\s*,\s*(?:PERK_EVHEAL_CH|0?\.10)\s*\)\)[\s\S]{0,80}?heal\(p\s*,\s*p\.maxHp\s*\*\s*(?:PERK_EVHEAL_F|0?\.06)\s*,\s*true\s*\)/;

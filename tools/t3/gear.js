@@ -287,6 +287,80 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('슬롯 레벨 상한 150', cap.maxed && cap.over === 150, `Lv ${cap.over} · MAX=${cap.maxed}`);
   await p.screenshot({ path: `${OUT}/t3-gear.png` });
 
+  /* ---------- ⚑ T145 — 세부 팝업 7번 칸 = «흡혈 +8%» (주인 확정 2026-09-05 16:4X) ----------
+     정적 게이트(verifyGearOptOrder·verifyGearOptAgg)는 GOPT 표를 보지만, 유저가 실제로 읽는 줄은
+     세부 팝업의 옵션 목록이다. +6강에서 7번이 해금돼 «흡혈 +8%» 로 보이고 8번(«공격력 +10%»)은 아직
+     잠겨 있는지, +9강에서 둘 다 해금되는지를 화면에서 직접 읽는다. */
+  console.log('\n=== ⚑ T145 세부 팝업 — 7번 = 흡혈 +8% · 8번 = 공격력 +10% ===');
+  for (const [plus, want7open, want8open] of [[6, true, false], [9, true, true]]) {
+    const st = await p.evaluate((pl) => {
+      save.inv = []; save.eq = {}; save.slots = {};
+      const g = newGear('weapon', 'crit_weapon', 4, pl); g.u = save.uid++;
+      save.inv.push(g); save.eq.weapon = g.u; persist(); showScreen('gear');
+      return { plus: g.plus, rar: g.rar };
+    }, plus);
+    await p.waitForTimeout(300);
+    await p.click('#gearColL .slot-card'); await p.waitForTimeout(400);
+    const d = await p.evaluate(() => {
+      const rows = [...document.querySelectorAll('#overlay .gd-opt')]
+        .filter(e => !/슬롯/.test(e.textContent))
+        .map(e => ({ t: e.textContent.replace(/\s+/g, ' ').trim(), lock: e.classList.contains('lock') }));
+      return { rows, n: rows.length };
+    });
+    const r7 = d.rows[6], r8 = d.rows[7];
+    chk(`신화 +${plus} 세부 팝업 — 7번 줄이 «흡혈 +8%» 다`,
+      !!r7 && /흡혈 \+8%/.test(r7.t), r7 ? r7.t : `줄 ${d.n}개`);
+    chk(`신화 +${plus} 세부 팝업 — 7번이 ${want7open ? '해금' : '잠금'} 이다`,
+      !!r7 && r7.lock === !want7open, r7 ? `lock=${r7.lock}` : '(없음)');
+    chk(`신화 +${plus} 세부 팝업 — 8번 줄이 «공격력 +10%» 이고 ${want8open ? '해금' : '잠금'} 이다`,
+      !!r8 && /공격력 \+10%/.test(r8.t) && r8.lock === !want8open,
+      r8 ? `${r8.t} · lock=${r8.lock}` : '(없음)');
+    chk(`신화 +${plus} 세부 팝업 — «흡혈» 줄이 정확히 1개다 (부위당 1칸)`,
+      d.rows.filter(x => /흡혈/.test(x.t)).length === 1,
+      `${d.rows.filter(x => /흡혈/.test(x.t)).length}줄`);
+    await p.evaluate(() => closeOverlay()); await p.waitForTimeout(200);
+    void st;
+  }
+  /* ---------- ⚑ T147 — 세부 팝업 «잠금 안내» 가 해금 조건과 맞는가 (한 칸 밀려 있었다) ----------
+     옵션 i 는 GT.optCount(rar,plus) > i 일 때 열린다 → i=0~4 는 일반·희귀·영웅·전설·신화 «이상»,
+     i=5~7 은 신화 +3/+6/+9강. 일반 +0 장비 하나로 8칸의 안내 문구를 전수로 읽는다. */
+  console.log('\n=== ⚑ T147 세부 팝업 잠금 안내 — 8칸 전수 ===');
+  {
+    await p.evaluate(() => {
+      save.inv = []; save.eq = {}; save.slots = {};
+      const g = newGear('weapon', 'crit_weapon', 0, 0); g.u = save.uid++;
+      save.inv.push(g); save.eq.weapon = g.u; persist(); showScreen('gear');
+    });
+    await p.waitForTimeout(300);
+    await p.click('#gearColL .slot-card'); await p.waitForTimeout(400);
+    const rows = await p.evaluate(() => [...document.querySelectorAll('#overlay .gd-opt')]
+      .filter(e => !/슬롯/.test(e.textContent))
+      .map(e => e.textContent.replace(/\s+/g, ' ').trim()));
+    const WANT = [null, '희귀 이상', '영웅 이상', '전설 이상', '신화 이상', '신화 +3강', '신화 +6강', '신화 +9강'];
+    chk('일반 +0 장비 — 1번만 해금(◆) 이고 2~8번은 잠금(🔒)', rows.length === 8 && /^◆/.test(rows[0]) && rows.slice(1).every(t => /^🔒/.test(t)),
+      `${rows.length}줄 — ${rows.map(t => t.slice(0, 2)).join('')}`);
+    for (let i = 1; i < 8; i++) {
+      chk(`${i + 1}번 칸 잠금 안내가 «(${WANT[i]})» 다`, !!rows[i] && rows[i].includes(`(${WANT[i]})`),
+        rows[i] || '(없음)');
+    }
+    await p.evaluate(() => closeOverlay()); await p.waitForTimeout(200);
+  }
+
+  {
+    /* 엔진 쪽 실측 — 풀셋 +6강 이상이면 p.steal 이 부위마다 가산돼 48 이다(= 준 피해의 48%). */
+    const agg = await p.evaluate(() => {
+      const set = parts => {
+        save.inv = []; save.eq = {}; save.slots = {};
+        for (const pt of parts) { const g = newGear(pt, GT.types[pt][0], 4, 6); g.u = save.uid++; save.inv.push(g); save.eq[pt] = g.u; }
+        persist(); return playerBase().steal;
+      };
+      const full = set(GT.parts), one = set(['weapon']);
+      return { full, one };
+    });
+    chk('index.html 엔진 — 풀셋 +6강 흡혈이 부위마다 가산돼 48 이다', agg.full === 48, `steal=${agg.full}`);
+    chk('index.html 엔진 — 1부위만 끼면 흡혈 8 이다', agg.one === 8, `steal=${agg.one}`);
+  }
+
   /* ---------- 대장간 수동 3칸 합성 ---------- */
   console.log('\n=== 대장간 — 수동 3칸 합성 (5단계 구도) ===');
   await p.evaluate(() => {
