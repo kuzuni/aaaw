@@ -769,6 +769,18 @@ console.log('\n[⑭ 합성 화면 — 수동 3칸 선택 (PLAN §11.3, 스크린
     const CODE = HTML.replace(/\/\*[\s\S]*?\*\//g, ' ');   /* 주석의 «autoEquipBest() 를 없앴다» 같은 서술은 코드가 아니다 */
     !/autoEquipBest\s*\(/.test(CODE) ? ok('게임 쪽 자동 장착 없음 (뽑기·합성 결과는 인벤에만 — T125 ①-c)')
       : bad('index.html 에 자동 장착 호출이 남아 있다 — 주인 21:2X «뽑기만 하고 장착 안 했는데 자동 장착되는 거 안 되게»');
+    /* ⚑ T127 — 바로 위 단언은 «autoEquipBest» 라는 **이름 하나**만 본다. 같은 동작을 다른 이름으로
+       되살리면 정적 게이트가 통과한다(사본 실측 — 빨개진 게이트 0건 · T3 gear 만 잡았다).
+       자동 장착은 이름이 무엇이든 반드시 `save.eq[...] = ...` 에 쓴다 — 그래서 **쓰는 자리를 센다**.
+       지금 장착을 «쓰는» 곳은 장비 세부 팝업의 «장착» 버튼(gdEq) 하나뿐이다
+       (해제 `gdUneq` 와 로드 정리는 `delete` 라 여기 안 걸린다 · `=` 뒤의 `==`·`=>` 는 제외). */
+    const EQW = CODE.match(/save\.eq\[[^\]]*\]\s*=(?![=>])/g) || [];
+    EQW.length === 1
+      ? ok('장착을 쓰는 자리가 1곳뿐 — 이름을 바꾼 자동 장착도 막힌다 (T125 ①-c · T127)')
+      : bad(`index.html 이 save.eq[...] 에 ${EQW.length}곳에서 쓴다 — 수동 «장착» 버튼 1곳이어야 한다 (T125 ①-c)`);
+    /gdEq[\s\S]{0,200}?save\.eq\[g\.part\]\s*=\s*g\.u/.test(CODE)
+      ? ok('그 1곳이 세부 팝업 «장착» 버튼(gdEq) 안이다 (유저가 직접 장착)')
+      : bad('save.eq 쓰기가 수동 «장착» 버튼(gdEq) 안에 있지 않다 — 자동 장착 경로일 수 있다 (T125 ①-c)');
     /if\(isEquipped\(g\)\)\{\s*toast/.test(HTML.replace(/\s+/g, m => m.includes('\n') ? '\n' : ' '))
       || /isEquipped\(g\)\|\|\(lock/.test(HTML)
       ? ok('합성 재료 후보에서 장착분 제외 (T125 ①-c · PLAN §11.3 과 일치)')
