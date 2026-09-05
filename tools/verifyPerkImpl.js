@@ -169,11 +169,15 @@ function loadHtm(src) {
   const a = src.indexOf('const PERKS=[');
   const b = src.indexOf('\n];', a);
   if (a < 0 || b < 0) return null;
-  const consts = [...src.matchAll(/^const ((?:PERK_|R_|DASH_|SPEAR_|STUN_|ENEMY_)[\s\S]*?);$/gm)]
-    .map(m => m[0]).join('\n');
+  const consts = [...src.matchAll(/^const ((?:PERK_|R_|DASH_|SPEAR_|STUN_|ENEMY_|WAVE_)[\s\S]*?);$/gm)]
+    .map(m => m[0]);
   const ctx = { Math, Object, Array, console: { log() {} } };
   vm.createContext(ctx);
-  try { vm.runInContext(consts + '\n' + src.slice(a, b + 3) + '\n;globalThis.__H={PERKS};', ctx); }
+  /* ⚑ 선언을 **한 줄씩** 올린다 — 한 덩어리로 올리면 이 목록 밖 상수를 참조하는 줄 하나가
+     전체를 무너뜨린다(T163 이 `SPEAR_REACH=ENEMY_GAP*SPEAR_PIERCE` 를 넣었을 때 실제로 났다).
+     못 올린 줄이 정말 필요했다면 바로 아래 PERKS 평가가 실패해 null 이 되므로 조용히 넘어가지 않는다. */
+  for (const c of consts) { try { vm.runInContext(c, ctx); } catch (e) { /* 이 게이트가 안 쓰는 선언 */ } }
+  try { vm.runInContext(src.slice(a, b + 3) + '\n;globalThis.__H={PERKS};', ctx); }
   catch (e) { return null; }
   return ctx.__H || null;
 }

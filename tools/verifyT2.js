@@ -2995,7 +2995,9 @@ console.log('\n[㊻ 전투 카메라 줌 CAM_ZOOM (T159)]');
   const WORLD = [
     ['전진 속도 132', /worldX\s*\+=\s*132\s*\*\s*p\.walkMul/],
     ['근접 사거리 74', /dist\s*>\s*74/],
-    ['적 간격 88', /worldX\s*:\s*x\s*\+\s*j\s*\*\s*88/],
+    /* ⚑⚑⚑ T163 (주인 확정 2026-09-05 22:1X) — 간격은 88 → **44** 가 됐고 리터럴이 아니라 `ENEMY_GAP` 상수다.
+       월드 단위라는 성질은 그대로여서 ㊻② 의 자리에 남는다(값 자체는 아래 ㊼ 가 본다). */
+    ['적 간격 ENEMY_GAP', /worldX\s*:\s*x\s*\+\s*j\s*\*\s*ENEMY_GAP/],
     ['원거리 사거리 440', /d\s*<\s*440/],
   ];
   let wbad = 0;
@@ -3004,7 +3006,7 @@ console.log('\n[㊻ 전투 카메라 줌 CAM_ZOOM (T159)]');
     if (inH && inS) continue;
     wbad++; bad(`② 월드 상수 «${nm}» 가 ${inH ? 'sim.js' : 'index.html'} 에서 사라졌다 — 줌은 그리기만 바꿔야 한다`);
   }
-  if (!wbad) ok('② 월드 상수 4종(전진 132 · 근접 74 · 적 간격 88 · 원거리 440)이 두 엔진에 종전 그대로다');
+  if (!wbad) ok('② 월드 상수 4종(전진 132 · 근접 74 · 적 간격 ENEMY_GAP · 원거리 440)이 두 엔진에 종전 그대로다');
 
   /* ③ 시뮬에는 줌이 없다 — 있으면 그리기 상수가 밸런스로 샌 것이다 */
   /CAM_ZOOM|PLAYER_SCREEN_X/.test(SIM)
@@ -3160,6 +3162,84 @@ console.log('\n[㊼ 이벤트 팝업 스크롤 없음 — 규격 ov-ev (T167 · 
     const clean = seeds.every(([, , detect]) => !detect(H0));
     clean ? ok(`  양성 대조군 — 원본은 ${seeds.length}개 검출자 어디에도 안 걸린다 (오탐 0)`)
           : bad('  양성 대조군이 걸렸다 — 원본에서 ㊼ 가 오탐을 낸다');
+  }
+}
+
+/* ---------- ㊽ 적 간격 ENEMY_GAP (T163 · 주인 확정 2026-09-05 22:1X «지금의 절반으로») ----------
+   주인 ④ 가 이름까지 적어 둔 셋을 본다: ⓐ 두 엔진 상수 동일(44) ⓑ 리터럴 88 잔재 0
+   ⓒ 창·검기 사거리가 «간격 × 관통 마릿수» 로 상수에 묶여 있다(닿는 적 수 보존). */
+console.log('\n[㊽ 적 간격 ENEMY_GAP = 44 (T163 · 주인 확정)]');
+{
+  const SCRIPT = (/<script>([\s\S]*)<\/script>/.exec(HTML) || [, ''])[1];
+  const gapOf = src => { const m = src.match(/const\s+ENEMY_GAP\s*=\s*(\d+)\s*;/); return m ? +m[1] : null; };
+  const gs = gapOf(SIM), gh = gapOf(SCRIPT);
+  (gs === 44 && gh === 44)
+    ? ok('① 두 엔진에 `ENEMY_GAP = 44` 가 같은 이름·같은 값으로 있다 (주인 «지금의 절반으로» — 88 → 44)')
+    : bad(`① ENEMY_GAP 이 44 가 아니거나 두 엔진이 다르다 (sim ${gs} · game ${gh})`);
+
+  /* ② 리터럴 88 잔재 0 — 간격·사거리 자리에 숫자가 남아 있으면 다음 워커가 한쪽만 고친다.
+     ⚑ 주석·무관한 88(보스 HP바 옛 폭·음계·좌표 %)까지 잡지 않도록 «간격/사거리 문법» 만 겨눈다. */
+  const LEFTOVER = [
+    ['적 배치 j*88', /j\s*\*\s*88/],
+    ['웨이브 이동 (size-1)*88', /\(\s*(?:node|nl)\.size\s*-\s*1\s*\)\s*\*\s*88/],
+    ['창 사거리 88*SPEAR_PIERCE', /88\s*\*\s*SPEAR_PIERCE/],
+    ['검기 사거리 리터럴 340·1400', /waveKing\s*\?\s*1400\s*:\s*340/],
+  ];
+  let lbad = 0;
+  for (const [nm, re] of LEFTOVER) {
+    const inS = re.test(SIM), inH = re.test(SCRIPT);
+    if (!inS && !inH) continue;
+    lbad++; bad(`② 리터럴 잔재 «${nm}» 가 ${[inS ? 'sim.js' : '', inH ? 'index.html' : ''].filter(Boolean).join(' / ')} 에 남아 있다`);
+  }
+  if (!lbad) ok(`② 옛 리터럴 ${LEFTOVER.length}종(j*88 · (size-1)*88 · 88*SPEAR_PIERCE · 1400:340)이 두 엔진에서 사라졌다`);
+
+  /* ③ 사거리가 «간격 × 관통 마릿수» 로 묶여 있다 */
+  const REACH = [
+    ['창 = 간격 × SPEAR_PIERCE', /const\s+SPEAR_REACH\s*=\s*ENEMY_GAP\s*\*\s*SPEAR_PIERCE/],
+    ['큰 검기 = 간격 × WAVE_PIERCE_BIG', /big\s*\?\s*ENEMY_GAP\s*\*\s*WAVE_PIERCE_BIG/],
+    ['검기 = 간격 × 4 · 검기왕 = 간격 × 16', /const\s+SPEAR_REACH\s*=[^;]*WAVE_REACH\s*=\s*ENEMY_GAP\s*\*\s*4,\s*WAVE_REACH_KING\s*=\s*ENEMY_GAP\s*\*\s*16/],
+    ['창 투사체가 SPEAR_REACH 를 쓴다', /maxX\s*:\s*p\.worldX\s*\+\s*SPEAR_REACH/],
+  ];
+  let rbad = 0;
+  for (const [nm, re] of REACH) {
+    const inS = re.test(SIM), inH = re.test(SCRIPT);
+    if (inS && inH) continue;
+    rbad++; bad(`③ 사거리 «${nm}» 가 ${inS ? 'index.html' : 'sim.js'} 에서 상수에 안 묶여 있다`);
+  }
+  if (!rbad) ok(`③ 일직선 사거리 ${REACH.length}종이 두 엔진에서 «간격 × 관통 마릿수» 로 묶여 있다 (닿는 적 수 보존)`);
+
+  /* ④ 적 발밑 HP바 폭이 간격보다 좁다 — 간격이 반이 되면 종전 56 폭은 옆 적과 겹친다(주인 ②) */
+  {
+    const m = SCRIPT.match(/const\s+HPBAR_W\s*=\s*ENEMY_GAP\s*-\s*(\d+),\s*HPBAR_W_BOSS\s*=\s*ENEMY_GAP\s*\*\s*2\s*-\s*(\d+)\s*;/);
+    const used = /drawHpBar\(x,gy\+12,e\.isBoss\?HPBAR_W_BOSS:HPBAR_W,/.test(SCRIPT);
+    const w = m ? gh - +m[1] : null;
+    (m && used && w !== null && w > 0 && w < gh)
+      ? ok(`④ 적 발밑 HP바 폭이 \`ENEMY_GAP-${m[1]}\` = ${w} 로 간격 ${gh} 보다 좁다 (옆 적과 겹치지 않는다 · 글자 크기는 안 건드렸다)`)
+      : bad('④ 적 HP바 폭이 간격에 안 묶여 있다 — 간격 44 에 폭 56 이면 옆 적과 겹친다(주인 ② «HP바 폭을 간격에 맞춘다»)');
+  }
+
+  /* ⑤ 리터럴 88 이 밸런스 쪽으로 새지 않았는가 — 음성 자기검사 */
+  {
+    console.log('  [음성 자기검사] 심은 고장을 ㊽ 가 잡는가');
+    const seeds = [
+      ['간격을 88 로 되돌림', () => SIM.replace(/const ENEMY_GAP=44;/, 'const ENEMY_GAP=88;'), s => gapOf(s) !== 44],
+      ['한쪽 엔진만 44 로', () => SCRIPT.replace(/const ENEMY_GAP=44;/, 'const ENEMY_GAP=40;'), s => gapOf(s) !== gapOf(SIM)],
+      ['배치를 리터럴 88 로 되돌림', () => SIM.replace(/worldX:x\+j\*ENEMY_GAP,/, 'worldX:x+j*88,'), s => /j\s*\*\s*88/.test(s)],
+      ['창 사거리를 리터럴로 되돌림', () => SIM.replace(/maxX:p\.worldX\+SPEAR_REACH,/, 'maxX:p.worldX+88*SPEAR_PIERCE,'), s => /88\s*\*\s*SPEAR_PIERCE/.test(s)],
+      ['검기 사거리를 리터럴로 되돌림', () => SIM.replace(/\(px\.waveKing\?WAVE_REACH_KING:WAVE_REACH\)/, '(px.waveKing?1400:340)'), s => /waveKing\s*\?\s*1400\s*:\s*340/.test(s)],
+      ['HP바 폭을 옛 56 으로', () => SCRIPT.replace(/e\.isBoss\?HPBAR_W_BOSS:HPBAR_W,/, 'e.isBoss?88:56,'), s => !/e\.isBoss\?HPBAR_W_BOSS:HPBAR_W,/.test(s)],
+    ];
+    let caught = 0;
+    for (const [nm, mut, detect] of seeds) {
+      const s1 = mut();
+      if (s1 === SIM || s1 === SCRIPT) { bad(`  음성 «${nm}» 이 아무것도 안 바꿨다 — 심는 자리가 옮겨졌다(게이트를 갱신할 것)`); continue; }
+      detect(s1) ? (caught++, ok(`  음성 «${nm}» 을 ㊽ 가 잡는다`)) : bad(`  음성 «${nm}» 을 ㊽ 가 못 잡았다`);
+    }
+    /* ⚑ 양성 대조군은 **그 씨앗이 겨눈 엔진**에만 댄다 — HP바는 그리기라 `sim.js` 에 아예 없어서
+       두 엔진에 다 대면 «원본이 걸린다» 는 헛빨강이 난다(실제로 한 번 났다). */
+    const clean = seeds.every(([nm, , detect]) => !detect(/HP바|한쪽 엔진만/.test(nm) ? SCRIPT : SIM));
+    clean ? ok(`  양성 대조군 — 원본이 ${seeds.length}개 검출자 어디에도 안 걸린다 (오탐 0)`)
+          : bad('  양성 대조군이 걸렸다 — 원본에서 ㊽ 가 오탐을 낸다');
   }
 }
 

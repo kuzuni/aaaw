@@ -223,6 +223,14 @@ const STUN_BOSS_MUL=1/3;
    — 화살 0.50 → 0.30 · 도끼 0.30 → 0.50 으로 **맞교환**. 검기·번개·창은 그대로. */
 const R_AXE=0.50, R_ARROW=0.30, R_WAVE=0.50, R_BOLT=0.75, R_SPEAR=1.00;
 const WAVE_PIERCE=2, WAVE_PIERCE_BIG=8, SPEAR_PIERCE=8;
+/* ⚑⚑⚑ T163 (주인 확정 2026-09-05 22:1X «적들 간격이 더 좁아야 함. 지금의 절반으로») —
+   웨이브 안 적 배치 간격 **88 → 44 (월드 px)**. 리터럴 88 을 쓰던 자리를 전부 이 상수로 묶는다.
+   이건 **월드 단위**라 index.html 의 카메라 배율(그리기만 1.5배)과 별개다 — 화면에서는 66px 로 보인다.
+   일직선 관통형(창·검기)의 사거리는 «간격 × 관통 마릿수» 로 묶어 **닿는 적 수가 그대로**이게 한다
+   (창 8칸 · 큰 검기 8칸 · 검기 4칸(관통 2 라 여유 · 종전 340 = 3.86칸) · 검기왕 16칸(종전 1400 = 15.9칸)).
+   index.html 도 같은 이름·같은 값(게이트가 두 파일을 대조한다). */
+const ENEMY_GAP=44;
+const SPEAR_REACH=ENEMY_GAP*SPEAR_PIERCE, WAVE_REACH=ENEMY_GAP*4, WAVE_REACH_KING=ENEMY_GAP*16;
 /* ⚑⚑⚑ T155 ② (주인 확정 2026-09-05 18:5X) — 특전 카드·인포·툴팁·장비 옵션 문구에서 창·도끼·화살·번개·검기가
    나오면 괄호로 «(공격력의 N%)» 를 붙인다. N 은 **위 R_* 상수에서 읽는다** — 문구에 숫자를 적어 두지 않으므로
    T118 처럼 계수가 바뀌면 문구가 저절로 따라온다. 창은 관통 마릿수(SPEAR_PIERCE)도 같이 적는다.
@@ -1192,7 +1200,7 @@ function heal(p,amt,noBoost){
 function aliveList(G){const o=[];for(const n of G.nodes)for(const e of n.enemies)if(e.hp>0)o.push(e);return o;}
 /* 지금 «필드 위에» 있는 적이 속한 노드 = 플레이어가 상대하고 있는 최전방 노드.
    주인 확정 보강(15:2X): 관통형(창·검기)은 이 노드의 적만 맞는다 — 다음 웨이브 대기분은 절대 맞지 않는다.
-   두 엔진 다 챕터의 적을 시작할 때 한꺼번에 만들어 두므로(노드 간격 560px, 창 사거리 88×8=704px)
+   두 엔진 다 챕터의 적을 시작할 때 한꺼번에 만들어 두므로(노드 간격 560px, 창 사거리 ENEMY_GAP×8=352px)
    필터가 없으면 창이 다음 웨이브까지 꿰뚫는다. 발사 시점의 노드를 투사체에 박아 두고 그것만 때린다. */
 function frontNode(G){let b=null;for(const n of G.nodes)for(const e of n.enemies)if(e.hp>0&&(!b||e.worldX<b.worldX))b=e;return b?b.wave:null;}
 function randTarget(G){
@@ -1468,11 +1476,11 @@ function fireBoltsAll(p,node){const G=p.G;const nd=node||frontNode(G);if(!nd)ret
 function fireWave(p,n){const G=p.G,px=p.px;n=n||1;
   const big=false;                                 /* 거대 검기 개조 특전은 새 10종에 없다 */
   const pierce=big?WAVE_PIERCE_BIG:(px.waveKing?20:WAVE_PIERCE);
-  const reach=big?88*SPEAR_PIERCE:(px.waveKing?1400:340);
+  const reach=big?ENEMY_GAP*WAVE_PIERCE_BIG:(px.waveKing?WAVE_REACH_KING:WAVE_REACH);   /* ⚑ T163 — 사거리 = 간격 × 관통 마릿수 */
   for(let k=0;k<n;k++)pushProj(G,{type:'wave',x:p.worldX+14,ratio:R_WAVE,spd:470,maxX:p.worldX+reach,hit:new Set(),pierce,node:frontNode(G)});}
 /* 창 관통 상한 8마리 — PLAN §3.0 «일직선 최대 8마리». 장비 «창 데미지» 옵션(spearMaster)은 계수만 올리고 관통 수는 그대로. */
 function fireSpear(p,n){const G=p.G;n=n||1;
-  for(let k=0;k<n;k++)pushProj(G,{type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:R_SPEAR,spd:520,maxX:p.worldX+88*SPEAR_PIERCE,hit:new Set(),pierce:SPEAR_PIERCE,node:frontNode(G)});}
+  for(let k=0;k<n;k++)pushProj(G,{type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:R_SPEAR,spd:520,maxX:p.worldX+SPEAR_REACH,hit:new Set(),pierce:SPEAR_PIERCE,node:frontNode(G)});}
 /* e = 이번 «공격» 이 맞힌 적 (스턴 축이 대상을 알아야 한다). 소환 적중에서도 불린다. */
 function procOnAttack(G,e){
   const p=G.player,px=p.px;
@@ -1743,10 +1751,10 @@ function runChapter(chapter,build,opts){
       const st=enemyStats(chapter,wi);
       for(let j=0;j<node.size;j++){
         const ranged=node.ranged[j];   /* ⚑ T105 — 챕터 시드로 이미 정해져 있다 (여기서 다시 굴리지 말 것) */
-        nd.enemies.push({worldX:x+j*88,hp:st.hp,maxHp:st.hp,dmg:st.dmg,ranged,
+        nd.enemies.push({worldX:x+j*ENEMY_GAP,hp:st.hp,maxHp:st.hp,dmg:st.dmg,ranged,
           atkTimer:rand(0.4,1.2),stun:0,slow:0,wave:nd,dead:false,isBoss:false,exp:0});
       }
-      wi++;x+=(node.size-1)*88+560;
+      wi++;x+=(node.size-1)*ENEMY_GAP+560;
     }else if(node.t==='boss'){
       const st=enemyStats(chapter,wi);
       const bh=st.hp*TUNE.bossHp,bd=st.dmg*TUNE.bossDmg;   /* 챕터 무관 항상 동일 (PLAN §6 주인 확정) */

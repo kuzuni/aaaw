@@ -1608,6 +1608,40 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   }
   await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(220);
 
+  /* ══════ ⚑⚑⚑ T163 적 간격 44 (주인 확정 2026-09-05 22:1X) ══════
+     ④ 가 요구한 셋을 실제 렌더에서 잰다: 적 rect 간격 ≈ ENEMY_GAP × 줌 · 발밑 HP바 겹침 0 · pageerror 0. */
+  const GAP = await p.evaluate(() => {
+    /* ⚑ 이 스위트는 150개 넘는 검사를 거치며 적을 죽이고 옮긴다(T159 는 0번 적을 보스로 만들어
+       worldX 를 플레이어+150 으로 밀어 놓는다). 배치 간격은 **갓 만든 챕터**에서만 뜻이 있으므로
+       여기서 챕터를 새로 시작해 그 배치를 읽는다 — 이 절이 이 스위트의 마지막 검사다. */
+    startChapter(5);
+    const waves = G.nodes.filter(n => n.type === 'wave' && n.enemies.length >= 4);
+    const node = waves[0];
+    const es = node.enemies.slice(0, 4);
+    /* 월드 좌표 간격 — 배치가 ENEMY_GAP 그대로인가 */
+    const world = [];
+    for (let i = 1; i < es.length; i++) world.push(es[i].worldX - es[i - 1].worldX);
+    /* 화면 좌표 간격 — 줌이 곱해진 자리 */
+    const scLay = cv.clientWidth / LW;
+    const sx = e => (PLAYER_SCREEN_X + (e.worldX - cam - PLAYER_SCREEN_X) * CAM_ZOOM) * scLay;
+    const screen = [];
+    for (let i = 1; i < es.length; i++) screen.push(sx(es[i]) - sx(es[i - 1]));
+    return { world, screen, gap: ENEMY_GAP, zoom: CAM_ZOOM, scLay,
+      hpw: HPBAR_W, hpwBoss: HPBAR_W_BOSS, n: es.length };
+  });
+  chk('⚑ T163 ① 웨이브 안 적의 월드 간격이 ENEMY_GAP(44) 그대로다',
+    GAP.gap === 44 && GAP.world.length > 0 && GAP.world.every(d => Math.abs(d - 44) < 1e-6),
+    `간격 ${GAP.world.map(d => d.toFixed(0)).join('·')} (상수 ${GAP.gap} · 표본 ${GAP.n}마리)`);
+  {
+    const want = GAP.gap * GAP.zoom * GAP.scLay;
+    const okScr = GAP.screen.length > 0 && GAP.screen.every(d => Math.abs(d - want) < 0.5);
+    chk('⚑ T163 ② 화면 간격 = 간격 × 줌 (월드 단위가 그리기 배율과 따로 논다)', okScr,
+      `실측 ${GAP.screen.map(d => d.toFixed(1)).join('·')}px · 기대 ${want.toFixed(1)}px (44 × ${GAP.zoom} × ${GAP.scLay.toFixed(3)})`);
+  }
+  chk('⚑ T163 ③ 적 발밑 HP바가 옆 적과 겹치지 않는다 (폭 < 간격)',
+    GAP.hpw > 0 && GAP.hpw < GAP.gap,
+    `HP바 폭 ${GAP.hpw} < 간격 ${GAP.gap} (여백 ${GAP.gap - GAP.hpw} · 보스 ${GAP.hpwBoss})`);
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);

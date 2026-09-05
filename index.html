@@ -967,6 +967,15 @@ GT.optCount=(rar,plus)=>{
    ⚑ T155 ② — 아래 문구 생성기가 로드 시점에 읽으므로 GOPT·PERKS 보다 **앞**에 있어야 한다. */
 const R_AXE=0.50, R_ARROW=0.30, R_WAVE=0.50, R_BOLT=0.75, R_SPEAR=1.00;
 const WAVE_PIERCE=2, SPEAR_PIERCE=8;
+/* ⚑⚑⚑ T163 (주인 확정 2026-09-05 22:1X «적들 간격이 더 좁아야 함. 지금의 절반으로») —
+   웨이브 안 적 배치 간격 **88 → 44 (월드 px)**. 리터럴 88 을 쓰던 자리를 전부 이 상수로 묶는다.
+   **월드 단위**라 카메라 줌(CAM_ZOOM 1.5 · 그리기만)과 별개다 — 화면에서는 44×1.5 = 66px 로 보인다.
+   일직선 관통형(창·검기)의 사거리는 «간격 × 관통 마릿수» 로 묶어 **닿는 적 수가 그대로**이게 한다.
+   sim.js 와 같은 이름·같은 값(게이트가 두 파일을 대조한다). */
+const ENEMY_GAP=44;
+const SPEAR_REACH=ENEMY_GAP*SPEAR_PIERCE, WAVE_REACH=ENEMY_GAP*4, WAVE_REACH_KING=ENEMY_GAP*16;
+/* 적 발밑 HP바 폭 — 간격보다 좁아야 옆 적과 안 겹친다(주인 ② «HP바 폭을 간격에 맞춘다»). */
+const HPBAR_W=ENEMY_GAP-4, HPBAR_W_BOSS=ENEMY_GAP*2-4;
 /* ⚑⚑⚑ T155 ② (주인 확정 2026-09-05 18:5X) — 특전 카드·인포·툴팁·장비 옵션 문구에서 창·도끼·화살·번개·검기가
    나오면 괄호로 «(공격력의 N%)» 를 붙인다. N 은 **위 R_* 상수에서 읽는다** — 문구에 숫자를 적어 두지 않으므로
    T118 처럼 계수가 바뀌면 문구가 저절로 따라온다. 창은 관통 마릿수(SPEAR_PIERCE)도 같이 적는다.
@@ -2774,13 +2783,13 @@ function startChapter(c){
       for(let j=0;j<nl.size;j++){
         const ranged=nl.ranged[j];   /* ⚑ T105 — 챕터 시드로 이미 정해져 있다 (여기서 다시 굴리지 말 것) */
         node.enemies.push({
-          worldX:x+j*88, hp:st.hp, maxHp:st.hp, dmg:st.dmg,
+          worldX:x+j*ENEMY_GAP, hp:st.hp, maxHp:st.hp, dmg:st.dmg,
           ranged, atkTimer:rand(0.4,1.2), stun:0, slow:0, aggro:false, wave:node, dead:false,
           skin: ranged?pick(RANGED_SKINS):pick(ENEMY_SKINS),
           exp:TUNE.expKill, isBoss:false, bob:Math.random()*7, hitT:0, strikeT:0,
         });
       }
-      totalEnemies+=nl.size; wi++; x+=(nl.size-1)*88+560;
+      totalEnemies+=nl.size; wi++; x+=(nl.size-1)*ENEMY_GAP+560;
     }else if(type==='boss'){
       const st=enemyStats(c,wi);
       const bh=Math.round(st.hp*TUNE.bossHp), bd=Math.round(st.dmg*TUNE.bossDmg);
@@ -3093,7 +3102,7 @@ function aliveEnemies(){
 }
 /* 지금 «필드 위에» 있는 적이 속한 노드 = 플레이어가 상대하고 있는 최전방 노드. sim.js frontNode() 와 1:1.
    주인 확정 보강(15:2X): 관통형(창·검기)은 이 노드의 적만 맞는다 — 다음 웨이브 대기분은 절대 맞지 않는다.
-   챕터의 적을 시작할 때 한꺼번에 만들어 두므로(노드 간격 560px, 창 사거리 88×8=704px) 필터가 없으면 꿰뚫린다. */
+   챕터의 적을 시작할 때 한꺼번에 만들어 두므로(노드 간격 560px, 창 사거리 ENEMY_GAP×8=352px) 필터가 없으면 꿰뚫린다. */
 function frontNode(){ let b=null; for(const n of G.nodes) for(const e of n.enemies) if(e.hp>0&&(!b||e.worldX<b.worldX)) b=e; return b?b.wave:null; }
 function randTarget(){
   const p=G.player;
@@ -3182,7 +3191,7 @@ function fireWave(p,n){
   const px=p.px; n=n||1;
   const big=false;                                  /* 거대 검기 개조 특전은 새 10종에 없다 */
   const pierce=big?WAVE_PIERCE_BIG:(px.waveKing?20:WAVE_PIERCE);
-  const reach=big?88*SPEAR_PIERCE:(px.waveKing?1400:340);
+  const reach=big?ENEMY_GAP*WAVE_PIERCE_BIG:(px.waveKing?WAVE_REACH_KING:WAVE_REACH);   /* ⚑ T163 — 사거리 = 간격 × 관통 마릿수 */
   volley(n,()=>{ AU.play('throw');
     pushProj({type:'wave',x:p.worldX+14,ratio:R_WAVE,spd:470,maxX:p.worldX+reach,hit:new Set(),pierce,node:frontNode()}); });
 }
@@ -3190,7 +3199,7 @@ function fireSpear(p,n){
   n=n||1;
   /* 창 관통 상한 8마리 — PLAN §3.0 «일직선 최대 8마리». 장비 «창 데미지» 옵션은 계수만 올린다. */
   volley(n,()=>{ AU.play('throw');
-    pushProj({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:R_SPEAR,spd:520,maxX:p.worldX+88*SPEAR_PIERCE,hit:new Set(),pierce:SPEAR_PIERCE,node:frontNode()}); });
+    pushProj({type:'spear',x:p.worldX+14,ratio:p.px.spearMaster?13.5:R_SPEAR,spd:520,maxX:p.worldX+SPEAR_REACH,hit:new Set(),pierce:SPEAR_PIERCE,node:frontNode()}); });
 }
 function gainExp(n){
   const p=G.player;
@@ -3964,7 +3973,7 @@ const cv=$('cv'), ctx=cv.getContext('2d');
 const LW=540; let LH=900, cam=0;
 
 /* ⚑⚑⚑ T159 — 전투 카메라 줌 (주인 지시 2026-09-05 19:5X «캐릭터랑 적들 한 1.5배는 더 커 보여야 한다»).
-   **월드 → 화면 변환에만 곱하는 배율 한 상수다.** 월드 단위(전진 속도 132 · 근접 사거리 74 · 적 간격 88 ·
+   **월드 → 화면 변환에만 곱하는 배율 한 상수다.** 월드 단위(전진 속도 132 · 근접 사거리 74 · 적 간격 ENEMY_GAP ·
    원거리 사거리 440 · 투사체 속도)는 한 글자도 안 바뀐다 — 그리기만 확대되므로 `sim.js`·밸런스와 무관하다.
    기준점은 **플레이어 발밑**(화면 x=`PLAYER_SCREEN_X` · y=`gy`)이라 플레이어는 종전과 같은 자리(화면 왼쪽
    150/540 = 27.8%)에 남고 적·보스·투사체·스파크·데미지 숫자·HP바·배경 소품이 전부 같은 배율로 따라 커진다.
@@ -4141,7 +4150,7 @@ function drawScene(){
     const s=e.isBoss?Math.min(1.7,(gy-VT-8)/70):1;
     drawCharOn(ctx,x,gy,{s,f:-1,body:e.skin.body,hat:e.skin.hat,weapon:e.skin.weapon,
       bob:Math.sin(t*7+e.bob)*(e.aggro?2.5:1), hitT:e.hitT, strikeT:e.strikeT});
-    drawHpBar(x,gy+12,e.isBoss?88:56,e.hp/e.maxHp,fmt(e.hp),'#E8483F');
+    drawHpBar(x,gy+12,e.isBoss?HPBAR_W_BOSS:HPBAR_W,e.hp/e.maxHp,fmt(e.hp),'#E8483F');
     /* ⚑ 스턴 표시 (T48) — 머리 위 💫 가 돌고 남은 시간을 같이 보여준다 (주인 15:5X «스턴 표시 + 남은 시간») */
     if(e.stun>0){
       const hy=gy-(e.isBoss?96:66);
