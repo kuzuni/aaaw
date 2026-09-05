@@ -76,7 +76,7 @@ function loadAcc(src) {
   const c = { console: { log(){} }, process, Math, JSON, Number, String, Array, Set, Map, Object, Date,
               parseInt, parseFloat, isFinite, isNaN, require };
   vm.createContext(c);
-  vm.runInContext(src.slice(0, cut) + '\n;globalThis.__A={newAccount,accRefresh,GT};', c);
+  vm.runInContext(src.slice(0, cut) + '\n;globalThis.__A={newAccount,accRefresh,accPull,gachaPull,newGacha,GT};', c);
   return c.__A || c.globalThis.__A;
 }
 
@@ -118,6 +118,59 @@ function simPolicyChecks(src, chkFn) {
         + (b.inv.length === 3 ? ' (장착분이 재료에서 빠졌다)' : ''));
 }
 
+/* ================================================================
+   ⚑⚑⚑ ⑨ T131 — 주인 확정 T125 ① 의 **«비용은 1회분 그대로(400 다이아)»** 절.
+
+   T125 ① 은 «겹침 회차는 신화 1 + 전설 1 = 2개를 준다» 와 «비용은 1회분 그대로» 라는
+   **두 짝**인데, «2개를 준다» 쪽만 ③(d) 4항목·T3 `gear` 3항목으로 못박혀 있었고
+   **«1회분» 쪽은 두 엔진 어디에도 단언이 없었다.** 즉 «회차» 가 아니라 «받은 개수» 로
+   청구해도 아무도 안 잡는다 — 게임에선 유저가 겹침 때마다 400 다이아를 더 낸다.
+
+   사본 돌연변이 2종에서 정적 게이트 18종·음성 러너 8종이 전부 초록이었다:
+   ① `accPull` 이 `a.gem-=GT.pullCost*got.length` 로 청구 → 실험4 최종 챕터 **258 → 269**
+   ② `doPull` 이 겹침으로 늘어난 개수만큼 추가 차감 → 정적 18종 전부 초록(게임만 손해).
+
+   ⑧ 과 같은 방식으로 **동작으로** 못박는다 — 계정 모델을 실제로 굴려 «소비 다이아 =
+   pullCost × 뽑기 **회차** 수» 인지 본다(받은 개수와 무관). 상수 400 자체는
+   `verifyPlanConst`·`verifyT2` 가 이미 보므로 여기서는 **청구 방식**만 본다.
+   음성 검사: `node tools/verifyGearEcon.js --self` (⑧ 4종 + ⑨ 3종).
+   ================================================================ */
+function pullCostChecks(src, chkFn) {
+  let A;
+  try { A = loadAcc(src); }
+  catch (e) { chkFn('sim.js 계정 모델(accPull)이 존재한다', false, String(e.message || e)); return; }
+  const P = A.GT;
+  /* 카운터를 «다음 회차가 곧 천장이자 피티» 로 두면 그 회차는 **결정적으로** 겹친다 */
+  const primed = () => { const g = A.newGacha(); g.p50 = P.pityMyth - 1; g.p10 = P.pityLegend - 1; return g; };
+
+  /* ⓐ 겹침 회차 1번 — 2개를 받아도 비용은 딱 1회분 */
+  const a = A.newAccount(P.pullCost);        /* 정확히 1회분만 쥐어 준다 */
+  a.gacha = primed();
+  const nA = A.accPull(a);
+  chkFn('ⓐ 겹침 회차도 비용은 1회분 (2개를 받아도 pullCost 한 번 · T125 ①)',
+        nA === 1 && a.pulls === 1 && a.gem === 0 && a.inv.length === 2,
+        `회차 ${nA} · 누적 ${a.pulls} · 잔액 ${a.gem}(0 이어야) · 인벤 ${a.inv.length}개(2 여야)`);
+
+  /* ⓑ 겹침이 낀 10연차 — 결과는 11개인데 회차·비용은 10 */
+  const b = A.newAccount(P.pullCost * 10);
+  b.gacha = primed();
+  const nB = A.accPull(b);
+  /* 같은 상태에서 «회차당 몇 개가 나오는가» 를 따로 세어 겹침이 실제로 있었음을 보인다 */
+  const gc = primed(); let items = 0;
+  for (let i = 0; i < 10; i++) items += A.gachaPull(gc).length;
+  chkFn('ⓑ 겹침이 낀 10연차 — 아이템은 11개인데 청구는 10회분',
+        nB === 10 && b.pulls === 10 && b.gem === 0 && items === 11,
+        `회차 ${nB} · 잔액 ${b.gem}(0 이어야) · 같은 상태 10회차의 아이템 ${items}개(11 이어야)`);
+
+  /* ⓒ 겹침이 없는 평범한 시퀀스 — 할인·할증 둘 다 여기서 걸린다 (잔액이 정확히 0) */
+  const K = 37;
+  const c = A.newAccount(P.pullCost * K);
+  const nC = A.accPull(c);
+  chkFn(`ⓒ 잔액이 정확히 0 — ${K}회분 다이아로 정확히 ${K}회 (할인·할증 없음)`,
+        nC === K && c.pulls === K && c.gem === 0,
+        `회차 ${nC}(${K} 여야) · 잔액 ${c.gem}(0 이어야)`);
+}
+
 /* --self: 사본에 고장을 심어 ⑧ 이 실제로 잡는지 본다 (T126 규약 — 돌연변이가 no-op 이면 그것부터 빨갛게) */
 if (SELF) {
   console.log('=== ⑧ 음성 검사 (T130) — sim.js 측정 정책 단언이 실제로 고장을 잡는가 ===');
@@ -139,8 +192,32 @@ if (SELF) {
   let ctrl = 0;
   simPolicyChecks(SRC, (n, pass) => { if (!pass) ctrl++; });
   console.log(ctrl === 0 ? '  ✓ 양성 대조군: 원본은 ⑧ 전부 통과 (오탐 없음)' : `  ✗ 양성 대조군: 원본이 ${ctrl}건 불합격 — 오탐이다`);
-  const good = caught === MUT.length && noop === 0 && ctrl === 0;
-  console.log(`\n음성 ${caught}/${MUT.length} · no-op ${noop} · 오탐 ${ctrl}`);
+
+  /* ⚑ T131 — ⑨ 뽑기 청구 방식 음성 검사 (같은 규약: 돌연변이가 no-op 이면 그것부터 빨갛게) */
+  console.log('\n=== ⑨ 음성 검사 (T131) — «비용은 1회분 그대로» 단언이 실제로 고장을 잡는가 ===');
+  const PULL_LINE = 'while(a.gem>=GT.pullCost){ a.gem-=GT.pullCost; for(const g of gachaPull(a.gacha)) a.inv.push(g); n++; a.pulls++; }';
+  const MUT9 = [
+    ['받은 개수만큼 청구 (겹침 회차 = 2회분)', PULL_LINE,
+      'while(a.gem>=GT.pullCost){ const got=gachaPull(a.gacha); a.gem-=GT.pullCost*got.length; for(const g of got) a.inv.push(g); n++; a.pulls++; }'],
+    ['겹침 회차에만 1회분 추가 청구',          PULL_LINE,
+      'while(a.gem>=GT.pullCost){ const got=gachaPull(a.gacha); a.gem-=GT.pullCost; if(got.length>1)a.gem-=GT.pullCost; for(const g of got) a.inv.push(g); n++; a.pulls++; }'],
+    ['10% 할인 (자를 반대로 흔든다)',          'a.gem-=GT.pullCost;', 'a.gem-=GT.pullCost*0.9;'],
+  ];
+  let caught9 = 0, noop9 = 0;
+  for (const [nm, from, to] of MUT9) {
+    if (!SRC.includes(from)) { noop9++; console.log(`  ✗ «${nm}» — 심을 자리(${from.slice(0, 28)}…)가 sim.js 에 없다: 돌연변이가 no-op 이다`); continue; }
+    let hit = 0;
+    pullCostChecks(SRC.replace(from, to), (n, pass) => { if (!pass) hit++; });
+    if (hit) { caught9++; console.log(`  ✓ «${nm}» → ⑨ 불합격 ${hit}건`); }
+    else console.log(`  ✗ «${nm}» → 아무도 안 잡았다`);
+  }
+  let ctrl9 = 0;
+  pullCostChecks(SRC, (n, pass) => { if (!pass) ctrl9++; });
+  console.log(ctrl9 === 0 ? '  ✓ 양성 대조군: 원본은 ⑨ 전부 통과 (오탐 없음)' : `  ✗ 양성 대조군: 원본이 ${ctrl9}건 불합격 — 오탐이다`);
+
+  const good = caught === MUT.length && noop === 0 && ctrl === 0
+            && caught9 === MUT9.length && noop9 === 0 && ctrl9 === 0;
+  console.log(`\n음성 ⑧ ${caught}/${MUT.length} · ⑨ ${caught9}/${MUT9.length} · no-op ${noop + noop9} · 오탐 ${ctrl + ctrl9}`);
   process.exit(good ? 0 : 1);
 }
 
@@ -423,6 +500,10 @@ console.log('\n[⑦ ⚑ T63 슬롯 균등 보너스 안내문 — 주인 확정 
 /* ---------------------------------------------------------------- */
 console.log('\n[⑧ ⚑ T130 시뮬 측정 정책 — T125 ①-c «시뮬의 autoEquip 은 그대로» (동작으로 확인)]');
 simPolicyChecks(SRC, chk);
+
+/* ---------------------------------------------------------------- */
+console.log('\n[⑨ ⚑ T131 뽑기 청구 방식 — T125 ① «비용은 1회분 그대로» (동작으로 확인)]');
+pullCostChecks(SRC, chk);
 
 /* ---------------------------------------------------------------- */
 console.log('\n[⑥ §11.5 경제 정합 (참고 출력 — 판정 아님)]');

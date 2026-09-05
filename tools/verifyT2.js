@@ -785,6 +785,28 @@ console.log('\n[⑭ 합성 화면 — 수동 3칸 선택 (PLAN §11.3, 스크린
       || /isEquipped\(g\)\|\|\(lock/.test(HTML)
       ? ok('합성 재료 후보에서 장착분 제외 (T125 ①-c · PLAN §11.3 과 일치)')
       : bad('장착 중인 장비가 아직 합성 재료로 선택된다 — 자동 장착이 없어 그 부위가 빈 채 남는다');
+    /* ⚑⚑⚑ T131 — T125 ① 의 나머지 반쪽 «비용은 1회분 그대로(400 다이아)».
+       «겹침 회차는 2개» 는 ③(d)·T3 가 보지만 «그래도 비용은 1회분» 은 아무도 안 봤다 —
+       사본에서 `doPull` 이 겹침으로 늘어난 개수만큼 추가 차감하게 고쳐도 정적 게이트 18종이
+       전부 초록이었다(유저만 손해). 상수 400 은 위 «주인 확정 경제 상수» 가 이미 보므로
+       여기서는 **청구 방식**만 본다: ⓐ 차감이 한 곳뿐이고 ⓑ 그 비용이 «회차 수» 로만 정해진다.
+       (시뮬 쪽 같은 조항은 `verifyGearEcon` ⑨ 가 계정 모델을 굴려 본다.) */
+    const DP = CODE.match(/function doPull\(n\)\{[\s\S]*?\n\}/);
+    if (!DP) bad('index.html 에 doPull(n) 이 없다 — 뽑기 비용 청구 경로를 확인할 수 없다 (T125 ①)');
+    else {
+      const GEMW = DP[0].match(/save\.gem\s*[-+]?=(?![=>])/g) || [];
+      GEMW.length === 1
+        ? ok('뽑기 다이아 차감이 doPull 안에서 1곳뿐 — 겹침 추가 청구가 낄 자리가 없다 (T125 ①)')
+        : bad(`doPull 이 save.gem 을 ${GEMW.length}곳에서 건드린다 — 주인 «비용은 1회분 그대로» 위반 소지 (T125 ①)`);
+      /* 비용식이 «회차 수 n» 으로만 정해진다 — 결과 배열(got·inv·length)이 끼면 개수 청구다 */
+      const COST = DP[0].match(/const\s+cost\s*=\s*([^;]+);/);
+      COST && /^\s*GT\.pullCost\s*\*\s*n\s*$/.test(COST[1])
+        ? ok('뽑기 비용 = GT.pullCost × 회차 수 n (받은 개수와 무관 · T125 ① «비용은 1회분»)')
+        : bad(`뽑기 비용식이 «pullCost × 회차 수» 가 아니다 — ${COST ? COST[1].trim() : 'cost 계산을 못 찾음'} (T125 ①)`);
+      !/save\.gem[^;\n]*(got|\.length)/.test(DP[0])
+        ? ok('다이아 차감이 결과 개수(got·length)에 걸려 있지 않다 (T125 ①)')
+        : bad('doPull 의 다이아 차감이 결과 개수를 참조한다 — 겹침 회차에 유저가 더 낸다 (T125 ①)');
+    }
   }
   /* (5) ⚑ 행동 대조 — 두 파일의 fuseMake 를 실제로 실행해 전 조합 비교 */
   const grab = (src, re) => { const m = src.match(re); return m ? m[0] : null; };

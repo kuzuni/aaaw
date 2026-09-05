@@ -73,6 +73,8 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   await p.click('#pull10'); await p.waitForTimeout(700);
   const g10 = await p.evaluate(() => ({ inv: save.inv.length, gem: save.gem, pulls: save.gacha.pulls, svg: document.querySelectorAll('#overlay svg.gicon').length }));
   chk('뽑기 10회 — 장비 10개 추가', g10.inv === 11 && g10.pulls === 11, `인벤 ${g10.inv} · 누적 ${g10.pulls}`);
+  /* ⚑ T131 — 여기서 잔액을 재는 단언이 없었다 (g10.gem 을 모으기만 하고 안 봤다). 10연차도 회차당 1회분이다. */
+  chk('뽑기 10회 비용 4,000 다이아 (400 × 10회 · 할인·할증 없음)', g10.gem === 100000 - 400 - 4000, `잔액 ${g10.gem}`);
   chk('10회 결과 10칸 연출', g10.svg >= 10, `svg ${g10.svg}개`);
   await p.evaluate(() => closeOverlay()); await p.waitForTimeout(200);
   /* 천장 — 50회에서 신화가 반드시 나온다 */
@@ -100,10 +102,18 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     /* 10연차 안에서 겹치게: 카운터를 49·9 로 두면 **첫 회차**에서 천장과 피티가 같이 걸린다.
        (40·0 으로 두고 10회째를 노리면 중간의 자연 전설이 피티를 리셋해 겹침이 안 날 수 있다 — 결정적으로 간다.) */
     save.inv = []; save.eq = {}; save.gem = 1e9; save.gacha = { p50: 49, p10: 9, pulls: 0 };
+    const gem0 = save.gem;
     doPull(10);
-    const ten = { inv: save.inv.length, pulls: save.gacha.pulls, cells: document.querySelectorAll('#overlay .inv-cell').length };
+    const ten = { inv: save.inv.length, pulls: save.gacha.pulls, cells: document.querySelectorAll('#overlay .inv-cell').length,
+                  spent: gem0 - save.gem };
     closeOverlay();
-    return { one, ten };
+    /* ⚑ T131 — 겹침 «1회» 뽑기의 청구도 잰다 (주인 T125 ① «비용은 1회분 그대로») */
+    save.inv = []; save.eq = {}; save.gem = 1e9; save.gacha = { p50: 49, p10: 9, pulls: 0 };
+    const gem1 = save.gem;
+    doPull(1);
+    const solo = { inv: save.inv.length, spent: gem1 - save.gem };
+    closeOverlay();
+    return { one, ten, solo };
   });
   await p.waitForTimeout(200);
   chk('겹침 회차가 2개를 준다 (신화 + 전설)', ov.one.n === 2 && ov.one.rars[0] === 4 && ov.one.rars[1] === 3,
@@ -111,6 +121,12 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('겹침 뒤 두 카운터 리셋 (이월 없음)', ov.one.p50 === 0 && ov.one.p10 === 0, `p50=${ov.one.p50} p10=${ov.one.p10}`);
   chk('겹침이 낀 10연차는 11개', ov.ten.inv === 11 && ov.ten.pulls === 10, `인벤 ${ov.ten.inv} · 뽑기 ${ov.ten.pulls}회`);
   chk('11개가 결과 화면에도 다 뜬다', ov.ten.cells === 11, `${ov.ten.cells}칸`);
+  /* ⚑⚑⚑ T131 — T125 ① 의 나머지 반쪽. «둘 다 준다» 는 위 3항목이 보지만 «비용은 1회분 그대로» 는
+     두 엔진 어디에도 단언이 없었다 — 사본에서 겹침분을 추가 청구해도 정적 게이트 18종이 전부 초록이었다. */
+  chk('겹침이 낀 10연차도 비용은 4,000 (11개를 받아도 10회분 · T125 ①)', ov.ten.spent === 4000,
+    `차감 ${ov.ten.spent} 다이아 · 받은 것 ${ov.ten.inv}개`);
+  chk('겹침 1회 뽑기도 비용은 400 (2개를 받아도 1회분 · T125 ①)', ov.solo.spent === 400 && ov.solo.inv === 2,
+    `차감 ${ov.solo.spent} 다이아 · 받은 것 ${ov.solo.inv}개`);
   /* ⚑⚑⚑ T125 ①-c — 뽑기 결과 자동 장착 금지 + 수동 장착 동작 */
   const noAuto = await p.evaluate(() => {
     save.inv = []; save.eq = {}; save.gem = 1e9; save.gacha = { p50: 0, p10: 0, pulls: 0 };
