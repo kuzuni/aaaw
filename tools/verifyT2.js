@@ -2464,6 +2464,105 @@ console.log('\n[㊶ T125 ①-c «↑ 표시» — 인벤에 더 좋은 게 있�
   }
 }
 
+console.log('\n[㊷ T125 ①-b «신화/전설 확정까지 N회» — N 이 실제로 줄어드는가 (T133)]');
+{
+  /* 주인 21:1X 원문: «천장 카운터 문구를 «신화 확정까지 N회» · «전설 확정까지 N회» 로 바꾼다
+     (N = 남은 횟수 · 50회·10회에서 카운트다운). 값은 `GT.pityMyth`·`GT.pityLegend` 에서 읽는다(하드코딩 금지)».
+     이 문장을 지키던 게이트는 ㉜⑤ 하나뿐이었는데 그것이 보는 것은 «상점 블록 안에 GT.pityMyth·GT.pityLegend
+     라는 **이름**이 있는가» 뿐이다. T133 실측: 두 줄의 뺄셈을 지워 `${GT.pityMyth}`·`${GT.pityLegend}`
+     (= 몇 번을 뽑아도 영원히 50·10 고정)로 만든 사본에서 **정적 19종·T3 gear 80/80 이 전부 초록**이었다 —
+     이름은 그대로 남아 있고, T3 의 기존 단언은 «처음 화면에서 50·10» 만 봐서 초기값이 우연히 같기 때문이다.
+     그래서 이름이 아니라 **동작**으로 못박는다: 조각을 실제 템플릿 리터럴로 렌더해 카운터를 움직여 본다.
+     («카운트다운» 은 유저에게 보이는 약속이라 화면 층도 필요하다 — T3 `gear` 가 실제 뽑기로 같은 축을 잰다.) */
+  const mPity = HTML.match(/<div class="pity">[\s\S]*?<\/div>/);
+  if (!mPity) bad('① 상점 천장 표시 조각(<div class="pity">)을 찾지 못했다 — 게이트를 갱신할 것');
+  else {
+    /* 조각 = index.html 의 템플릿 리터럴 안쪽이라 그대로 다시 리터럴로 감싸 돌린다.
+       gachaRateText·fmtQty 는 이 절의 관심 밖이라 빈 문자열/항등으로 세운다. */
+    const render = (frag, myth, leg, p50, p10) => {
+      const ctx = {
+        GT: { pityMyth: myth, pityLegend: leg },
+        st: { p50, p10, pulls: p50 + p10 },
+        gachaRateText: () => '',
+        fmtQty: n => String(n),
+      };
+      vm.createContext(ctx);
+      let out;
+      try { out = String(vm.runInContext('`' + frag + '`', ctx)); }
+      catch (e) { return `throw:${e.message}`; }
+      return out.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    };
+    const nM = s => { const m = /신화 확정까지\s*(-?\d+)\s*회/.exec(s); return m ? +m[1] : null; };
+    const nL = s => { const m = /전설 확정까지\s*(-?\d+)\s*회/.exec(s); return m ? +m[1] : null; };
+
+    /* 조각 하나를 받아 ①~⑤ 를 판정하고 «위반 사유 목록» 을 돌려준다 (--self 가 사본에 그대로 쓴다). */
+    const checkPity = frag => {
+      const F = [];
+      const s00 = render(frag, 50, 10, 0, 0);
+      /* ① 두 줄이 있고 신화가 위·전설이 아래 (주인 «두 줄 나란히 — 신화 위 · 전설 아래») */
+      const iM = s00.indexOf('신화 확정까지'), iL = s00.indexOf('전설 확정까지');
+      if (iM < 0 || iL < 0) F.push(`① 문구 두 줄 중 빠진 것이 있다 — «${s00}»`);
+      else if (iM > iL) F.push('① 전설 줄이 신화 줄보다 위다 — 주인 확정은 «신화 위 · 전설 아래»');
+      /* ② 남은 횟수다 — (p50,p10) 세 점의 값이 50-p50 · 10-p10 과 같다 */
+      for (const [p50, p10] of [[0, 0], [7, 3], [49, 9]]) {
+        const s = render(frag, 50, 10, p50, p10);
+        if (nM(s) !== 50 - p50 || nL(s) !== 10 - p10)
+          F.push(`② p50=${p50}·p10=${p10} 에서 «${nM(s)}회 / ${nL(s)}회» 다 — 남은 횟수는 ${50 - p50} / ${10 - p10}`);
+      }
+      /* ③ 신화 줄은 p50 에만, 전설 줄은 p10 에만 반응한다 (두 카운터 뒤바뀜 검출) */
+      const a = render(frag, 50, 10, 0, 0), b = render(frag, 50, 10, 9, 0), c = render(frag, 50, 10, 0, 4);
+      if (!(nM(b) < nM(a))) F.push(`③ p50 을 0 → 9 로 올려도 신화 N 이 안 줄어든다 (${nM(a)} → ${nM(b)})`);
+      if (nL(b) !== nL(a)) F.push(`③ p50 을 올렸는데 전설 N 이 움직인다 (${nL(a)} → ${nL(b)}) — 카운터가 뒤바뀌었다`);
+      if (!(nL(c) < nL(a))) F.push(`③ p10 을 0 → 4 로 올려도 전설 N 이 안 줄어든다 (${nL(a)} → ${nL(c)})`);
+      if (nM(c) !== nM(a)) F.push(`③ p10 을 올렸는데 신화 N 이 움직인다 (${nM(a)} → ${nM(c)}) — 카운터가 뒤바뀌었다`);
+      /* ④ 상수를 GT 에서 읽는다 — 천장을 60·12 로 바꾼 컨텍스트에서 표시도 따라간다 (하드코딩 금지) */
+      const s60 = render(frag, 60, 12, 0, 0);
+      if (nM(s60) !== 60 || nL(s60) !== 12)
+        F.push(`④ 천장을 60·12 로 두면 «${nM(s60)}회 / ${nL(s60)}회» 가 뜬다 — GT.pityMyth·GT.pityLegend 를 안 읽는다(리터럴)`);
+      /* ⑤ 음수가 안 뜬다 — 카운터가 상한에 닿은 순간에도 0 이하로 내려가지 않는다 */
+      const sEnd = render(frag, 50, 10, 50, 10);
+      if (nM(sEnd) < 0 || nL(sEnd) < 0)
+        F.push(`⑤ p50=50·p10=10 에서 «${nM(sEnd)}회 / ${nL(sEnd)}회» 로 음수가 뜬다`);
+      return F;
+    };
+
+    const F = checkPity(mPity[0]);
+    if (F.length) F.forEach(f => bad(f));
+    else ok('①~⑤ 천장 표시가 «신화 위 · 전설 아래» 두 줄이고, N 이 GT.pityMyth·GT.pityLegend 에서 각자의 카운터만큼 카운트다운한다 (렌더 실행 대조 9점)');
+
+    /* ---- 음성 자기검사 (`node tools/verifyT2.js --self`) ----
+       T126 규약: 심은 고장이 no-op 이면(치환 대상이 사라졌으면) 그것부터 빨갛게 떨어뜨린다. */
+    if (process.argv.includes('--self')) {
+      console.log('  [음성 자기검사] 심은 고장을 ㊷ 가 잡는가');
+      const F0 = mPity[0];
+      const muts = [
+        ['뺄셈 삭제 — 영원히 50·10 고정 (T133 이 실제로 뚫은 사본)',
+          s => s.replace('${GT.pityMyth-st.p50}', '${GT.pityMyth}').replace('${GT.pityLegend-st.p10}', '${GT.pityLegend}')],
+        ['두 카운터 뒤바뀜 (신화 줄이 p10 을, 전설 줄이 p50 을 본다)',
+          s => s.replace('${GT.pityMyth-st.p50}', '${GT.pityMyth-st.p10}').replace('${GT.pityLegend-st.p10}', '${GT.pityLegend-st.p50}')],
+        ['카운트업 — 남은 횟수가 아니라 누적을 띄운다',
+          s => s.replace('${GT.pityMyth-st.p50}', '${st.p50}').replace('${GT.pityLegend-st.p10}', '${st.p10}')],
+        ['상수 하드코딩 — GT 를 안 읽고 50·10 을 박아 넣는다',
+          s => s.replace('${GT.pityMyth-st.p50}', '${50-st.p50}').replace('${GT.pityLegend-st.p10}', '${10-st.p10}')],
+        ['줄 순서 뒤바뀜 (전설 위 · 신화 아래)',
+          s => s.replace(/신화 확정까지/, '@@SWAP@@').replace(/전설 확정까지/, '신화 확정까지').replace('@@SWAP@@', '전설 확정까지')],
+      ];
+      let caught = 0, noop = 0;
+      for (const [nm, f] of muts) {
+        const m = f(F0);
+        if (m === F0) { noop++; bad(`  음성 «${nm}» 이 no-op 이다 — 치환 자리가 사라졌으면 게이트를 먼저 고칠 것 (T126)`); continue; }
+        const R = checkPity(m);
+        if (R.length) { caught++; console.log(`    ✓ ${nm}: 잡음 (${R.length}건 — ${R[0].slice(0, 60)}…)`); }
+        else bad(`  음성 «${nm}» 을 ㊷ 가 못 잡았다`);
+      }
+      /* 양성 대조군 — 원본은 한 건도 안 걸려야 한다(오탐 0) */
+      checkPity(F0).length === 0
+        ? ok(`  음성 ${caught}/${muts.length} · no-op ${noop} · 양성 대조군 오탐 0`)
+        : bad('  양성 대조군이 걸렸다 — 원본에서 ㊷ 가 오탐을 낸다');
+    }
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');

@@ -127,6 +127,41 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     `차감 ${ov.ten.spent} 다이아 · 받은 것 ${ov.ten.inv}개`);
   chk('겹침 1회 뽑기도 비용은 400 (2개를 받아도 1회분 · T125 ①)', ov.solo.spent === 400 && ov.solo.inv === 2,
     `차감 ${ov.solo.spent} 다이아 · 받은 것 ${ov.solo.inv}개`);
+  /* ⚑⚑⚑ T133 — T125 ①-b 의 나머지 반쪽. 위 «천장 문구» 단언은 **처음 화면(카운터 0)** 에서 «50회·10회» 만 보고,
+     정적 ㉜⑤ 는 «GT.pityMyth·GT.pityLegend 라는 이름이 블록 안에 있는가» 만 본다. 그래서 두 줄의 뺄셈을 지운
+     사본(= 몇 번을 뽑아도 영원히 50·10)이 **정적 19종·이 스위트 80/80 을 전부 초록으로 통과**했다(T133 실측).
+     주인 21:1X 원문은 «N = 남은 횟수 · 50회·10회에서 **카운트다운**» 이라 화면에서 실제로 줄어드는지 잰다. */
+  const cd = await p.evaluate(() => {
+    const rd = () => {
+      const t = (document.querySelector('.pity')?.textContent || '').replace(/\s+/g, ' ');
+      const m = /신화 확정까지\s*(-?\d+)\s*회/.exec(t), l = /전설 확정까지\s*(-?\d+)\s*회/.exec(t);
+      return { m: m ? +m[1] : null, l: l ? +l[1] : null, t: t.trim() };
+    };
+    save.inv = []; save.eq = {}; save.gem = 1e9;
+    save.gacha = { p50: 0, p10: 0, pulls: 0 }; renderShop(); const a = rd();
+    save.gacha = { p50: 7, p10: 3, pulls: 7 }; renderShop(); const b = rd();
+    save.gacha = { p50: 49, p10: 9, pulls: 49 }; renderShop(); const c = rd();
+    /* 상태를 손으로 세우는 것에 그치지 않고 **실제 뽑기**로도 움직이는지 본다:
+       p50=49·p10=9 는 겹침 회차라 한 번 뽑으면 두 카운터가 같이 리셋된다(T125 ①) → 표시도 50·10 으로 돌아온다. */
+    doPull(1); closeOverlay(); renderShop(); const d = rd();
+    /* 겹치지 않는 평범한 한 회차: p50·p10 이 각각 1씩 오르므로 표시는 각각 1씩 줄어야 한다.
+       (자연 전설↑ 이 나오면 p10 이 리셋되므로 신화 쪽만 결정적으로 본다.) */
+    save.gacha = { p50: 10, p10: 2, pulls: 10 }; renderShop(); const e = rd();
+    doPull(1); closeOverlay(); renderShop(); const f = rd();
+    return { a, b, c, d, e, f, p50: save.gacha.p50 };
+  });
+  await p.waitForTimeout(200);
+  chk('천장 표시가 카운트다운이다 — 카운터 0·0 → 50/10 · 7·3 → 43/7 · 49·9 → 1/1',
+    cd.a.m === 50 && cd.a.l === 10 && cd.b.m === 43 && cd.b.l === 7 && cd.c.m === 1 && cd.c.l === 1,
+    `${cd.a.m}/${cd.a.l} → ${cd.b.m}/${cd.b.l} → ${cd.c.m}/${cd.c.l}`);
+  chk('신화 줄은 p50 만, 전설 줄은 p10 만 본다 (두 카운터가 안 뒤바뀌었다)',
+    cd.b.m === 43 && cd.b.l === 7, `p50=7·p10=3 에서 ${cd.b.m}/${cd.b.l} (기대 43/7)`);
+  chk('겹침 회차를 실제로 뽑으면 표시도 50·10 으로 돌아온다 (T125 ① 두 카운터 리셋)',
+    cd.d.m === 50 && cd.d.l === 10, `${cd.d.m}/${cd.d.l}`);
+  /* 마지막 항목만 실제 굴림에 기대므로 «p50 이 11» 로 못박지 않는다 — 0.1% 로 자연 신화가 떠 p50 이 0 이 되면
+     기대 표시도 50 이다. 보는 것은 언제나 «화면 = 50 − p50» 이고, 카운터가 움직였다는 것까지 같이 본다. */
+  chk('평범한 1회 뽑기를 화면이 따라간다 (표시 = 50 − p50 · 카운터가 실제로 움직였다)',
+    cd.e.m === 40 && cd.p50 !== 10 && cd.f.m === 50 - cd.p50, `${cd.e.m} → ${cd.f.m} (p50 10 → ${cd.p50})`);
   /* ⚑⚑⚑ T125 ①-c — 뽑기 결과 자동 장착 금지 + 수동 장착 동작 */
   const noAuto = await p.evaluate(() => {
     save.inv = []; save.eq = {}; save.gem = 1e9; save.gacha = { p50: 0, p10: 0, pulls: 0 };
