@@ -585,6 +585,92 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('⚑ T137 1부위면 정확히 1번 굴리고 10% 회복한다',
     trig.oneRolls === 2 && nr(trig.oneHeal, 0.1), `굴림 ${trig.oneRolls}회 · 회복 ${(trig.oneHeal * 100).toFixed(4)}%`);
 
+  /* ---------- ⚑⚑⚑ T138 처치-트리거 3특전 (주인 확정 T121 2차 17:0X · 17:2X) ----------
+     정적 층(`tools/verifyKillTrigger.js`)은 `sim.js` 엔진을 굴려서 재고 `index.html` 은 문면·상수로 묶는다.
+     여기서는 **게임 쪽 실제 함수**(`onKill`·`dealPlayerDamage`·`playerStrike`)를 그대로 불러 같은 세 문장을 확인한다:
+       ⓐ «광전사(치확 0 고정) 상태에서도 그 한 방은 0% → 100%» · 스택 아님 · 평타에서만 소모
+       ⓑ «웨이브 마지막 적 → 다음 웨이브 첫 적으로는 대시하지 않는다»
+       ⓒ «8스택이라고 +800% 를 한 번에 쓰는 게 아니라 8번의 공격이 각각 +100%»
+     ⚑ 판은 `G.paused=true` 로 얼려 두고 `Math.random` 을 0.5 로 고정한다 —
+       치명 굴림(`<cr`)·적 회피(10%)·데미지 흔들림(0.92~1.08)이 전부 결정적이 된다. 끝나면 되돌린다. */
+  console.log('\n=== ⚑ T138 처치-트리거 3특전 — 확정 치명 · 대시 · 버서커 (게임 쪽 실측) ===');
+  const t138 = await p.evaluate(() => {
+    startChapter(1);
+    const pl = G.player, or = Math.random;
+    const waves = G.nodes.filter(nd => nd.type === 'wave' && nd.enemies && nd.enemies.length);
+    const prep = nd => nd.enemies.forEach(e => { e.hp = 1e15; e.maxHp = 1e15; e.dead = false; e.isBoss = false; });
+    waves.forEach(prep);
+    const w0 = waves[0], w1 = waves[1];
+    const zero = () => { for (const k of Object.keys(pl.px)) if (typeof pl.px[k] === 'number') pl.px[k] = 0; };
+    const kill = e => { e.hp = 0; e.dead = false; onKill(e, 0); };
+    G.paused = true; G.cleared = true;          /* 레벨업 팝업이 안 뜨게 (특전 3택은 다른 항목이 본다) */
+    Math.random = () => 0.5;
+    const out = {};
+    try {
+      /* ⓐ 확정 치명 — 광전사(치확 0 고정) + 확정 치명 */
+      zero(); pl.critR = 0; pl.px.p_berserk = 1;
+      const tgt = w0.enemies[w0.enemies.length - 1];
+      out.baseCrit = dealPlayerDamage(tgt, 1);                 /* 광전사만 — 치명 0% */
+      pl.px.p_killSureCrit = 1;
+      kill(w0.enemies[0]);      out.flag1 = pl.sureCrit === true;
+      kill(w0.enemies[1]);      out.flag2 = pl.sureCrit === true;   /* 두 번 죽여도 플래그 하나 */
+      out.crit1 = dealPlayerDamage(tgt, 1);                    /* 평타 — 반드시 치명 */
+      out.crit2 = dealPlayerDamage(tgt, 1);                    /* 소모됐다 — 치명 아님 */
+      kill(w0.enemies[2]);                                     /* 다시 켠다 (표적이 곧 그 적이라 되살린다) */
+      tgt.hp = 1e15; tgt.maxHp = 1e15; tgt.dead = false;
+      out.flag3 = pl.sureCrit === true;
+      out.summonCrit = dealPlayerDamage(tgt, 1, '🪓');         /* 소환·반격 축 — 쓰지 않는다 */
+      out.summonKeep = pl.sureCrit === true;                   /* 소모도 안 한다 */
+
+      /* ⓑ 대시 — 같은 웨이브에만 */
+      zero(); pl.dash = false; pl.px.p_killDash = 1;
+      w0.enemies.forEach(e => { e.hp = 1e15; e.dead = false; });
+      kill(w0.enemies[0]);      out.dashSame = pl.dash === true;
+      pl.dash = false;
+      w0.enemies.forEach((e, i) => { if (i) { e.hp = 0; e.dead = true; } });   /* 한 마리만 남았다 */
+      if (w1) prep(w1);
+      kill(w0.enemies[0]);      out.dashNext = pl.dash;        /* 다음 웨이브가 꽉 차 있어도 false 여야 한다 */
+      out.nextAlive = w1 ? w1.enemies.filter(e => e.hp > 0).length : 0;
+
+      /* ⓒ 버서커 — 평타 1회당 1개씩 */
+      zero(); pl.dash = false; pl.bsStk = 0; pl.sureCrit = false;
+      const wb = waves[waves.length - 1]; prep(wb);
+      const bt = wb.enemies[wb.enemies.length - 1];
+      const strikes = () => { const a = []; for (let i = 0; i < 5; i++) { const h = bt.hp; playerStrike(bt); a.push(h - bt.hp); } return a; };
+      out.plain = strikes();                                   /* 대조군 — 스택 없음 */
+      pl.px.p_berserkStk = 1;
+      /* 웨이브가 3마리뿐이라 표적까지 죽는다 — 처치로 스택만 쌓고 표적은 되살려 데미지를 잰다 */
+      for (let i = 0; i < 3; i++) kill(wb.enemies[i % wb.enemies.length]);
+      out.stk = pl.bsStk;
+      bt.hp = 1e15; bt.maxHp = 1e15; bt.dead = false;
+      out.hits = strikes();
+      out.left = pl.bsStk;
+      out.counterKeep = (() => { pl.bsStk = 3; doCounter(bt, 0); return pl.bsStk; })();
+      out.summonStk = (() => { summonHit(bt, 0.75, '🪓'); return pl.bsStk; })();
+    } catch (e) { out.err = String(e); }
+    Math.random = or; G.paused = false;
+    return out;
+  });
+  const rr = (t138.hits || []).map((d, i) => d / (t138.plain ? t138.plain[i] : NaN));
+  chk('⚑ T138 광전사만 있으면 처치 뒤 평타가 치명타가 아니다 (치확 0 고정 · 대조군)',
+    t138.baseCrit === false, `crit=${t138.baseCrit}${t138.err ? ' · ' + t138.err : ''}`);
+  chk('⚑ T138 처치하면 확정 치명이 켜지고, 두 번 죽여도 플래그는 하나 (스택 아님)',
+    t138.flag1 === true && t138.flag2 === true, `${t138.flag1}/${t138.flag2}`);
+  chk('⚑ T138 그 한 방은 광전사여도 반드시 치명타 (주인 «0% → 100%»)', t138.crit1 === true, `crit=${t138.crit1}`);
+  chk('⚑ T138 다음 평타는 다시 치명타가 아니다 (한 방만 소모)', t138.crit2 === false, `crit=${t138.crit2}`);
+  chk('⚑ T138 소환·반격 적중은 확정 치명을 쓰지도 소모하지도 않는다 (살아 있는 표적에 실측)',
+    t138.flag3 === true && t138.summonCrit === false && t138.summonKeep === true,
+    `켜짐=${t138.flag3} · crit=${t138.summonCrit} · 남음=${t138.summonKeep}`);
+  chk('⚑ T138 같은 웨이브에 적이 남아 있으면 대시한다', t138.dashSame === true, `dash=${t138.dashSame}`);
+  chk('⚑ T138 웨이브 마지막 적을 죽이면 다음 웨이브에 적이 남아 있어도 대시하지 않는다 (주인 명시)',
+    t138.dashNext === false && t138.nextAlive > 0, `dash=${t138.dashNext} · 다음 웨이브 생존 ${t138.nextAlive}마리`);
+  chk('⚑ T138 처치 3번 → 버서커 스택 3개', t138.stk === 3, `bsStk=${t138.stk}`);
+  chk('⚑ T138 세 번의 평타가 각각 ×2 · 그 뒤는 ×1 (한 방에 ×8 이 아니다 — 주인 명시)',
+    rr.length === 5 && [2, 2, 2, 1, 1].every((w, i) => Math.abs(rr[i] - w) < 1e-9) && t138.left === 0,
+    rr.map(x => '×' + (Number.isFinite(x) ? x.toFixed(3) : '?')).join(' · ') + ` · 남은 스택 ${t138.left}`);
+  chk('⚑ T138 반격·소환은 버서커 스택을 소모하지 않는다',
+    t138.counterKeep === 3 && t138.summonStk === 3, `반격 뒤 ${t138.counterKeep} · 소환 뒤 ${t138.summonStk}`);
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);
