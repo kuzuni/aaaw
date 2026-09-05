@@ -332,8 +332,10 @@ else {
   const diff = MUST.filter(k => k in TH && TS[k] !== TH[k]).map(k => `${k} sim=${TS[k]} html=${TH[k]}`);
   missing.length ? bad(`index.html TUNE 누락 ${missing.length}개: ${missing.join(' ')}`) : ok(`필수 TUNE 상수 ${MUST.length}개 전부 존재`);
   diff.length ? bad(`TUNE 값 불일치 ${diff.length}건: ${diff.join(' / ')}`) : ok(`TUNE 값 ${MUST.length}개 전수 일치 (보스 ×${TS.bossHp}·×${TS.bossDmg}, 챕터 ${TS.maxChapter})`);
-  if (TS.bossHp === 8 && TS.bossDmg === 1.8) ok('보스 = HP ×8 · DMG ×1.8 (주인 확정 상수, 07:3X)');
-  else bad(`보스 배수가 주인 확정값이 아니다 — HP ×${TS.bossHp} · DMG ×${TS.bossDmg} (확정: ×8 · ×1.8)`);
+  /* ⚑⚑⚑ T168 (주인 확정 2026-09-05 23:4X «체력 4배 많고 공격력 1.5배 센 거로 … 항상 그 수치로») — ×8·×1.8 → ×4·×1.5.
+     여전히 «주인 확정 상수» 라 튜닝 노브가 아니다: 리터럴을 게이트에 남겨 엔진이 곧 정답이 되지 않게 한다. */
+  if (TS.bossHp === 4 && TS.bossDmg === 1.5) ok('보스 = HP ×4 · DMG ×1.5 (주인 확정 상수, T168 · 종전 ×8·×1.8)');
+  else bad(`보스 배수가 주인 확정값이 아니다 — HP ×${TS.bossHp} · DMG ×${TS.bossDmg} (확정: ×4 · ×1.5)`);
   /* ⚑⚑⚑ T103 — 주인 정정으로 600 → **420** (사다리 8점 맨 아랫줄 «신화9강+슬롯100 = 420»).
      최종 벽 위치도 같은 값이다. ⚠ 배수(`wall4Hp/Dmg`)는 T103 재적합에서 **1.0(꺼짐)** 이 됐다 —
      380→420 을 «150→380 률을 그대로 이어» 채우면 잔차가 1 아래라, 주인 지시 ④ 의
