@@ -23,6 +23,8 @@ fs.copyFileSync(path.join(root, 'tools', 'verifyOptText.js'), path.join(SB, 'too
 
 const PLAN0 = fs.readFileSync(path.join(SB, 'PLAN.md'), 'utf8');
 const SIM0 = fs.readFileSync(path.join(SB, 'sim.js'), 'utf8');
+/* ⚑ T157 — 게이트 파일 자체도 사본에서 흔든다(«죽은 면제 = 불합격» 규칙을 시험하려면 허용목록을 심어야 한다). */
+const GATE0 = fs.readFileSync(path.join(SB, 'tools', 'verifyOptText.js'), 'utf8');
 
 /* [이름, 대상파일, 찾을 문자열, 바꿀 문자열, 기대 exit] — 기대 1 = 잡아야 함(음성), 0 = 통과해야 함(오탐 방지) */
 const CASES = [
@@ -62,6 +64,15 @@ const CASES = [
     '- 랜덤 타겟:', '- 이 문장은 엔진 심볼을 하나도 부르지 않으므로 숫자 12345% 가 있어도 대조 대상이 아니다.\n- 랜덤 타겟:', 0],
   ['⑩ 오탐 방지 — 표 밖이지만 §7(다른 게이트 관할) 산문은 안 본다', 'PLAN',
     '- 챕터가 무한 + 웨이브 5마리 고정 구조임', '- `chapterLayout(c)` 는 챕터당 999개를 만든다(§7 산문 — verifyPlanConst 관할).\n- 챕터가 무한 + 웨이브 5마리 고정 구조임', 0],
+  /* ⚑ T157 — «죽은 면제 = 불합격». 허용목록은 «지금 이 문장에 이 숫자가 있을 때만» 을 뜻하는 자물쇠라,
+     문장이 바뀌어 한 번도 안 걸리면 빈 문 앞에 남는다. 종전엔 ⚠ 경고 한 줄이라 T104 가 넣은
+     '산문:heal()|6' 이 T155 로 죽은 채 그대로 있었다. 이제 두 목록 다 죽으면 exit 1 이어야 한다. */
+  ['⑪ 죽은 산문 면제를 심으면 잡아야 한다', 'GATE',
+    'const ALLOW_PROSE = {\n};',
+    "const ALLOW_PROSE = {\n  '산문:없는함수()|9999': { ctx: '있을 리 없는 문맥 9999', why: 'T157 자가시험용 죽은 면제' },\n};", 1],
+  ['⑫ 죽은 ALLOW 면제를 심으면 잡아야 한다', 'GATE',
+    '\nconst ALLOW = {',
+    "\nconst ALLOW = {\n  '없는항목id|9999': 'T157 자가시험용 죽은 면제',", 1],
 ];
 
 function run() {
@@ -81,17 +92,18 @@ let pass = 0, fail = 0;
   if (!ok) console.log(r.stdout.split('\n').slice(-8).map(s => '      ' + s).join('\n'));
 }
 
+const BASE = { PLAN: PLAN0, SIM: SIM0, GATE: GATE0 };
+const DEST = { PLAN: path.join(SB, 'PLAN.md'), SIM: path.join(SB, 'sim.js'), GATE: path.join(SB, 'tools', 'verifyOptText.js') };
 for (const [name, which, from, to, want] of CASES) {
-  const src = which === 'PLAN' ? PLAN0 : SIM0;
+  const src = BASE[which];
   if (!src.includes(from)) {
     fail++;
-    console.log(`  ✗ ${name} — 치환 대상 문자열을 못 찾았다(PLAN/sim 이 바뀌었으면 이 시험을 갱신할 것)`);
+    console.log(`  ✗ ${name} — 치환 대상 문자열을 못 찾았다(PLAN/sim/게이트가 바뀌었으면 이 시험을 갱신할 것)`);
     continue;
   }
-  /* SIM 쪽 상수는 여러 곳에 있을 수 있어 전부 바꾼다. PLAN 산문은 첫 곳만. */
+  /* SIM 쪽 상수는 여러 곳에 있을 수 있어 전부 바꾼다. PLAN 산문·게이트는 첫 곳만. */
   const mutated = which === 'SIM' ? src.split(from).join(to) : src.replace(from, to);
-  fs.writeFileSync(path.join(SB, 'PLAN.md'), which === 'PLAN' ? mutated : PLAN0);
-  fs.writeFileSync(path.join(SB, 'sim.js'), which === 'SIM' ? mutated : SIM0);
+  for (const k of ['PLAN', 'SIM', 'GATE']) fs.writeFileSync(DEST[k], k === which ? mutated : BASE[k]);
   const r = run();
   const ok = r.status === want;
   ok ? pass++ : fail++;

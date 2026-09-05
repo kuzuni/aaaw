@@ -38,8 +38,9 @@ const LIST = process.argv.includes('--list');
 /* ── 허용목록: «설명문 숫자인데 엔진 상수로 나타나지 않는 것이 정상» 인 항목 ──
    키는 `<항목ID>|<숫자>`. 값은 사유(사람이 읽는 근거). 사유 없이 추가 금지. */
 const ALLOW = {
-  /* ⚑ T124 — 'plate:7|1'(판금갑옷 «사망 시 1회 부활») 항목은 18계열 옵션표가 폐지되면서 대상이 사라져 지웠다. */
-  'l_misfire|2': '«오사 데미지 2배» 의 2 는 p.misfire 에서 두 단계 떨어진 곳(화살에 friendly 플래그를 심고, 화살 처리부 sim.js:819 `e.hp-=a.dmg*2`)에 있어 자동 추적 밖이다. 수동 확인 완료 — 2배 일치',
+  /* ⚑ T124 — 'plate:7|1'(판금갑옷 «사망 시 1회 부활») 항목은 18계열 옵션표가 폐지되면서 대상이 사라져 지웠다.
+     ⚑ T157 — 'l_misfire|2'(오사 데미지 2배) 도 같은 이유로 대상이 사라졌다(두 엔진에 `l_misfire` 0건).
+     죽은 채 남아 있었고 아래 «죽은 면제» 단언이 없어 아무도 안 알려 줬다 — 지웠다. */
 };
 
 /* ── ④ 산문 허용목록 (T42) ─ 키는 `산문:<앵커들>|<숫자>`, 값은 `{ctx, why}`.
@@ -48,15 +49,15 @@ const ALLOW = {
    ⚑ ctx 가 핵심이다 — 숫자만으로 면제하면 «그 숫자로 드리프트한 진짜 오류» 까지 같이 통과한다.
    실제로 처음 구현에서 `m_procX2|2` 를 숫자만으로 면제했더니, T42 를 낳은 그 버그(«확률 1.22배» → «확률 2배»)를
    게이트가 그대로 통과시켰다(음성 테스트 ①이 잡았다). 그래서 면제는 «그 숫자가 이 문맥에 있을 때만» 으로 건다.
-   ctx 는 숫자 주변 ±24자 안에 그대로 들어 있어야 하는 조각이며, 숫자를 포함시키는 것이 안전하다. */
+   ctx 는 숫자 주변 ±24자 안에 그대로 들어 있어야 하는 조각이며, 숫자를 포함시키는 것이 안전하다.
+
+   ⚑ P1(T83) — §3.0·§4 재작성으로 종전 8건(폐기된 4단 등급 확률·m_procX2 정정문·구 관측치 등)이 전부
+     대상 소멸했다. 새 산문에는 «엔진에 리터럴로 없는 인용 수치» 가 없어 비어 있는 것이 정상이다.
+   ⚑ T104 로 넣었던 '산문:heal()|6'(«6% 는 최대 체력 기준»)은 **T157 에서 지웠다** — T155 가 회복 비율을
+     6% → 12% 로 교체해 ctx «6% 는» 이 문장에서 사라져 **죽은 면제**가 됐기 때문이다. 종전엔 죽어도 ⚠ 경고
+     한 줄이라 아무도 안 지웠고, 죽은 면제는 «그 문맥이 다시 생기면 조용히 넓어지는 구멍» 이다 —
+     그래서 아래 판정에서 **죽은 면제 = 불합격**으로 올렸다(ALLOW·ALLOW_PROSE 양쪽). */
 const ALLOW_PROSE = {
-  /* ⚑ P1(T83) — §3.0·§4 재작성으로 종전 8건(폐기된 4단 등급 확률·m_procX2 정정문·구 관측치 등)이 전부
-     대상 소멸했다. 새 산문에는 아직 «엔진에 리터럴로 없는 인용 수치» 가 없어 비어 있는 것이 정상이다. */
-  /* ⚑⚑⚑ T104 (주인 확정 2026-09-03) — §3.1 «회피 시 회복» 특전 산문에서 언급되는 두 숫자.
-     · «4번 «회피 시 화살»» = 특전 순번 표기(같은 트리거 자리를 가리키는 참조). heal() 엔진 상수에 4는 없다.
-     · «6% 는 최대 체력 기준» = 회복 비율 6%. 엔진에서는 `p.maxHp * PERK_EVHEAL_F` 로 상수를 쓰므로
-       heal() 함수 본문에는 6 리터럴이 없다(회피 분기 호출부에 있고, verifyPerkOrder 가 그 자리를 대조한다). */
-  '산문:heal()|6': { ctx: '6% 는', why: 'T104 § 3.1 · 회복 비율 6% (PERK_EVHEAL_F=0.06 · 회피 분기 호출부에서 곱한다)' },
 };
 
 
@@ -311,12 +312,13 @@ const flags = [];
 let checked = 0, allowed = 0;
 let proseChecked = 0, proseAllowed = 0, proseLines = 0;
 const proseAllowUsed = new Set();
+const allowUsed = new Set();   /* ⚑ T157 — 죽은 면제를 잡으려면 «이번에 실제로 쓴 키» 를 알아야 한다 */
 function audit(itemId, text, apText, where) {
   const pool = poolFor(apText);
   for (const n of numsIn(text)) {
     checked++;
     const key = `${itemId}|${n}`;
-    if (ALLOW[key]) { allowed++; if (LIST) console.log(`  · 허용  ${key.padEnd(24)} ${ALLOW[key]}`); continue; }
+    if (ALLOW[key]) { allowed++; allowUsed.add(key); if (LIST) console.log(`  · 허용  ${key.padEnd(24)} ${ALLOW[key]}`); continue; }
     if (!explained(n, pool)) {
       flags.push({ itemId, n, text, where, pool: [...pool].sort((a, b) => a - b) });
     }
@@ -367,10 +369,16 @@ for (const f of proseFlags) {
   console.log(`      문장: ${f.text.trim().slice(0, 160)}`);
   console.log(`      엔진 숫자: ${f.pool.join(', ') || '(없음)'}`);
 }
+/* ⚑ T157 — 죽은 면제는 «경고» 가 아니라 **불합격**이다.
+   허용목록은 «지금 이 문장에 이 숫자가 있을 때만» 을 뜻하는 자물쇠인데, 그 문장이 바뀌어 한 번도 안 걸리면
+   자물쇠가 빈 문 앞에 남는다 — 나중에 같은 문맥이 되살아나면 그때는 진짜 드리프트를 조용히 통과시킨다.
+   실제로 T104 가 넣은 '산문:heal()|6' 이 T155 로 죽은 채 ⚠ 한 줄로만 뜨고 있었다(T157 에서 지웠다). */
 const proseAllowStale = Object.keys(ALLOW_PROSE).filter(k => !proseAllowUsed.has(k));
-if (proseAllowStale.length) console.log(`  ⚠ 산문 허용목록 중 이번에 안 걸린 항목 ${proseAllowStale.length}개(문장이 바뀌었으면 지울 것): ${proseAllowStale.join(' · ')}`);
-console.log(`\n불일치 ${flags.length}건 · 산문 불일치 ${proseFlags.length}건 · PLAN §3 누락 ${perkTextMissing}종 · 표 대조 ${tableOk ? 'OK' : 'NG'}`);
-if (flags.length || proseFlags.length || perkTextMissing || !tableOk) {
+const allowStale = Object.keys(ALLOW).filter(k => !allowUsed.has(k));
+if (proseAllowStale.length) console.log(`  ✗ 산문 허용목록에 죽은 항목 ${proseAllowStale.length}개(이번에 한 번도 안 걸렸다 — 문장이 바뀌었으면 지울 것): ${proseAllowStale.join(' · ')}`);
+if (allowStale.length) console.log(`  ✗ 허용목록(ALLOW)에 죽은 항목 ${allowStale.length}개(이번에 한 번도 안 걸렸다 — 대상이 사라졌으면 지울 것): ${allowStale.join(' · ')}`);
+console.log(`\n불일치 ${flags.length}건 · 산문 불일치 ${proseFlags.length}건 · PLAN §3 누락 ${perkTextMissing}종 · 표 대조 ${tableOk ? 'OK' : 'NG'} · 죽은 면제 ${allowStale.length + proseAllowStale.length}건`);
+if (flags.length || proseFlags.length || perkTextMissing || !tableOk || allowStale.length || proseAllowStale.length) {
   console.log('→ 실패: 설명문과 엔진이 어긋났다. 엔진이 옳으면 설명문을, 설명문이 옳으면 엔진을 고쳐라(엔진 수치 변경은 T1 회차 절차).');
   process.exit(1);
 }
