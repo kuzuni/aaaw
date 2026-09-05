@@ -130,6 +130,27 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('세부 팝업의 «장착» 으로 수동 장착된다', noAuto.hasEq && noAuto.eqAfterClick === 1 && noAuto.equippedU === noAuto.u,
     `장착 ${noAuto.eqAfterClick}부위 · uid ${noAuto.equippedU}`);
   chk('장착하면 NEW 뱃지가 사라진다', noAuto.nwCleared);
+  /* ⚑⚑⚑ T128 — «열어 보면 지워진다» 갈래는 위 «장착» 갈래와 다른 코드 경로다(장착은 renderGear 를 부르고 닫기는 안 불렀다).
+     그래서 **모델 플래그가 아니라 화면의 뱃지 개수**를 센다 — 모델만 보는 단언은 이 결함을 그대로 통과시켰다. */
+  const nwView = await p.evaluate(() => {
+    save.inv = []; save.eq = {}; save.gem = 1e9; save.gacha = { p50: 0, p10: 0, pulls: 0 };
+    doPull(10); closeOverlay();
+    showScreen('gear'); renderGear();
+    const cnt = () => document.querySelectorAll('#invGrid .nwm').length;
+    const before = cnt();
+    const g = save.inv[0];
+    openGearDetail(g.u);
+    const hasClose = !!document.getElementById('gdClose');
+    if (hasClose) document.getElementById('gdClose').click();   /* «닫기» — 장착하지 않는다 */
+    const after = cnt(), model = save.inv.filter(x => x.nw).length;
+    closeOverlay();
+    return { before, after, model, inv: save.inv.length, hasClose };
+  });
+  await p.waitForTimeout(200);
+  chk('세부 팝업을 열면 NEW 플래그가 지워진다 (닫기 갈래)', nwView.hasClose && nwView.model === nwView.inv - 1,
+    `모델 ${nwView.model}/${nwView.inv}`);
+  chk('«닫기» 직후 인벤 격자의 NEW 뱃지가 즉시 줄어든다', nwView.before === nwView.inv && nwView.after === nwView.model,
+    `뱃지 ${nwView.before} → ${nwView.after} · 모델 ${nwView.model}`);
   await p.evaluate(() => { closeOverlay(); showScreen('shop'); }); await p.waitForTimeout(300);
   await p.screenshot({ path: `${OUT}/t3-shop.png` });
 

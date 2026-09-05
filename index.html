@@ -1777,7 +1777,12 @@ function slotUpgradeHTML(pt){ return slotCostHTML(pt)+slotNoteHTML(pt); }
 function openGearDetail(u){
   const g=invById(u);
   if(!g){ closeOverlay(); return; }
-  if(g.nw){ delete g.nw; persist(); }      /* ⚑ T125 ①-c — 한 번 열어 봤으면 «NEW» 는 지운다 */
+  /* ⚑ T125 ①-c — 한 번 열어 봤으면 «NEW» 는 지운다.
+     ⚑⚑⚑ T128 — 여기서 `renderGear()` 까지 해야 한다. 모델에서만 지우면 **뒤에 깔린 인벤 격자는 옛 HTML 그대로**라
+     NEW 뱃지가 화면에 남는다(«닫기» 로 닫으면 아무도 다시 그리지 않는다 — `closeOverlay()` 는 오버레이만 비운다).
+     장착·해제·슬롯 강화 경로는 각자 `renderGear()` 를 부르고 있어 이 한 갈래만 어긋나 있었다.
+     격자는 `#overlay` 와 다른 컨테이너라 팝업이 열린 채 다시 그려도 무해하다(슬롯 강화 경로가 이미 그렇게 한다). */
+  if(g.nw){ delete g.nw; persist(); renderGear(); }
   const lv=save.slots[g.part]|0, cost=GT.slotCost(lv), eqd=isEquipped(g);
   /* ⚑ T116 U02 — 레퍼런스 `장비 세부팝업.jpg` 의 구조로 재배치한다(두 비평가 공통 «가장 효과 큰 수정 2개» 중 하나):
      등급 배지가 상자 윗변에 걸치고 → 좌상 정사각 아이콘 + 오른쪽 이름줄·메타줄 2단 헤더 →
