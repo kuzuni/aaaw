@@ -27,7 +27,7 @@ const TUNE={
      되돌렸다**. 주인 원문: «맞추라 한 적이 없는데 왜 맞췄노. 전에 그 기준대로 밸런스 되야 하는데.»
      ⚑ 상시 규칙 — 특전·3택·등급 등 «플레이어 쪽» 이 바뀌어도 루틴은 이 네 값을 임의로 재적합하지 않는다.
      재적합은 주인이 «맞춰라» 라고 한 경우에만, 그리고 언제나 `PERK_MODE_LADDER`(기준 플레이어) 조건으로만 한다. */
-  eBaseHp:50.174688, eBaseDmg:9.330519,
+  eBaseHp:49.283586, eBaseDmg:9.164809,
   /* ⚑ T35: 단일 성장률 `eHpG 1.185`·`eDmgG 1.08` 폐기 → PLAN §11.7 «구간별 성장률» 표.
      적 HP 는 플레이어 «공격력» 축, 적 DMG 는 «체력+실드» 축에서 주인 확정 스탯 사다리로부터 역산된 값이다.
      [하한, 성장률] — 챕터 c 에서 c+1 로 갈 때 적용할 배수를 c 로 찾는다.
@@ -84,8 +84,8 @@ const TUNE={
         잔차가 1 아래로 나오고, 주인 지시 ④가 «잔차가 1 아래면 벽을 끄고 률만으로 잇는다» 로 정해 두었다.
      ⚠ 적 HP·DMG 는 `Math.round` 라 초반 칸의 계단이 크다(2칸 챕터 15: 적 HP 51 → 52 가 14.5% → 5.5%).
         0.5% 단위보다 잘게 움직이지 말 것. 근거·실측표 `docs/balance/T103/result.md`. */
-  eHpSeg:[[0,1.0292],[5,1.003143],[15,1.071776],[28,1.077458],[40,1.05304],[70,1.023291],[150,1.023071],[380,1.014651]],
-  eDmgSeg:[[0,1.0265],[5,1.003143],[15,1.068093],[28,1.060994],[40,1.025582],[70,1.025206],[150,1.022541],[380,1.014651]],
+  eHpSeg:[[0,1.0292],[3,1.143045],[7,1.036216],[15,1.107449],[30,1.078482],[60,1.075168],[100,1.023029]],
+  eDmgSeg:[[0,1.0265],[3,1.141544],[7,1.036216],[15,1.101885],[30,1.054227],[60,1.069589],[100,1.024943]],
   /* ⚑⚑ 「벽 예산」 — T1 R02 가 «사다리 유지 + 벽 존재» 를 동시에 만족시킨 방법 (T35 가 남긴 숙제의 답).
      T35 는 «구간별 성장률이 사다리 7점에서 역산된 값이라 벽을 얹으면 사다리가 어긋난다» 며 벽 4종을 전부 껐다.
      하지만 어긋나는 건 «혼동» 이 아니라 **예산**이다: 과녁 7개 중 5 만 벽 밖(c<10)이고 15·30·50·70·120·260 은 전부 벽 안이라
@@ -611,6 +611,19 @@ function applyCollHp(p,n){
    (회복 → 공격력 → 회피율 → 화살 → 도끼 → 반격률 → 창 → 치확 → 치피 → 방어력). */
 const PERK_MODE_PLAY='3pick', PERK_MODE_LADDER='base10';
 const PERKS_BASE10=PERKS.slice(0,10);
+/* ⚑⚑⚑ T160 (주인 확정 2026-09-05 20:2X · 20:3X 정정) — 재적합 자(尺)의 나머지 두 스위치.
+   주인 «기준은 전에 그 밸런스 맞추던 방식으로 — 특전 10개 고정에, 치명 확률 어쩌구 그 옵션 있는
+   기본 옵션에, 장비들은 옵션 없다 치고». `perkMode:'base10'` 이 첫째고 아래 둘이 나머지다.
+
+   ⚠ **둘 다 «재는 자» 전용이다 — 게임 동작(index.html)은 한 글자도 안 바뀐다.**
+   ⓐ `baseStats:'legacy20'` — 기본 스탯 넷(치확·반격·방어·회피)을 **옛 값 20** 으로 쓴다.
+      게임의 실제 기본치는 T123 대로 `TUNE.pCrit0/pCounter0/pDef0/pEvade0 = 0` 이고 그건 그대로 둔다
+      (`verifyCombatConst` ① 이 계속 0 을 대조한다). 자만 옛 값을 쓰는 이유는 주인이 «전에 맞추던 방식»
+      으로 재라고 했기 때문이다. 나머지 기본치(공 25 · 체 150 · 실 250 · 공속 1.0 · 치피 150)는
+      지금 값이 곧 옛 값이라 스위치가 필요 없다.
+   ⓑ `gearOpts:false` — 장비의 **세트 옵션(GOPT)** 을 통째로 끈다. 등급·강화·슬롯의 공/체/실 기여
+      (`buildPower`)만 남는다. `g_*` 축이 0 으로 남으므로 뒤의 퍼센트 합산도 저절로 무효다. */
+const LADDER_BASE20=20;   /* 옛 기본 스탯 — 치확·반격·방어·회피 (주인 «전에 했던 수치») */
 
 /* ================= 장비 시스템 (PLAN §11) ================= */
 /* ⚑⚑⚑ T124 (주인 확정 2026-09-04 · 19:2X) — 장비 계열 재설계.
@@ -1076,9 +1089,12 @@ function basePx(){ const o=_basePxLegacy(); for(const k of PERKS) o[k.id]=0; for
 function mkPlayer(build,G){
   const pw=buildPower(build);
   const maxHp=pw.hp;
+  /* ⚑ T160 하니스 스위치 ⓐ — 자가 `baseStats:'legacy20'` 이면 넷만 옛 값 20 을 쓴다(게임 상수는 불변) */
+  const lg=G&&G.baseStats==='legacy20';
+  const b0=(v,k)=>lg?LADDER_BASE20:v;
   const p={G, worldX:0, atkTimer:0, nextAtk:0, nextCrit:false,
-    dmg:pw.atk, aspd:TUNE.pAspd0, critR:TUNE.pCrit0, critF:TUNE.pCritF0,
-    def:TUNE.pDef0, counter:TUNE.pCounter0, evade:TUNE.pEvade0, steal:0, killHeal:0, misfire:0, goldMul:1, walkMul:1, healAmp:0,
+    dmg:pw.atk, aspd:TUNE.pAspd0, critR:b0(TUNE.pCrit0), critF:TUNE.pCritF0,
+    def:b0(TUNE.pDef0), counter:b0(TUNE.pCounter0), evade:b0(TUNE.pEvade0), steal:0, killHeal:0, misfire:0, goldMul:1, walkMul:1, healAmp:0,
     maxHp, hp:maxHp, maxSh:pw.sh, sh:pw.sh,   /* ⚑ T35: 실드 독립 스탯 (`maxHp*0.8` 파생 폐기) */
     level:1, exp:0, ward:0, repairAmp:0,
     /* ⚑ T121 신규 상태 — 치명 스택(평타 적중 누적) · N타 카운터(특전마다 따로) · 수집가·체력이 지금 건 배수 */
@@ -1086,8 +1102,9 @@ function mkPlayer(build,G){
     /* ⚑ T121 2차 — 처치 시 확정 치명 플래그 · 버서커 스택 · 처치 시 대시 중 여부 */
     sureCrit:false, bsStk:0, dash:false,
     buffs:{atk:[],aspd:[],critR:[],critF:[],def:[],evade:[]}, px:basePx()};
-  /* 장비 계열 옵션 적용 (PLAN §11.1 — 상위 등급은 하위 옵션 포함) */
-  for(const pt of GT.parts){
+  /* 장비 계열 옵션 적용 (PLAN §11.1 — 상위 등급은 하위 옵션 포함)
+     ⚑ T160 하니스 스위치 ⓑ — 자가 `gearOpts:false` 면 세트 옵션을 통째로 건너뛴다(공/체/실 기여만 남는다). */
+  if(!(G&&G.gearOpts===false)) for(const pt of GT.parts){
     const g=build.eq[pt]; if(!g)continue;
     const tbl=GOPT[g.type]; if(!tbl)continue;
     const n=GT.optCount(g.rar,g.plus);
@@ -1708,7 +1725,10 @@ function runChapter(chapter,build,opts){
     dead:false,cleared:false,t:0,atkTries:0,miss:0,   /* 적 회피 10% 실측용 (PLAN §2.3) */
     noPerk:!!opts.noPerk,
     /* ⚑⚑⚑ T120 — 특전 획득 자(尺). 기본 = 게임과 같은 3택, 사다리 측정 = «기준 플레이어»(base10). */
-    perkMode:opts.perkMode||PERK_MODE_PLAY};
+    perkMode:opts.perkMode||PERK_MODE_PLAY,
+    /* ⚑⚑⚑ T160 — 재적합 자의 나머지 두 스위치. 기본값은 «게임 그대로»(undefined) 라 안 넘기면 종전 동작이다. */
+    baseStats:opts.baseStats,
+    gearOpts:opts.gearOpts};
   const p=mkPlayer(build,G);G.player=p;p.G=G;
   const layout=chapterLayout(chapter);
   let x=560,wi=0;
@@ -1909,21 +1929,28 @@ function eqStr(a){
    ⚑ 종전엔 실험1(과녁)과 실험5(사다리)가 서로 다른 표를 봤다 — 이제 **표가 하나**이고 실험5 는
      같은 7칸을 «슬롯 0렙» 진단으로 다시 보는 자리로만 남는다.
    ⚠ 이 함수는 **재는 자일 뿐 맞추는 것은 TUNE** 이다(난이도 노브 = 구간 성장률·벽 배수·기저). */
+/* ⚑⚑⚑ T160 (주인 확정 2026-09-05 20:2X · 20:3X 정정 3건) — 과녁 챕터를 새 표로 갈아끼웠다.
+   주인 원문: «노템 3 · 일반 7 · 희귀 15 · 전설 30 · 신화 60 · 신화 9강 100 · 신화 9강 슬롯100 은 125 정도».
+   빌드·슬롯은 **한 칸도 안 바뀐다**(20:3X «슬롯 그것도 전에 그 기준») — 움직인 것은 과녁 챕터뿐이고,
+   맞추는 노브는 적 스탯(기저·구간률·벽)이다. 종전 표(5·15·28·70·150·380·420)는 이 표로 대체됐다. */
 const EXP1_TARGETS=[
-  {id:'노템(장비0·슬롯0)',        rar:-1,plus:0, slot:0,   at:5,   want:10},
-  {id:'일반 풀셋(슬롯0)',          rar:0, plus:0, slot:0,   at:15,  want:10},
-  {id:'희귀 풀셋·슬롯5',           rar:1, plus:0, slot:5,   at:28,  want:10},
-  /* ⚑⚑⚑ T153 — «영웅 풀셋·슬롯10 = 챕터 40» 칸은 **장비 등급이 사라져 삭제**했다(8점 → 7점).
-     적 스탯은 한 글자도 안 건드린다(상시 규칙) — 표에서 칸만 뺀 것이다. */
-  {id:'전설 풀셋·슬롯15',          rar:2, plus:0, slot:15,  at:70,  want:10},
-  {id:'신화 풀셋·슬롯25',          rar:3, plus:0, slot:25,  at:150, want:10},
-  {id:'신화+9강 풀셋·슬롯50',      rar:3, plus:9, slot:50,  at:380, want:10},
-  {id:'신화+9강 풀셋·슬롯100',     rar:3, plus:9, slot:100, at:420, want:10},
+  {id:'노템(장비0·슬롯0)',        rar:-1,plus:0, slot:0,   at:3,   want:10},
+  {id:'일반 풀셋(슬롯0)',          rar:0, plus:0, slot:0,   at:7,   want:10},
+  {id:'희귀 풀셋·슬롯5',           rar:1, plus:0, slot:5,   at:15,  want:10},
+  /* ⚑⚑⚑ T153 — «영웅 풀셋·슬롯10» 칸은 **장비 등급이 사라져 삭제**했다(8점 → 7점). */
+  {id:'전설 풀셋·슬롯15',          rar:2, plus:0, slot:15,  at:30,  want:10},
+  {id:'신화 풀셋·슬롯25',          rar:3, plus:0, slot:25,  at:60,  want:10},
+  {id:'신화+9강 풀셋·슬롯50',      rar:3, plus:9, slot:50,  at:100, want:10},
+  {id:'신화+9강 풀셋·슬롯100',     rar:3, plus:9, slot:100, at:125, want:10},
 ];
+/* ⚑⚑⚑ T160 — 사다리 측정 조건(주인 확정 ②). 실험1·5 와 `fitLadder`·게이트가 **같은 이 상수**를 넘긴다.
+   자를 한 곳에서만 정의해야 «어떤 도구는 옵션을 켠 채 쟀다» 가 안 생긴다. */
+const LADDER_OPTS={perkMode:PERK_MODE_LADDER, baseStats:'legacy20', gearOpts:false};
 /* 사다리 7칸의 확정 총 스탯 (주인 표 — 공/체/실. 진단 출력의 대조용이고 판정은 클리어율로만 한다)
    ⚑ T153 — 영웅 칸(챕터 40)이 빠졌다. 남은 칸의 값은 그대로다. */
-const LADDER_STAT={5:[25,150,250], 15:[50,250,400], 28:[108.9,543.4,868.9],
-  70:[524.7,2619.1,4188.9], 150:[3742.2,18703.1,29921.9], 380:[106912,533475,853125], 420:[190050,948300,1516500]};
+/* ⚑ T160 — 빌드는 그대로이므로 값도 그대로다. 키(과녁 챕터)만 새 표로 옮겼다. */
+const LADDER_STAT={3:[25,150,250], 7:[50,250,400], 15:[108.9,543.4,868.9],
+  30:[524.7,2619.1,4188.9], 60:[3742.2,18703.1,29921.9], 100:[106912,533475,853125], 125:[190050,948300,1516500]};
 const EXP1_TOL=2;                  // ±%p (주인 확정)
 const EXP1_SCORE_N=1000;           // 과녁당 채점 판수 하한 (주인 확정 «1,000판 이상»)
 /* ⚑⚑⚑ T120 — 실험1 은 **언제나 «기준 플레이어»(`PERK_MODE_LADDER`)로 잰다**. 이것이 주인 확정 ① 의 자다.
@@ -1947,7 +1974,7 @@ function exp1_targets(){
     for(let c=T.at-span;c<=T.at+span;c++){
       if(c<1)continue;
       let w=0;
-      for(let i=0;i<N;i++) if(runChapter(c,b,{perkMode:EXP1_PERKMODE}).clear)w++;   /* ⚑ T120 — 자 = 기준 플레이어 */
+      for(let i=0;i<N;i++) if(runChapter(c,b,Object.assign({},LADDER_OPTS,{perkMode:EXP1_PERKMODE})).clear)w++;   /* ⚑ T120 자 = 기준 플레이어 · ⚑ T160 기본 스탯 20 + 세트 옵션 끔 */
       const rate=w/N*100, d=rate-T.want, ok=Math.abs(d)<=EXP1_TOL;
       const tag=c===T.at?(ok?'   ← 과녁 ✓':`   ← 과녁 ✗(${T.want}±${EXP1_TOL}%)`):'';
       console.log(`    챕터 ${String(c).padStart(3)}: 클리어율 ${rate.toFixed(1)}%${tag}`);
@@ -2084,7 +2111,7 @@ function exp5_ladder(){
     for(let c=L.at-span;c<=L.at+span;c++){
       if(c<1)continue;
       let w=0;
-      for(let i=0;i<N;i++) if(runChapter(c,b,{perkMode:PERK_MODE_LADDER}).clear)w++;   /* ⚑ T120 — 사다리 자 = «기준 플레이어»(실험1 과 같은 자) */
+      for(let i=0;i<N;i++) if(runChapter(c,b,LADDER_OPTS).clear)w++;   /* ⚑ T120 사다리 자 = «기준 플레이어» · ⚑ T160 실험1 과 같은 LADDER_OPTS */
       const rate=w/N*100;
       const exp=rate>0?(100/rate).toFixed(1)+'회':'∞';
       const tag=c===L.at?'   ← 사다리 과녁 챕터 (슬롯 0렙 관측 — 판정은 실험1)':'';
