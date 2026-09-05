@@ -671,6 +671,108 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('⚑ T138 반격·소환은 버서커 스택을 소모하지 않는다',
     t138.counterKeep === 3 && t138.summonStk === 3, `반격 뒤 ${t138.counterKeep} · 소환 뒤 ${t138.summonStk}`);
 
+  /* ---------- ⚑⚑⚑ T139 피격 판정 순서 (주인 확정 T121 3차 18:2X) ----------
+     주인 문면: «판정 순서 **회피 → 방어막 → 피해 무시 → 피해**» · «방어막으로 막은 공격은 «피격» 이
+     아니다(트리거·가시갑옷 발동 없음)» · 피해 무시는 «회피 판정 «뒤»·방어막 «뒤» 에 굴림».
+     정적 층(`tools/verifyHitOrder.js`)은 `sim.js` 의 `hitPlayer` 를 vm 에서 굴려 재고 index.html 은
+     네 층의 **위치**를 비교한다 — **게임이 실제로 그 순서로 도는지**는 여기서만 확인된다.
+     순서를 가르는 열쇠는 **방어막 장수의 소모 여부**다. 모든 확률 굴림을 «성공» 으로 굳혀 놓고
+     «방어막 1장 + 피해 무시 특전» 으로 한 대 맞으면
+       · 주인 순서면 → 방어막이 먼저 막아 **장수가 1 → 0** 이 된다
+       · 순서가 뒤집히면 → 무시가 먼저 성공해 그대로 끝나므로 **장수가 1 로 남는다**.
+     ⚑ 굴림 횟수는 **조기 종료가 연출 앞에서 끊기는 경로에서만** 쓴다 — 게임 쪽 `hitPlayer` 는
+     `sparks`·`wardFx` 같은 연출이 `Math.random` 을 같이 쓰기 때문에(맨몸 피격 한 대에 수십 번)
+     피해가 끝까지 흐르거나 방어막 연출을 타는 경로에서는 굴림 수가 순서의 증거가 못 된다.
+     회피·피해 무시의 조기 종료는 연출 앞에서 끊겨 굴림이 정확히 1·2회로 떨어진다. */
+  console.log('\n=== ⚑ T139 피격 판정 순서 «회피 → 방어막 → 피해 무시 → 피해» (게임 안 실측) ===');
+  const t139 = await p.evaluate(() => {
+    startChapter(7);
+    const pl = G.player, px = pl.px, RR = Math.random;
+    const keep = { hp: pl.hp, sh: pl.sh, ev: pl.evade, ward: pl.ward, def: pl.def, bd: pl.buffs.def,
+      gc: px.guardCrystal, pause: G.paused, ign: px.p_ignoreN, wall: px.p_shWallL,
+      th: px.p_thorns, ths: px.g_thornSh, wh: px.p_wardHitN, ct: pl.counter };
+    G.paused = true; pl.def = 0; pl.buffs.def = []; px.guardCrystal = false;
+    pl.counter = 0; px.g_thornSh = 0;
+    let n = 0;
+    const roll = f => { n = 0; Math.random = () => { const v = f(n); n++; return v; }; };
+    const foe = () => ({ hp: 1e4 });
+    /* 회피율 90(엔진 상한)으로 굳혀 **첫 굴림 값 하나로** 회피 성공·실패를 정한다 */
+    const HIT = () => 0.95, EVA = i => (i === 0 ? 0.10 : 0);
+    const out = {};
+    const set = o => { px.p_ignoreN = o.ign || 0; px.p_shWallL = o.wall || 0;
+      px.p_thorns = o.thorn || 0; px.p_wardHitN = o.wardHit || 0;
+      pl.ward = o.ward || 0; pl.sh = o.sh || 0; pl.hp = pl.maxHp; pl.evade = 90; };
+    const shot = (o, f) => { set(o); const e = foe(); const h0 = pl.hp, s0 = pl.sh, w0 = pl.ward;
+      roll(f); hitPlayer(o.dmg === undefined ? 1 : o.dmg, o.melee !== false, e);
+      return { rolls: n, ward: pl.ward, dWard: pl.ward - w0, dHp: h0 - pl.hp, dSh: s0 - pl.sh,
+        refl: 1e4 - e.hp }; };
+    /* 회피만 실패시키고 그 뒤 확률 굴림은 전부 «성공» 으로 굳힌다 — 이 값에서 방어막이 깎이면
+       방어막이 무시보다 «앞» 이고, 안 깎이면 무시가 먼저 성공한 것이다. */
+    const HITYES = i => (i === 0 ? 0.95 : 0);
+    try {
+      /* 맨몸 피격 — 아무 방어층도 없으면 피해가 들어간다 (양성 대조) */
+      out.bare = shot({}, HIT);
+      /* ① 회피 > 방어막 — 피할 수 있던 타격은 방어막을 안 깎는다 (연출 앞에서 끊겨 굴림 1회) */
+      out.ev = shot({ ward: 3 }, EVA);
+      /* ② 방어막 > 피해 무시 (핵심) — 무시가 «성공» 값을 받아도 방어막이 먼저 깎인다 */
+      out.wardFirst = shot({ ward: 1, ign: 1 }, HITYES);
+      /* ③ 방어막 > 실드 방벽 */
+      out.wardWall = shot({ ward: 1, wall: 1, sh: 1e9 }, HITYES);
+      /* ④ 방어막이 0 이라야 무시를 굴린다 — 조기 종료가 연출 앞이라 굴림이 정확히 2회 */
+      out.ignOn = shot({ ign: 1 }, HITYES);
+      out.ignOff = shot({ ign: 1 }, () => 0.95);
+      /* ⑤ 실드 방벽은 실드가 0 이면 굴리지 않는다 (굴렸다면 성공해서 피해가 0 이었을 값) */
+      out.wallNoSh = shot({ wall: 1, sh: 0 }, HITYES);
+      out.wallSh = shot({ wall: 1, sh: 1e9 }, HITYES);
+      /* ⑥ 막힌·무시된 타격은 «피격» 이 아니다 (가시갑옷·피격 시 방어막 0) */
+      out.okHit = shot({ thorn: 1, wardHit: 1 }, HITYES);   /* 양성 대조 */
+      out.blocked = shot({ ward: 1, thorn: 1, wardHit: 1 }, HITYES);
+      out.ignored = shot({ ign: 1, thorn: 1, wardHit: 1 }, HITYES);
+      out.evaded = shot({ ward: 2, thorn: 1, wardHit: 1 }, EVA);
+    } catch (e) { out.err = String(e && e.message || e); }
+    finally {
+      Math.random = RR;
+      pl.hp = keep.hp; pl.sh = keep.sh; pl.evade = keep.ev; pl.ward = keep.ward; pl.def = keep.def;
+      pl.buffs.def = keep.bd; px.guardCrystal = keep.gc; G.paused = keep.pause; pl.counter = keep.ct;
+      px.p_ignoreN = keep.ign; px.p_shWallL = keep.wall; px.p_thorns = keep.th;
+      px.g_thornSh = keep.ths; px.p_wardHitN = keep.wh;
+    }
+    return out;
+  });
+  chk('⚑ T139 맨몸 근접 피격이면 피해가 들어간다 (양성 대조)',
+    t139.bare && t139.bare.dHp > 0, t139.bare && `체력 −${t139.bare.dHp}${t139.err ? ' · ' + t139.err : ''}`);
+  chk('⚑ T139 ① 회피에 성공하면 방어막이 안 깎이고 굴림은 회피 1번뿐 (회피가 «앞»)',
+    t139.ev && t139.ev.ward === 3 && t139.ev.rolls === 1 && t139.ev.dHp === 0,
+    t139.ev && `장수 ${t139.ev.ward} · 굴림 ${t139.ev.rolls}회 · 체력 −${t139.ev.dHp}`);
+  chk('⚑ T139 ② 방어막 1장 + 피해 무시(굴리면 성공) → **방어막이 먼저 깎인다** (1 이면 뒤집힌 것)',
+    t139.wardFirst && t139.wardFirst.ward === 0 && t139.wardFirst.dHp === 0,
+    t139.wardFirst && `남은 장수 ${t139.wardFirst.ward} · 체력 −${t139.wardFirst.dHp}`);
+  chk('⚑ T139 ③ 방어막 1장 + 실드 방벽(실드 있음) → 방어막이 먼저 깎인다',
+    t139.wardWall && t139.wardWall.ward === 0 && t139.wardWall.dHp === 0 && t139.wardWall.dSh === 0,
+    t139.wardWall && `남은 장수 ${t139.wardWall.ward} · 체력 −${t139.wardWall.dHp} · 실드 −${t139.wardWall.dSh}`);
+  chk('⚑ T139 ④ 방어막이 0 이면 피해 무시를 굴린다 (조기 종료가 연출 앞 → 굴림 정확히 2회 · 피해 0)',
+    t139.ignOn && t139.ignOn.rolls === 2 && t139.ignOn.dHp === 0,
+    t139.ignOn && `굴림 ${t139.ignOn.rolls}회 · 체력 −${t139.ignOn.dHp}`);
+  chk('⚑ T139 ④ 무시에 실패하면 피해가 끝까지 흐른다',
+    t139.ignOff && t139.ignOff.dHp > 0, t139.ignOff && `체력 −${t139.ignOff.dHp}`);
+  chk('⚑ T139 ⑤ 실드가 0 이면 실드 방벽을 굴리지 않는다 (굴렸으면 성공해 피해가 0 이었을 값)',
+    t139.wallNoSh && t139.wallNoSh.dHp > 0, t139.wallNoSh && `체력 −${t139.wallNoSh.dHp}`);
+  chk('⚑ T139 ⑤ 실드가 있으면 굴리고, 성공하면 체력·실드가 안 준다 (굴림 2회)',
+    t139.wallSh && t139.wallSh.rolls === 2 && t139.wallSh.dSh === 0 && t139.wallSh.dHp === 0,
+    t139.wallSh && `굴림 ${t139.wallSh.rolls}회 · 체력 −${t139.wallSh.dHp} · 실드 −${t139.wallSh.dSh}`);
+  chk('⚑ T139 ⑥ 양성 대조 — 정상 피격이면 가시갑옷이 되갚고 «피격 시 방어막» 이 붙는다',
+    t139.okHit && t139.okHit.refl > 0 && t139.okHit.dWard > 0,
+    t139.okHit && `반사 ${t139.okHit.refl} · 방어막 +${t139.okHit.dWard}`);
+  chk('⚑ T139 ⑥ 방어막으로 막은 타격은 «피격» 이 아니다 (반사 0 · 방어막 안 붙음)',
+    t139.blocked && t139.blocked.refl === 0 && t139.blocked.ward === 0,
+    t139.blocked && `반사 ${t139.blocked.refl} · 남은 장수 ${t139.blocked.ward}`);
+  chk('⚑ T139 ⑥ 무시된 타격도 «피격» 이 아니다 (반사 0 · 방어막 안 붙음 · 체력 불변)',
+    t139.ignored && t139.ignored.refl === 0 && t139.ignored.dWard === 0 && t139.ignored.dHp === 0,
+    t139.ignored && `반사 ${t139.ignored.refl} · 방어막 +${t139.ignored.dWard} · 체력 −${t139.ignored.dHp}`);
+  chk('⚑ T139 ⑥ 회피한 타격도 반사 0 · 방어막 장수 불변',
+    t139.evaded && t139.evaded.refl === 0 && t139.evaded.ward === 2,
+    t139.evaded && `반사 ${t139.evaded.refl} · 장수 ${t139.evaded.ward}`);
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);
