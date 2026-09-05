@@ -52,6 +52,98 @@ function chk(name, pass, detail) {
   else { bad++; console.log(`  ✗ ${name}  — ${detail}`); }
 }
 
+/* ================================================================
+   ⚑⚑⚑ ⑧ T130 — 주인 확정 T125 ①-c 의 **«시뮬(sim.js)의 autoEquip 은 측정 정책이라 그대로»** 절.
+
+   T125 는 «자동 장착 금지» 를 **게임(index.html) 쪽에만** 걸었고, 시뮬은 «가상 플레이어는
+   항상 최선 장착» 이라는 **측정 정책**이라 종전 그대로 두라고 주인이 명시했다.
+   그 «금지» 쪽(index.html)은 T127 이 정적 단언 2개로 못박았는데, **«그대로» 쪽(sim.js)은
+   게이트에 한 줄도 없었다** — sim.js `accRefresh` 의 두 줄을 지우면 정적 게이트 18종·음성 러너
+   7종·T3 4스위트가 전부 초록인 채로 실험4 최종 챕터가 **217 → 9**(자동 장착 제거)·
+   **217 → 265**(장착분을 합성 재료에서 제외)로 움직였다. 밸런스 자(尺)가 소리 없이 바뀐다.
+
+   그래서 이름 대신 **동작으로** 못박는다 — 계정 모델을 실제로 굴려 ⓐ 장착이 채워지는가
+   ⓑ 더 좋은 것으로 갈아끼우는가 ⓒ 장착 중인 것도 합성 재료로 쓰는가 를 본다.
+   함수 이름을 바꿔도, 자동 장착을 다른 방식으로 지워도 여기서 빨개진다.
+   음성 검사: `node tools/verifyGearEcon.js --self` (심은 고장 4종 + 양성 대조군 1종).
+   ================================================================ */
+const SELF = process.argv.includes('--self');
+
+/* 주어진 sim.js 소스를 vm 에서 평가해 계정 모델 함수를 꺼낸다 (CLI 디스패처 앞까지만) */
+function loadAcc(src) {
+  const cut = src.indexOf(CUT);
+  if (cut < 0) throw new Error('사본에서 CLI 디스패처를 못 찾았다');
+  const c = { console: { log(){} }, process, Math, JSON, Number, String, Array, Set, Map, Object, Date,
+              parseInt, parseFloat, isFinite, isNaN, require };
+  vm.createContext(c);
+  vm.runInContext(src.slice(0, cut) + '\n;globalThis.__A={newAccount,accRefresh,GT};', c);
+  return c.__A || c.globalThis.__A;
+}
+
+/* ⑧ 본체 — 통과/불합격을 chkFn 으로 보고한다 (본 실행과 음성 검사가 같은 코드를 쓴다) */
+function simPolicyChecks(src, chkFn) {
+  let A;
+  try { A = loadAcc(src); }
+  catch (e) { chkFn('sim.js 계정 모델(newAccount·accRefresh)이 존재한다', false, String(e.message || e)); return; }
+  const P = A.GT, W = P.types.weapon[0], H = P.types.helm[0];
+  const mk = (part, type, rar, plus) => ({ part, type, rar, plus: plus || 0 });
+
+  /* ⓐ 자동 장착이 살아 있다 — 인벤에 있는 장비가 실제로 장착된다 */
+  const a = A.newAccount(0);
+  a.inv.push(mk('weapon', W, 0), mk('helm', H, 0));
+  A.accRefresh(a);
+  const eqA = a.eq && a.eq.weapon;
+  chkFn('ⓐ accRefresh 가 인벤 장비를 실제로 장착한다 (시뮬 자동 장착 유지 · T125 ①-c)',
+        !!(eqA && eqA.part === 'weapon' && a.eq.helm),
+        eqA ? `weapon=${eqA.rar}등급 · helm=${a.eq.helm ? '장착' : '빈칸'}` : '장착 0부위 — 자동 장착이 사라졌다');
+
+  /* ⓑ «항상 최선» — 더 좋은 장비가 들어오면 갈아끼운다 */
+  a.inv.push(mk('weapon', W, 3, 2));
+  A.accRefresh(a);
+  const eqB = a.eq && a.eq.weapon;
+  chkFn('ⓑ 더 좋은 장비가 인벤에 들어오면 갈아끼운다 (가상 플레이어 = 항상 최선)',
+        !!(eqB && eqB.rar === 3),
+        eqB ? `weapon = ${eqB.rar}등급 +${eqB.plus}` : '장착 없음');
+
+  /* ⓒ 전체 대상 합성 — 장착 중인 장비도 재료가 된다 (게임 쪽 «장착분 제외» 를 시뮬에 옮기면 빨개진다) */
+  const b = A.newAccount(0);
+  b.inv.push(mk('weapon', W, 0), mk('weapon', W, 0), mk('weapon', W, 0));
+  A.accRefresh(b);                      /* 3개 → 1등급 1개 (그리고 그것이 장착된다) */
+  const mid = b.inv.length === 1 && b.inv[0].rar === 1 && b.eq.weapon === b.inv[0];
+  b.inv.push(mk('weapon', W, 1), mk('weapon', W, 1));
+  A.accRefresh(b);                      /* 장착분 포함 3개 → 2등급 1개 */
+  chkFn('ⓒ 장착 중인 장비도 합성 재료로 쓴다 (시뮬은 전체 대상 합성 — 게임의 «장착분 제외» 와 다르다)',
+        mid && b.inv.length === 1 && b.inv[0].rar === 2,
+        `1차 ${mid ? 'OK' : '실패'} · 2차 후 인벤 ${b.inv.length}개 · 최고 ${Math.max(...b.inv.map(g => g.rar))}등급`
+        + (b.inv.length === 3 ? ' (장착분이 재료에서 빠졌다)' : ''));
+}
+
+/* --self: 사본에 고장을 심어 ⑧ 이 실제로 잡는지 본다 (T126 규약 — 돌연변이가 no-op 이면 그것부터 빨갛게) */
+if (SELF) {
+  console.log('=== ⑧ 음성 검사 (T130) — sim.js 측정 정책 단언이 실제로 고장을 잡는가 ===');
+  const MUT = [
+    ['자동 장착 호출 제거',        'a.eq=autoEquip(a.inv);',       '/* 제거 */'],
+    ['autoEquip 이 늘 빈 장착 반환', 'function autoEquip(inv){\n  const eq={};', 'function autoEquip(inv){\n  const eq={}; if(inv)return eq;'],
+    ['최선이 아니라 최악을 장착',    'if(!b||gearScore(g)>gearScore(b))', 'if(!b||gearScore(g)<gearScore(b))'],
+    ['장착분을 합성 재료에서 제외',  'a.fuses+=fuseAll(a.inv,new Set());',
+      'a.fuses+=fuseAll(a.inv,new Set(Object.values(a.eq||{})));'],
+  ];
+  let caught = 0, noop = 0;
+  for (const [nm, from, to] of MUT) {
+    if (!SRC.includes(from)) { noop++; console.log(`  ✗ «${nm}» — 심을 자리(${from.slice(0, 28)}…)가 sim.js 에 없다: 돌연변이가 no-op 이다`); continue; }
+    let hit = 0;
+    simPolicyChecks(SRC.replace(from, to), (n, pass) => { if (!pass) hit++; });
+    if (hit) { caught++; console.log(`  ✓ «${nm}» → ⑧ 불합격 ${hit}건`); }
+    else console.log(`  ✗ «${nm}» → 아무도 안 잡았다`);
+  }
+  let ctrl = 0;
+  simPolicyChecks(SRC, (n, pass) => { if (!pass) ctrl++; });
+  console.log(ctrl === 0 ? '  ✓ 양성 대조군: 원본은 ⑧ 전부 통과 (오탐 없음)' : `  ✗ 양성 대조군: 원본이 ${ctrl}건 불합격 — 오탐이다`);
+  const good = caught === MUT.length && noop === 0 && ctrl === 0;
+  console.log(`\n음성 ${caught}/${MUT.length} · no-op ${noop} · 오탐 ${ctrl}`);
+  process.exit(good ? 0 : 1);
+}
+
 console.log('=== 장비 경제 동작 게이트 (T29) — §11.1~§11.4 규칙을 엔진을 실제로 굴려 확인 ===');
 
 /* ---------------------------------------------------------------- */
@@ -327,6 +419,10 @@ console.log('\n[⑦ ⚑ T63 슬롯 균등 보너스 안내문 — 주인 확정 
   chk('가드 없는 옛 식은 실제로 상한을 넘는다 (이 게이트가 지키는 대상이 실재함을 확인)', naive > GT.slotLvMax,
       `가드 없으면 최저슬롯 ${GT.slotLvMax} → «Lv.${naive}» 광고`);
 }
+
+/* ---------------------------------------------------------------- */
+console.log('\n[⑧ ⚑ T130 시뮬 측정 정책 — T125 ①-c «시뮬의 autoEquip 은 그대로» (동작으로 확인)]');
+simPolicyChecks(SRC, chk);
 
 /* ---------------------------------------------------------------- */
 console.log('\n[⑥ §11.5 경제 정합 (참고 출력 — 판정 아님)]');
