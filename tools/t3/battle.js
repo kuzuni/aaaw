@@ -773,6 +773,135 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     t139.evaded && t139.evaded.refl === 0 && t139.evaded.ward === 2,
     t139.evaded && `반사 ${t139.evaded.refl} · 장수 ${t139.evaded.ward}`);
 
+  /* =============================================================================
+     ⚑⚑⚑ T142 — 관통 베기 I/II/III 의 발동 규칙 (주인 확정 T121 2차 · 17:4X)
+     정적 게이트 `tools/verifyCleave.js` 는 `sim.js` 를 굴려 재고, **여기서는 게임 쪽 `cleave` 를
+     같은 방식으로 굴린다** — 두 엔진이 갈라지는 것을 문면이 아니라 동작으로 잡는 자리다.
+     난수를 대본(queue)으로 갈아끼우고 적을 원하는 자리에 세워 «누가 몇 번 얼마나 맞았나» 를 센다.
+     ============================================================================= */
+  console.log('\n=== ⚑ T142 관통 베기 I/II/III — 따로 굴림 · 바로 뒤 1마리 · 값 그대로 (게임 쪽 실측) ===');
+  const t142 = await p.evaluate(() => {
+    startChapter(1);
+    const pl = G.player, or = Math.random;
+    const waves = G.nodes.filter(nd => nd.type === 'wave' && nd.enemies && nd.enemies.length);
+    const w0 = waves[0], w1 = waves[1];
+    const zero = () => { for (const k of Object.keys(pl.px)) if (typeof pl.px[k] === 'number') pl.px[k] = 0; };
+    G.paused = true; G.cleared = true;
+    let q = [], dflt = 0.999, n = 0;
+    Math.random = () => { n++; return q.length ? q.shift() : dflt; };
+    /* 연출 함수(파티클·데미지 숫자·효과음)는 자기들도 난수를 쓰므로 측정 중에는 막아 둔다 —
+       막지 않으면 대본이 연출에 먹혀 굴림 순서가 어긋난다. 끝나면 되돌린다. */
+    const oSp = window.sparks, oTx = window.addText, oAu = AU.play;
+    window.sparks = () => {}; window.addText = () => {}; AU.play = () => {};
+    const out = {};
+    const HIT = 0, NOEV = 0.5, D = 100;
+    try {
+      /* 무대 — 첫 웨이브에 적 4마리를 88px 간격 일렬로 세운다 (모자라면 같은 모양으로 채운다) */
+      const seed = w0.enemies[0];
+      while (w0.enemies.length < 4) w0.enemies.push(Object.assign({}, seed));
+      w0.enemies.length = 4;
+      const setup = () => {
+        w0.enemies.forEach((e, i) => {
+          e.worldX = i * 88; e.hp = 1e9; e.maxHp = 1e9;
+          e.dead = false; e.isBoss = false; e.stun = 0; e.wave = w0;
+        });
+        if (w1) w1.enemies.forEach(e => { e.hp = 1e9; e.maxHp = 1e9; e.dead = false; e.wave = w1; });
+        G.miss = 0; G.kills = 0;
+      };
+      /* 한 방 — 대본을 깔고 `cleave` 를 한 번 부른 뒤 각 적의 손실을 돌려준다 */
+      const shot = (perks, script, tgtIdx) => {
+        zero(); setup();
+        for (const k of perks) pl.px[k] = 1;
+        q = script.slice(); n = 0;
+        const before = w0.enemies.map(e => e.hp);
+        const b1 = w1 ? w1.enemies.map(e => e.hp) : [];
+        cleave(w0.enemies[tgtIdx === undefined ? 0 : tgtIdx], D);
+        return {
+          lost: w0.enemies.map((e, i) => before[i] - e.hp),
+          lost1: w1 ? w1.enemies.map((e, i) => b1[i] - e.hp) : [],
+          rolls: n, miss: G.miss,
+        };
+      };
+      const CL3 = ['p_cleaveN', 'p_cleaveR', 'p_cleaveL'];
+      out.three = shot(CL3, [HIT, NOEV, HIT, NOEV, HIT, NOEV]);      /* 셋 다 성공 → 3번 */
+      out.one = shot(['p_cleaveN'], [HIT, NOEV]);                    /* 하나만 → 1번 */
+      out.midMiss = shot(CL3, [HIT, NOEV, 0.9, HIT, NOEV]);          /* 가운데만 실패 → 2번 */
+      out.thN = shot(['p_cleaveN'], [0.32, NOEV]);                   /* 33% 경계 — 발동 */
+      out.thN2 = shot(['p_cleaveN'], [0.33, NOEV]);                  /* 33% 경계 — 안 함 */
+      out.thR = shot(['p_cleaveR'], [0.65, NOEV]);
+      out.thR2 = shot(['p_cleaveR'], [0.66, NOEV]);
+      out.thL = shot(['p_cleaveL'], [0.999, NOEV]);                  /* III 는 항상 */
+      out.evade = shot(['p_cleaveL'], [HIT, 0.05]);                  /* 뒤 적이 회피 */
+      /* 앞 적만 있을 때 — 마지막 적을 타겟으로 잡으면 뒤가 없다 */
+      out.frontOnly = shot(['p_cleaveL'], [HIT, NOEV], 3);
+      /* 다른 웨이브의 «더 가까운» 적이 있어도 같은 웨이브 것이 맞는다 */
+      out.wave = (() => {
+        zero(); setup(); pl.px.p_cleaveL = 1;
+        w0.enemies[1].hp = 0; w0.enemies[2].hp = 0;                  /* 같은 웨이브의 뒤 = 3번(264px) */
+        if (w1) w1.enemies.forEach((e, i) => { e.worldX = 20 + i; });/* 더 가까운 자리에 다음 웨이브 */
+        q = [HIT, NOEV]; n = 0;
+        const b0 = w0.enemies[3].hp, b1 = w1 ? w1.enemies.map(e => e.hp) : [];
+        cleave(w0.enemies[0], D);
+        return { same: b0 - w0.enemies[3].hp, next: w1 ? b1.map((h, i) => h - w1.enemies[i].hp) : [] };
+      })();
+      /* 뒤 적 처치도 «처치» 판정 · 한 적은 한 번만 죽는다 */
+      out.kill = (() => {
+        zero(); setup(); for (const k of CL3) pl.px[k] = 1;
+        w0.enemies[1].hp = D; w0.enemies[1].maxHp = D;
+        q = [HIT, NOEV, HIT, NOEV, HIT, NOEV]; n = 0; dflt = 0;
+        const k0 = G.kills;
+        cleave(w0.enemies[0], D);
+        dflt = 0.999;
+        return { kills: G.kills - k0, hp: w0.enemies[1].hp, dead: w0.enemies[1].dead === true, miss: G.miss };
+      })();
+      /* 평타에만 — 게임 쪽 호출부는 `dealPlayerDamage(e,ratio,src)` 의 basic 분기다 */
+      out.basic = (() => {
+        zero(); setup(); pl.px.p_cleaveL = 1;
+        q = [0.99, NOEV, 0.5]; n = 0;                                /* 치명 실패 · 적 회피 실패 · 흔들림 */
+        const b = w0.enemies[1].hp;
+        dealPlayerDamage(w0.enemies[0], 1, '🪓');                    /* 소환 적중 = 평타 아님 */
+        const summon = b - w0.enemies[1].hp;
+        setup(); zero(); pl.px.p_cleaveL = 1;
+        q = [0.99, NOEV, 0.5, HIT, NOEV]; n = 0;
+        const b2 = w0.enemies[1].hp;
+        dealPlayerDamage(w0.enemies[0], 1);                          /* 평타 */
+        return { summon, basicHit: b2 - w0.enemies[1].hp };
+      })();
+    } catch (e) { out.err = String(e); }
+    window.sparks = oSp; window.addText = oTx; AU.play = oAu;
+    Math.random = or; G.paused = false;
+    return out;
+  });
+  const D142 = 100;
+  chk('⚑ T142 셋 다 보유·전부 성공 → 바로 뒤 적이 한 공격에 3번 맞는다 (주인 «최대 3번»)',
+    t142.three && t142.three.lost[1] === D142 * 3 && t142.three.rolls === 6,
+    t142.three ? `[${t142.three.lost}] 굴림 ${t142.three.rolls}${t142.err ? ' · ' + t142.err : ''}` : String(t142.err));
+  chk('⚑ T142 하나만 보유하면 1번 · 가운데만 실패하면 2번 (셋을 따로 굴린다)',
+    t142.one && t142.one.lost[1] === D142 && t142.midMiss.lost[1] === D142 * 2 && t142.midMiss.rolls === 5,
+    t142.one ? `1개 ${t142.one.lost[1]} · 가운데실패 ${t142.midMiss.lost[1]} (굴림 ${t142.midMiss.rolls})` : '');
+  chk('⚑ T142 확률 임계 — I 0.32 발동 / 0.33 안 함 · II 0.65 / 0.66 · III 는 0.999 에서도 발동',
+    t142.thN && t142.thN.lost[1] === D142 && t142.thN2.lost[1] === 0 &&
+    t142.thR.lost[1] === D142 && t142.thR2.lost[1] === 0 && t142.thL.lost[1] === D142,
+    t142.thN ? `${t142.thN.lost[1]}/${t142.thN2.lost[1]} · ${t142.thR.lost[1]}/${t142.thR2.lost[1]} · ${t142.thL.lost[1]}` : '');
+  chk('⚑ T142 손실은 «바로 뒤» 한 마리에만 몰린다 — 뒤의 뒤로 안 번진다',
+    t142.three && t142.three.lost[0] === 0 && t142.three.lost[2] === 0 && t142.three.lost[3] === 0,
+    t142.three ? `[${t142.three.lost}]` : '');
+  chk('⚑ T142 뒤에 아무도 없으면 굴리지도 않는다 (맨 뒤 적을 때렸을 때)',
+    t142.frontOnly && t142.frontOnly.rolls === 0 && t142.frontOnly.lost.every(v => v === 0),
+    t142.frontOnly ? `굴림 ${t142.frontOnly.rolls} · [${t142.frontOnly.lost}]` : '');
+  chk('⚑ T142 뒤 적의 회피 10% 는 따로 굴린다 (회피하면 hp 불변 · miss +1)',
+    t142.evade && t142.evade.lost[1] === 0 && t142.evade.miss === 1 && t142.evade.rolls === 2,
+    t142.evade ? `손실 ${t142.evade.lost[1]} · miss ${t142.evade.miss} · 굴림 ${t142.evade.rolls}` : '');
+  chk('⚑ T142 같은 웨이브 안에서만 — 다음 웨이브가 더 가까워도 같은 웨이브의 먼 적이 맞는다',
+    t142.wave && t142.wave.same === D142 && t142.wave.next.every(v => v === 0),
+    t142.wave ? `같은 웨이브 ${t142.wave.same} · 다음 웨이브 [${t142.wave.next}]` : '');
+  chk('⚑ T142 뒤 적 처치도 «처치» 판정 — kills +1 · 한 번만 죽고 hp 가 음수로 안 내려간다',
+    t142.kill && t142.kill.kills === 1 && t142.kill.hp === 0 && t142.kill.dead && t142.kill.miss === 0,
+    t142.kill ? `kills ${t142.kill.kills} · hp ${t142.kill.hp} · miss ${t142.kill.miss}` : '');
+  chk('⚑ T142 평타에만 걸린다 — 소환 적중(🪓)에는 안 걸리고 평타에는 걸린다',
+    t142.basic && t142.basic.summon === 0 && t142.basic.basicHit > 0,
+    t142.basic ? `소환 ${t142.basic.summon} · 평타 ${t142.basic.basicHit}` : '');
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);
