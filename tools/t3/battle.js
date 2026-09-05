@@ -1626,8 +1626,16 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     const sx = e => (PLAYER_SCREEN_X + (e.worldX - cam - PLAYER_SCREEN_X) * CAM_ZOOM) * scLay;
     const screen = [];
     for (let i = 1; i < es.length; i++) screen.push(sx(es[i]) - sx(es[i - 1]));
+    /* ⚑⚑⚑ T169 — 웨이브 «끝»(마지막 적) → 다음 노드 «시작» 거리가 NODE_GAP 인가.
+       걷는 시간 = 거리 / 전진 속도 132 이므로 종전(560)의 절반이어야 한다. */
+    const w0 = G.nodes.find(n => n.type === 'wave' && n.enemies.length);
+    const i0 = G.nodes.indexOf(w0);
+    const nxt = G.nodes[i0 + 1];
+    const lastX = Math.max(...w0.enemies.map(e => e.worldX));
     return { world, screen, gap: ENEMY_GAP, zoom: CAM_ZOOM, scLay,
-      hpw: HPBAR_W, hpwBoss: HPBAR_W_BOSS, n: es.length };
+      hpw: HPBAR_W, hpwBoss: HPBAR_W_BOSS, n: es.length,
+      nodeGap: NODE_GAP, nodeGapEv: NODE_GAP_EVENT,
+      walk: nxt ? nxt.x - lastX : null, nextType: nxt ? nxt.type : '-' };
   });
   chk('⚑ T163 ① 웨이브 안 적의 월드 간격이 ENEMY_GAP(44) 그대로다',
     GAP.gap === 44 && GAP.world.length > 0 && GAP.world.every(d => Math.abs(d - 44) < 1e-6),
@@ -1641,6 +1649,11 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
   chk('⚑ T163 ③ 적 발밑 HP바가 옆 적과 겹치지 않는다 (폭 < 간격)',
     GAP.hpw > 0 && GAP.hpw < GAP.gap,
     `HP바 폭 ${GAP.hpw} < 간격 ${GAP.gap} (여백 ${GAP.gap - GAP.hpw} · 보스 ${GAP.hpwBoss})`);
+  chk('⚑ T169 ④ 웨이브 끝 → 다음 노드 거리가 NODE_GAP(280) 이다 (걷는 시간 종전의 ½)',
+    GAP.nodeGap === 280 && GAP.walk !== null && Math.abs(GAP.walk - 280) < 1e-6,
+    `거리 ${GAP.walk} (다음 노드 «${GAP.nextType}») · 걷는 시간 ${(GAP.walk / 132).toFixed(2)}s (종전 560 → ${(560 / 132).toFixed(2)}s)`);
+  chk('⚑ T169 ④-b 이벤트 → 다음 웨이브 거리(NODE_GAP_EVENT)는 470 그대로다 (주인 지시 밖)',
+    GAP.nodeGapEv === 470, `NODE_GAP_EVENT ${GAP.nodeGapEv}`);
 
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();

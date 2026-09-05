@@ -973,6 +973,13 @@ const WAVE_PIERCE=2, SPEAR_PIERCE=8;
    일직선 관통형(창·검기)의 사거리는 «간격 × 관통 마릿수» 로 묶어 **닿는 적 수가 그대로**이게 한다.
    sim.js 와 같은 이름·같은 값(게이트가 두 파일을 대조한다). */
 const ENEMY_GAP=44;
+/* ⚑⚑⚑ T169 (주인 확정 2026-09-05 23:5X «쉼터 악마 천사까지의 거리가 너무 김. 절반으로 줄여») —
+   노드 사이 거리 **560 → 280 (월드 px)**. 챕터 시작 → 첫 웨이브, 웨이브 끝 → 다음 노드(쉼터·악마·천사·보스)
+   둘 다 이 상수를 쓴다. 전진 속도 132 는 그대로라 **걷는 시간이 그대로 절반**이 된다.
+   ⚑ 이벤트 노드 → 다음 웨이브 거리(`NODE_GAP_EVENT` 470)는 **주인 지시가 명시하지 않아 그대로 둔다**
+     (주인 원문은 «쉼터·악마·천사**까지의** 거리» 라 웨이브 → 이벤트 쪽이다 · PROGRESS T169 행에 등재).
+   sim.js 와 같은 이름·같은 값(게이트가 두 파일을 대조한다). */
+const NODE_GAP=280, NODE_GAP_EVENT=470;
 const SPEAR_REACH=ENEMY_GAP*SPEAR_PIERCE, WAVE_REACH=ENEMY_GAP*4, WAVE_REACH_KING=ENEMY_GAP*16;
 /* 적 발밑 HP바 폭 — 간격보다 좁아야 옆 적과 안 겹친다(주인 ② «HP바 폭을 간격에 맞춘다»). */
 const HPBAR_W=ENEMY_GAP-4, HPBAR_W_BOSS=ENEMY_GAP*2-4;
@@ -2774,7 +2781,7 @@ const RANGED_SKINS=[
 ];
 
 function startChapter(c){
-  const nodes=[]; let x=560, wi=0, totalEnemies=0;
+  const nodes=[]; let x=NODE_GAP, wi=0, totalEnemies=0;
   chapterLayout(c).forEach(nl=>{
     const type=nl.t;
     const node={type, x, done:false, enemies:[]};
@@ -2789,7 +2796,7 @@ function startChapter(c){
           exp:TUNE.expKill, isBoss:false, bob:Math.random()*7, hitT:0, strikeT:0,
         });
       }
-      totalEnemies+=nl.size; wi++; x+=(nl.size-1)*ENEMY_GAP+560;
+      totalEnemies+=nl.size; wi++; x+=(nl.size-1)*ENEMY_GAP+NODE_GAP;
     }else if(type==='boss'){
       const st=enemyStats(c,wi);
       const bh=Math.round(st.hp*TUNE.bossHp), bd=Math.round(st.dmg*TUNE.bossDmg);
@@ -2800,7 +2807,7 @@ function startChapter(c){
         exp:TUNE.expBoss, isBoss:true, hits:0, bob:0, hitT:0, strikeT:0,
       });
       totalEnemies+=1;
-    }else{ x+=470; }
+    }else{ x+=NODE_GAP_EVENT; }
     nodes.push(node);
   });
   G={
@@ -3102,7 +3109,7 @@ function aliveEnemies(){
 }
 /* 지금 «필드 위에» 있는 적이 속한 노드 = 플레이어가 상대하고 있는 최전방 노드. sim.js frontNode() 와 1:1.
    주인 확정 보강(15:2X): 관통형(창·검기)은 이 노드의 적만 맞는다 — 다음 웨이브 대기분은 절대 맞지 않는다.
-   챕터의 적을 시작할 때 한꺼번에 만들어 두므로(노드 간격 560px, 창 사거리 ENEMY_GAP×8=352px) 필터가 없으면 꿰뚫린다. */
+   챕터의 적을 시작할 때 한꺼번에 만들어 두므로(노드 간격 NODE_GAP=280px, 창 사거리 ENEMY_GAP×8=352px) 필터가 없으면 꿰뚫린다. */
 function frontNode(){ let b=null; for(const n of G.nodes) for(const e of n.enemies) if(e.hp>0&&(!b||e.worldX<b.worldX)) b=e; return b?b.wave:null; }
 function randTarget(){
   const p=G.player;

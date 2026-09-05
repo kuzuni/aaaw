@@ -3245,6 +3245,70 @@ console.log('\n[㊽ 적 간격 ENEMY_GAP = 44 (T163 · 주인 확정)]');
   }
 }
 
+/* ---------- ㊾ 노드 간격 NODE_GAP (T169 · 주인 확정 2026-09-05 23:5X «절반으로 줄여») ----------
+   주인 ③ 이 요구한 둘: 두 엔진 상수 동일(280) · 리터럴 560 잔재 0.
+   ⚑ 이벤트 → 다음 웨이브 거리(`NODE_GAP_EVENT` 470)는 주인 지시 밖이라 **값을 안 바꾸고 이름만** 뽑았다 —
+     여기서는 «리터럴로 되돌아가지 않았는가» 만 본다(값이 바뀌면 주인 판단 · PROGRESS T169 행). */
+console.log('\n[㊾ 노드 간격 NODE_GAP = 280 (T169 · 주인 확정)]');
+{
+  const SCRIPT = (/<script>([\s\S]*)<\/script>/.exec(HTML) || [, ''])[1];
+  const numOf = (src, k) => { const m = src.match(new RegExp('const NODE_GAP=(\\d+), NODE_GAP_EVENT=(\\d+);')); return m ? +m[k] : null; };
+  const gs = numOf(SIM, 1), gh = numOf(SCRIPT, 1);
+  (gs === 280 && gh === 280)
+    ? ok('① 두 엔진에 `NODE_GAP = 280` 이 같은 이름·같은 값으로 있다 (주인 «절반으로» — 560 → 280)')
+    : bad(`① NODE_GAP 이 280 이 아니거나 두 엔진이 다르다 (sim ${gs} · game ${gh})`);
+  const es = numOf(SIM, 2), eh = numOf(SCRIPT, 2);
+  (es === 470 && eh === 470)
+    ? ok('①-b 이벤트 → 다음 웨이브 거리 `NODE_GAP_EVENT = 470` 은 두 엔진에서 **안 바뀌었다** (주인 지시 밖 · 등재만)')
+    : bad(`①-b NODE_GAP_EVENT 가 470 이 아니다 (sim ${es} · game ${eh}) — 주인 지시 밖의 값이 움직였다`);
+
+  const LEFT = [
+    ['챕터 시작 x=560', /(?:let|const)\s+x\s*=\s*560/],
+    ['웨이브 뒤 +560', /\*\s*ENEMY_GAP\s*\+\s*560/],
+    ['이벤트 뒤 +470', /x\s*\+=\s*470/],
+  ];
+  let lbad = 0;
+  for (const [nm, re] of LEFT) {
+    const inS = re.test(SIM), inH = re.test(SCRIPT);
+    if (!inS && !inH) continue;
+    lbad++; bad(`② 리터럴 잔재 «${nm}» 가 ${[inS ? 'sim.js' : '', inH ? 'index.html' : ''].filter(Boolean).join(' / ')} 에 남아 있다`);
+  }
+  if (!lbad) ok(`② 옛 리터럴 ${LEFT.length}종(x=560 · +560 · +470)이 두 엔진에서 사라졌다 (전부 상수로 묶였다)`);
+
+  /* ③ 배선 — 두 엔진이 «챕터 시작»·«웨이브 뒤» 두 자리에서 정말 NODE_GAP 을 쓴다 */
+  const WIRE = [
+    ['챕터 시작이 NODE_GAP', /x\s*=\s*NODE_GAP\s*,\s*wi\s*=\s*0/],
+    ['웨이브 뒤가 NODE_GAP', /\*\s*ENEMY_GAP\s*\+\s*NODE_GAP;/],
+    ['이벤트 뒤가 NODE_GAP_EVENT', /x\s*\+=\s*NODE_GAP_EVENT;/],
+  ];
+  let wbad2 = 0;
+  for (const [nm, re] of WIRE) {
+    const inS = re.test(SIM), inH = re.test(SCRIPT);
+    if (inS && inH) continue;
+    wbad2++; bad(`③ 배선 «${nm}» 이 ${inS ? 'index.html' : 'sim.js'} 에 없다`);
+  }
+  if (!wbad2) ok(`③ 노드 배치 ${WIRE.length}자리가 두 엔진에서 상수로 배선돼 있다`);
+
+  {
+    console.log('  [음성 자기검사] 심은 고장을 ㊾ 가 잡는가');
+    const seeds = [
+      ['간격을 560 으로 되돌림', () => SIM.replace(/const NODE_GAP=280,/, 'const NODE_GAP=560,'), s => numOf(s, 1) !== 280],
+      ['한쪽 엔진만 다르게', () => SCRIPT.replace(/const NODE_GAP=280,/, 'const NODE_GAP=300,'), s => numOf(s, 1) !== numOf(SIM, 1)],
+      ['챕터 시작을 리터럴로', () => SIM.replace(/let x=NODE_GAP,wi=0;/, 'let x=560,wi=0;'), s => /(?:let|const)\s+x\s*=\s*560/.test(s)],
+      ['웨이브 뒤를 리터럴로', () => SIM.replace(/\*ENEMY_GAP\+NODE_GAP;/, '*ENEMY_GAP+560;'), s => /\*\s*ENEMY_GAP\s*\+\s*560/.test(s)],
+      ['이벤트 뒤 값을 흔듦', () => SIM.replace(/NODE_GAP_EVENT=470;/, 'NODE_GAP_EVENT=235;'), s => numOf(s, 2) !== 470],
+    ];
+    for (const [nm, mut, detect] of seeds) {
+      const s1 = mut();
+      if (s1 === SIM || s1 === SCRIPT) { bad(`  음성 «${nm}» 이 아무것도 안 바꿨다 — 심는 자리가 옮겨졌다(게이트를 갱신할 것)`); continue; }
+      detect(s1) ? ok(`  음성 «${nm}» 을 ㊾ 가 잡는다`) : bad(`  음성 «${nm}» 을 ㊾ 가 못 잡았다`);
+    }
+    const clean = seeds.every(([nm, , detect]) => !detect(/한쪽 엔진만/.test(nm) ? SCRIPT : SIM));
+    clean ? ok(`  양성 대조군 — 원본이 ${seeds.length}개 검출자 어디에도 안 걸린다 (오탐 0)`)
+          : bad('  양성 대조군이 걸렸다 — 원본에서 ㊾ 가 오탐을 낸다');
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');

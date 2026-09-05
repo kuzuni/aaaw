@@ -230,6 +230,13 @@ const WAVE_PIERCE=2, WAVE_PIERCE_BIG=8, SPEAR_PIERCE=8;
    (창 8칸 · 큰 검기 8칸 · 검기 4칸(관통 2 라 여유 · 종전 340 = 3.86칸) · 검기왕 16칸(종전 1400 = 15.9칸)).
    index.html 도 같은 이름·같은 값(게이트가 두 파일을 대조한다). */
 const ENEMY_GAP=44;
+/* ⚑⚑⚑ T169 (주인 확정 2026-09-05 23:5X «쉼터 악마 천사까지의 거리가 너무 김. 절반으로 줄여») —
+   노드 사이 거리 **560 → 280 (월드 px)**. 챕터 시작 → 첫 웨이브, 웨이브 끝 → 다음 노드(쉼터·악마·천사·보스)
+   둘 다 이 상수를 쓴다. 전진 속도 132 는 그대로라 **걷는 시간이 그대로 절반**이 된다.
+   ⚑ 이벤트 노드 → 다음 웨이브 거리(`NODE_GAP_EVENT` 470)는 **주인 지시가 명시하지 않아 그대로 둔다**
+     (주인 원문은 «쉼터·악마·천사**까지의** 거리» 라 웨이브 → 이벤트 쪽이다 · PROGRESS T169 행에 등재).
+   index.html 도 같은 이름·같은 값(게이트가 두 파일을 대조한다). */
+const NODE_GAP=280, NODE_GAP_EVENT=470;
 const SPEAR_REACH=ENEMY_GAP*SPEAR_PIERCE, WAVE_REACH=ENEMY_GAP*4, WAVE_REACH_KING=ENEMY_GAP*16;
 /* ⚑⚑⚑ T155 ② (주인 확정 2026-09-05 18:5X) — 특전 카드·인포·툴팁·장비 옵션 문구에서 창·도끼·화살·번개·검기가
    나오면 괄호로 «(공격력의 N%)» 를 붙인다. N 은 **위 R_* 상수에서 읽는다** — 문구에 숫자를 적어 두지 않으므로
@@ -1200,7 +1207,7 @@ function heal(p,amt,noBoost){
 function aliveList(G){const o=[];for(const n of G.nodes)for(const e of n.enemies)if(e.hp>0)o.push(e);return o;}
 /* 지금 «필드 위에» 있는 적이 속한 노드 = 플레이어가 상대하고 있는 최전방 노드.
    주인 확정 보강(15:2X): 관통형(창·검기)은 이 노드의 적만 맞는다 — 다음 웨이브 대기분은 절대 맞지 않는다.
-   두 엔진 다 챕터의 적을 시작할 때 한꺼번에 만들어 두므로(노드 간격 560px, 창 사거리 ENEMY_GAP×8=352px)
+   두 엔진 다 챕터의 적을 시작할 때 한꺼번에 만들어 두므로(노드 간격 NODE_GAP=280px, 창 사거리 ENEMY_GAP×8=352px)
    필터가 없으면 창이 다음 웨이브까지 꿰뚫는다. 발사 시점의 노드를 투사체에 박아 두고 그것만 때린다. */
 function frontNode(G){let b=null;for(const n of G.nodes)for(const e of n.enemies)if(e.hp>0&&(!b||e.worldX<b.worldX))b=e;return b?b.wave:null;}
 function randTarget(G){
@@ -1744,7 +1751,7 @@ function runChapter(chapter,build,opts){
     gearOpts:opts.gearOpts};
   const p=mkPlayer(build,G);G.player=p;p.G=G;
   const layout=chapterLayout(chapter);
-  let x=560,wi=0;
+  let x=NODE_GAP,wi=0;
   for(const node of layout){
     const nd={type:node.t,x,done:false,enemies:[]};
     if(node.t==='wave'){
@@ -1754,13 +1761,13 @@ function runChapter(chapter,build,opts){
         nd.enemies.push({worldX:x+j*ENEMY_GAP,hp:st.hp,maxHp:st.hp,dmg:st.dmg,ranged,
           atkTimer:rand(0.4,1.2),stun:0,slow:0,wave:nd,dead:false,isBoss:false,exp:0});
       }
-      wi++;x+=(node.size-1)*ENEMY_GAP+560;
+      wi++;x+=(node.size-1)*ENEMY_GAP+NODE_GAP;
     }else if(node.t==='boss'){
       const st=enemyStats(chapter,wi);
       const bh=st.hp*TUNE.bossHp,bd=st.dmg*TUNE.bossDmg;   /* 챕터 무관 항상 동일 (PLAN §6 주인 확정) */
       nd.enemies.push({worldX:x+60,hp:bh,maxHp:bh,dmg:bd,ranged:false,
         atkTimer:1.2,stun:0,slow:0,wave:nd,dead:false,isBoss:true,hits:0});
-    }else x+=470;
+    }else x+=NODE_GAP_EVENT;
     G.nodes.push(nd);
   }
   const dt=1/30;
