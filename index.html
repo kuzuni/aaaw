@@ -3190,10 +3190,22 @@ function volley(n,shot){
 }
 /* ⚑ 소환 발사 5종 — 발수 n 을 인자로 받는다(특전 텍스트의 «도끼 2개 / 화살 2발 / 번개 2회» 가 그대로 인자다).
    데미지 계수는 주인 확정 상수(R_AXE …). sim.js 의 같은 이름 함수와 1:1이고, 여기에만 순차 연사·사운드가 붙는다. */
+/* ⚑⚑⚑ T165 (주인 지시 2026-09-05 22:5X «도끼는 포물선으로 날아가기») — 도끼만 위로 볼록한 포물선을 그린다.
+   **그리기 전용**이다: 발사할 때 출발 x 를 `x0` 로 적어 두고, 그릴 때 진행률 u 로 y 를 얹을 뿐
+   x 진행(`pr.x+=pr.spd*dt`)·명중 판정(`pr.x>=pr.tgt.worldX-10`)·대상 선택·데미지·발수는 한 글자도 안 바뀐다.
+   따라서 도달 시간·명중 프레임 수가 종전 직선과 같고 `sim.js` 는 무수정이다(시뮬엔 그림이 없다). */
+const AXE_ARC=0.35;                              /* 정점 높이 = 출발~명중 거리의 35% (주인 위임값) */
+function axeArcY(pr){
+  const ex=(pr.tgt&&pr.tgt.hp>0)?pr.tgt.worldX-10:pr.x;   /* 명중 지점 = 판정식과 같은 x (적이 움직여도 따라간다) */
+  const span=ex-(pr.x0!=null?pr.x0:pr.x);
+  if(!(span>1)) return 0;                        /* 코앞의 적 — 포물선 없이 종전 그대로 */
+  const u=clamp((pr.x-pr.x0)/span,0,1);
+  return -4*AXE_ARC*span*u*(1-u);                /* u=0/1 에서 0 · u=0.5 에서 -0.35×거리 (위로 볼록) */
+}
 function fireAxe(p,n){
   n=(n||1)*(p.px.axeCount?3:1);
   volley(n,()=>{ const t=randTarget(); if(!t)return; AU.play('throw');
-    pushProj({type:'axe',x:p.worldX+14,tgt:t,ratio:R_AXE,spd:430,spin:0}); });
+    pushProj({type:'axe',x:p.worldX+14,x0:p.worldX+14,tgt:t,ratio:R_AXE,spd:430,spin:0}); });
 }
 function fireArrows(p,n){
   const px=p.px; n=n||2;
@@ -3859,7 +3871,10 @@ function update(dt){
       if(pr.x>pr.maxX) done=true;
     }else{
       if(!pr.tgt||pr.tgt.hp<=0) done=true;
-      else if(pr.x>=pr.tgt.worldX-10){ projHit(pr,pr.tgt); done=true; }
+      else if(pr.x>=pr.tgt.worldX-10){ projHit(pr,pr.tgt);
+        /* T165 — 포물선의 «착지 순간 타격 스파크»(도끼만 · 연출 전용 · 판정 시각은 위 종전 줄 그대로) */
+        if(pr.type==='axe') sparks(pr.tgt.worldX-10,-46,'#D2691E',5,120);
+        done=true; }
     }
     if(done) G.pprojs.splice(i,1);
   }
@@ -4255,7 +4270,8 @@ function drawScene(){
   for(const pr of G.pprojs){
     const x=pr.x-cam;
     if(pr.type==='axe'){
-      ctx.save(); ctx.translate(x,gy-46); ctx.rotate(pr.spin);
+      /* T165 — 화면상 y 오프셋만 얹는다(x 는 종전 그대로). T159 줌·T164 오프셋과 같은 카메라 변환 안이다. */
+      ctx.save(); ctx.translate(x,gy-46+axeArcY(pr)); ctx.rotate(pr.spin);
       ctx.fillStyle='#7A5230'; ctx.fillRect(-2,-12,4,22);
       ctx.fillStyle='#D2691E';
       ctx.beginPath(); ctx.moveTo(0,-12); ctx.quadraticCurveTo(13,-12,12,-1); ctx.quadraticCurveTo(5,-6,0,-4); ctx.closePath(); ctx.fill();

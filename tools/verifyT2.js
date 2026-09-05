@@ -3529,6 +3529,111 @@ console.log('\n[Ⓐ 발밑 바 2/3 · 플레이어 16% · 실드 0 찌꺼기 (T1
   }
 }
 
+/* ---------- Ⓑ 도끼 포물선 (T165 · 주인 지시 2026-09-05 22:5X) ----------
+   (⚑ 동그라미 숫자는 ㊿ 에서 끝났다 — T166 이 마지막 칸을, T164 가 Ⓐ 를 가져갔으므로 이 절은 Ⓑ 다) 
+   주인 원문 «도끼는 포물선으로 날아가기».
+   이 절이 지키는 것은 단 하나 — **포물선이 그림에만 있는가**다:
+     ① `AXE_ARC` 상수가 index.html 한 곳 · 값 0.35 ② `axeArcY` 가 u(1-u) 꼴의 위로 볼록한 함수
+     ③ 발사 때 출발 x 를 `x0` 로 적어 둔다 ④ 그리기의 도끼만 `axeArcY` 를 y 에 얹는다(x 는 그대로)
+     ⑤ **명중 시각 계산이 종전 함수 그대로** — `pr.x+=pr.spd*dt` 와 `pr.x>=pr.tgt.worldX-10` 이 무수정
+     ⑥ 화살·창·번개·검기는 포물선을 안 탄다 ⑦ `sim.js` 에 포물선이 한 글자도 없다(속도 430·R_AXE 불변).
+   «실제로 올라갔다 내려오는가» 는 `tools/t3/battle.js` 가 좌표로 잰다. */
+console.log('\n[Ⓑ 도끼 포물선 AXE_ARC (T165)]');
+{
+  const SCRIPT = (/<script>([\s\S]*)<\/script>/.exec(HTML) || [, ''])[1];
+  const draw = (/function drawScene\(\)\{([\s\S]*?)\n\}/.exec(SCRIPT) || [, ''])[1];
+  const arcFn = (/function\s+axeArcY\(pr\)\{([\s\S]*?)\n\}/.exec(SCRIPT) || [, ''])[1];
+
+  /* ① 상수 한 곳 · 0.35 */
+  const decl = SCRIPT.match(/const\s+AXE_ARC\s*=\s*([0-9.]+)\s*;/g) || [];
+  if (decl.length !== 1) bad(`① \`const AXE_ARC=…\` 선언이 ${decl.length}개다 — 정점 높이는 **한 상수 한 곳**이어야 한다`);
+  else {
+    const v = parseFloat(/=\s*([0-9.]+)/.exec(decl[0])[1]);
+    v === 0.35 ? ok('① `const AXE_ARC=0.35` 가 index.html 에 한 번만 선언돼 있다 (정점 = 거리의 35% · 주인 위임값)')
+               : bad(`① AXE_ARC 값이 ${v} 다 — 주인 위임 기본값은 0.35`);
+  }
+
+  /* ② 위로 볼록한 포물선 — u(1-u) 꼴 · 부호가 음수(캔버스 y 는 아래가 +) */
+  const convex = /-\s*4\s*\*\s*AXE_ARC\s*\*\s*span\s*\*\s*u\s*\*\s*\(\s*1\s*-\s*u\s*\)/.test(arcFn);
+  const clamped = /clamp\(\s*\(\s*pr\.x\s*-\s*pr\.x0\s*\)\s*\/\s*span\s*,\s*0\s*,\s*1\s*\)/.test(arcFn);
+  (convex && clamped)
+    ? ok('② `axeArcY` = `-4*AXE_ARC*span*u*(1-u)` · u 는 0~1 클램프 — 출발·명중에서 0, 중간에서 위로 볼록')
+    : bad('② `axeArcY` 가 u(1-u) 꼴의 위로 볼록한 식이 아니다 (부호가 +면 땅으로 꺼진다)');
+  /const\s+ex\s*=\s*\(pr\.tgt&&pr\.tgt\.hp>0\)\?pr\.tgt\.worldX-10:pr\.x;/.test(arcFn)
+    ? ok('②-b 포물선의 끝점이 **명중 판정식과 같은 x**(`tgt.worldX-10`)다 — 적이 움직여도 착지점이 안 어긋난다')
+    : bad('②-b 포물선 끝점이 명중 판정식과 다른 x 다');
+  /if\(!\(span>1\)\) return 0;/.test(arcFn)
+    ? ok('②-c 코앞의 적(거리 ≤ 1)에는 포물선을 안 태운다 (0 으로 나누지 않는다)')
+    : bad('②-c 거리 0 가드가 없다 — 코앞의 적에 NaN 이 샌다');
+
+  /* ③ 출발 x 를 적어 둔다 — 진행률의 기준점 */
+  /pushProj\(\{type:'axe',x:p\.worldX\+14,x0:p\.worldX\+14,/.test(SCRIPT)
+    ? ok('③ `fireAxe` 가 출발 x 를 `x0` 로 함께 적는다 (진행률 u 의 기준점 · 발사 지점은 종전 `worldX+14` 그대로)')
+    : bad('③ 도끼 투사체에 `x0` 가 없다 — 진행률을 잴 기준점이 사라진다');
+
+  /* ④ 그리기의 도끼만 y 에 얹는다 (x 는 손대지 않는다) */
+  /ctx\.translate\(x,gy-46\+axeArcY\(pr\)\);\s*ctx\.rotate\(pr\.spin\);/.test(draw)
+    ? ok('④ 도끼 그리기가 `gy-46+axeArcY(pr)` — **y 오프셋만** 더한다(x 는 `pr.x-cam` 그대로 · 회전은 종전 `pr.spin`)')
+    : bad('④ 도끼 그리기가 y 오프셋만 더하는 꼴이 아니다 — x 를 건드리면 명중 시각이 어긋난다');
+
+  /* ⑤ 명중 시각 계산 무수정 — T165 의 핵심 불변식 */
+  /pr\.x\+=pr\.spd\*dt;/.test(SCRIPT)
+    ? ok('⑤ x 진행이 `pr.x+=pr.spd*dt` 로 종전 그대로다 (도끼 속도 430 도 불변 → 도달 시간 동일)')
+    : bad('⑤ 투사체 x 진행식이 바뀌었다 — 포물선은 도달 시간을 바꾸면 안 된다');
+  /else if\(pr\.x>=pr\.tgt\.worldX-10\)\{/.test(SCRIPT)
+    ? ok('⑤-b 명중 판정이 `pr.x>=pr.tgt.worldX-10` 종전 함수 그대로다 (y 는 판정에 안 들어간다)')
+    : bad('⑤-b 명중 판정식이 바뀌었다 — 포물선이 판정으로 샜다');
+  /spd:430/.test(SCRIPT) && /spd:430/.test(SIM)
+    ? ok('⑤-c 도끼 속도 430 이 두 엔진에 그대로다')
+    : ok('⑤-c 도끼 속도는 index.html 쪽에만 있다 (시뮬엔 투사체 비행이 없다 — 종전과 같음)');
+
+  /* ⑥ 나머지 4종은 직선 그대로 */
+  const straight = ['parrow', 'spear', 'wave'].filter(t => new RegExp(`pr\\.type==='${t}'`).test(draw) && !new RegExp(`${t}[\\s\\S]{0,400}?axeArcY`).test(draw));
+  straight.length === 3
+    ? ok('⑥ 화살·창·검기 그리기에는 `axeArcY` 가 없다 (번개는 투사체가 아니라 즉발) — 직선 그대로')
+    : bad('⑥ 도끼 아닌 투사체가 포물선을 탄다 — 주인 지시는 «도끼는» 이다');
+
+  /* ⑦ sim.js 무변경 */
+  /AXE_ARC|axeArcY|x0:/.test(SIM)
+    ? bad('⑦ sim.js 에 포물선이 새어 들어갔다 — 시뮬엔 그림이 없다(두 엔진 판정 동일성이 깨진다)')
+    : ok('⑦ `sim.js` 에 `AXE_ARC`·`axeArcY`·`x0` 가 한 글자도 없다 (밸런스 영향 0)');
+  const rAxe = /R_AXE\s*=\s*([0-9.]+)/;
+  (rAxe.exec(SCRIPT) || [, 'x'])[1] === (rAxe.exec(SIM) || [, 'y'])[1]
+    ? ok('⑦-b 도끼 데미지 계수 `R_AXE` 가 두 엔진에서 같다 (연출만 바뀌었다)')
+    : bad('⑦-b R_AXE 가 두 엔진에서 갈렸다');
+
+  /* ---------- 음성 자기검사 ---------- */
+  {
+    console.log('  [음성 자기검사] 심은 고장을 Ⓑ 가 잡는가');
+    const S0 = SCRIPT;
+    const seeds = [
+      ['포물선 함수를 0 으로 (= 직선으로 되돌림)', s => s.replace(/return -4\*AXE_ARC\*span\*u\*\(1-u\);/, 'return 0;'),
+        s => !/-\s*4\s*\*\s*AXE_ARC\s*\*\s*span\s*\*\s*u\s*\*\s*\(\s*1\s*-\s*u\s*\)/.test(s)],
+      ['부호를 뒤집어 아래로 볼록', s => s.replace(/return -4\*AXE_ARC\*span\*u\*\(1-u\);/, 'return 4*AXE_ARC*span*u*(1-u);'),
+        s => !/return\s*-\s*4\s*\*\s*AXE_ARC/.test(s)],
+      ['그리기에서 오프셋 제거', s => s.replace(/ctx\.translate\(x,gy-46\+axeArcY\(pr\)\);/, 'ctx.translate(x,gy-46);'),
+        s => !/ctx\.translate\(x,gy-46\+axeArcY\(pr\)\);/.test(s)],
+      ['x0 를 안 적음', s => s.replace(/x:p\.worldX\+14,x0:p\.worldX\+14,/, 'x:p.worldX+14,'),
+        s => !/pushProj\(\{type:'axe',x:p\.worldX\+14,x0:p\.worldX\+14,/.test(s)],
+      ['포물선을 x 진행에 태움 (도달 시간이 바뀐다)', s => s.replace(/pr\.x\+=pr\.spd\*dt;/, 'pr.x+=pr.spd*dt*(pr.type===\'axe\'?0.8:1);'),
+        s => !/pr\.x\+=pr\.spd\*dt;/.test(s)],
+      ['명중 판정에 y 를 섞음', s => s.replace(/else if\(pr\.x>=pr\.tgt\.worldX-10\)\{/, 'else if(pr.x>=pr.tgt.worldX-10&&axeArcY(pr)>-4){'),
+        s => !/else if\(pr\.x>=pr\.tgt\.worldX-10\)\{/.test(s)],
+      ['AXE_ARC 를 두 곳에 선언', s => s.replace(/const AXE_ARC=0\.35;/, 'const AXE_ARC=0.35; const AXE_ARC2=0.35;\nconst AXE_ARC=0.35;'),
+        s => (s.match(/const\s+AXE_ARC\s*=\s*([0-9.]+)\s*;/g) || []).length !== 1],
+    ];
+    let caught = 0;
+    for (const [nm, mut, detect] of seeds) {
+      const s1 = mut(S0);
+      if (s1 === S0) { bad(`  음성 «${nm}» 이 아무것도 안 바꿨다 — 심는 자리가 옮겨졌다(게이트를 갱신할 것)`); continue; }
+      detect(s1) ? (caught++, ok(`  음성 «${nm}» 을 Ⓑ 가 잡는다`)) : bad(`  음성 «${nm}» 을 Ⓑ 가 못 잡았다`);
+    }
+    const clean = seeds.every(([, , detect]) => !detect(S0));
+    clean ? ok(`  양성 대조군 — 원본은 ${seeds.length}개 검출자 어디에도 안 걸린다 (오탐 0)`)
+          : bad('  양성 대조군이 걸렸다 — 원본에서 Ⓑ 가 오탐을 낸다');
+  }
+}
+
 /* ---------- 결과 ---------- */
 console.log(`\n통과 ${pass} · 불합격 ${fail}`);
 console.log(fail === 0 ? '→ 통과' : '→ 불합격');

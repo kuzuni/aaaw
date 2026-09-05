@@ -1866,6 +1866,93 @@ const chk = (n, c, d) => { R.push({ n, c, d }); console.log(`  ${c ? '✓' : '�
     `발밑 HP바 ${T164.preP.toFixed(1)} → ${T164.pHp.w.toFixed(1)}px · 적 바 ${T164.preE.toFixed(1)} → ${T164.eHp.w.toFixed(1)}px · ` +
     `실드 0 파란 픽셀 ${T164.sh0n}개`);
 
+  /* ================= ⚑⚑⚑ T165 — 도끼 포물선 실측 (주인 지시 2026-09-05 22:5X) =================
+     주인 원문 «도끼는 포물선으로 날아가기». 등재문 ③ 이 요구하는 두 가지를 좌표로 잰다:
+       ⓐ 도끼 1발의 y 가 «중간에 출발점보다 위로 올라갔다 내려온다»
+       ⓑ **명중 프레임 수가 종전과 동일** — 같은 자리·같은 속도의 직선 투사체(화살)를 나란히 쏴서
+          두 발이 **같은 프레임에** 사라지는지 본다(포물선이 x 진행·판정으로 새면 여기서 갈린다).
+     360×800 은 T165 대상이 아니다(그리기 y 오프셋뿐) — 390×844 한 벌로 잰다. */
+  console.log('\n=== ⚑ T165 도끼 포물선 (좌표 실측) ===');
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(200);   /* 앞 절이 뷰포트를 바꿨을 수 있다 */
+  await p.evaluate(() => { const st = document.getElementById('t154NoAnim'); if (st) st.remove(); startChapter(7); });
+  await p.waitForTimeout(320);
+  await drainAll(p);
+  const AX = await p.evaluate(async () => {
+    G.paused = false; G.over = false; G.cleared = false;      /* 실제 메인 루프가 도는 살아 있는 전투에서 잰다 */
+    for (const n of G.nodes) for (const e of n.enemies) if (e.hp > 0) { e.maxHp = 1e12; e.hp = 1e12; }
+    const node = G.nodes.find(n => n.enemies.some(e => e.hp > 0)) || G.nodes[0];
+    const tgt = node.enemies.find(e => e.hp > 0) || node.enemies[0];
+    tgt.worldX = G.player.worldX + 240;                 /* 포물선이 보이는 거리로 고정 */
+    G.pprojs.length = 0;
+    fireAxe(G.player, 1);                               /* **실제 발사 경로** 로 만든다 (x0 를 여기서 적는지 본다) */
+    const axe = G.pprojs.find(q => q.type === 'axe');
+    const out = { fired: !!axe, hasX0: !!(axe && axe.x0 != null), arc: 0.35, st: { screen: screenName, paused: !!G.paused, over: !!G.over } };
+    if (!axe) return out;
+    axe.tgt = tgt; axe.x = G.player.worldX + 14; axe.x0 = axe.x;   /* 기하만 고정 — 속도·판정식은 안 건드린다 */
+    /* 궤적 자체를 21점으로 훑는다 — 동기 구간이라 메인 루프가 끼어들지 않는다(끝나면 x 를 되돌린다) */
+    {
+      const span0 = (tgt.worldX - 10) - axe.x0, keep = axe.x, ys = [];
+      for (let i = 0; i <= 20; i++) { axe.x = axe.x0 + span0 * i / 20; ys.push(axeArcY(axe)); }
+      axe.x = keep;
+      out.sweep = { y0: ys[0], y1: ys[20], mid: ys[10], span0,
+        up: ys.slice(0, 11).every((v, i) => i === 0 || v < ys[i - 1]),
+        down: ys.slice(10).every((v, i) => i === 0 || v > ys[9 + i]) };
+    }
+    const arr = { type: 'parrow', x: axe.x, x0: axe.x, tgt, ratio: R_ARROW, spd: axe.spd };
+    out.spd = axe.spd;
+    G.pprojs.push(arr);                                 /* 같은 자리·같은 속도의 **직선** 쌍둥이 */
+    const samp = [];
+    let fAxe = -1, fArr = -1, dxMax = 0;
+    await new Promise(res => {
+      let f = 0;
+      const tick = () => {
+        f++;
+        const a = G.pprojs.includes(axe), b = G.pprojs.includes(arr);
+        if (a) {
+          const span = (tgt.worldX - 10) - axe.x0;
+          samp.push({ u: span > 1 ? (axe.x - axe.x0) / span : 0, y: axeArcY(axe), span });
+          if (b) dxMax = Math.max(dxMax, Math.abs(axe.x - arr.x));
+        }
+        if (!a && fAxe < 0) fAxe = f;
+        if (!b && fArr < 0) fArr = f;
+        if (fAxe > 0 && fArr > 0) return res();
+        if (f > 900) return res();
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    out.fAxe = fAxe; out.fArr = fArr; out.dxMax = dxMax; out.n = samp.length;
+    if (samp.length) {
+      let k = 0;
+      for (let i = 1; i < samp.length; i++) if (samp[i].y < samp[k].y) k = i;
+      out.peakY = samp[k].y; out.peakU = samp[k].u; out.peakSpan = samp[k].span;
+      out.firstY = samp[0].y; out.lastY = samp[samp.length - 1].y;
+      out.up = samp.slice(0, k).every((s, i) => i === 0 || s.y <= samp[i - 1].y + 0.6);
+      out.down = samp.slice(k).every((s, i) => i === 0 || s.y >= samp[k + i - 1].y - 0.6);
+    }
+    return out;
+  });
+  chk('⚑ T165 ① `fireAxe` 가 만든 도끼에 출발 x(`x0`) 가 적혀 있다', AX.fired && AX.hasX0,
+    `발사 ${AX.fired ? 'O' : 'X'} · x0 ${AX.hasX0 ? 'O' : 'X'} · 속도 ${AX.spd}`);
+  chk('⚑ T165 ② 도끼 y 가 중간에 출발점보다 **위로** 올라간다', (AX.peakY || 0) < -0.20 * (AX.peakSpan || 1),
+    `정점 ${(AX.peakY || 0).toFixed(1)}px (u=${(AX.peakU || 0).toFixed(2)} · 거리 ${(AX.peakSpan || 0).toFixed(0)}px) · 표본 ${AX.n}`);
+  chk('⚑ T165 ② 정점 높이 ≈ 거리의 35% (±10%)',
+    AX.peakSpan ? Math.abs(-AX.peakY / (AX.arc * AX.peakSpan) - 1) <= 0.10 : false,
+    `실측 ${AX.peakSpan ? (-AX.peakY / AX.peakSpan * 100).toFixed(1) : '—'}% · 기대 35.0%`);
+  const SW = AX.sweep || {};
+  chk('⚑ T165 ② 궤적 21점 훑기 — 출발·착지에서 y 가 0(부동소수 오차 안) · 중간(u=0.5)이 정점 · 올라갔다 내려온다',
+    Math.abs(SW.y0) < 1e-6 && Math.abs(SW.y1) < 1e-6 && SW.up === true && SW.down === true &&   /* 부동소수 u≈1 이라 −0.0 급 잔재가 남는다 */
+    Math.abs(-SW.mid / (0.35 * (SW.span0 || 1)) - 1) <= 0.001,
+    `u=0 → ${(SW.y0 || 0).toExponential(1)}px · u=0.5 → ${(SW.mid || 0).toFixed(1)}px · u=1 → ${(SW.y1 || 0).toExponential(1)}px (거리 ${(SW.span0 || 0).toFixed(0)}px)`);
+  chk('⚑ T165 ② 실제 비행 표본도 양 끝에서 정점의 25% 안으로 내려온다',
+    Math.abs(AX.firstY || 9e9) <= 0.25 * Math.abs(AX.peakY || 1) && Math.abs(AX.lastY || 9e9) <= 0.25 * Math.abs(AX.peakY || 1) &&
+    AX.up === true && AX.down === true,
+    `첫 ${(AX.firstY || 0).toFixed(1)} · 끝 ${(AX.lastY || 0).toFixed(1)} · 정점 ${(AX.peakY || 0).toFixed(1)} · 단조 상승 ${AX.up} · 단조 하강 ${AX.down}`);
+  chk('⚑ T165 ③ **명중 프레임 수가 직선 투사체와 동일** (도달 시간 불변)', AX.fAxe > 0 && AX.fAxe === AX.fArr,
+    `도끼 ${AX.fAxe}프레임 · 같은 속도의 직선 화살 ${AX.fArr}프레임`);
+  chk('⚑ T165 ③ 비행 중 x 가 직선과 한 픽셀도 안 다르다 (y 오프셋만 얹었다)', AX.dxMax === 0,
+    `최대 x 차 ${(AX.dxMax || 0).toFixed(3)}px`);
+
   chk('pageerror 0', errs.length === 0, errs.slice(0, 2).join(' | '));
   await b.close();
   const bad = R.filter(r => !r.c);
