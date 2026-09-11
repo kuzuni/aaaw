@@ -124,7 +124,7 @@ const NUM = [
   { r: 65, s: 'I(33%)·III(100%)', k: 'PERK_SUMMON_L', v: 1.00 },
   { r: 67, s: '(33%)·전설 III(100%)', k: 'PERK_EVHEAL_CH', v: 0.33 },
   { r: 67, s: '(33%)·전설 III(100%)', k: 'PERK_EVHEAL_L', v: 1.00 },
-  { r: 69, s: '상한 80', k: null, v: 'Math.min(80,' },
+  { r: 69, s: '상한 90', k: null, v: 'Math.min(90,' },
   { r: 71, s: '«치명 시 창»(66%)', k: 'PERK_CRITSP_L', v: 0.66 },
   { r: 78, s: '희귀 25/40 = **62.5%**', k: 'PERK_GRADE_RATE[1]', v: 25 },
   { r: 78, s: '전설 15/40 = **37.5%**', k: 'PERK_GRADE_RATE[2]', v: 15 },
@@ -452,7 +452,7 @@ const MUT = [
   { t: 'HTM', d: 'game 소환 발수 (fireAxe(p,2) → (p,1))', f: s => s.replace('fireAxe(p,2)', 'fireAxe(p,1)') },
   { t: 'HTM', d: 'game 기본치 (pCritF0 150 → 180)', f: s => s.replace('pCritF0:150', 'pCritF0:180') },
   { t: 'HTM', d: 'game 함수명 개명 (gainWard → giveWard)', f: s => s.replace(/gainWard/g, 'giveWard') },
-  { t: 'HTM', d: 'game 방어 상한 (min(80 → 90)', f: s => s.replace('Math.min(80,', 'Math.min(90,') },
+  { t: 'HTM', d: 'game 방어 상한 (min(90 → 95)', f: s => s.replace('Math.min(90,', 'Math.min(95,') },
   { t: 'HTM', d: 'game ap 대입값을 리터럴 옛 값으로', f: s => s.replace('ap:p=>{p.px.p_atk=1; p.dmg*=PERK_ATK_M;}', 'ap:p=>{p.px.p_atk=1; p.dmg*=1.20;}') },
 ];
 

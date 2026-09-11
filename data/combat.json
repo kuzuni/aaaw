@@ -1,6 +1,6 @@
 {
-  "_source": "sim.js@0618225abac92cae29a0a351943fdd084aa6dd7d",
-  "_generatedAt": "2026-09-05T14:51:06.809Z",
+  "_source": "sim.js@ddc63d1a5141a3cd2fe1a74138e614f80bb0a732",
+  "_generatedAt": "2026-09-11T18:58:02.220Z",
   "_note": "전투 규칙 상수. 길이는 월드 px · 시간은 초. ⚑ move·range(근접/원거리)·projectile 속도·enemyAttack·caps 는 엔진에 이름이 없는 리터럴이라 함수 객체 소스에서 뽑았다(README ⓑ) — 값이 바뀌면 --check 가 잡는다.",
   "move": {
     "playerSpeed": 132,
@@ -47,7 +47,7 @@
     ]
   },
   "caps": {
-    "def": 80,
+    "def": 90,
     "evade": 90
   },
   "events": {

@@ -1,6 +1,6 @@
 {
-  "_source": "index.html@18bb8494ce8d5a0210eb83367f524b892c05441d",
-  "_generatedAt": "2026-09-05T14:51:06.815Z",
+  "_source": "index.html@68fe4b3853e4d441679c2e16c338ddfb2aa2867b",
+  "_generatedAt": "2026-09-11T18:58:02.225Z",
   "_note": "index.html 에만 있는 그리기 상수(밸런스 무관 · 월드 좌표를 안 바꾼다). 브라우저 DOM 없이 index.html 을 올릴 수 없어 이 파일만 소스에서 상수 이름으로 찾아 읽는다(README ⓐ).",
   "camera": {
     "zoom": 1.5,

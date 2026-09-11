@@ -1,6 +1,6 @@
 {
-  "_source": "sim.js@0618225abac92cae29a0a351943fdd084aa6dd7d",
-  "_generatedAt": "2026-09-05T14:51:06.808Z",
+  "_source": "sim.js@ddc63d1a5141a3cd2fe1a74138e614f80bb0a732",
+  "_generatedAt": "2026-09-11T18:58:02.218Z",
   "_note": "뽑기 상자 3종. rate 순서 = 등급 인덱스(0 일반 · 1 희귀 · 2 전설 · 3 신화) · 단위 %. cum = 굴림 임계(높은 등급부터 누적 · toFixed(6)). pityMyth 0 = 천장 없음 · pityLegend 0 = 피티 없음.",
   "boxes": {
     "rare": {

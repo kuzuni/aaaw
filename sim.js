@@ -390,7 +390,7 @@ const PERK_SUMMON_N=0.33, PERK_SUMMON_R=0.66, PERK_SUMMON_L=1.00, /* 회피 시 
       PERK_CRITSP_R=0.33, PERK_CRITSP_L=0.66, PERK_CRITBOLT_L=0.66, /* 치명 시 창(희귀 33 · 전설 66) · 치명 시 번개(전설 66) */
       PERK_EVHEAL_R=0.66, PERK_EVHEAL_L=1.00,                    /* 회피 시 회복 II/III — 66% · 100% · 최대 체력 12%(PERK_EVHEAL_F · ⚑ T155) */
       PERK_EVREP_R=0.15, PERK_EVREP_L=0.25, PERK_EVREP_F=0.06,    /* 회피 시 수리 I/II — 15/25% · 최대 실드 6% */
-      PERK_DEF_R=1.16, PERK_DEF_L=1.24,                          /* 방어력 증가 II/III — 곱연산(상한 80 은 엔진 규칙) */
+      PERK_DEF_R=1.16, PERK_DEF_L=1.24,                          /* 방어력 증가 II/III — 곱연산(상한 90 은 엔진 규칙 · 2026-09-12 주인 80→90) */
       PERK_IGN_N=0.20,                                           /* 피해 무시 — 피격 20% (회피·방어막 «뒤») */
       PERK_SHWALL_L=0.50, PERK_SHREF_L=0.50,                     /* 실드 방벽 · 실드 반사 — 실드 > 0 일 때 각 50% */
       PERK_NOSH_ATK=1.50, PERK_NOSH_ASPD=1.30,                   /* 실드 0 인 동안 공격력 +50% · 공속 +30% */
@@ -1170,7 +1170,7 @@ const effCritR=p=>{const px=p.px;if(px.p_berserk)return 0;
   if(px.p_critStack)c+=p.critStk;
   return c;};
 const effCritF=p=>p.critF+bsum(p,'critF');
-const effDef=p=>Math.min(80,p.def+bsum(p,'def'));
+const effDef=p=>Math.min(90,p.def+bsum(p,'def'));   /* 방어 상한 90 — 주인 2026-09-12 «최대 회피율 90% · 최대 방어력 90% 로 되게 해 주고 초과 안 되게» (종전 80) */
 const effEvade=p=>{const px=p.px;let e=p.evade+bsum(p,'evade');
   if(px.lastStand&&p.hp<=p.maxHp*0.10)e+=40;               /* 장비 옵션 */
   return Math.min(90,e);};

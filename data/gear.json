@@ -1,6 +1,6 @@
 {
-  "_source": "sim.js@0618225abac92cae29a0a351943fdd084aa6dd7d",
-  "_generatedAt": "2026-09-05T14:51:06.807Z",
+  "_source": "sim.js@ddc63d1a5141a3cd2fe1a74138e614f80bb0a732",
+  "_generatedAt": "2026-09-11T18:58:02.216Z",
   "_note": "장비 4등급 × 6부위 × 3세트. atk/hp/sh = 그 등급 1부위의 0강·슬롯0 기여(절대값). 강화는 선형(plusStep 1레벨당 +211.11% = 19/9) · 슬롯은 1레벨당 +1% 가산(상한 150).",
   "parts": [
     "weapon",

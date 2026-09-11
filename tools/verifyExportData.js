@@ -153,7 +153,7 @@ chk('combat · 이동·사거리·투사체·스턴·상한', ['move.playerSpeed
   'enemyAttack.evade', 'stun.boss', 'caps.def', 'caps.evade'].every(k => has(C, k)));
 chk('combat · 창 사거리 = 적 간격 × 관통 수', C.range.spearReach === C.range.enemyGap * C.pierce.spear,
   `${C.range.enemyGap} × ${C.pierce.spear} = ${C.range.spearReach}`);
-chk('combat · 방어 상한 80 · 회피 상한 90 · 적 회피 10%', C.caps.def === 80 && C.caps.evade === 90
+chk('combat · 방어 상한 90 · 회피 상한 90 · 적 회피 10%', C.caps.def === 90 && C.caps.evade === 90
   && C.enemyAttack.evade === 0.10);
 
 chk('ui · 카메라·바·연출', ['camera.zoom', 'camera.playerX', 'bars.footBarW', 'bars.enemyBarW',

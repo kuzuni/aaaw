@@ -1,6 +1,6 @@
 {
-  "_source": "sim.js@0618225abac92cae29a0a351943fdd084aa6dd7d",
-  "_generatedAt": "2026-09-05T14:51:06.794Z",
+  "_source": "sim.js@ddc63d1a5141a3cd2fe1a74138e614f80bb0a732",
+  "_generatedAt": "2026-09-11T18:58:02.205Z",
   "_note": "챕터 1~420 전수. nodes = 노드 순서(챕터 시드 고정 · wave/rest/devil/angel/boss). waves[].hp/dmg = 그 웨이브 일반 적 1마리 스탯(정수 반올림 뒤 값). boss = 그 챕터 보스(= 마지막 웨이브 인덱스 스탯 × bossHp/bossDmg).",
   "layout": {
     "waves": 5,
